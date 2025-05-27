@@ -1,0 +1,42 @@
+/* src/components/layout/Navbar/Navbar.css */
+.navbar {
+  background-color: #333; /* Color oscuro */
+  color: white;
+  padding: 0 20px;
+  height: 60px;
+  display: flex; /* Para alinear items */
+  justify-content: space-between; /* Espacio entre logo y links */
+  align-items: center; /* Centrar verticalmente */
+  position: fixed; /* Fija en la parte superior */
+  top: 0;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box; /* Incluye padding en el ancho */
+  z-index: 1000; /* Asegura que esté por encima */
+}
+
+.navbar-brand {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.navbar-links {
+  list-style: none; /* Quita los puntos de la lista */
+  margin: 0;
+  padding: 0;
+  display: flex; /* Links en horizontal */
+}
+
+.navbar-links li {
+  margin-left: 20px; /* Espacio entre links */
+}
+
+.navbar-links a {
+  color: white;
+  text-decoration: none; /* Quita el subrayado */
+  font-size: 1.1em;
+}
+
+.navbar-links a:hover {
+  color: #5c9eff; /* Un color para el hover */
+}

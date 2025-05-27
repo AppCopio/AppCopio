@@ -1,0 +1,9 @@
+/* src/App.css */
+.App {
+  text-align: center;
+}
+
+.content {
+  padding: 20px;
+  margin-top: 60px; /* Dejamos espacio para la Navbar fija */
+}
