@@ -1,14 +1,21 @@
+
 // src/App.tsx
-import Navbar from './components/layout/navbar/Navbar'; // <-- IMPORTA
+import { Routes, Route } from 'react-router-dom'; // <-- IMPORTA
+import Navbar from './components/layout/Navbar/Navbar';
+import HomePage from './pages/HomePage/HomePage';     // <-- IMPORTA
+import MapPage from './pages/MapPage/MapPage';       // <-- IMPORTA
 import './App.css';
 
 function App() {
   return (
     <div className="App">
-      <Navbar /> {/* <-- AÑADE EL COMPONENTE */}
+      <Navbar />
       <main className="content">
-        <h1>Bienvenido a AppCopio</h1>
-        <p>Esta es el área de contenido principal. Pronto mostraremos el mapa y las herramientas aquí.</p>
+        <Routes> {/* <-- DEFINE EL ÁREA DE RUTAS */}
+          <Route path="/" element={<HomePage />} /> {/* <-- RUTA PARA INICIO */}
+          <Route path="/map" element={<MapPage />} /> {/* <-- RUTA PARA MAPA */}
+          {/* <Route path="/login" element={<LoginPage />} />  Añadiremos esto después */}
+        </Routes>
       </main>
     </div>
   );
