@@ -1,17 +1,13 @@
-// src/App.tsx
-import Navbar from './components/layout/navbar/Navbar'; // <-- IMPORTA
-import './App.css';
+// src/pages/HomePage/HomePage.tsx
+import React from 'react';
 
-function App() {
+const HomePage: React.FC = () => {
   return (
-    <div className="App">
-      <Navbar /> {/* <-- AÑADE EL COMPONENTE */}
-      <main className="content">
-        <h1>Bienvenido a AppCopio</h1>
-        <p>Esta es el área de contenido principal. Pronto mostraremos el mapa y las herramientas aquí.</p>
-      </main>
+    <div>
+      <h1>Bienvenido a AppCopio</h1>
+      <p>Esta es el área de contenido principal. Aquí podríamos mostrar un resumen o noticias.</p>
     </div>
   );
-}
+};
 
-export default App;
+export default HomePage;
