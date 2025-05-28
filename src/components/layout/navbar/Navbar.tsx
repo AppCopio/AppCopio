@@ -1,22 +1,33 @@
-// src/components/layout/Navbar/Navbar.tsx
+// src/components/layout/navbar/Navbar.tsx
 import React from 'react';
-import { Link } from 'react-router-dom'; // <-- IMPORTA Link
+import { Link } from 'react-router-dom';
 import './Navbar.css';
 
-const Navbar: React.FC = () => {
+// Definimos el tipo de props que puede recibir
+interface NavbarProps {
+  isAdmin?: boolean; // Hacemos la prop opcional
+}
+
+const Navbar: React.FC<NavbarProps> = ({ isAdmin = false }) => { // Por defecto no es admin
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        {/* Cambiamos <a> por <Link> */}
         <Link to="/" style={{ color: 'white', textDecoration: 'none' }}> 
             AppCopio
         </Link>
       </div>
       <ul className="navbar-links">
-        {/* Cambiamos <a> por <Link> */}
         <li><Link to="/">Inicio</Link></li>
         <li><Link to="/map">Mapa</Link></li>
-        <li><Link to="/login">Acceder</Link></li> {/* Dejamos /login por ahora */}
+
+        {/* AQUÍ ESTÁ LA MAGIA: Muestra "Centros" solo si isAdmin es true */}
+        {isAdmin && (
+          <li><Link to="/admin/centers">Centros</Link></li>
+        )}
+
+        {/* Si está en modo admin, quizás el link de login no tiene sentido
+            o podría cambiar a "Salir" o "Mi Perfil". Por ahora lo dejamos. */}
+        <li><Link to="/login">Acceder</Link></li>
       </ul>
     </nav>
   );

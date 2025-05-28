@@ -1,0 +1,30 @@
+/* src/components/layout/CenterLayout/CenterLayout.css */
+.center-header {
+  background-color: #f0f0f0;
+  padding: 15px 20px;
+  border-bottom: 1px solid #ddd;
+  text-align: center;
+}
+
+.center-header h2 {
+  margin: 0 0 10px 0;
+}
+
+.center-subnav a {
+  margin: 0 15px;
+  text-decoration: none;
+  color: #337ab7;
+  font-weight: bold;
+  padding: 5px 0;
+  border-bottom: 2px solid transparent;
+  transition: border-bottom-color 0.2s ease;
+}
+
+.center-subnav a:hover,
+.center-subnav a.active { /* Puedes añadir lógica 'active' con NavLink después */
+  border-bottom-color: #337ab7;
+}
+
+.center-main-area {
+  padding: 20px;
+}
