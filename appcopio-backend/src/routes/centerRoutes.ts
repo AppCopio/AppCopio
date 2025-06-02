@@ -1,23 +1,21 @@
 // src/routes/centerRoutes.ts
-import { Router, Request, Response } from 'express';
-import pool from '../config/db'; // Importamos nuestro pool de conexiones configurado
+// src/routes/centerRoutes.ts
+import { Request, Response, Router } from 'express';
+import pool from '../config/db';
 
-const router = Router(); // Creamos una instancia del Router de Express
+const router = Router();
 
-// Definimos la ruta GET para '/' (que será montada en /api/centers)
-// Esta ruta obtendrá todos los centros de la base de datos
+interface RequestParams {
+  id: string;
+}
+
+// GET (funciona)
 router.get('/', async (req: Request, res: Response) => {
   try {
-    // Usamos el pool para ejecutar una consulta SQL
-    // 'SELECT * FROM Centers' obtiene todas las columnas de todos los registros en la tabla Centers
-    // 'ORDER BY name ASC' ordena los resultados alfabéticamente por el nombre del centro
     const result = await pool.query('SELECT * FROM Centers ORDER BY name ASC');
-
-    // Si la consulta es exitosa, result.rows contendrá un array de objetos, cada uno representando un centro
     res.status(200).json(result.rows);
   } catch (error) {
     console.error('Error al obtener los centros desde la base de datos:', error);
-    // Devolvemos un error 500 (Error Interno del Servidor) si algo sale mal
     if (error instanceof Error) {
         res.status(500).json({ message: 'Error interno del servidor al consultar los centros.', error: error.message });
     } else {
@@ -26,11 +24,152 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// --- Futuras Rutas para Centros ---
-// GET /api/centers/:id (Obtener un centro específico)
-// POST /api/centers (Crear un nuevo centro)
-// PUT /api/centers/:id (Actualizar un centro)
-// DELETE /api/centers/:id (Eliminar un centro)
-// PATCH /api/centers/:id/activate (Activar/Desactivar un centro)
+// GET /api/centers/:id - Obtener un centro específico por su ID
+router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM Centers WHERE center_id = $1', [id]);
 
-export default router; // Exportamos el router para usarlo en index.ts
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Centro no encontrado.' });
+      return; // Añadido para consistencia y claridad
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error(`Error al obtener el centro ${id}:`, error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Error interno del servidor.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'Error interno del servidor desconocido.' });
+    }
+  }
+});
+
+// POST /api/centers - Crear un nuevo centro
+router.post('/', async (req: Request, res: Response) => {
+  const {
+    center_id, name, address, type, capacity, is_active = false, latitude, longitude
+  } = req.body;
+
+  if (!center_id || !name || !type) {
+    res.status(400).json({ message: 'center_id, name, y type son campos requeridos.' });
+    return;
+  }
+  if (!['Acopio', 'Albergue'].includes(type)) {
+    res.status(400).json({ message: 'El tipo de centro debe ser "Acopio" o "Albergue".' });
+    return;
+  }
+
+  try {
+    const newCenter = await pool.query(
+      `INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       RETURNING *`,
+      [center_id, name, address, type, capacity || 0, is_active, latitude, longitude]
+    );
+    res.status(201).json(newCenter.rows[0]);
+  } catch (error) {
+    console.error('Error al crear el centro:', error);
+    if (error instanceof Error && (error as any).code === '23505') {
+        res.status(409).json({ message: `El center_id '${center_id}' ya existe.`, error: error.message });
+    } else if (error instanceof Error) {
+        res.status(500).json({ message: 'Error interno del servidor.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'Error interno del servidor desconocido.' });
+    }
+  }
+});
+
+// PUT /api/centers/:id - Actualizar un centro existente
+router.put('/:id', async (req: Request<{ id: string }>, res: Response) => {
+  const { id } = req.params;
+  const {
+    name, address, type, capacity, is_active, latitude, longitude
+  } = req.body;
+
+  if (!name || !type) {
+    res.status(400).json({ message: 'name y type son campos requeridos para la actualización.' });
+    return;
+  }
+  if (type && !['Acopio', 'Albergue'].includes(type)) {
+    res.status(400).json({ message: 'El tipo de centro debe ser "Acopio" o "Albergue".' });
+    return;
+  }
+
+  try {
+    const updatedCenter = await pool.query(
+      `UPDATE Centers
+       SET name = $1, address = $2, type = $3, capacity = $4, is_active = $5, latitude = $6, longitude = $7, updated_at = CURRENT_TIMESTAMP
+       WHERE center_id = $8
+       RETURNING *`,
+      [name, address, type, capacity, is_active, latitude, longitude, id]
+    );
+
+    if (updatedCenter.rows.length === 0) {
+      res.status(404).json({ message: 'Centro no encontrado para actualizar.' });
+      return;
+    }
+    res.status(200).json(updatedCenter.rows[0]);
+  } catch (error) {
+    console.error(`Error al actualizar el centro ${id}:`, error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Error interno del servidor.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'Error interno del servidor desconocido.' });
+    }
+  }
+});
+
+// DELETE /api/centers/:id - Eliminar un centro (tu versión corregida)
+router.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
+  const { id } = req.params;
+  try {
+    const deleteOp = await pool.query('DELETE FROM Centers WHERE center_id = $1 RETURNING *', [id]);
+
+    if (deleteOp.rowCount === 0) { // o deleteOp.rows.length === 0
+      res.status(404).json({ message: 'Centro no encontrado para eliminar.' });
+      return; 
+    }
+    res.status(204).send(); // Correcto para DELETE exitoso sin contenido que devolver
+  } catch (error) {
+    console.error(`Error al eliminar el centro ${id}:`, error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Error interno del servidor.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'Error interno del servidor desconocido.' });
+    }
+  }
+});
+
+// PATCH /api/centers/:id/status - Activar o desactivar un centro
+router.patch('/:id/status', async (req: Request<{ id: string }>, res: Response) => {
+    const { id } = req.params;
+    const { isActive } = req.body; 
+
+    if (typeof isActive !== 'boolean') {
+        res.status(400).json({ message: 'El campo "isActive" es requerido y debe ser un booleano.' });
+        return;
+    }
+
+    try {
+        const updatedCenter = await pool.query(
+            'UPDATE Centers SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE center_id = $2 RETURNING *',
+            [isActive, id]
+        );
+
+        if (updatedCenter.rows.length === 0) {
+            res.status(404).json({ message: 'Centro no encontrado para actualizar estado.' });
+            return;
+        }
+        res.status(200).json(updatedCenter.rows[0]);
+    } catch (error) {
+        console.error(`Error al actualizar estado del centro ${id}:`, error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error interno del servidor.', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error interno del servidor desconocido.' });
+        }
+    }
+});
+
+export default router;
