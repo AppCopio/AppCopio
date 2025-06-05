@@ -1,0 +1,58 @@
+/* src/components/map/MapComponent.css */
+.map-wrapper {
+  width: 100%;
+  height: calc(100vh - 60px); /* Ajusta la altura para que no quede debajo de la navbar */
+}
+
+.error-message {
+  padding: 20px;
+  color: red;
+  text-align: center;
+}
+
+.marker-pin {
+  background-color: white;
+  padding: 5px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  font-size: 1.5em; 
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.3s ease;
+  border: 3px solid transparent;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.marker-pin:hover {
+    transform: scale(1.2);
+}
+
+.marker-pin.active {
+  border-color: #28a745; /* Verde si activo */
+  background-color: #d4edda;
+}
+
+.marker-pin.inactive {
+  border-color: #6c757d; /* Gris si inactivo */
+  background-color: #f8f9fa;
+  opacity: 0.7;
+}
+
+.infowindow-content {
+  padding: 5px 10px;
+  text-align: left;
+}
+
+.infowindow-content h4 {
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.infowindow-content p {
+  margin: 3px 0;
+  font-size: 0.9em;
+  color: #555;
+}
