@@ -1,12 +1,7 @@
 # AppCopio  - Guía de Desarrollo Local
-
-¡Hola equipo!
+Wena,
 
 Bienvenidos al repositorio oficial de AppCopio. Este documento es nuestra guía central para configurar el entorno de desarrollo y empezar a trabajar. El objetivo es que todos podamos levantar el proyecto en nuestras máquinas locales de forma rápida y consistente.
-
-## 🚀 Descripción del Proyecto
-
-[cite_start]AppCopio es una plataforma de gestión integral para centros de acopio y albergues diseñada para contextos post-catástrofe.  [cite_start]Su propósito es centralizar la información en tiempo real, mejorar la coordinación de ayuda y optimizar la distribución de recursos, conectando a municipalidades, equipos de emergencia, voluntarios y damnificados. 
 
 ## 🏗️ Arquitectura del Proyecto
 
@@ -29,7 +24,8 @@ Antes de empezar, asegúrate de tener instalado el siguiente software en tu comp
 
 ## 🛠️ Paso 1: Configuración del Backend (`appcopio-backend`)
 
-Empezaremos por el backend, ya que el frontend depende de él para obtener los datos.
+
+Luego de tener clonado el repositorio empezaremos por el backend, ya que el frontend depende de él para obtener los datos.
 
 1.  **Navega a la carpeta del backend** en tu terminal:
     ```bash
@@ -47,7 +43,7 @@ Empezaremos por el backend, ya que el frontend depende de él para obtener los d
     * Una vez creada, abre la "Query Tool" (Herramienta de Consultas) para esa base de datos y **ejecuta el siguiente script SQL completo**. Esto creará todas las tablas necesarias y cargará los datos iniciales.
 
     <details>
-    <summary>Haz clic aquí para ver el Script SQL completo</summary>
+    <summary>Haz clic aquí para ver el Script SQL completo o pidele el archivo .sql al bruno</summary>
 
     ```sql
     -- Borra las tablas si ya existen (útil si necesitas empezar de cero)
@@ -129,9 +125,9 @@ Ahora vamos con la parte visual.
     npm install
     ```
 3.  **Crea tu archivo de entorno local (`.env.local`)**:
-    * Este archivo es necesario para la clave de la API de Google Maps. Cada miembro del equipo debe obtener su propia clave de API gratuita desde la [Google Cloud Console](https://console.cloud.google.com/).
+    * Este archivo es necesario para la clave de la API de Google Maps. Cada miembro del equipo debe obtener su propia clave de API gratuita (wuajajaja con cuea tenemos la mia)desde la [Google Cloud Console](https://console.cloud.google.com/).
     * En la raíz de la carpeta `appcopio-frontend`, crea un archivo llamado `.env.local`.
-    * Añade el siguiente contenido, reemplazando con tu propia clave:
+    * Añade el siguiente contenido, reemplazando con tu propia clave (pedirsela al bruno pero usar con cuidado ⚠):
 
         ```env
         VITE_Maps_API_KEY=TU_PROPIA_CLAVE_DE_API_DE_Maps
@@ -158,4 +154,4 @@ Necesitarás **dos terminales abiertas** para correr la aplicación completa.
 
 ¡Y listo! Con ambos servidores corriendo, la aplicación debería ser completamente funcional. Si navegas a la sección `/map`, deberías ver los pines cargados desde la base de datos que configuraste.
 
-¡Cualquier duda, me avisan!
+Cualquier duda consultarle al bruno! :D
