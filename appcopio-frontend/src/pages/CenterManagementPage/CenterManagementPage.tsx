@@ -1,10 +1,8 @@
 // src/pages/CenterManagementPage/CenterManagementPage.tsx
 import React, { useState, useEffect } from 'react';
-// YA NO NECESITAMOS LOS DATOS SIMULADOS, ASÍ QUE BORRAMOS ESA IMPORTACIÓN
-// import { potentialCentersData } from '../../data/potentialCenters';
 import './CenterManagementPage.css';
 
-// 1. Definimos la interfaz para que coincida con los datos de la API
+// La interfaz Center y el componente StatusSwitch se mantienen igual
 export interface Center {
   center_id: string;
   name: string;
@@ -14,7 +12,6 @@ export interface Center {
   is_active: boolean;
 }
 
-// El componente del Switch sigue siendo útil, no necesita cambios
 const StatusSwitch: React.FC<{ center: Center; onToggle: (id: string) => void }> = ({ center, onToggle }) => {
   return (
     <label className="switch">
@@ -29,69 +26,84 @@ const StatusSwitch: React.FC<{ center: Center; onToggle: (id: string) => void }>
   );
 };
 
+
 const CenterManagementPage: React.FC = () => {
-  // 2. Creamos estados para los centros, el estado de carga y posibles errores
   const [centers, setCenters] = useState<Center[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 3. Usamos useEffect para llamar a la API cuando el componente se monta
+  // La función para obtener los datos iniciales se mantiene igual
   useEffect(() => {
     const fetchCenters = async () => {
       try {
         const response = await fetch('http://localhost:4000/api/centers');
-        if (!response.ok) {
-          throw new Error('Error en la respuesta de la red');
-        }
+        if (!response.ok) throw new Error('Error en la respuesta de la red');
         const data: Center[] = await response.json();
-        setCenters(data); // Guardamos los datos reales en nuestro estado
+        setCenters(data);
       } catch (err) {
-        if (err instanceof Error) {
-            setError(err.message);
-        } else {
-            setError('Ocurrió un error desconocido');
-        }
+        setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido');
         console.error("Error al obtener los centros:", err);
       } finally {
-        setIsLoading(false); // Dejamos de cargar, ya sea con éxito o con error
+        setIsLoading(false);
       }
     };
-
     fetchCenters();
-  }, []); // El array vacío [] asegura que esto se ejecute solo una vez
+  }, []);
 
-  // El resto de las funciones (handleToggleActive, handleShowInfo) siguen siendo válidas
-  // aunque handleToggleActive ahora modifica el estado local. Más adelante,
-  // esta función también hará una llamada PATCH a la API.
-  const handleToggleActive = (id: string) => {
-    setCenters(prevCenters =>
-      prevCenters.map(center =>
-        center.center_id === id ? { ...center, is_active: !center.is_active } : center
-      )
-    );
-    // TODO: En el siguiente paso, aquí se llamaría a la API PATCH /api/centers/:id/status
-    console.log(`Cambiado estado (localmente) del centro ${id}`);
+  // --- ¡AQUÍ ESTÁ EL CAMBIO IMPORTANTE! ---
+  // Hacemos que la función sea 'async' para poder usar 'await'
+  const handleToggleActive = async (id: string) => {
+    // 1. Encontramos el centro en nuestro estado actual para saber cuál será su nuevo estado
+    const centerToToggle = centers.find(center => center.center_id === id);
+    if (!centerToToggle) return; // Si no lo encuentra, no hace nada
+
+    const newStatus = !centerToToggle.is_active;
+
+    try {
+      // 2. Hacemos la llamada a la API con el método PATCH
+      const response = await fetch(`http://localhost:4000/api/centers/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isActive: newStatus }), // Enviamos el nuevo estado en el cuerpo
+      });
+
+      if (!response.ok) {
+        // Si la API devuelve un error, lo lanzamos para que lo capture el 'catch'
+        throw new Error('El servidor no pudo actualizar el estado del centro.');
+      }
+
+      // 3. Si la API respondió OK, actualizamos nuestro estado local para que la UI refleje el cambio
+      setCenters(prevCenters =>
+        prevCenters.map(center =>
+          center.center_id === id ? { ...center, is_active: newStatus } : center
+        )
+      );
+
+    } catch (err) {
+      console.error('Error al actualizar el estado del centro:', err);
+      // Podríamos mostrar una alerta al usuario
+      alert('No se pudo actualizar el centro. Por favor, inténtelo de nuevo.');
+    }
   };
 
   const handleShowInfo = (id: string) => {
     alert(`Mostrar información del centro ${id}`);
   };
 
-  // 4. Mostramos un mensaje mientras se cargan los datos
   if (isLoading) {
     return <div className="center-management-container">Cargando centros desde la base de datos...</div>;
   }
 
-  // 5. Mostramos un mensaje de error si la llamada a la API falló
   if (error) {
     return <div className="center-management-container error-message">Error: {error}</div>;
   }
 
-  // 6. Si todo salió bien, mostramos la lista con los datos reales
   return (
     <div className="center-management-container">
       <h1>Gestión de Centros y Albergues</h1>
-      <p>Esta lista muestra el catastro de centros directamente desde la base de datos para planificar la respuesta en caso de emergencias. [cite: 142]</p>
+      <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
 
       <ul className="center-list">
         {centers.map(center => (
