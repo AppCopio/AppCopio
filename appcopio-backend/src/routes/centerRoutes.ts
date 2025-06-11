@@ -252,6 +252,24 @@ router.put('/:centerId/inventory/:itemId', async (req: Request<{ centerId: strin
   }
 });
 
-  
+router.delete('/:centerId/inventory/:itemId', async (req: Request, res: Response) => {
+  const { centerId, itemId } = req.params;
+
+  try {
+    const deleteOp = await pool.query(
+      'DELETE FROM CenterInventories WHERE center_id = $1 AND item_id = $2',
+      [centerId, itemId]
+    );
+
+    if (deleteOp.rowCount === 0) {
+      res.status(404).json({ message: 'No se encontró el item en el inventario de este centro para eliminar.' });
+      return;
+    }
+    res.status(204).send(); // 204 No Content indica éxito sin devolver datos
+  } catch (error) {
+    console.error(`Error al eliminar item del inventario para el centro ${centerId}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+});
 
 export default router;

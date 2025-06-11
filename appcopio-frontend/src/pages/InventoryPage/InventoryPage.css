@@ -56,9 +56,7 @@
   font-weight: bold;
 }
 
-.inventory-table tr:nth-child(even) {
-  background-color: #f2f2f2;
-}
+
 
 .action-btn {
   background-color: #ffc107;
@@ -91,7 +89,7 @@
 }
 
 .modal-content {
-  background-color: white;
+  background-color: rgb(32, 30, 30);
   padding: 30px;
   border-radius: 8px;
   width: 90%;
@@ -154,5 +152,17 @@
 
 .modal-actions .btn-primary {
   background-color: #007bff;
+  color: white;
+}
+
+
+.modal-actions.edit-actions {
+  display: flex;
+  justify-content: space-between; /* Alinea los botones a los extremos */
+  align-items: center;
+}
+
+.modal-actions .btn-danger {
+  background-color: #dc3545;
   color: white;
 }

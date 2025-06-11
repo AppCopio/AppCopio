@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import './InventoryPage.css';
 
-// ... (Las interfaces InventoryItem y GroupedInventory se mantienen igual) ...
+// --- INTERFACES ---
 interface InventoryItem {
   item_id: number;
   quantity: number;
@@ -11,35 +11,47 @@ interface InventoryItem {
   category: string;
   description: string | null;
 }
+
 interface GroupedInventory {
   [category: string]: InventoryItem[];
 }
 
+// --- CONSTANTES ---
+const API_BASE_URL = 'http://localhost:4000/api';
 
-
+// --- COMPONENTE PRINCIPAL ---
 const InventoryPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
+  
+  // Simulación de Rol de Usuario para mostrar/ocultar botones
   const userRole: 'Encargado' | 'Emergencias' = 'Encargado';
-
+  
+  // --- ESTADOS DEL COMPONENTE ---
   const [inventory, setInventory] = useState<GroupedInventory>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- NUEVOS ESTADOS PARA EL MODAL Y EL FORMULARIO ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]); // Para el selector
+  // Estados para el modal de AÑADIR
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState(1);
+  
+  // Estados para el modal de EDICIÓN
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+
+  // Estado compartido para envío de formularios
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Función reutilizable para obtener los datos del inventario
+  // --- FUNCIONES DE OBTENCIÓN DE DATOS ---
   const fetchInventory = async () => {
     if (!centerId) return;
-    setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/inventory`);
-      if (!response.ok) throw new Error('Error en la respuesta de la red');
+      const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory`);
+      if (!response.ok) throw new Error('Error al obtener el inventario del centro');
+      
       const data: InventoryItem[] = await response.json();
       const groupedData = data.reduce((acc, item) => {
         const category = item.category || 'Sin Categoría';
@@ -50,97 +62,143 @@ const InventoryPage: React.FC = () => {
       setInventory(groupedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido');
-    } finally {
-      setIsLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/products/categories`);
+      if (!response.ok) throw new Error('Error al obtener las categorías');
+      const data: string[] = await response.json();
+      setCategories(data);
+      if (data.length > 0 && !newItemCategory) {
+        setNewItemCategory(data[0]);
+      }
+    } catch (err) {
+      console.error("Error al obtener categorías:", err);
     }
   };
   
-  // Función para obtener las categorías existentes
-  const fetchCategories = async () => {
-      try {
-          const response = await fetch('http://localhost:4000/api/products/categories');
-          const data: string[] = await response.json();
-          setCategories(data);
-          if (data.length > 0) {
-              setNewItemCategory(data[0]); // Seleccionamos la primera por defecto
-          }
-      } catch (err) {
-          console.error("Error al obtener categorías:", err);
-      }
-  };
-  
   useEffect(() => {
-    fetchInventory();
-    fetchCategories();
+    setIsLoading(true);
+    Promise.all([fetchInventory(), fetchCategories()]).finally(() => setIsLoading(false));
   }, [centerId]);
 
-  // --- NUEVA FUNCIÓN PARA MANEJAR EL ENVÍO DEL FORMULARIO ---
+  // --- MANEJADORES DE EVENTOS (HANDLERS) ---
   const handleAddItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!centerId) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/inventory`, {
+      const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          itemName: newItemName,
-          category: newItemCategory,
-          quantity: newItemQuantity,
-        }),
+        body: JSON.stringify({ itemName: newItemName, category: newItemCategory, quantity: newItemQuantity }),
       });
-      if (!response.ok) throw new Error('Error al añadir el item');
-      
-      // Si todo sale bien, cerramos el modal y refrescamos la lista de inventario
-      setIsModalOpen(false);
+      if (!response.ok) throw new Error('Error del servidor al añadir el item');
+      setIsAddModalOpen(false);
       setNewItemName('');
       setNewItemQuantity(1);
-      fetchInventory(); // Volvemos a pedir los datos para ver el cambio
+      await fetchInventory(); // Refrescamos la lista con los nuevos datos
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error desconocido');
+      alert(err instanceof Error ? err.message : 'Error desconocido al añadir el item');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleOpenEditModal = (item: InventoryItem) => {
+    setEditingItem({ ...item });
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (!editingItem) return;
+    const { name, value } = e.target;
+    setEditingItem({
+      ...editingItem,
+      [name]: name === 'quantity' ? Number(value) : value,
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    if (!editingItem || !centerId) return;
+    setIsSubmitting(true);
+    try {
+      const updateQuantityPromise = fetch(`${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: editingItem.quantity }),
+      });
+      const updateProductPromise = fetch(`${API_BASE_URL}/products/${editingItem.item_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingItem.name, category: editingItem.category }),
+      });
+      const responses = await Promise.all([updateQuantityPromise, updateProductPromise]);
+      for (const response of responses) {
+        if (!response.ok) throw new Error('Falló una de las actualizaciones. Revisa la consola.');
+      }
+      handleCloseEditModal();
+      await fetchInventory();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error desconocido al guardar los cambios');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) return <div>Cargando inventario...</div>;
-  if (error) return <div className="error-message">Error: {error}</div>;
+  const handleDeleteItem = async () => {
+    if (!editingItem || !centerId) return;
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar "${editingItem.name}" del inventario de este centro?`)) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('No se pudo eliminar el item desde el servidor.');
+      handleCloseEditModal();
+      await fetchInventory();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error desconocido al eliminar');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- RENDERIZADO DEL COMPONENTE ---
+  if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
+  if (error) return <div className="inventory-container error-message">Error: {error}</div>;
 
   return (
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
         {userRole === 'Encargado' && (
-          <button className="add-item-btn" onClick={() => setIsModalOpen(true)}>
+          <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>
             + Añadir Nuevo Item
           </button>
         )}
       </div>
 
-      {/* --- CÓDIGO DEL MODAL (solo se muestra si isModalOpen es true) --- */}
-      {isModalOpen && (
+      {/* Modal para Añadir Item */}
+      {isAddModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
             <form onSubmit={handleAddItemSubmit}>
               <h3>Añadir Item al Inventario</h3>
               <div className="form-group">
                 <label htmlFor="itemName">Nombre del Item:</label>
-                <input
-                  id="itemName"
-                  type="text"
-                  value={newItemName}
-                  onChange={e => setNewItemName(e.target.value)}
-                  placeholder="Ej: Frazadas 1.5 plazas"
-                  required
-                />
+                <input id="itemName" type="text" value={newItemName} onChange={e => setNewItemName(e.target.value)} placeholder="Ej: Frazadas 1.5 plazas" required />
               </div>
               <div className="form-group">
                 <label htmlFor="category">Categoría:</label>
-                <select 
-                  id="category" 
-                  value={newItemCategory}
-                  onChange={e => setNewItemCategory(e.target.value)}
-                  required
-                >
+                <select id="category" value={newItemCategory} onChange={e => setNewItemCategory(e.target.value)} required>
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
@@ -148,29 +206,50 @@ const InventoryPage: React.FC = () => {
                 <label htmlFor="quantity">Cantidad:</label>
                 <div className="quantity-input">
                   <button type="button" onClick={() => setNewItemQuantity(q => Math.max(1, q - 1))}>-</button>
-                  <input
-                    id="quantity"
-                    type="number"
-                    value={newItemQuantity}
-                    onChange={e => setNewItemQuantity(Number(e.target.value))}
-                    min="1"
-                    required
-                  />
+                  <input id="quantity" type="number" value={newItemQuantity} onChange={e => setNewItemQuantity(Number(e.target.value))} min="1" required />
                   <button type="button" onClick={() => setNewItemQuantity(q => q + 1)}>+</button>
                 </div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Añadiendo...' : 'Añadir Item'}
-                </button>
+                <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)} disabled={isSubmitting}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Añadiendo...' : 'Añadir Item'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* La tabla del inventario se mantiene igual */}
+      {/* Modal para Editar Item */}
+      {isEditModalOpen && editingItem && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Editar Item del Inventario</h3>
+            <div className="form-group">
+              <label htmlFor="editItemName">Nombre del Item:</label>
+              <input id="editItemName" name="name" type="text" value={editingItem.name} onChange={handleEditFormChange} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="editItemCategory">Categoría:</label>
+              <select id="editItemCategory" name="category" value={editingItem.category} onChange={handleEditFormChange}>
+                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="editItemQuantity">Cantidad:</label>
+              <input id="editItemQuantity" name="quantity" type="number" value={editingItem.quantity} onChange={handleEditFormChange} min="0" />
+            </div>
+            <div className="modal-actions edit-actions">
+              <button onClick={handleDeleteItem} className="btn-danger" disabled={isSubmitting}>Eliminar</button>
+              <div>
+                <button onClick={handleCloseEditModal} className="btn-secondary" disabled={isSubmitting}>Cancelar</button>
+                <button onClick={handleSaveChanges} className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar Cambios'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Renderizado de la Tabla de Inventario */}
       {Object.keys(inventory).length === 0 ? (
         <p>Este centro aún no tiene items en su inventario.</p>
       ) : (
@@ -191,7 +270,9 @@ const InventoryPage: React.FC = () => {
                     <td>{item.name}</td>
                     <td>{item.quantity}</td>
                     {userRole === 'Encargado' && (
-                      <td><button className="action-btn">Editar</button></td>
+                      <td>
+                        <button className="action-btn" onClick={() => handleOpenEditModal(item)}>Editar</button>
+                      </td>
                     )}
                   </tr>
                 ))}
