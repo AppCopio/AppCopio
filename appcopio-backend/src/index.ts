@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import pool from './config/db'; 
 import centerRoutes from './routes/centerRoutes'; 
 
+import productRoutes from './routes/productRoutes';
 dotenv.config();
 
 const app = express(); // Esta es tu instancia de 'Application'
@@ -23,6 +24,7 @@ app.get('/api', (req: Request, res: Response) => {
 // Rutas de la API para Centros
 // app.use() espera middleware o un router. 'centerRoutes' DEBE ser un router.
 app.use('/api/centers', centerRoutes); 
+app.use('/api/products', productRoutes);
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);

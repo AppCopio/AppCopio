@@ -1,0 +1,158 @@
+/* src/pages/InventoryPage/InventoryPage.css */
+.inventory-container {
+  padding: 20px;
+}
+
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.inventory-header h3 {
+  margin: 0;
+}
+
+.add-item-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.add-item-btn:hover {
+  background-color: #218838;
+}
+
+.category-section {
+  margin-bottom: 30px;
+}
+
+.category-section h4 {
+  color: #337ab7;
+  margin-bottom: 10px;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.inventory-table th, .inventory-table td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+}
+
+.inventory-table th {
+  background-color: #f9f9f9;
+  font-weight: bold;
+}
+
+.inventory-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.action-btn {
+  background-color: #ffc107;
+  color: #333;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.action-btn:hover {
+  background-color: #e0a800;
+} 
+
+/* ... tus estilos existentes de la tabla ... */
+
+/* Estilos para el Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h3 {
+  margin-top: 0;
+}
+
+.modal-content .form-group {
+  margin-bottom: 15px;
+}
+
+.modal-content label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.modal-content input, .modal-content select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.quantity-input {
+  display: flex;
+  align-items: center;
+}
+
+.quantity-input button {
+  width: 40px;
+  height: 40px;
+  font-size: 1.2em;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.quantity-input input {
+  text-align: center;
+  border-left: none;
+  border-right: none;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-actions .btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.modal-actions .btn-primary {
+  background-color: #007bff;
+  color: white;
+}

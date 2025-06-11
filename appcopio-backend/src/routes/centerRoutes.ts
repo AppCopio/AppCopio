@@ -172,4 +172,86 @@ router.patch('/:id/status', async (req: Request<{ id: string }>, res: Response) 
     }
 });
 
+// GET /api/centers/:centerId/inventory - Obtener el inventario de un centro
+router.get('/:centerId/inventory', async (req: Request<{ centerId: string }>, res: Response) => {
+  const { centerId } = req.params;
+  try {
+    const query = `
+      SELECT ci.item_id, ci.quantity, p.name, p.category 
+      FROM CenterInventories AS ci JOIN Products AS p ON ci.item_id = p.item_id 
+      WHERE ci.center_id = $1 ORDER BY p.name`;
+    const result = await pool.query(query, [centerId]);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error(`Error al obtener inventario para el centro ${centerId}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+});
+
+// POST /api/centers/:centerId/inventory - Añadir un item al inventario
+router.post('/:centerId/inventory', async (req: Request<{ centerId: string }>, res: Response) => {
+  const { centerId } = req.params;
+  const { itemName, category, quantity } = req.body;
+
+  if (!itemName || !category || !quantity || quantity <= 0) {
+    res.status(400).json({ message: 'Se requieren itemName, category y una quantity mayor a 0.' });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let productResult = await client.query('SELECT item_id FROM Products WHERE name = $1', [itemName]);
+    let itemId;
+    if (productResult.rows.length === 0) {
+      const newProductResult = await client.query('INSERT INTO Products (name, category) VALUES ($1, $2) RETURNING item_id', [itemName, category]);
+      itemId = newProductResult.rows[0].item_id;
+    } else {
+      itemId = productResult.rows[0].item_id;
+    }
+    const inventoryResult = await client.query(
+      `INSERT INTO CenterInventories (center_id, item_id, quantity) VALUES ($1, $2, $3)
+       ON CONFLICT (center_id, item_id) DO UPDATE SET quantity = CenterInventories.quantity + $3, last_updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [centerId, itemId, quantity]
+    );
+    await client.query('COMMIT');
+    res.status(201).json(inventoryResult.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`Error en transacción de inventario para el centro ${centerId}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
+// PUT /api/centers/:centerId/inventory/:itemId - Actualizar la cantidad de un item
+router.put('/:centerId/inventory/:itemId', async (req: Request<{ centerId: string; itemId: string }>, res: Response) => {
+  const { centerId, itemId } = req.params;
+  const { quantity } = req.body;
+
+  if (typeof quantity !== 'number' || quantity < 0) {
+    res.status(400).json({ message: 'Se requiere una "quantity" numérica y mayor o igual a 0.' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE CenterInventories SET quantity = $1, last_updated_at = CURRENT_TIMESTAMP WHERE center_id = $2 AND item_id = $3 RETURNING *`,
+      [quantity, centerId, itemId]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'No se encontró el item en el inventario de este centro.' });
+      return;
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error(`Error al actualizar el inventario para el centro ${centerId}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+});
+
+  
+
 export default router;
