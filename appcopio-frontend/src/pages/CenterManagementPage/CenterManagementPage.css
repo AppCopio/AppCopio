@@ -134,3 +134,20 @@ input:checked + .slider:before {
     min-width: 60px; /* Ancho para que no salte */
     text-align: left;
 }
+
+
+
+.inventory-btn {
+  padding: 8px 15px;
+  background-color: #17a2b8; 
+  color: white;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  margin-right: 10px; 
+}
+.inventory-btn:hover {
+  background-color: #138496;
+}

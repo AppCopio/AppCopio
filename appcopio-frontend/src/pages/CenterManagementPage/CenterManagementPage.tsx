@@ -1,5 +1,6 @@
 // src/pages/CenterManagementPage/CenterManagementPage.tsx
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import './CenterManagementPage.css';
 
 // La interfaz Center y el componente StatusSwitch se mantienen igual
@@ -50,40 +51,33 @@ const CenterManagementPage: React.FC = () => {
     fetchCenters();
   }, []);
 
-  // --- ¡AQUÍ ESTÁ EL CAMBIO IMPORTANTE! ---
-  // Hacemos que la función sea 'async' para poder usar 'await'
+  // La función para activar/desactivar se mantiene igual
   const handleToggleActive = async (id: string) => {
-    // 1. Encontramos el centro en nuestro estado actual para saber cuál será su nuevo estado
     const centerToToggle = centers.find(center => center.center_id === id);
-    if (!centerToToggle) return; // Si no lo encuentra, no hace nada
+    if (!centerToToggle) return;
 
     const newStatus = !centerToToggle.is_active;
 
     try {
-      // 2. Hacemos la llamada a la API con el método PATCH
       const response = await fetch(`http://localhost:4000/api/centers/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ isActive: newStatus }), // Enviamos el nuevo estado en el cuerpo
+        body: JSON.stringify({ isActive: newStatus }),
       });
 
       if (!response.ok) {
-        // Si la API devuelve un error, lo lanzamos para que lo capture el 'catch'
         throw new Error('El servidor no pudo actualizar el estado del centro.');
       }
-
-      // 3. Si la API respondió OK, actualizamos nuestro estado local para que la UI refleje el cambio
+      
       setCenters(prevCenters =>
         prevCenters.map(center =>
           center.center_id === id ? { ...center, is_active: newStatus } : center
         )
       );
-
     } catch (err) {
       console.error('Error al actualizar el estado del centro:', err);
-      // Podríamos mostrar una alerta al usuario
       alert('No se pudo actualizar el centro. Por favor, inténtelo de nuevo.');
     }
   };
@@ -112,7 +106,16 @@ const CenterManagementPage: React.FC = () => {
               <h3>{center.name}</h3>
               <p>{center.address} ({center.type})</p>
             </div>
+            {/* --- SECCIÓN DE ACCIONES MODIFICADA --- */}
             <div className="center-actions">
+              {/* 1. BOTÓN/ENLACE AÑADIDO */}
+              <Link 
+                to={`/center/${center.center_id}/inventory`} 
+                className="inventory-btn"
+              >
+                Inventario
+              </Link>
+
               <button 
                 className="info-button" 
                 onClick={() => handleShowInfo(center.center_id)}

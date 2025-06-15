@@ -1,6 +1,7 @@
 // src/pages/InventoryPage/InventoryPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext'; // <-- IMPORTAMOS EL HOOK DE AUTENTICACIÓN
 import './InventoryPage.css';
 
 // --- INTERFACES ---
@@ -23,8 +24,8 @@ const API_BASE_URL = 'http://localhost:4000/api';
 const InventoryPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   
-  // Simulación de Rol de Usuario para mostrar/ocultar botones
-  const userRole: 'Encargado' | 'Emergencias' = 'Encargado';
+  // Obtenemos el usuario del contexto global para saber su rol
+  const { user } = useAuth();
   
   // --- ESTADOS DEL COMPONENTE ---
   const [inventory, setInventory] = useState<GroupedInventory>({});
@@ -50,9 +51,10 @@ const InventoryPage: React.FC = () => {
     if (!centerId) return;
     try {
       const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory`);
-      if (!response.ok) throw new Error('Error al obtener el inventario del centro');
+      if (!response.ok) throw new Error('Error en la respuesta de la red al obtener inventario');
       
       const data: InventoryItem[] = await response.json();
+      
       const groupedData = data.reduce((acc, item) => {
         const category = item.category || 'Sin Categoría';
         if (!acc[category]) acc[category] = [];
@@ -67,15 +69,15 @@ const InventoryPage: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/categories`);
-      if (!response.ok) throw new Error('Error al obtener las categorías');
-      const data: string[] = await response.json();
-      setCategories(data);
-      if (data.length > 0 && !newItemCategory) {
-        setNewItemCategory(data[0]);
-      }
+        const response = await fetch(`${API_BASE_URL}/products/categories`);
+        if (!response.ok) throw new Error('Error al obtener las categorías');
+        const data: string[] = await response.json();
+        setCategories(data);
+        if (data.length > 0 && !newItemCategory) {
+            setNewItemCategory(data[0]);
+        }
     } catch (err) {
-      console.error("Error al obtener categorías:", err);
+        console.error("Error al obtener categorías:", err);
     }
   };
   
@@ -99,7 +101,7 @@ const InventoryPage: React.FC = () => {
       setIsAddModalOpen(false);
       setNewItemName('');
       setNewItemQuantity(1);
-      await fetchInventory(); // Refrescamos la lista con los nuevos datos
+      await fetchInventory();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error desconocido al añadir el item');
     } finally {
@@ -179,7 +181,8 @@ const InventoryPage: React.FC = () => {
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
-        {userRole === 'Encargado' && (
+        {/* Los botones de acción se muestran según el rol del usuario (H11) */}
+        {user?.role === 'Encargado' && (
           <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>
             + Añadir Nuevo Item
           </button>
@@ -249,7 +252,7 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
       
-      {/* Renderizado de la Tabla de Inventario */}
+      {/* Renderizado de la Tabla de Inventario (H14) */}
       {Object.keys(inventory).length === 0 ? (
         <p>Este centro aún no tiene items en su inventario.</p>
       ) : (
@@ -261,7 +264,7 @@ const InventoryPage: React.FC = () => {
                 <tr>
                   <th>Item</th>
                   <th>Cantidad</th>
-                  {userRole === 'Encargado' && <th>Acciones</th>}
+                  {user?.role === 'Encargado' && <th>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
@@ -269,7 +272,7 @@ const InventoryPage: React.FC = () => {
                   <tr key={item.item_id}>
                     <td>{item.name}</td>
                     <td>{item.quantity}</td>
-                    {userRole === 'Encargado' && (
+                    {user?.role === 'Encargado' && (
                       <td>
                         <button className="action-btn" onClick={() => handleOpenEditModal(item)}>Editar</button>
                       </td>

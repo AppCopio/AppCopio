@@ -1,41 +1,43 @@
 // src/pages/LoginPage/LoginPage.tsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Para redirigir (simulado)
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext'; // <-- IMPORTA EL HOOK
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
-  // Estados para guardar lo que el usuario escribe
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(''); // Para mostrar errores
+  const [error, setError] = useState('');
 
-  const navigate = useNavigate(); // Hook para navegar
+  const navigate = useNavigate();
+  const { login } = useAuth(); // <-- USA EL CONTEXTO
 
-  // Función que se ejecuta al enviar el formulario
   const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault(); // Evita que la página se recargue
+    event.preventDefault();
 
-    // --- AQUÍ IRÁ LA LÓGICA DE CONEXIÓN AL BACKEND ---
-    console.log('Intentando iniciar sesión con:', { username, password });
-
-    // Simulación: Si escribe algo, lo dejamos pasar (¡SOLO PARA PRUEBAS!)
-    if (username && password) {
-      setError('');
-      alert(`¡Bienvenido ${username}! (Simulación)`);
-      // Redirigimos al inicio (o a un futuro Dashboard)
-      navigate('/'); 
+    // --- LÓGICA DE SIMULACIÓN ---
+    if (username.toLowerCase() === 'admin') {
+      // Si el usuario es 'admin', lo logueamos como rol 'Emergencias'
+      login({ username: 'admin', role: 'Emergencias' });
+      navigate('/admin'); // Lo redirigimos al dashboard de admin
+    } else if (username.toLowerCase().startsWith('encargado-')) {
+      // Si empieza con 'encargado-', ej: "encargado-C001"
+      const centerId = username.split('-')[1].toUpperCase();
+      login({ username: `encargado_${centerId}`, role: 'Encargado', centerId });
+      navigate(`/center/${centerId}/inventory`); // Lo redirigimos a su inventario
     } else {
-      setError('Por favor, ingresa usuario y contraseña.');
+      setError('Usuario no reconocido. Prueba con "admin" o "encargado-C001".');
     }
-    // --- FIN DE LA SIMULACIÓN ---
   };
 
+ 
+  //USERS: admin o encargado-CXXX ej: encargado-C001
+  //se puede poner cualquier cosa en la contraseña o dejar en blanc
   return (
     <div className="login-page">
       <div className="login-container">
         <h2>Iniciar Sesión</h2>
         <p>Acceso para Municipalidad y Encargados de Centro.</p>
-        
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="username">Usuario:</label>
@@ -43,27 +45,22 @@ const LoginPage: React.FC = () => {
               type="text"
               id="username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)} // Actualiza el estado
+              onChange={(e) => setUsername(e.target.value)}
               placeholder="Tu nombre de usuario"
             />
           </div>
-          
           <div className="form-group">
             <label htmlFor="password">Contraseña:</label>
             <input
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)} // Actualiza el estado
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Tu contraseña"
             />
           </div>
-
-          {error && <p className="error-message">{error}</p>} 
-          
-          <button type="submit" className="login-button">
-            Acceder
-          </button>
+          {error && <p className="error-message">{error}</p>}
+          <button type="submit" className="login-button">Acceder</button>
         </form>
       </div>
     </div>

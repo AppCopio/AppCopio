@@ -1,33 +1,58 @@
 // src/components/layout/navbar/Navbar.tsx
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import './Navbar.css';
 
-// Definimos el tipo de props que puede recibir
-interface NavbarProps {
-  isAdmin?: boolean; // Hacemos la prop opcional
-}
+const Navbar: React.FC = () => {
+  const { user, logout, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
-const Navbar: React.FC<NavbarProps> = ({ isAdmin = false }) => { // Por defecto no es admin
+  const handleLogout = () => {
+    if (window.confirm('¿Estás seguro de que quieres salir?')) {
+      logout();
+      navigate('/');
+    }
+  };
+
+  // --- LÓGICA DE RUTAS DINÁMICAS ---
+  // 1. Definimos cuál será la ruta "home" dependiendo del rol del usuario.
+  const homePath = user?.role === 'Emergencias' ? '/admin/dashboard' : '/';
+
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <Link to="/" style={{ color: 'white', textDecoration: 'none' }}> 
-            AppCopio
+        {/* 2. El logo ahora apunta a la ruta 'home' dinámica */}
+        <Link to={homePath} style={{ color: 'white', textDecoration: 'none' }}>
+          AppCopio
         </Link>
       </div>
       <ul className="navbar-links">
-        <li><Link to="/">Inicio</Link></li>
-        <li><Link to="/map">Mapa</Link></li>
-
-        {/* AQUÍ ESTÁ LA MAGIA: Muestra "Centros" solo si isAdmin es true */}
-        {isAdmin && (
-          <li><Link to="/admin/centers">Centros</Link></li>
+        {/* 3. El enlace de "Inicio" también usa la ruta dinámica */}
+        <li><NavLink to={homePath}>Inicio</NavLink></li>
+        <li><NavLink to="/map">Mapa</NavLink></li>
+        
+        {/* Links condicionales para el rol 'Emergencias' */}
+        {user?.role === 'Emergencias' && (
+          <>
+            {/* 4. HEMOS ELIMINADO el enlace 'Dashboard' de aquí porque ahora está en 'Inicio' */}
+            <li><NavLink to="/admin/centers">Centros</NavLink></li>
+          </>
         )}
 
-        {/* Si está en modo admin, quizás el link de login no tiene sentido
-            o podría cambiar a "Salir" o "Mi Perfil". Por ahora lo dejamos. */}
-        <li><Link to="/login">Acceder</Link></li>
+        {/* Links condicionales para el rol 'Encargado' */}
+        {user?.role === 'Encargado' && user.centerId && (
+          <>
+            <li><NavLink to={`/center/${user.centerId}/inventory`}>Mi Centro</NavLink></li>
+          </>
+        )}
+
+        {/* Botón de Login o Logout */}
+        {isAuthenticated ? (
+          <li><button onClick={handleLogout} className="logout-btn">Salir</button></li>
+        ) : (
+          <li><NavLink to="/login">Acceder</NavLink></li>
+        )}
       </ul>
     </nav>
   );

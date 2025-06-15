@@ -7,7 +7,7 @@ const AdminDashboard: React.FC = () => {
       <h2>Dashboard DIDECO - Vista Principal</h2>
       <p>
         Bienvenido al panel de control de AppCopio. Desde aquí podrás supervisar
-        y gestionar los centros de acopio y albergues de la comuna. [cite: 50]
+        y gestionar los centros de acopio y albergues de la comuna.
       </p>
       {/* Aquí irían estadísticas, alertas, accesos directos, etc. */}
       <ul>
