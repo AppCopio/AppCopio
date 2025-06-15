@@ -37,19 +37,21 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
     npm install
     ```
 
-3.  **Configura la Base de Datos PostgreSQL**:
+3.  **Configurar la Base de Datos PostgreSQL**:
     * Asegúrate de que tu servicio de PostgreSQL esté corriendo.
     * Usando `pgAdmin` o tu cliente de base de datos preferido, **crea una nueva base de datos vacía**. Se recomienda usar el nombre `appcopio_db`.
-    * Una vez creada, abre la "Query Tool" (Herramienta de Consultas) para esa base de datos y **ejecuta el siguiente script SQL completo**. Esto creará todas las tablas necesarias y cargará los datos iniciales.
+    * Una vez creada la base de datos, abre la "Query Tool" (Herramienta de Consultas) para esa base de datos y **ejecuta el siguiente script SQL completo**. Esto creará todas las tablas necesarias (incluyendo las de inventario) y cargará los datos iniciales.
 
     <details>
-    <summary>Haz clic aquí para ver el Script SQL completo o pidele el archivo .sql al bruno</summary>
+    <summary>Haz clic aquí para ver el Script SQL completo y actualizado</summary>
 
     ```sql
-    -- Borra las tablas si ya existen (útil si necesitas empezar de cero)
-    DROP TABLE IF EXISTS Users CASCADE;
-    DROP TABLE IF EXISTS Centers CASCADE;
-    DROP TABLE IF EXISTS Roles CASCADE;
+    -- Borra las tablas en orden correcto si ya existen para evitar errores de dependencias
+    DROP TABLE IF EXISTS CenterInventories;
+    DROP TABLE IF EXISTS Products;
+    DROP TABLE IF EXISTS Users;
+    DROP TABLE IF EXISTS Centers;
+    DROP TABLE IF EXISTS Roles;
 
     -- Tabla para Roles (Equipo de Emergencias, Encargado de Centro)
     CREATE TABLE Roles (
@@ -59,19 +61,7 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 
     INSERT INTO Roles (role_name) VALUES ('Emergencias'), ('Encargado');
 
-    -- Tabla para Usuarios
-    CREATE TABLE Users (
-        user_id SERIAL PRIMARY KEY,
-        username VARCHAR(100) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        email VARCHAR(100) UNIQUE,
-        role_id INT NOT NULL,
-        center_id VARCHAR(10),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (role_id) REFERENCES Roles(role_id)
-    );
-
-    -- Tabla para Centros
+    -- Tabla para Centros (Catastro)
     CREATE TABLE Centers (
         center_id VARCHAR(10) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
@@ -85,13 +75,59 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Insertamos algunos centros de ejemplo para probar
+    -- Insertamos algunos centros de ejemplo
     INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude) VALUES
     ('C001', 'Gimnasio Municipal Playa Ancha', 'Av. Playa Ancha 123', 'Albergue', 150, false, -33.036100, -71.606700),
     ('C002', 'Liceo Bicentenario Valparaíso', 'Calle Independencia 456', 'Acopio', 0, true, -33.045800, -71.619700),
     ('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 0, false, -33.039500, -71.628500);
 
-    SELECT 'Tablas creadas e inicializadas con éxito!' as status;
+    -- Tabla para Usuarios
+    CREATE TABLE Users (
+        user_id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        email VARCHAR(100) UNIQUE,
+        role_id INT NOT NULL,
+        center_id VARCHAR(10) REFERENCES Centers(center_id) ON DELETE SET NULL, -- Se conecta con Centros
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (role_id) REFERENCES Roles(role_id)
+    );
+
+    -- Tabla Maestra de Productos/Insumos
+    CREATE TABLE Products (
+        item_id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        description TEXT
+    );
+
+    -- Insertamos algunos productos de ejemplo
+    INSERT INTO Products (name, category) VALUES
+    ('Agua Embotellada 1.5L', 'Alimentos y Bebidas'),
+    ('Frazadas (1.5 plazas)', 'Ropa de Cama y Abrigo'),
+    ('Pañales para Adultos (Talla M)', 'Higiene Personal'),
+    ('Pañales para Niños (Talla G)', 'Higiene Personal'),
+    ('Comida para Mascotas (Perro)', 'Mascotas'),
+    ('Conservas (Atún, Legumbres)', 'Alimentos y Bebidas');
+
+    -- Tabla de Inventario por Centro (Tabla de Unión)
+    CREATE TABLE CenterInventories (
+        center_inventory_id SERIAL PRIMARY KEY,
+        center_id VARCHAR(10) NOT NULL,
+        item_id INT NOT NULL,
+        quantity INT NOT NULL CHECK (quantity >= 0),
+        last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (center_id) REFERENCES Centers(center_id) ON DELETE CASCADE,
+        FOREIGN KEY (item_id) REFERENCES Products(item_id) ON DELETE CASCADE,
+        UNIQUE (center_id, item_id)
+    );
+
+    -- Insertamos algunos registros de inventario de ejemplo para el centro C002
+    INSERT INTO CenterInventories (center_id, item_id, quantity) VALUES
+    ('C002', 1, 200),
+    ('C002', 2, 150);
+
+    SELECT 'Todas las tablas han sido creadas e inicializadas con éxito!' as status;
     ```
     </details>
 
