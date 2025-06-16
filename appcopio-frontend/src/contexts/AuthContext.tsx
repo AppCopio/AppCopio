@@ -1,10 +1,11 @@
 // src/contexts/AuthContext.tsx
-import React, { createContext, useState, useContext, type ReactNode } from 'react';
-// 1. Definimos la "forma" de nuestro usuario y del contexto
+import { createContext, useState, useContext, type ReactNode } from 'react';
+
+// La interfaz User no cambia
 interface User {
   username: string;
   role: 'Emergencias' | 'Encargado';
-  centerId?: string | null; // El ID del centro, opcional
+  centerId?: string | null;
 }
 
 interface AuthContextType {
@@ -14,21 +15,39 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-// 2. Creamos el contexto
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// 3. Creamos el "Proveedor" que envolverá nuestra aplicación
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  // --- CAMBIO 1: INICIALIZACIÓN DEL ESTADO ---
+  // Ahora, al iniciar, intentamos leer el usuario desde localStorage.
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const storedUser = window.localStorage.getItem('user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (error) {
+      console.error("Error al leer el usuario del localStorage", error);
+      return null;
+    }
+  });
 
   const login = (userData: User) => {
-    setUser(userData);
-    // En un futuro, aquí guardaríamos el token en localStorage
+    // --- CAMBIO 2: GUARDAR EN LOCALSTORAGE AL HACER LOGIN ---
+    try {
+      window.localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      console.error("Error al guardar el usuario en localStorage", error);
+    }
   };
 
   const logout = () => {
-    setUser(null);
-    // En un futuro, aquí borraríamos el token
+    // --- CAMBIO 3: BORRAR DE LOCALSTORAGE AL HACER LOGOUT ---
+    try {
+      window.localStorage.removeItem('user');
+      setUser(null);
+    } catch (error) {
+      console.error("Error al borrar el usuario de localStorage", error);
+    }
   };
 
   const isAuthenticated = !!user;
@@ -40,7 +59,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// 4. Creamos un "hook" personalizado para usar el contexto fácilmente
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

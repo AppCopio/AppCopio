@@ -7,7 +7,7 @@ const AdminLayout: React.FC = () => {
   return (
     <div className="admin-layout">
       {/* Le decimos a la Navbar que estamos en modo Admin */}
-      <Navbar isAdmin={true} /> 
+      <Navbar /> 
       <div className="admin-content">
         <main className="admin-main-area">
           <Outlet /> 
