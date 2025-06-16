@@ -3,24 +3,50 @@
     import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
     import './MapComponent.css';
 
-    interface Center {
+  interface Center {
     center_id: string;
     name: string;
     address: string;
     type: 'Acopio' | 'Albergue';
     capacity: number;
     is_active: boolean;
-    latitude: string | number;
-    longitude: string | number;
+    // Aunque TypeScript los define como number, la DB puede devolverlos como string.
+    // La conversión se hará antes de pasarlos al componente de Google Maps.
+    latitude: number | string; 
+    longitude: number | string;
+    fullnessPercentage: number; 
     }
+    
+    interface MapComponentProps {
+    centers: Center[]; // Un array de objetos Center
+    }
+    
     const apiKey = import.meta.env.VITE_Maps_API_KEY;
     const valparaisoCoords = { lat: -33.04, lng: -71.61 };
 
-    const MapComponent: React.FC = () => {
-    const [centers, setCenters] = useState<Center[]>([]);
+    const MapComponent: React.FC<MapComponentProps> = ({centers}) => {
+    //const [centes, setCenters] = useState<Center[]>([]);
     const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
 
-    useEffect(() => {
+    const getPinColor = (percentage: number): string => {
+        if (percentage >= 80) {
+            return '#4CAF50'; // Verde
+        } else if (percentage >= 50 && percentage < 80) {
+            return '#FFC107'; // Naranjo
+        } else {
+            return '#F44336'; // Rojo
+        }
+    };
+
+    const selectedCenter = centers.find(c => c.center_id === selectedCenterId);
+
+    // Si la clave API no está configurada, muestra un mensaje de error
+    if (!apiKey) {
+        return <div className="error-message">Error: Falta la Clave API de Google Maps (VITE_Maps_API_KEY). Revisa tu archivo .env.local</div>;
+    }
+
+
+    /*useEffect(() => {
         const apiUrl = 'http://localhost:4000/api/centers';
         fetch(apiUrl)
         .then(response => {
@@ -29,17 +55,13 @@
         })
         .then((data: Center[]) => setCenters(data))
         .catch(error => console.error("Hubo un problema con la llamada fetch:", error));
-    }, []);
-
-    if (!apiKey) {
-        return <div className="error-message">Error: Falta la Clave API de Google Maps. Revisa el archivo .env.local</div>;
-    }
+    }, []);*/
     
-    const selectedCenter = centers.find(c => c.center_id === selectedCenterId);
+    //const selectedCenter = centers.find(c => c.center_id === selectedCenterId);
 
     return (
         <APIProvider apiKey={apiKey}>
-        <div className="map-wrapper">
+        <div className="map-wrapper w-full h-full rounded-xl overflow-hidden shadow-lg">
             <Map
             defaultCenter={valparaisoCoords}
             defaultZoom={13}
@@ -47,6 +69,7 @@
             gestureHandling={'greedy'}
             disableDefaultUI={true}
             fullscreenControl={true}
+            style={{ width: '100%', height: '100%' }}
             >
             {centers.map(center => (
                 <AdvancedMarker

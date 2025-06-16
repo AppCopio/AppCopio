@@ -12,15 +12,51 @@ interface RequestParams {
 // GET (funciona)
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query('SELECT * FROM Centers ORDER BY name ASC');
-    res.status(200).json(result.rows);
+    const centersResult = await pool.query(
+      'SELECT center_id, name, address, type, capacity, is_active, latitude, longitude FROM Centers'
+    );
+    const centers = centersResult.rows;
+    const centersWithFullness = await Promise.all(centers.map(async (center) => {
+            try {
+                // Sumar la cantidad de todos los ítems asociados a este centro en CenterInventories.
+                // COALESCE(SUM(quantity), 0) asegura que si no hay ítems, el total sea 0 en lugar de NULL.
+                const inventoryResult = await pool.query(
+                    'SELECT COALESCE(SUM(quantity), 0) AS total_quantity FROM CenterInventories WHERE center_id = $1',
+                    [center.center_id]
+                );
+
+                const totalQuantity = parseInt(inventoryResult.rows[0].total_quantity, 10); // Convertir a número entero
+
+                let fullnessPercentage = 0;
+                // Definir la capacidad efectiva del centro para el cálculo del porcentaje.
+                // Si la capacidad definida en la DB es 0 (ej. para centros de acopio sin una capacidad numérica fija),
+                // asumimos una capacidad predeterminada de 1000 unidades para el cálculo.
+                const effectiveCapacity = center.capacity > 0 ? center.capacity : 1000; 
+
+                if (effectiveCapacity > 0) { // Evitar división por cero
+                    fullnessPercentage = (totalQuantity / effectiveCapacity) * 100;
+                }
+
+                // Devolver un nuevo objeto de centro que incluya todas sus propiedades originales
+                // más el nuevo campo 'fullnessPercentage'.
+                return {
+                    ...center,
+                    fullnessPercentage: parseFloat(fullnessPercentage.toFixed(2)) // Redondear a 2 decimales para limpieza
+                };
+            } catch (innerError) {
+                // Si ocurre un error al procesar un centro individual (ej. problema con la consulta de inventario),
+                // lo registramos y lo relanzamos para que el bloque catch principal lo maneje.
+                console.error(`Error al procesar el centro ${center.center_id}:`, innerError);
+                throw innerError; 
+            }
+        }));
+        res.json(centersWithFullness);
   } catch (error) {
-    console.error('Error al obtener los centros desde la base de datos:', error);
-    if (error instanceof Error) {
-        res.status(500).json({ message: 'Error interno del servidor al consultar los centros.', error: error.message });
-    } else {
-        res.status(500).json({ message: 'Error interno del servidor desconocido al consultar los centros.' });
-    }
+    console.error('Error al obtener centros con porcentaje de llenado (general):', error);
+        // Asegúrate de que solo se envíe una respuesta por solicitud.
+        if (!res.headersSent) { 
+            res.status(500).json({ message: 'Error interno del servidor al cargar centros.' });
+        }
   }
 });
 
