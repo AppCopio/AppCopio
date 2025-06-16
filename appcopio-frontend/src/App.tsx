@@ -15,6 +15,7 @@ import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import CenterManagementPage from './pages/CenterManagementPage/CenterManagementPage';
 import InventoryPage from './pages/InventoryPage/InventoryPage';
 import NeedsPage from './pages/NeedsPage/NeedsPage';
+import InventoryHistoryPage from './pages/InventoryHistoryPage/InventoryHistoryPage';
 
 import './App.css';
 
@@ -46,6 +47,10 @@ function App() {
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="needs" element={<NeedsPage />} />
             </Route>
+          </Route>
+          {/* --- Rutas Protegidas SOLO para el rol "Encargado" --- */}
+          <Route element={<ProtectedRoute allowedRoles={['Encargado']} />}>
+            <Route path="/historial-inventario" element={<InventoryHistoryPage />} />
           </Route>
 
           {/* Ruta para página no encontrada */}
