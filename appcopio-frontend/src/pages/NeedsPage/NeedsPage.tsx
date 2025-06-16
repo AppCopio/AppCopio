@@ -1,7 +1,7 @@
 // src/pages/NeedsPage/NeedsPage.tsx
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-// import './NeedsPage.css'; // Si necesitas estilos específicos
+import './NeedsPage.css';
 
 const NeedsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
@@ -16,12 +16,12 @@ const NeedsPage: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="needs-page">
       <h3>Crear Solicitud o Incidencia (Centro {centerId})</h3>
-      <p>Reporta necesidades de recursos o cualquier otra incidencia importante.</p>
+      <p className="instructions">Reporta necesidades de recursos o cualquier otra incidencia importante.</p>
 
-      <form onSubmit={handleSubmit}>
-        <div>
+      <form onSubmit={handleSubmit} className="needs-form">
+        <div className="form-group">
           <label htmlFor="description">Descripción:</label><br />
           <textarea 
             id="description" 
@@ -32,7 +32,7 @@ const NeedsPage: React.FC = () => {
             required
           ></textarea>
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="urgency">Nivel de Urgencia:</label><br />
           <select 
             id="urgency"
@@ -44,7 +44,7 @@ const NeedsPage: React.FC = () => {
             <option value="Alta">Alta</option>
           </select>
         </div>
-        <button type="submit">Enviar Solicitud</button>
+        <button type="submit" className="submit-btn">Enviar Solicitud</button>
       </form>
       {/* Aquí podrías mostrar una lista de solicitudes existentes */}
     </div>

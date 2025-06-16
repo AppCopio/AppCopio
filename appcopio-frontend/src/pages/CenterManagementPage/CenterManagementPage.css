@@ -31,7 +31,7 @@
 }
 
 .center-item.item-inactive {
-  border-left-color: #dc3545; /* Rojo si inactivo */
+  border-left-color: #ccc; /* Rojo si inactivo */
   opacity: 0.8;
 }
 
@@ -54,7 +54,7 @@
 
 .info-button {
   padding: 8px 15px;
-  background-color: #5bc0de;
+  background-color: #17a2b8;
   color: white;
   border: none;
   border-radius: 4px;
@@ -63,7 +63,7 @@
 }
 
 .info-button:hover {
-  background-color: #31b0d5;
+  background-color: #138496;
 }
 
 /* Estilos para el Switch (basado en W3Schools) */
@@ -135,11 +135,9 @@ input:checked + .slider:before {
     text-align: left;
 }
 
-
-
 .inventory-btn {
   padding: 8px 15px;
-  background-color: #17a2b8; 
+  background-color: #17a2b8;
   color: white;
   border-radius: 4px;
   text-decoration: none;
