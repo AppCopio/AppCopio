@@ -1,10 +1,9 @@
 // src/pages/InventoryPage/InventoryPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { addRequestToOutbox } from '../../utils/offlineDb'; // Importamos nuestro helper de IndexedDB
+import { addRequestToOutbox } from '../../utils/offlineDb';
 import './InventoryPage.css';
-import { Link } from 'react-router-dom';
 
 // --- INTERFACES ---
 interface InventoryItem {
@@ -21,7 +20,7 @@ interface GroupedInventory {
 
 // --- CONSTANTES ---
 const API_BASE_URL = 'http://localhost:4000/api';
-const SYNC_TAG = 'sync-inventory-updates'; // Etiqueta para nuestro evento de sincronización
+const SYNC_TAG = 'sync-inventory-updates';
 
 // --- COMPONENTE PRINCIPAL ---
 const InventoryPage: React.FC = () => {
@@ -92,33 +91,23 @@ const InventoryPage: React.FC = () => {
   };
   
   useEffect(() => {
-    Promise.all([fetchInventory(), fetchCategories()]);
+    setIsLoading(true);
+    Promise.all([fetchInventory(), fetchCategories()]).finally(() => setIsLoading(false));
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'SYNC_COMPLETED') {
+        console.log('Página de Inventario: Recibido mensaje de SYNC_COMPLETED. Refrescando datos...');
+        fetchInventory(false); 
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
   }, [centerId]);
-
-  useEffect(() => {
-  const handleMessage = (event: MessageEvent) => {
-    // Nos aseguramos de que el mensaje es el que nos interesa
-    if (event.data && event.data.type === 'SYNC_COMPLETED') {
-      console.log('Página de Inventario: Recibido mensaje de SYNC_COMPLETED. Refrescando datos...');
-      // Llamamos a nuestra función para volver a pedir los datos, sin mostrar el "Cargando..."
-      fetchInventory(false); 
-    }
-  };
-
-  // Añadimos el listener cuando el componente se monta
-  navigator.serviceWorker.addEventListener('message', handleMessage);
-
-  // Importante: removemos el listener cuando el componente se desmonta para evitar fugas de memoria
-  return () => {
-    navigator.serviceWorker.removeEventListener('message', handleMessage);
-  };
-}, []);
-
-
-
   
   const handleAddItemSubmit = async (e: React.FormEvent) => {
-
     e.preventDefault();
     if (!centerId) return;
     setIsSubmitting(true);
@@ -153,10 +142,27 @@ const InventoryPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-
   
-  const handleSaveChanges = async () => {
+  const handleOpenEditModal = (item: InventoryItem) => {
+    setEditingItem({ ...item });
+    setIsEditModalOpen(true);
+  };
 
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (!editingItem) return;
+    const { name, value } = e.target;
+    setEditingItem({
+      ...editingItem,
+      [name]: name === 'quantity' ? Number(value) : value,
+    });
+  };
+
+  const handleSaveChanges = async () => {
     if (!editingItem || !centerId) return;
     
     const originalItem = Object.values(inventory).flat().find(i => i.item_id === editingItem.item_id);
@@ -213,35 +219,10 @@ const InventoryPage: React.FC = () => {
       }
     } finally {
         setIsSubmitting(false);
-
-
     }
-
-    // 3. Registrar en historial
-    await fetch(`${API_BASE_URL}/inventory/log`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        center_id: user?.centerId,
-        product_name: editingItem.name,
-        quantity: editingItem.quantity,
-        action_type: 'edit'
-      })
-    });
-
-    // 4. Cerrar modal y recargar
-    handleCloseEditModal();
-    await fetchInventory();
-
-  } catch (err) {
-    alert(err instanceof Error ? err.message : 'Error desconocido al guardar los cambios');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleDeleteItem = async () => {
-
     if (!editingItem || !centerId) return;
     if (!window.confirm(`¿Estás seguro de que quieres eliminar "${editingItem.name}" del inventario de este centro?`)) return;
     
@@ -281,26 +262,6 @@ const InventoryPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-  
-  const handleOpenEditModal = (item: InventoryItem) => {
-    setEditingItem({ ...item });
-    setIsEditModalOpen(true);
-  };
-
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
-    setEditingItem(null);
-  };
-
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    if (!editingItem) return;
-    const { name, value } = e.target;
-    setEditingItem({
-      ...editingItem,
-      [name]: name === 'quantity' ? Number(value) : value,
-    });
-  };
-
 
   // --- RENDERIZADO DEL COMPONENTE ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
@@ -310,19 +271,19 @@ const InventoryPage: React.FC = () => {
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
-
         {user?.role === 'Encargado' && (
           <div style={{ display: 'flex', gap: '10px' }}>
             <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>
               + Añadir Nuevo Item
             </button>
-            <Link to="/historial-inventario" className="action-btn">
+            <Link to={`/center/${centerId}/history`} className="action-btn">
               Ver Historial
             </Link>
           </div>
         )}
-</div>
+      </div>
 
+      {/* Modal para Añadir Item */}
       {isAddModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -337,6 +298,7 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
 
+      {/* Modal para Editar Item */}
       {isEditModalOpen && editingItem && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -349,6 +311,7 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
       
+      {/* Renderizado de la Tabla de Inventario */}
       {Object.keys(inventory).length === 0 ? (<p>Este centro aún no tiene items en su inventario.</p>) : (Object.entries(inventory).map(([category, items]) => (
           <div key={category} className="category-section">
             <h4>{category}</h4>
