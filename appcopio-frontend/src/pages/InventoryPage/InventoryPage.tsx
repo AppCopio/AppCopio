@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext'; // <-- IMPORTAMOS EL HOOK DE AUTENTICACIÓN
 import './InventoryPage.css';
+import { Link } from 'react-router-dom';
 
 // --- INTERFACES ---
 interface InventoryItem {
@@ -88,26 +89,55 @@ const InventoryPage: React.FC = () => {
 
   // --- MANEJADORES DE EVENTOS (HANDLERS) ---
   const handleAddItemSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!centerId) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemName: newItemName, category: newItemCategory, quantity: newItemQuantity }),
-      });
-      if (!response.ok) throw new Error('Error del servidor al añadir el item');
-      setIsAddModalOpen(false);
-      setNewItemName('');
-      setNewItemQuantity(1);
-      await fetchInventory();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error desconocido al añadir el item');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  e.preventDefault();
+  if (!centerId) return;
+  setIsSubmitting(true);
+  try {
+    // 1. Añadir item al inventario
+    const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        itemName: newItemName,
+        category: newItemCategory,
+        quantity: newItemQuantity
+      }),
+    });
+
+    if (!response.ok) throw new Error('Error del servidor al añadir el item');
+
+    // 2. Registrar en historial
+    console.log('🔥 Enviando log al backend:', {
+      center_id: user?.centerId,
+      product_name: newItemName,
+      quantity: newItemQuantity,
+      action_type: 'add'
+    });
+    await fetch(`${API_BASE_URL}/inventory/log`, {
+
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        center_id: user?.centerId,
+        product_name: newItemName,
+        quantity: newItemQuantity,
+        action_type: 'add'
+      })
+    });
+
+    // 3. Resetear y recargar
+    setIsAddModalOpen(false);
+    setNewItemName('');
+    setNewItemQuantity(1);
+    await fetchInventory();
+
+  } catch (err) {
+    alert(err instanceof Error ? err.message : 'Error desconocido al añadir el item');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
   
   const handleOpenEditModal = (item: InventoryItem) => {
     setEditingItem({ ...item });
@@ -129,49 +159,89 @@ const InventoryPage: React.FC = () => {
   };
 
   const handleSaveChanges = async () => {
-    if (!editingItem || !centerId) return;
-    setIsSubmitting(true);
-    try {
-      const updateQuantityPromise = fetch(`${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: editingItem.quantity }),
-      });
-      const updateProductPromise = fetch(`${API_BASE_URL}/products/${editingItem.item_id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editingItem.name, category: editingItem.category }),
-      });
-      const responses = await Promise.all([updateQuantityPromise, updateProductPromise]);
-      for (const response of responses) {
-        if (!response.ok) throw new Error('Falló una de las actualizaciones. Revisa la consola.');
-      }
-      handleCloseEditModal();
-      await fetchInventory();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error desconocido al guardar los cambios');
-    } finally {
-      setIsSubmitting(false);
+  if (!editingItem || !centerId) return;
+  setIsSubmitting(true);
+  try {
+    // 1. Actualizar cantidad en inventario
+    const updateQuantityPromise = fetch(`${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity: editingItem.quantity }),
+    });
+
+    // 2. Actualizar datos del producto (nombre, categoría)
+    const updateProductPromise = fetch(`${API_BASE_URL}/products/${editingItem.item_id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: editingItem.name,
+        category: editingItem.category
+      }),
+    });
+
+    const responses = await Promise.all([updateQuantityPromise, updateProductPromise]);
+
+    for (const response of responses) {
+      if (!response.ok) throw new Error('Falló una de las actualizaciones. Revisa la consola.');
     }
-  };
+
+    // 3. Registrar en historial
+    await fetch(`${API_BASE_URL}/inventory/log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        center_id: user?.centerId,
+        product_name: editingItem.name,
+        quantity: editingItem.quantity,
+        action_type: 'edit'
+      })
+    });
+
+    // 4. Cerrar modal y recargar
+    handleCloseEditModal();
+    await fetchInventory();
+
+  } catch (err) {
+    alert(err instanceof Error ? err.message : 'Error desconocido al guardar los cambios');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleDeleteItem = async () => {
-    if (!editingItem || !centerId) return;
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar "${editingItem.name}" del inventario de este centro?`)) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('No se pudo eliminar el item desde el servidor.');
-      handleCloseEditModal();
-      await fetchInventory();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error desconocido al eliminar');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  if (!editingItem || !centerId) return;
+  if (!window.confirm(`¿Estás seguro de que quieres eliminar "${editingItem.name}" del inventario de este centro?`)) return;
+  setIsSubmitting(true);
+  try {
+    // 1. Eliminar item del inventario
+    const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) throw new Error('No se pudo eliminar el item desde el servidor.');
+
+    // 2. Registrar en historial
+    await fetch(`${API_BASE_URL}/inventory/log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        center_id: user?.centerId,
+        product_name: editingItem.name,
+        quantity: editingItem.quantity,
+        action_type: 'delete'
+      })
+    });
+
+    // 3. Cerrar modal y recargar
+    handleCloseEditModal();
+    await fetchInventory();
+
+  } catch (err) {
+    alert(err instanceof Error ? err.message : 'Error desconocido al eliminar');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // --- RENDERIZADO DEL COMPONENTE ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
@@ -181,13 +251,19 @@ const InventoryPage: React.FC = () => {
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
-        {/* Los botones de acción se muestran según el rol del usuario (H11) */}
+
+        {/* Botones visibles solo para el rol Encargado */}
         {user?.role === 'Encargado' && (
-          <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>
-            + Añadir Nuevo Item
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>
+              + Añadir Nuevo Item
+            </button>
+            <Link to="/historial-inventario" className="action-btn">
+              Ver Historial
+            </Link>
+          </div>
         )}
-      </div>
+</div>
 
       {/* Modal para Añadir Item */}
       {isAddModalOpen && (

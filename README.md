@@ -93,6 +93,12 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
         FOREIGN KEY (role_id) REFERENCES Roles(role_id)
     );
 
+    --Usuarios de ejemplo
+    INSERT INTO "Users" (username, password_hash, email, role_id, center_id)
+    VALUES 
+    ('admin_jrojas', 'temporal123', 'jrojas@admin.cl', 1, NULL),
+    ('admin_sofia', 'temporal456', 'sofia@admin.cl', 1, NULL);
+
     -- Tabla Maestra de Productos/Insumos
     CREATE TABLE Products (
         item_id SERIAL PRIMARY KEY,
@@ -126,6 +132,25 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
     INSERT INTO CenterInventories (center_id, item_id, quantity) VALUES
     ('C002', 1, 200),
     ('C002', 2, 150);
+
+    -- tabla Incidencias
+    CREATE TABLE "Incidents" (
+    incident_id SERIAL PRIMARY KEY,
+    description TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pendiente', -- 'pendiente', 'aceptada', 'rechazada'
+    registered_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMP, -- fecha de resolución si está aceptada o rechazada
+    resolution_comment TEXT, -- justificación si fue rechazada
+    resolved_by INTEGER REFERENCES "Users"(user_id), -- quién resolvió la incidencia
+    center_id VARCHAR(10) NOT NULL REFERENCES "Centers"(center_id),
+    assigned_to INTEGER REFERENCES "Users"(user_id) -- puede estar vacío inicialmente
+    );
+
+
+    -- Insertamos una incicdencia de ejempo para el centro C002
+    INSERT INTO "Incidents" (description,status,registered_at,center_id,assigned_to) VALUES 
+    ('Falta urgente de agua potable para 50 personas','pendiente',NOW(),'C001', NULL);
+
 
     SELECT 'Todas las tablas han sido creadas e inicializadas con éxito!' as status;
     ```
