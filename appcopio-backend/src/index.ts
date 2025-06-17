@@ -2,14 +2,17 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-dotenv.config();
+
 
 import pool from './config/db'; 
 
 import centerRoutes from './routes/centerRoutes'; 
 import productRoutes from './routes/productRoutes';
-import incidentRoutes from './routes/incidentRoutes';
+
+import inventoryRoutes from './routes/inventoryRoutes';
 import userRoutes from './routes/userRoutes';
+import incidentRoutes from './routes/incidentRoutes';
+dotenv.config();
 
 const app = express(); // Esta es tu instancia de 'Application'
 const port = process.env.PORT || 4000;
@@ -29,6 +32,8 @@ app.use('/api/centers', centerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/inventory', inventoryRoutes);
+
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
