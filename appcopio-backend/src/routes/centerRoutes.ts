@@ -5,6 +5,14 @@ import pool from '../config/db';
 
 const router = Router();
 
+const itemRatiosPerPerson: { [key: string]: number } = {
+    'Alimentos y Bebidas': 5,      // 5 unidades de alimentos/bebidas por persona
+    'Ropa de Cama y Abrigo': 2,    // 2 unidades de ropa de cama/abrigo por persona
+    'Higiene Personal': 3,         // 3 unidades de higiene personal por persona
+    'Mascotas': 1,                 // 1 unidad de comida para mascotas por persona
+    'Herramientas': 1              // Ejemplo de otra categoría
+};
+
 interface RequestParams {
   id: string;
 }
@@ -12,16 +20,98 @@ interface RequestParams {
 // GET (funciona)
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query('SELECT * FROM Centers ORDER BY name ASC');
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error('Error al obtener los centros desde la base de datos:', error);
-    if (error instanceof Error) {
-        res.status(500).json({ message: 'Error interno del servidor al consultar los centros.', error: error.message });
-    } else {
-        res.status(500).json({ message: 'Error interno del servidor desconocido al consultar los centros.' });
+    const centersResult = await pool.query(
+      'SELECT center_id, name, address, type, capacity, is_active, latitude, longitude FROM Centers'
+    );
+    const centers = centersResult.rows;
+    const centersWithFullness = await Promise.all(centers.map(async (center) => {
+            try {
+                // Si la capacidad del centro es 0 o indefinida, no podemos calcular un porcentaje significativo.
+                // Asumimos que para centros de acopio sin capacidad definida, pueden apuntar a 100 personas como objetivo.
+                // PARA ALBERGUES, la 'capacity' ya es el número de personas.
+                const peopleCapacity = center.capacity > 0 ? center.capacity : 100; // Capacidad en número de personas
+
+                // Si por alguna razón la capacidad sigue siendo 0, el llenado es 0%
+                if (peopleCapacity === 0) {
+                    console.log(`--- Centro: ${center.name} (${center.center_id}) ---`);
+                    console.log(`Capacidad en personas: ${peopleCapacity}`);
+                    console.log(`Porcentaje de llenado calculado: 0% (Capacidad 0)`);
+                    return { ...center, fullnessPercentage: 0 };
+                }
+                // Obtener el inventario del centro agrupado por categoría de producto
+                const inventoryByCategoryResult = await pool.query(
+                    `SELECT p.category, COALESCE(SUM(ci.quantity), 0) AS category_quantity
+                     FROM CenterInventories ci
+                     JOIN Products p ON ci.item_id = p.item_id
+                     WHERE ci.center_id = $1
+                     GROUP BY p.category`,
+                    [center.center_id]
+                );
+
+
+
+                const inventoryResult = await pool.query(
+                    'SELECT COALESCE(SUM(quantity), 0) AS total_quantity FROM CenterInventories WHERE center_id = $1',
+                    [center.center_id]
+                );
+
+                const inventoryMap = new Map<string, number>();
+                inventoryByCategoryResult.rows.forEach(row => {
+                    inventoryMap.set(row.category, parseInt(row.category_quantity, 10));
+                });
+
+                let totalSufficiencyScore = 0;
+                let categoriesConsideredCount = 0;
+
+                // Calcular la suficiencia para cada categoría relevante
+                for (const category in itemRatiosPerPerson) {
+                    if (Object.prototype.hasOwnProperty.call(itemRatiosPerPerson, category)) {
+                        const requiredPerPerson = itemRatiosPerPerson[category];
+                        const neededForCapacity = peopleCapacity * requiredPerPerson;
+                        const actualQuantity = inventoryMap.get(category) || 0;
+
+                        if (neededForCapacity > 0) {
+                            // Calcula la suficiencia para esta categoría, limitado a 100%
+                            const categorySufficiency = Math.min(actualQuantity / neededForCapacity, 1.0);
+                            totalSufficiencyScore += categorySufficiency;
+                            categoriesConsideredCount++;
+                        }
+                    }
+                }
+
+                let overallFullnessPercentage = 0;
+                if (categoriesConsideredCount > 0) {
+                    overallFullnessPercentage = (totalSufficiencyScore / categoriesConsideredCount) * 100;
+                }
+
+                // *** INICIO DE DEBUG: Imprimir valores por consola para cada centro ***
+                console.log(`\n--- Centro: ${center.name} (${center.center_id}) ---`);
+                console.log(`Tipo: ${center.type}, Capacidad (personas): ${peopleCapacity}`);
+                console.log(`Inventario por Categoría:`, Array.from(inventoryMap.entries()));
+                console.log(`Ratios de Necesidad por Persona:`, itemRatiosPerPerson);
+                console.log(`Suficiencia Total del Centro (Puntaje): ${totalSufficiencyScore.toFixed(2)}`);
+                console.log(`Categorías consideradas: ${categoriesConsideredCount}`);
+                console.log(`Porcentaje de llenado CALCULADO: ${overallFullnessPercentage.toFixed(2)}%`);
+                // *** FIN DE DEBUG ***
+
+                return {
+                    ...center,
+                    fullnessPercentage: parseFloat(overallFullnessPercentage.toFixed(2))
+                };
+            } catch (innerError) {
+                console.error(`Error al procesar el centro ${center.center_id}:`, innerError);
+                // Si hay un error interno, devolvemos el centro con 0% de llenado para que no se caiga la app,
+                // pero el error se registrará.
+                return { ...center, fullnessPercentage: 0 }; 
+            }
+        }));
+        res.json(centersWithFullness); 
+    } catch (error) {
+        console.error('Error al obtener centros con porcentaje de llenado (general):', error);
+        if (!res.headersSent) { 
+            res.status(500).json({ message: 'Error interno del servidor al cargar centros.' });
+        }
     }
-  }
 });
 
 // GET /api/centers/:id - Obtener un centro específico por su ID

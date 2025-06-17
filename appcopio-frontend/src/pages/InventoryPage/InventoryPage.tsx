@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { addRequestToOutbox } from '../../utils/offlineDb'; // Importamos nuestro helper de IndexedDB
 import './InventoryPage.css';
+import { Link } from 'react-router-dom';
 
 // --- INTERFACES ---
 interface InventoryItem {
@@ -117,6 +118,7 @@ const InventoryPage: React.FC = () => {
 
   
   const handleAddItemSubmit = async (e: React.FormEvent) => {
+
     e.preventDefault();
     if (!centerId) return;
     setIsSubmitting(true);
@@ -151,8 +153,10 @@ const InventoryPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
   
   const handleSaveChanges = async () => {
+
     if (!editingItem || !centerId) return;
     
     const originalItem = Object.values(inventory).flat().find(i => i.item_id === editingItem.item_id);
@@ -209,10 +213,35 @@ const InventoryPage: React.FC = () => {
       }
     } finally {
         setIsSubmitting(false);
+
+
     }
-  };
+
+    // 3. Registrar en historial
+    await fetch(`${API_BASE_URL}/inventory/log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        center_id: user?.centerId,
+        product_name: editingItem.name,
+        quantity: editingItem.quantity,
+        action_type: 'edit'
+      })
+    });
+
+    // 4. Cerrar modal y recargar
+    handleCloseEditModal();
+    await fetchInventory();
+
+  } catch (err) {
+    alert(err instanceof Error ? err.message : 'Error desconocido al guardar los cambios');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleDeleteItem = async () => {
+
     if (!editingItem || !centerId) return;
     if (!window.confirm(`¿Estás seguro de que quieres eliminar "${editingItem.name}" del inventario de este centro?`)) return;
     
@@ -272,6 +301,7 @@ const InventoryPage: React.FC = () => {
     });
   };
 
+
   // --- RENDERIZADO DEL COMPONENTE ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
   if (error) return <div className="inventory-container error-message">Error: {error}</div>;
@@ -280,12 +310,18 @@ const InventoryPage: React.FC = () => {
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
+
         {user?.role === 'Encargado' && (
-          <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>
-            + Añadir Nuevo Item
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>
+              + Añadir Nuevo Item
+            </button>
+            <Link to="/historial-inventario" className="action-btn">
+              Ver Historial
+            </Link>
+          </div>
         )}
-      </div>
+</div>
 
       {isAddModalOpen && (
         <div className="modal-overlay">
