@@ -3,6 +3,7 @@ import { createContext, useState, useContext, type ReactNode } from 'react';
 
 // La interfaz User no cambia
 interface User {
+  user_id: number;
   username: string;
   role: 'Emergencias' | 'Encargado';
   centerId?: string | null;

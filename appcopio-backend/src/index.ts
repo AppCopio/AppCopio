@@ -2,12 +2,14 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config();
 
 import pool from './config/db'; 
-import centerRoutes from './routes/centerRoutes'; 
 
+import centerRoutes from './routes/centerRoutes'; 
 import productRoutes from './routes/productRoutes';
-dotenv.config();
+import incidentRoutes from './routes/incidentRoutes';
+import userRoutes from './routes/userRoutes';
 
 const app = express(); // Esta es tu instancia de 'Application'
 const port = process.env.PORT || 4000;
@@ -25,6 +27,8 @@ app.get('/api', (req: Request, res: Response) => {
 // app.use() espera middleware o un router. 'centerRoutes' DEBE ser un router.
 app.use('/api/centers', centerRoutes); 
 app.use('/api/products', productRoutes);
+app.use('/api/incidents', incidentRoutes);
+app.use('/api/users', userRoutes);
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);

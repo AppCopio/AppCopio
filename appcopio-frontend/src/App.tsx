@@ -15,6 +15,7 @@ import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import CenterManagementPage from './pages/CenterManagementPage/CenterManagementPage';
 import InventoryPage from './pages/InventoryPage/InventoryPage';
 import NeedsPage from './pages/NeedsPage/NeedsPage';
+import IncidentListPage from './pages/IncidentListPage/IncidentListPage';
 
 import './App.css';
 
@@ -28,6 +29,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/incidentes" element={<IncidentListPage />} />
           </Route>
 
           {/* --- Rutas Protegidas para el Rol "Emergencias" --- */}
