@@ -1,20 +1,20 @@
     // src/components/map/MapComponent.tsx (Versión final y correcta)
     import React, { useState, useEffect } from 'react';
-    import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+    import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin} from '@vis.gl/react-google-maps';
     import './MapComponent.css';
 
   interface Center {
-    center_id: string;
-    name: string;
-    address: string;
-    type: 'Acopio' | 'Albergue';
-    capacity: number;
-    is_active: boolean;
-    // Aunque TypeScript los define como number, la DB puede devolverlos como string.
-    // La conversión se hará antes de pasarlos al componente de Google Maps.
-    latitude: number | string; 
-    longitude: number | string;
-    fullnessPercentage: number; 
+        center_id: string;
+        name: string;
+        address: string;
+        type: 'Acopio' | 'Albergue';
+        capacity: number;
+        is_active: boolean;
+        // Aunque TypeScript los define como number, la DB puede devolverlos como string.
+        // La conversión se hará antes de pasarlos al componente de Google Maps.
+        latitude: number | string; 
+        longitude: number | string;
+        fullnessPercentage: number; 
     }
     
     interface MapComponentProps {
@@ -71,7 +71,7 @@
             fullscreenControl={true}
             style={{ width: '100%', height: '100%' }}
             >
-            {centers.map(center => (
+            {/*centers.map(center => (
                 <AdvancedMarker
                 key={center.center_id}
                 position={{ lat: Number(center.latitude), lng: Number(center.longitude) }}
@@ -81,18 +81,39 @@
                 <div className={`marker-pin ${center.is_active ? 'active' : 'inactive'}`}>
                     <span>{center.type === 'Albergue' ? '🏠' : '📦'}</span>
                 </div>
+
                 </AdvancedMarker>
-            ))}
+            ))*/}
+            {centers.map(center => {
+                const pinColor = getPinColor(center.fullnessPercentage); // Get the color based on the percentage
+                return (
+                    <AdvancedMarker
+                        key={center.center_id} // Unique key for React
+                        // CRITICAL FIX HERE: Convert latitude and longitude to Number
+                        position={{ lat: Number(center.latitude), lng: Number(center.longitude) }} 
+                        title={`${center.name} (${center.fullnessPercentage.toFixed(0)}% full)`} // Title on hover
+                        onClick={() => setSelectedCenterId(center.center_id)} // On click, select this center
+                    >
+                        {/* Pin component to customize the marker */}
+                        <Pin background={pinColor} // Pin background color
+                            borderColor={pinColor} // Pin border color (same as background for a solid color)
+                            glyphColor={'#FFF'} // Glyph/icon color inside the pin (white for contrast)
+                        />
+                    </AdvancedMarker>
+                );
+            })}
+
             {selectedCenter && (
                 <InfoWindow
-                position={{ lat: Number(selectedCenter.latitude), lng: Number(selectedCenter.longitude) }}
-                onCloseClick={() => setSelectedCenterId(null)}
-                pixelOffset={[0, -40]}
+                    position={{ lat: Number(selectedCenter.latitude), lng: Number(selectedCenter.longitude) }}
+                    onCloseClick={() => setSelectedCenterId(null)} // Close the InfoWindow on click outside
+                    pixelOffset={[0, -40]}
                 >
                 <div className="infowindow-content">
                     <h4>{selectedCenter.name}</h4>
                     <p><strong>Tipo:</strong> {selectedCenter.type}</p>
                     <p><strong>Estado:</strong> {selectedCenter.is_active ? 'Activo' : 'Inactivo'}</p>
+                    <p className="text-sm mt-1"><strong>Llenado:</strong> {selectedCenter.fullnessPercentage.toFixed(0)}%</p>
                     <p>{selectedCenter.address}</p>
                 </div>
                 </InfoWindow>
