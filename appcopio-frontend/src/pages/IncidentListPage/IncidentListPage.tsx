@@ -10,6 +10,7 @@ interface Incident {
   center_id: string;
   assigned_to: number | null;
   assigned_username?: string | null; // opcional si haces el JOIN en backend
+  resolution_comment?: string | null; // opcional si haces el JOIN en backend
 }
 
 interface AdminUser {
@@ -93,6 +94,13 @@ const IncidentListPage: React.FC = () => {
   };
 
   const handleApprove = async (incidentId: number) => {
+
+    const incident = incidents.find(i => i.incident_id === incidentId);
+  if (!incident?.assigned_to) {
+    alert('Debes asignar un usuario antes de aprobar esta incidencia.');
+    return;
+  }
+
     try {
       await fetch(`/api/incidents/${incidentId}/approve`, {
         method: 'POST',
@@ -122,6 +130,12 @@ const IncidentListPage: React.FC = () => {
   const handleReject = async (incidentId: number) => {
     const comment = prompt('Ingrese una justificación para rechazar esta incidencia:');
     if (!comment) return;
+
+    const incident = incidents.find(i => i.incident_id === incidentId);
+  if (!incident?.assigned_to) {
+    alert('Debes asignar un usuario antes de rechazar esta incidencia.');
+    return;
+  }
 
     try {
       await fetch(`/api/incidents/${incidentId}/reject`, {
@@ -165,22 +179,23 @@ const IncidentListPage: React.FC = () => {
       <table>
         <thead>
           <tr>
-            <th>Descripción</th>
             <th>Fecha</th>
+            <th>Descripción</th>
             <th>Centro</th>
             <th>Estado</th>
             <th>Asignado a</th>
             <th>Acción</th>
+            <th>Comentario</th>
           </tr>
         </thead>
 
         <tbody>
           {incidents.map((incident) => (
             <tr key={incident.incident_id}>
-              <td>{incident.description}</td>
               <td>{new Date(incident.registered_at).toLocaleString()}</td>
+              <td>{incident.description}</td>
               <td>{incident.center_id}</td>
-              <td>{incident.status}</td>
+              <td className={`status ${incident.status}`}>{incident.status}</td>
               <td>{incident.assigned_username ?? incident.assigned_to ?? 'Nadie'}</td>
               <td>
                 {incident.status === 'pendiente' && (
@@ -206,7 +221,7 @@ const IncidentListPage: React.FC = () => {
                   </>
                 )}
               </td>
-
+              <td>{incident.resolution_comment}</td>
             </tr>
           ))}
         </tbody>

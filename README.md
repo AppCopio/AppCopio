@@ -80,9 +80,9 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	
 	-- Centros de ejemplo
 	INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude) VALUES
-	('C001', 'Gimnasio Municipal Playa Ancha', 'Av. Playa Ancha 123', 'Albergue', 150, false, -33.036100, -71.606700),
-	('C002', 'Liceo Bicentenario Valparaíso', 'Calle Independencia 456', 'Acopio', 0, true, -33.045800, -71.619700),
-	('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 0, false, -33.039500, -71.628500);
+    ('C001', 'Gimnasio Municipal Sann roque', 'San roque 123', 'Albergue', 150, false, -33.073440, -71.583330),
+    ('C002', 'Liceo Bicentenario Valparaíso', 'Calle Independencia 456', 'Acopio', 0, true, -33.045800, -71.619700),
+    ('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 0, false, -33.039500, -71.628500);
 	
 	-- Tabla de Usuarios
 	CREATE TABLE Users (
@@ -133,8 +133,10 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	
 	-- Inventario de ejemplo
 	INSERT INTO CenterInventories (center_id, item_id, quantity) VALUES
-	('C002', 1, 200),
-	('C002', 2, 150);
+	('C002', 1, 2000),
+	('C002', 2, 15000),
+	('C003', 2, 10000),
+	('C001', 1, 5000);
 	
 	-- Tabla de Incidencias
 	CREATE TABLE Incidents (
@@ -143,6 +145,7 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	    status VARCHAR(20) NOT NULL DEFAULT 'pendiente', -- 'pendiente', 'aceptada', 'rechazada'
 	    registered_at TIMESTAMP NOT NULL DEFAULT NOW(),
 	    resolved_at TIMESTAMP,
+		urgency VARCHAR(20) NOT NULL,
 	    resolution_comment TEXT,
 	    resolved_by INTEGER REFERENCES Users(user_id),
 	    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id),
@@ -150,8 +153,8 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	);
 	
 	-- Incidencia de ejemplo
-	INSERT INTO Incidents (description, status, registered_at, center_id, assigned_to)
-	VALUES ('Falta urgente de agua potable para 50 personas', 'pendiente', NOW(), 'C001', NULL);
+	INSERT INTO Incidents (description, status, registered_at, center_id, assigned_to, urgency)
+	VALUES ('Falta urgente de agua potable para 50 personas', 'pendiente', NOW(), 'C001', NULL, 'Media');
 	
 	CREATE TABLE InventoryLog (
 		log_id SERIAL PRIMARY KEY,

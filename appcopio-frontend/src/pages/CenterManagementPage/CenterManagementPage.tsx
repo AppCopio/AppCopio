@@ -22,7 +22,6 @@ const StatusSwitch: React.FC<{ center: Center; onToggle: (id: string) => void }>
         onChange={() => onToggle(center.center_id)} 
       />
       <span className="slider round"></span>
-      <span className="switch-label">{center.is_active ? 'Activo' : 'Inactivo'}</span>
     </label>
   );
 };
@@ -113,7 +112,7 @@ const CenterManagementPage: React.FC = () => {
                 to={`/center/${center.center_id}/inventory`} 
                 className="inventory-btn"
               >
-                Inventario
+                Gestionar
               </Link>
 
               <button 
