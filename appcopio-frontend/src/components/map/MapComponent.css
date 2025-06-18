@@ -1,7 +1,7 @@
 /* src/components/map/MapComponent.css */
 .map-wrapper {
   width: 100%;
-  height: calc(100vh - 60px); /* Ajusta la altura para que no quede debajo de la navbar */
+  height: calc(100vh - 60px); 
 }
 
 .error-message {
@@ -10,47 +10,52 @@
   text-align: center;
 }
 
+/* Estilo base para el pin personalizado */
 .marker-pin {
-  background-color: white;
-  padding: 5px;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  background-color: white; /* Fondo blanco para que resalte el emoji */
   font-size: 1.5em; 
   cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.3s ease;
-  border: 3px solid transparent;
-  width: 40px;
-  height: 40px;
+  transition: transform 0.2s ease, border-color 0.3s ease;
+  border: 4px solid grey; /* Un borde por defecto mientras carga */
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
   display: flex;
   justify-content: center;
   align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .marker-pin:hover {
     transform: scale(1.2);
 }
 
-.marker-pin.active {
-  border-color: #28a745; /* Verde si activo */
-  background-color: #d4edda;
+/* --- ESTILOS DE ESTADO PARA EL BORDE --- */
+.marker-pin.status-ok {
+  border-color: #28a745; /* Verde */
+}
+.marker-pin.status-warning {
+  border-color: #ffc107; /* Naranja/Amarillo */
+}
+.marker-pin.status-critical {
+  border-color: #dc3545; /* Rojo */
+}
+.marker-pin.status-inactive {
+  border-color: #6c757d; /* Gris */
+  opacity: 0.6;
+  filter: grayscale(80%); /* Efecto para que se vea apagado */
 }
 
-.marker-pin.inactive {
-  border-color: #6c757d; /* Gris si inactivo */
-  background-color: #f8f9fa;
-  opacity: 0.7;
-}
 
+/* Estilos para la ventana de información */
 .infowindow-content {
   padding: 5px 10px;
   text-align: left;
 }
-
 .infowindow-content h4 {
   margin: 0 0 5px 0;
   color: #333;
 }
-
 .infowindow-content p {
   margin: 3px 0;
   font-size: 0.9em;
