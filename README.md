@@ -46,7 +46,7 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
     <summary>Haz clic aquí para ver el Script SQL completo y actualizado</summary>
 
     ```sql
-    -- Eliminación en orden para evitar errores de dependencia
+	-- Eliminación en orden para evitar errores de dependencia
 	DROP TABLE IF EXISTS CenterInventories;
 	DROP TABLE IF EXISTS Products;
 	DROP TABLE IF EXISTS Incidents;
@@ -73,6 +73,7 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	    capacity INT DEFAULT 0,
 	    is_active BOOLEAN DEFAULT FALSE,
 	    latitude DECIMAL(9, 6),
+		fullness_percentage INT DEFAULT 0,
 	    longitude DECIMAL(9, 6),
 	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 	    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -80,9 +81,9 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	
 	-- Centros de ejemplo
 	INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude) VALUES
-    ('C001', 'Gimnasio Municipal Sann roque', 'San roque 123', 'Albergue', 150, false, -33.073440, -71.583330),
-    ('C002', 'Liceo Bicentenario Valparaíso', 'Calle Independencia 456', 'Acopio', 0, true, -33.045800, -71.619700),
-    ('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 0, false, -33.039500, -71.628500);
+    ('C001', 'Gimnasio Municipal San roque', 'San roque 123', 'Albergue', 200 , false, -33.073440, -71.583330),
+    ('C002', 'Liceo Bicentenario Valparaíso', 'Calle Independencia 456', 'Acopio', 100, true, -33.045800, -71.619700),
+    ('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 300, false, -33.039500, -71.628500);
 	
 	-- Tabla de Usuarios
 	CREATE TABLE Users (
@@ -133,10 +134,12 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	
 	-- Inventario de ejemplo
 	INSERT INTO CenterInventories (center_id, item_id, quantity) VALUES
-	('C002', 1, 2000),
-	('C002', 2, 15000),
-	('C003', 2, 10000),
-	('C001', 1, 5000);
+	('C002', 6, 30),
+	('C003', 1, 120),
+	('C003', 4, 120),
+	('C003', 6, 20),
+	('C001', 1, 100),
+	('C002', 3, 30);
 	
 	-- Tabla de Incidencias
 	CREATE TABLE Incidents (

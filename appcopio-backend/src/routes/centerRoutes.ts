@@ -6,9 +6,9 @@ import pool from '../config/db';
 const router = Router();
 
 const itemRatiosPerPerson: { [key: string]: number } = {
-    'Alimentos y Bebidas': 5,      // 5 unidades de alimentos/bebidas por persona
-    'Ropa de Cama y Abrigo': 2,    // 2 unidades de ropa de cama/abrigo por persona
-    'Higiene Personal': 3,         // 3 unidades de higiene personal por persona
+    'Alimentos y Bebidas': 1,      // 5 unidades de alimentos/bebidas por persona
+    'Ropa de Cama y Abrigo': 1,    // 2 unidades de ropa de cama/abrigo por persona
+    'Higiene Personal': 1,         // 3 unidades de higiene personal por persona
     'Mascotas': 1,                 // 1 unidad de comida para mascotas por persona
     'Herramientas': 1              // Ejemplo de otra categoría
 };
@@ -29,7 +29,7 @@ router.get('/', async (req: Request, res: Response) => {
                 // Si la capacidad del centro es 0 o indefinida, no podemos calcular un porcentaje significativo.
                 // Asumimos que para centros de acopio sin capacidad definida, pueden apuntar a 100 personas como objetivo.
                 // PARA ALBERGUES, la 'capacity' ya es el número de personas.
-                const peopleCapacity = center.capacity > 0 ? center.capacity : 100; // Capacidad en número de personas
+                const peopleCapacity = center.capacity // Capacidad en número de personas
 
                 // Si por alguna razón la capacidad sigue siendo 0, el llenado es 0%
                 if (peopleCapacity === 0) {
@@ -61,27 +61,41 @@ router.get('/', async (req: Request, res: Response) => {
                 });
 
                 let totalSufficiencyScore = 0;
-                let categoriesConsideredCount = 0;
+                let contributingCategoriesCount = 0;
 
                 // Calcular la suficiencia para cada categoría relevante
                 for (const category in itemRatiosPerPerson) {
                     if (Object.prototype.hasOwnProperty.call(itemRatiosPerPerson, category)) {
                         const requiredPerPerson = itemRatiosPerPerson[category];
-                        const neededForCapacity = peopleCapacity * requiredPerPerson;
+                        // Cantidad total de esta categoría necesaria para la capacidad del centro.
+                        const neededForCategory = peopleCapacity * requiredPerPerson; 
+                        
+                        // Cantidad real que el centro tiene de esta categoría.
                         const actualQuantity = inventoryMap.get(category) || 0;
 
-                        if (neededForCapacity > 0) {
-                            // Calcula la suficiencia para esta categoría, limitado a 100%
-                            const categorySufficiency = Math.min(actualQuantity / neededForCapacity, 1.0);
+                        if (neededForCategory > 0) { // Evitar división por cero si no se necesita nada de esta categoría
+                            // Calcula la suficiencia para esta categoría (ej. 0.5 si tienen la mitad de lo necesario).
+                            // Se limita a 1.0 (100%) para que un exceso de un ítem no dispare el porcentaje completo.
+                            const categorySufficiency = Math.min(actualQuantity / neededForCategory, 1.0);
                             totalSufficiencyScore += categorySufficiency;
-                            categoriesConsideredCount++;
+                            
+                            // CAMBIO CLAVE: Solo incrementamos el contador si esta categoría tiene inventario real
+                            // Esto evita que las categorías sin ítems arrastren el promedio hacia abajo.
+                            if (actualQuantity > 0) { 
+                                contributingCategoriesCount++;
+                            }
                         }
                     }
                 }
 
                 let overallFullnessPercentage = 0;
-                if (categoriesConsideredCount > 0) {
-                    overallFullnessPercentage = (totalSufficiencyScore / categoriesConsideredCount) * 100;
+                if (contributingCategoriesCount > 0) { // Evitar división por cero si no hay categorías que contribuyan
+                    overallFullnessPercentage = (totalSufficiencyScore / contributingCategoriesCount) * 100;
+                } else if (totalSufficiencyScore > 0) { 
+                    // Caso borde: Si totalSufficiencyScore > 0 pero contributingCategoriesCount es 0
+                    // (ej. neededForCategory era 0 para todas las categorías, pero había algo de actualQuantity)
+                    // Consideramos que está 100% lleno en cuanto a las necesidades definidas.
+                    overallFullnessPercentage = 100; 
                 }
 
                 // *** INICIO DE DEBUG: Imprimir valores por consola para cada centro ***
@@ -90,7 +104,7 @@ router.get('/', async (req: Request, res: Response) => {
                 console.log(`Inventario por Categoría:`, Array.from(inventoryMap.entries()));
                 console.log(`Ratios de Necesidad por Persona:`, itemRatiosPerPerson);
                 console.log(`Suficiencia Total del Centro (Puntaje): ${totalSufficiencyScore.toFixed(2)}`);
-                console.log(`Categorías consideradas: ${categoriesConsideredCount}`);
+                //console.log(`Categorías consideradas: ${categoriesConsideredCount}`);
                 console.log(`Porcentaje de llenado CALCULADO: ${overallFullnessPercentage.toFixed(2)}%`);
                 // *** FIN DE DEBUG ***
 
