@@ -4,27 +4,37 @@ import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin} from '@vis.gl/react-
 import { useAuth } from '../../contexts/AuthContext';
 import './MapComponent.css';
 
-// 1. La interfaz se mantiene, esperando fullnessPercentage del backend
+// 1. La interfaz actualizada con el estado operativo
 interface Center {
     center_id: string;
     name: string;
     address: string;
     type: 'Acopio' | 'Albergue';
     is_active: boolean;
+    operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
+    public_note?: string;
     latitude: number | string; 
     longitude: number | string;
     fullnessPercentage: number; 
 }
 
-const apiKey = import.meta.env.VITE_Maps_API_KEY; // Corregido en una respuesta anterior
+const apiKey = (import.meta as any).env.VITE_Maps_API_KEY; // Clave API de Google Maps
 const valparaisoCoords = { lat: -33.04, lng: -71.61 };
 
-// 2. MODIFICAMOS LA FUNCIÓN para que devuelva un nombre de CLASE CSS
+// 2. MODIFICAMOS LA FUNCIÓN para considerar el estado operativo
 const getPinStatusClass = (center: Center): string => {
     if (!center.is_active) {
         return 'status-inactive'; // Gris
     }
-    // Lógica de clase basada en el porcentaje
+    
+    // Prioridad al estado operativo
+    if (center.operational_status === 'Cerrado Temporalmente') {
+        return 'status-temporarily-closed'; // Rojo/naranja especial
+    } else if (center.operational_status === 'Capacidad Máxima') {
+        return 'status-full-capacity'; // Amarillo especial
+    }
+    
+    // Lógica de clase basada en el porcentaje si está abierto
     if (center.fullnessPercentage < 33) {
         return 'status-critical'; // Rojo
     } else if (center.fullnessPercentage < 66) {
@@ -92,6 +102,14 @@ const MapComponent: React.FC = () => {
                                 <h4>{selectedCenter.name}</h4>
                                 <p><strong>Tipo:</strong> {selectedCenter.type}</p>
                                 <p><strong>Estado:</strong> {selectedCenter.is_active ? 'Activo' : 'Inactivo'}</p>
+                                {selectedCenter.operational_status && (
+                                    <p><strong>Estado Operativo:</strong> {selectedCenter.operational_status}</p>
+                                )}
+                                {selectedCenter.operational_status === 'Cerrado Temporalmente' && selectedCenter.public_note && (
+                                    <div className="public-note">
+                                        <p><strong>Nota:</strong> {selectedCenter.public_note}</p>
+                                    </div>
+                                )}
                                 <p><strong>Nivel de Abastecimiento:</strong> {selectedCenter.fullnessPercentage.toFixed(0)}%</p>
                             </div>
                         </InfoWindow>

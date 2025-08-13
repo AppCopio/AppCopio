@@ -46,6 +46,16 @@
   filter: grayscale(80%); /* Efecto para que se vea apagado */
 }
 
+/* Nuevos estados operativos */
+.marker-pin.status-temporarily-closed {
+  border-color: #fd7e14; /* Naranja más intenso */
+  background-color: #fff3cd; /* Fondo amarillo claro */
+}
+.marker-pin.status-full-capacity {
+  border-color: #ffc107; /* Amarillo */
+  background-color: #fff3cd; /* Fondo amarillo claro */
+}
+
 
 /* Estilos para la ventana de información */
 .infowindow-content {
@@ -60,4 +70,18 @@
   margin: 3px 0;
   font-size: 0.9em;
   color: #555;
+}
+
+/* Estilo para la nota pública */
+.public-note {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 8px 0;
+}
+.public-note p {
+  margin: 0;
+  color: #856404;
+  font-weight: 500;
 }
