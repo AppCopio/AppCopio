@@ -50,67 +50,71 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	DROP TABLE IF EXISTS CenterInventories;
 	DROP TABLE IF EXISTS Products;
 	DROP TABLE IF EXISTS Incidents;
-	DROP TABLE IF EXISTS Users;
 	DROP TABLE IF EXISTS InventoryLog;
+	DROP TABLE IF EXISTS Users;
 	DROP TABLE IF EXISTS Centers;
 	DROP TABLE IF EXISTS Roles;
-	
-	
+
+
 	-- Tabla de Roles
 	CREATE TABLE Roles (
-	    role_id SERIAL PRIMARY KEY,
-	    role_name VARCHAR(50) UNIQUE NOT NULL
+		role_id SERIAL PRIMARY KEY,
+		role_name VARCHAR(50) UNIQUE NOT NULL
 	);
-	
+
 	INSERT INTO Roles (role_name) VALUES ('Emergencias'), ('Encargado');
-	
+
 	-- Tabla de Centros
 	CREATE TABLE Centers (
-	    center_id VARCHAR(10) PRIMARY KEY,
-	    name VARCHAR(255) NOT NULL,
-	    address VARCHAR(255),
-	    type VARCHAR(50) NOT NULL CHECK (type IN ('Acopio', 'Albergue')),
-	    capacity INT DEFAULT 0,
-	    is_active BOOLEAN DEFAULT FALSE,
-	    latitude DECIMAL(9, 6),
+		center_id VARCHAR(10) PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		address VARCHAR(255),
+		type VARCHAR(50) NOT NULL CHECK (type IN ('Acopio', 'Albergue')),
+		capacity INT DEFAULT 0,
+		is_active BOOLEAN DEFAULT FALSE,
+		latitude DECIMAL(9, 6),
+		longitude DECIMAL(9, 6),
 		fullness_percentage INT DEFAULT 0,
-	    longitude DECIMAL(9, 6),
-	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-	    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+		-- NUEVAS COLUMNAS AÑADIDAS
+		operational_status VARCHAR(50) DEFAULT 'Abierto', -- 'Abierto', 'Cerrado Temporalmente', 'Capacidad Máxima'
+		public_note TEXT,
+		-- FIN DE NUEVAS COLUMNAS
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	);
-	
+
 	-- Centros de ejemplo
 	INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude) VALUES
-    ('C001', 'Gimnasio Municipal San roque', 'San roque 123', 'Albergue', 200 , false, -33.073440, -71.583330),
-    ('C002', 'Liceo Bicentenario Valparaíso', 'Calle Independencia 456', 'Acopio', 100, true, -33.045800, -71.619700),
-    ('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 300, false, -33.039500, -71.628500);
-	
+	('C001', 'Gimnasio Municipal San roque', 'San roque 123', 'Albergue', 200 , false, -33.073440, -71.583330),
+	('C002', 'Liceo Bicentenario Valparaíso', 'Calle Independencia 456', 'Acopio', 100, true, -33.045800, -71.619700),
+	('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 300, false, -33.039500, -71.628500);
+
 	-- Tabla de Usuarios
 	CREATE TABLE Users (
-	    user_id SERIAL PRIMARY KEY,
-	    username VARCHAR(100) UNIQUE NOT NULL,
-	    password_hash VARCHAR(255) NOT NULL,
-	    email VARCHAR(100) UNIQUE,
-	    role_id INT NOT NULL REFERENCES Roles(role_id),
-	    center_id VARCHAR(10),
-	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-	    FOREIGN KEY (center_id) REFERENCES Centers(center_id) ON DELETE SET NULL
+		user_id SERIAL PRIMARY KEY,
+		username VARCHAR(100) UNIQUE NOT NULL,
+		password_hash VARCHAR(255) NOT NULL,
+		email VARCHAR(100) UNIQUE,
+		role_id INT NOT NULL REFERENCES Roles(role_id),
+		center_id VARCHAR(10),
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (center_id) REFERENCES Centers(center_id) ON DELETE SET NULL
 	);
-	
+
 	-- Usuarios de ejemplo
 	INSERT INTO Users (username, password_hash, email, role_id, center_id)
 	VALUES 
 	('admin_jrojas', 'temporal123', 'jrojas@admin.cl', 1, NULL),
 	('admin_sofia', 'temporal456', 'sofia@admin.cl', 1, NULL);
-	
+
 	-- Tabla de Productos
 	CREATE TABLE Products (
-	    item_id SERIAL PRIMARY KEY,
-	    name VARCHAR(255) UNIQUE NOT NULL,
-	    category VARCHAR(100) NOT NULL,
-	    description TEXT
+		item_id SERIAL PRIMARY KEY,
+		name VARCHAR(255) UNIQUE NOT NULL,
+		category VARCHAR(100) NOT NULL,
+		description TEXT
 	);
-	
+
 	-- Productos de ejemplo
 	INSERT INTO Products (name, category) VALUES
 	('Agua Embotellada 1.5L', 'Alimentos y Bebidas'),
@@ -119,19 +123,19 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	('Pañales para Niños (Talla G)', 'Higiene Personal'),
 	('Comida para Mascotas (Perro)', 'Mascotas'),
 	('Conservas (Atún, Legumbres)', 'Alimentos y Bebidas');
-	
+
 	-- Tabla de Inventario por Centro
 	CREATE TABLE CenterInventories (
-	    center_inventory_id SERIAL PRIMARY KEY,
-	    center_id VARCHAR(10) NOT NULL,
-	    item_id INT NOT NULL,
-	    quantity INT NOT NULL CHECK (quantity >= 0),
-	    last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-	    FOREIGN KEY (center_id) REFERENCES Centers(center_id) ON DELETE CASCADE,
-	    FOREIGN KEY (item_id) REFERENCES Products(item_id) ON DELETE CASCADE,
-	    UNIQUE (center_id, item_id)
+		center_inventory_id SERIAL PRIMARY KEY,
+		center_id VARCHAR(10) NOT NULL,
+		item_id INT NOT NULL,
+		quantity INT NOT NULL CHECK (quantity >= 0),
+		last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (center_id) REFERENCES Centers(center_id) ON DELETE CASCADE,
+		FOREIGN KEY (item_id) REFERENCES Products(item_id) ON DELETE CASCADE,
+		UNIQUE (center_id, item_id)
 	);
-	
+
 	-- Inventario de ejemplo
 	INSERT INTO CenterInventories (center_id, item_id, quantity) VALUES
 	('C002', 6, 30),
@@ -140,25 +144,26 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	('C003', 6, 20),
 	('C001', 1, 100),
 	('C002', 3, 30);
-	
+
 	-- Tabla de Incidencias
 	CREATE TABLE Incidents (
-	    incident_id SERIAL PRIMARY KEY,
-	    description TEXT NOT NULL,
-	    status VARCHAR(20) NOT NULL DEFAULT 'pendiente', -- 'pendiente', 'aceptada', 'rechazada'
-	    registered_at TIMESTAMP NOT NULL DEFAULT NOW(),
-	    resolved_at TIMESTAMP,
+		incident_id SERIAL PRIMARY KEY,
+		description TEXT NOT NULL,
+		status VARCHAR(20) NOT NULL DEFAULT 'pendiente', -- 'pendiente', 'aceptada', 'rechazada'
 		urgency VARCHAR(20) NOT NULL,
-	    resolution_comment TEXT,
-	    resolved_by INTEGER REFERENCES Users(user_id),
-	    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id),
-	    assigned_to INTEGER REFERENCES Users(user_id)
+		resolution_comment TEXT,
+		registered_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		resolved_at TIMESTAMP,
+		resolved_by INTEGER REFERENCES Users(user_id),
+		center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id),
+		assigned_to INTEGER REFERENCES Users(user_id)
 	);
-	
+
 	-- Incidencia de ejemplo
 	INSERT INTO Incidents (description, status, registered_at, center_id, assigned_to, urgency)
 	VALUES ('Falta urgente de agua potable para 50 personas', 'pendiente', NOW(), 'C001', NULL, 'Media');
-	
+
+	-- Tabla de registro de cambios en el inventario
 	CREATE TABLE InventoryLog (
 		log_id SERIAL PRIMARY KEY,
 		center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id),
@@ -167,10 +172,9 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 		action_type TEXT CHECK (action_type IN ('add', 'edit', 'delete')),
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	);
-	
-	
+
 	-- Confirmación
-	SELECT 'Todas las tablas han sido creadas e inicializadas'
+	SELECT 'Todas las tablas han sido creadas e inicializadas';
     ```
     </details>
 
