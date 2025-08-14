@@ -53,6 +53,7 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	DROP TABLE IF EXISTS InventoryLog;
 	DROP TABLE IF EXISTS Users;
 	DROP TABLE IF EXISTS Centers;
+	DROP TABLE IF EXISTS Categories;
 	DROP TABLE IF EXISTS Roles;
 
 
@@ -63,6 +64,20 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	);
 
 	INSERT INTO Roles (role_name) VALUES ('Emergencias'), ('Encargado');
+
+	-- Tabla de Categorías
+	CREATE TABLE Categories (
+		category_id SERIAL PRIMARY KEY,
+		name VARCHAR(100) UNIQUE NOT NULL
+	);
+
+	-- Se insertan las categorías por defecto para que la aplicación las tenga desde el inicio
+	INSERT INTO Categories (name) VALUES 
+	('Alimentos y Bebidas'), 
+	('Ropa de Cama y Abrigo'), 
+	('Higiene Personal'), 
+	('Mascotas'),
+	('Herramientas');
 
 	-- Tabla de Centros
 	CREATE TABLE Centers (
@@ -75,10 +90,8 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 		latitude DECIMAL(9, 6),
 		longitude DECIMAL(9, 6),
 		fullness_percentage INT DEFAULT 0,
-		-- NUEVAS COLUMNAS AÑADIDAS
-		operational_status VARCHAR(50) DEFAULT 'Abierto', -- 'Abierto', 'Cerrado Temporalmente', 'Capacidad Máxima'
+		operational_status VARCHAR(50) DEFAULT 'Abierto',
 		public_note TEXT,
-		-- FIN DE NUEVAS COLUMNAS
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	);
@@ -107,22 +120,23 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	('admin_jrojas', 'temporal123', 'jrojas@admin.cl', 1, NULL),
 	('admin_sofia', 'temporal456', 'sofia@admin.cl', 1, NULL);
 
-	-- Tabla de Productos
+	-- Tabla de Productos (Modificada para usar category_id)
 	CREATE TABLE Products (
 		item_id SERIAL PRIMARY KEY,
 		name VARCHAR(255) UNIQUE NOT NULL,
-		category VARCHAR(100) NOT NULL,
-		description TEXT
+		description TEXT,
+		category_id INT REFERENCES Categories(category_id)
 	);
 
-	-- Productos de ejemplo
-	INSERT INTO Products (name, category) VALUES
-	('Agua Embotellada 1.5L', 'Alimentos y Bebidas'),
-	('Frazadas (1.5 plazas)', 'Ropa de Cama y Abrigo'),
-	('Pañales para Adultos (Talla M)', 'Higiene Personal'),
-	('Pañales para Niños (Talla G)', 'Higiene Personal'),
-	('Comida para Mascotas (Perro)', 'Mascotas'),
-	('Conservas (Atún, Legumbres)', 'Alimentos y Bebidas');
+	-- Productos de ejemplo actualizados para usar los IDs de la tabla Categories
+	-- Asumiendo: 1='Alimentos y Bebidas', 2='Ropa de Cama y Abrigo', 3='Higiene Personal', 4='Mascotas'
+	INSERT INTO Products (name, category_id) VALUES
+	('Agua Embotellada 1.5L', 1),
+	('Frazadas (1.5 plazas)', 2),
+	('Pañales para Adultos (Talla M)', 3),
+	('Pañales para Niños (Talla G)', 3),
+	('Comida para Mascotas (Perro)', 4),
+	('Conservas (Atún, Legumbres)', 1);
 
 	-- Tabla de Inventario por Centro
 	CREATE TABLE CenterInventories (
@@ -149,7 +163,7 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	CREATE TABLE Incidents (
 		incident_id SERIAL PRIMARY KEY,
 		description TEXT NOT NULL,
-		status VARCHAR(20) NOT NULL DEFAULT 'pendiente', -- 'pendiente', 'aceptada', 'rechazada'
+		status VARCHAR(20) NOT NULL DEFAULT 'pendiente',
 		urgency VARCHAR(20) NOT NULL,
 		resolution_comment TEXT,
 		registered_at TIMESTAMP NOT NULL DEFAULT NOW(),
