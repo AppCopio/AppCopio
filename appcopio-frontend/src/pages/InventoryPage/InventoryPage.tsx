@@ -1,8 +1,8 @@
-// src/pages/InventoryPage/InventoryPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { addRequestToOutbox } from '../../utils/offlineDb';
+import { fetchWithAbort } from '../../services/api';
 import './InventoryPage.css';
 
 // --- INTERFACES ---
@@ -19,14 +19,14 @@ interface GroupedInventory {
 }
 
 // --- CONSTANTES ---
-const API_BASE_URL = 'http://localhost:4000/api';
 const SYNC_TAG = 'sync-inventory-updates';
 
 // --- COMPONENTE PRINCIPAL ---
 const InventoryPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const { user } = useAuth();
-  
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   // --- ESTADOS ---
   const [inventory, setInventory] = useState<GroupedInventory>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -51,69 +51,111 @@ const InventoryPage: React.FC = () => {
       }).catch(err => console.error('Error al registrar la sincronización:', err));
     }
   };
-
-  const fetchInventory = async (showLoading = true) => {
+  
+  // Se refactoriza la función para poder ser reutilizada de forma segura.
+  const fetchInventory = async (showLoadingSpinner = true) => {
     if (!centerId) return;
-    if (showLoading) setIsLoading(true);
+    if (showLoadingSpinner) setIsLoading(true);
+    
+    // Se usa un AbortController local para esta llamada específica.
+    const controller = new AbortController();
     try {
-      const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory`);
-      if (!response.ok) throw new Error('Error al obtener el inventario del centro');
-      
-      const data: InventoryItem[] = await response.json();
+      const data = await fetchWithAbort<InventoryItem[]>(
+        `${apiUrl}/centers/${centerId}/inventory`,
+        controller.signal
+      );
       const groupedData = data.reduce((acc, item) => {
         const category = item.category || 'Sin Categoría';
         if (!acc[category]) acc[category] = [];
         acc[category].push(item);
         return acc;
       }, {} as GroupedInventory);
+
       setInventory(groupedData);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido');
-      console.error("Error al obtener inventario:", err);
+        if (err instanceof Error && err.name !== 'AbortError') {
+            setError(err.message);
+            console.error("Error al obtener inventario:", err);
+        }
     } finally {
-      if (showLoading) setIsLoading(false);
+      if (showLoadingSpinner) setIsLoading(false);
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/products/categories`);
-        if (!response.ok) throw new Error('Error al obtener las categorías');
-        const data: string[] = await response.json();
-        setCategories(data);
-        if (data.length > 0 && !newItemCategory) {
-            setNewItemCategory(data[0]);
-        }
-    } catch (err) {
-        console.error("Error al obtener categorías:", err);
-    }
-  };
-  
+  // --- EFECTOS ---
   useEffect(() => {
-    setIsLoading(true);
-    Promise.all([fetchInventory(), fetchCategories()]).finally(() => setIsLoading(false));
+    if (!centerId) {
+        setIsLoading(false);
+        return;
+    }
+
+    const controller = new AbortController();
+
+    const loadInitialData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            // Se ejecutan ambas peticiones de lectura inicial en paralelo y son cancelables.
+            const [inventoryData, categoriesData] = await Promise.all([
+                fetchWithAbort<InventoryItem[]>(`${apiUrl}/centers/${centerId}/inventory`, controller.signal),
+                fetchWithAbort<string[]>(`${apiUrl}/products/categories`, controller.signal)
+            ]);
+
+            // Procesamiento del inventario
+            const groupedData = inventoryData.reduce((acc, item) => {
+                const category = item.category || 'Sin Categoría';
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(item);
+                return acc;
+            }, {} as GroupedInventory);
+            setInventory(groupedData);
+
+            // Procesamiento de las categorías
+            setCategories(categoriesData);
+            if (categoriesData.length > 0 && !newItemCategory) {
+                setNewItemCategory(categoriesData[0]);
+            }
+        } catch (err) {
+            if (err instanceof Error && err.name !== 'AbortError') {
+                console.error("Error al cargar datos iniciales:", err);
+                setError("No se pudieron cargar los datos de la página.");
+            }
+        } finally {
+            if (!controller.signal.aborted) {
+                setIsLoading(false);
+            }
+        }
+    };
+    
+    loadInitialData();
 
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'SYNC_COMPLETED') {
-        console.log('Página de Inventario: Recibido mensaje de SYNC_COMPLETED. Refrescando datos...');
+        console.log('Página de Inventario: Recibido SYNC_COMPLETED. Refrescando datos...');
+        // Se llama a la función de fetch, que es segura.
         fetchInventory(false); 
       }
     };
+
     navigator.serviceWorker.addEventListener('message', handleMessage);
 
+    // La función de limpieza cancela las peticiones iniciales y remueve el listener.
     return () => {
+      controller.abort();
       navigator.serviceWorker.removeEventListener('message', handleMessage);
     };
-  }, [centerId]);
-  
+  }, [centerId, apiUrl]); // Se añade apiUrl a las dependencias.
+
+  // ... las demás funciones se actualizan para usar apiUrl ...
+
   const handleAddItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!centerId) return;
     setIsSubmitting(true);
     
     const request = {
-        url: `${API_BASE_URL}/centers/${centerId}/inventory`,
+        url: `${apiUrl}/centers/${centerId}/inventory`,
         method: 'POST',
         body: { itemName: newItemName, category: newItemCategory, quantity: newItemQuantity },
     };
@@ -138,7 +180,7 @@ const InventoryPage: React.FC = () => {
       setIsAddModalOpen(false);
       setNewItemName('');
       setNewItemQuantity(1);
-      await fetchInventory(false);
+      await fetchInventory(false); // Refresca los datos sin mostrar el spinner de carga
       setIsSubmitting(false);
     }
   };
@@ -168,7 +210,7 @@ const InventoryPage: React.FC = () => {
     const originalItem = Object.values(inventory).flat().find(i => i.item_id === editingItem.item_id);
     setIsSubmitting(true);
     
-    // --- UI Optimista ---
+    // UI Optimista
     setInventory(prev => {
         const newInventory = { ...prev };
         const categoryKey = originalItem?.category || 'Sin Categoría';
@@ -184,14 +226,14 @@ const InventoryPage: React.FC = () => {
     try {
       const promises: Promise<Response>[] = [];
       if (originalItem?.quantity !== editingItem.quantity) {
-        promises.push(fetch(`${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, {
+        promises.push(fetch(`${apiUrl}/centers/${centerId}/inventory/${editingItem.item_id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quantity: editingItem.quantity }),
         }));
       }
       if (originalItem?.name !== editingItem.name || originalItem?.category !== editingItem.category) {
-        promises.push(fetch(`${API_BASE_URL}/products/${editingItem.item_id}`, {
+        promises.push(fetch(`${apiUrl}/products/${editingItem.item_id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: editingItem.name, category: editingItem.category }),
@@ -203,13 +245,12 @@ const InventoryPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Fallo al guardar cambios, guardando para sincronización offline.', err);
-      // Esto responde a H15: actualizar inventario sin conexión
       if ('serviceWorker' in navigator && !navigator.onLine) {
         if (originalItem?.quantity !== editingItem.quantity) {
-          addRequestToOutbox({ url: `${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, method: 'PUT', body: { quantity: editingItem.quantity } });
+          addRequestToOutbox({ url: `${apiUrl}/centers/${centerId}/inventory/${editingItem.item_id}`, method: 'PUT', body: { quantity: editingItem.quantity } });
         }
         if (originalItem?.name !== editingItem.name || originalItem?.category !== editingItem.category) {
-          addRequestToOutbox({ url: `${API_BASE_URL}/products/${editingItem.item_id}`, method: 'PUT', body: { name: editingItem.name, category: editingItem.category } });
+          addRequestToOutbox({ url: `${apiUrl}/products/${editingItem.item_id}`, method: 'PUT', body: { name: editingItem.name, category: editingItem.category } });
         }
         registerForSync();
         alert('Estás sin conexión. Tus cambios se guardarán cuando vuelvas a tener internet.');
@@ -229,7 +270,7 @@ const InventoryPage: React.FC = () => {
     const originalInventory = inventory;
     setIsSubmitting(true);
     
-    // --- UI Optimista ---
+    // UI Optimista
     setInventory(prev => {
         const newInventory = { ...prev };
         const categoryKey = editingItem.category || 'Sin Categoría';
@@ -244,14 +285,14 @@ const InventoryPage: React.FC = () => {
     handleCloseEditModal();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, {
+      const response = await fetch(`${apiUrl}/centers/${centerId}/inventory/${editingItem.item_id}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('No se pudo eliminar el item desde el servidor.');
     } catch (err) {
       console.error('Fallo al eliminar item, guardando para sincronización offline.', err);
       if ('serviceWorker' in navigator && !navigator.onLine) {
-        addRequestToOutbox({ url: `${API_BASE_URL}/centers/${centerId}/inventory/${editingItem.item_id}`, method: 'DELETE', body: null });
+        addRequestToOutbox({ url: `${apiUrl}/centers/${centerId}/inventory/${editingItem.item_id}`, method: 'DELETE', body: null });
         registerForSync();
         alert('Estás sin conexión. El item se eliminará cuando vuelvas a tener internet.');
       } else {

@@ -1,42 +1,53 @@
-// src/pages/NeedsPage/NeedsPage.tsx
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import './NeedsFormPage.css';
 
 const NeedsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   const [description, setDescription] = useState('');
   const [urgency, setUrgency] = useState('Media');
-  
+  // Estado para gestionar el proceso de envío.
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const response = await fetch('http://localhost:4000/api/incidents', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        center_id: centerId,
-        description,
-        urgency,
-      }),
-    });
+    // Previene envíos múltiples si la petición anterior aún está en curso.
+    if (isSubmitting) return;
 
-    if (!response.ok) {
-      throw new Error('No se pudo enviar la solicitud');
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${apiUrl}/incidents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          center_id: centerId,
+          description,
+          urgency,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('No se pudo enviar la solicitud');
+      }
+
+      alert('Incidencia registrada con éxito');
+      // Resetea el formulario tras un envío exitoso.
+      setDescription('');
+      setUrgency('Media');
+    } catch (error) {
+      console.error('Error al enviar la incidencia:', error);
+      alert('Error al enviar la solicitud. Intenta nuevamente.');
+    } finally {
+      // Se asegura de reactivar el formulario sin importar el resultado.
+      setIsSubmitting(false);
     }
-
-    alert('Incidencia registrada con éxito');
-    setDescription('');
-    setUrgency('Media');
-  } catch (error) {
-    console.error('Error al enviar la incidencia:', error);
-    alert('Error al enviar la solicitud. Intenta nuevamente.');
-  }
-};
+  };
 
 
   return (
@@ -54,6 +65,7 @@ const NeedsPage: React.FC = () => {
             value={description}
             onChange={e => setDescription(e.target.value)}
             required
+            disabled={isSubmitting} // Deshabilita el campo durante el envío.
           ></textarea>
         </div>
         <div className="form-group">
@@ -62,15 +74,18 @@ const NeedsPage: React.FC = () => {
             id="urgency"
             value={urgency}
             onChange={e => setUrgency(e.target.value)}
+            disabled={isSubmitting} // Deshabilita el campo durante el envío.
           >
             <option value="Baja">Baja</option>
             <option value="Media">Media</option>
             <option value="Alta">Alta</option>
           </select>
         </div>
-        <button type="submit" className="submit-btn">Enviar Solicitud</button>
+        {/* El botón se deshabilita y cambia su texto durante el envío. */}
+        <button type="submit" className="submit-btn" disabled={isSubmitting}>
+          {isSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
+        </button>
       </form>
-      {/* Aquí podrías mostrar una lista de solicitudes existentes */}
     </div>
   );
 };

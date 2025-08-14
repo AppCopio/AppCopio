@@ -1,6 +1,7 @@
 // src/pages/CenterManagementPage/CenterManagementPage.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchWithAbort } from '../../services/api'; //  1. IMPORTAMOS EL SERVICIO
 import './CenterManagementPage.css';
 
 // La interfaz Center y el componente StatusSwitch se mantienen igual
@@ -31,24 +32,40 @@ const CenterManagementPage: React.FC = () => {
   const [centers, setCenters] = useState<Center[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const apiUrl = import.meta.env.VITE_API_URL; // Usamos la variable de entorno
 
-  // La función para obtener los datos iniciales se mantiene igual
+  //  2. USEEFFECT ACTUALIZADO CON EL PATRÓN ABORTCONTROLLER
   useEffect(() => {
-    const fetchCenters = async () => {
+    const controller = new AbortController();
+
+    const loadCenters = async () => {
+      // Reiniciamos el estado por si acaso (útil para futuras recargas)
+      setIsLoading(true);
+      setError(null);
+
       try {
-        const response = await fetch('http://localhost:4000/api/centers');
-        if (!response.ok) throw new Error('Error en la respuesta de la red');
-        const data: Center[] = await response.json();
+        const data = await fetchWithAbort<Center[]>(
+          `${apiUrl}/centers`, 
+          controller.signal
+        );
         setCenters(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido');
-        console.error("Error al obtener los centros:", err);
+        if (err instanceof Error && err.name !== 'AbortError') {
+          setError(err.message);
+          console.error("Error al obtener los centros:", err);
+        }
       } finally {
         setIsLoading(false);
       }
     };
-    fetchCenters();
-  }, []);
+
+    loadCenters();
+
+    // La función de limpieza que previene la race condition y memory leaks
+    return () => {
+      controller.abort();
+    };
+  }, [apiUrl]); // Añadimos apiUrl a las dependencias por buena práctica
 
   // La función para activar/desactivar se mantiene igual
   const handleToggleActive = async (id: string) => {
@@ -58,11 +75,9 @@ const CenterManagementPage: React.FC = () => {
     const newStatus = !centerToToggle.is_active;
 
     try {
-      const response = await fetch(`http://localhost:4000/api/centers/${id}/status`, {
+      const response = await fetch(`${apiUrl}/centers/${id}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: newStatus }),
       });
 
@@ -105,16 +120,13 @@ const CenterManagementPage: React.FC = () => {
               <h3>{center.name}</h3>
               <p>{center.address} ({center.type})</p>
             </div>
-            {/* --- SECCIÓN DE ACCIONES MODIFICADA --- */}
             <div className="center-actions">
-              {/* 1. BOTÓN/ENLACE AÑADIDO */}
               <Link 
                 to={`/center/${center.center_id}/inventory`} 
                 className="inventory-btn"
               >
                 Gestionar
               </Link>
-
               <button 
                 className="info-button" 
                 onClick={() => handleShowInfo(center.center_id)}
