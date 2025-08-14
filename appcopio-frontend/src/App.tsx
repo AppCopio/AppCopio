@@ -13,6 +13,7 @@ import MapPage from "./pages/MapPage/MapPage";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard/AdminDashboard";
 import CenterManagementPage from "./pages/CenterManagementPage/CenterManagementPage";
+import CenterDetailsPage from "./pages/CenterDetailsPage/CenterDetailsPage";
 import InventoryPage from "./pages/InventoryPage/InventoryPage";
 import NeedsFormPage from "./pages/NeedsFormPage/NeedsFormPage";
 import NeedsStatusPage from "./pages/NeedsStatusPage/NeedsStatusPage";
@@ -54,6 +55,7 @@ function App() {
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="needs/new" element={<NeedsFormPage />} />
               <Route path="needs/status" element={<NeedsStatusPage />} />
+              <Route path="details" element={<CenterDetailsPage />} />
             </Route>
           </Route>
 

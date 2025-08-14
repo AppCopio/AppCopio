@@ -3,17 +3,18 @@ import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-goog
 import { useAuth } from '../../contexts/AuthContext';
 import './MapComponent.css';
 
-// La interfaz debe ser idéntica a la usada en MapPage
-// Es buena práctica tenerla en un archivo compartido (ej: src/types.ts)
+// 1. La interfaz actualizada con el estado operativo
 interface Center {
     center_id: string;
     name: string;
     address: string;
     type: 'Acopio' | 'Albergue';
     is_active: boolean;
-    latitude: number;
-    longitude: number;
-    fullnessPercentage: number;
+    operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
+    public_note?: string;
+    latitude: number | string; 
+    longitude: number | string;
+    fullnessPercentage: number; 
 }
 
 // Se define la interfaz para las props que el componente recibe
@@ -24,15 +25,30 @@ interface MapComponentProps {
 const apiKey = import.meta.env.VITE_Maps_API_KEY;
 const valparaisoCoords = { lat: -33.04, lng: -71.61 };
 
+// 2. MODIFICAMOS LA FUNCIÓN para considerar el estado operativo
 const getPinStatusClass = (center: Center): string => {
-    if (!center.is_active) return 'status-inactive';
-    if (center.fullnessPercentage < 33) return 'status-critical';
-    if (center.fullnessPercentage < 66) return 'status-warning';
-    return 'status-ok';
+    if (!center.is_active) {
+        return 'status-inactive'; // Gris
+    }
+    
+    // Prioridad al estado operativo
+    if (center.operational_status === 'Cerrado Temporalmente') {
+        return 'status-temporarily-closed'; // Rojo/naranja especial
+    } else if (center.operational_status === 'Capacidad Máxima') {
+        return 'status-full-capacity'; // Amarillo especial
+    }
+    
+    // Lógica de clase basada en el porcentaje si está abierto
+    if (center.fullnessPercentage < 33) {
+        return 'status-critical'; // Rojo
+    } else if (center.fullnessPercentage < 66) {
+        return 'status-warning';  // Naranja
+    } else {
+        return 'status-ok';       // Verde
+    }
 };
 
-// Se actualiza la firma del componente para aceptar las props
-const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
+const MapComponent: React.FC = () => {
     const { isAuthenticated } = useAuth();
     // Se elimina el estado 'centers' y el useEffect, ya que los datos ahora vienen de las props.
     const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
@@ -81,6 +97,14 @@ const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
                                 <h4>{selectedCenter.name}</h4>
                                 <p><strong>Tipo:</strong> {selectedCenter.type}</p>
                                 <p><strong>Estado:</strong> {selectedCenter.is_active ? 'Activo' : 'Inactivo'}</p>
+                                {selectedCenter.operational_status && (
+                                    <p><strong>Estado Operativo:</strong> {selectedCenter.operational_status}</p>
+                                )}
+                                {selectedCenter.operational_status === 'Cerrado Temporalmente' && selectedCenter.public_note && (
+                                    <div className="public-note">
+                                        <p><strong>Nota:</strong> {selectedCenter.public_note}</p>
+                                    </div>
+                                )}
                                 <p><strong>Nivel de Abastecimiento:</strong> {selectedCenter.fullnessPercentage.toFixed(0)}%</p>
                             </div>
                         </InfoWindow>

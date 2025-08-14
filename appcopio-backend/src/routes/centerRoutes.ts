@@ -21,7 +21,7 @@ interface RequestParams {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const centersResult = await pool.query(
-      'SELECT center_id, name, address, type, capacity, is_active, latitude, longitude FROM Centers'
+      'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers'
     );
     const centers = centersResult.rows;
     const centersWithFullness = await Promise.all(centers.map(async (center) => {
@@ -268,6 +268,58 @@ router.patch('/:id/status', async (req: Request<{ id: string }>, res: Response) 
         res.status(200).json(updatedCenter.rows[0]);
     } catch (error) {
         console.error(`Error al actualizar estado del centro ${id}:`, error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error interno del servidor.', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error interno del servidor desconocido.' });
+        }
+    }
+});
+
+// PATCH /api/centers/:id/operational-status - Actualizar estado operativo del centro
+router.patch('/:id/operational-status', async (req: Request<{ id: string }>, res: Response) => {
+    const { id } = req.params;
+    const { operationalStatus, publicNote } = req.body;
+
+    // Validar que el estado operativo sea uno de los valores permitidos
+    const validStatuses = ['Abierto', 'Cerrado Temporalmente', 'Capacidad Máxima'];
+    if (!operationalStatus || !validStatuses.includes(operationalStatus)) {
+        res.status(400).json({ 
+            message: 'El campo "operationalStatus" es requerido y debe ser uno de: ' + validStatuses.join(', ') 
+        });
+        return;
+    }
+
+    try {
+        // Primero verificar que el centro existe
+        const centerExists = await pool.query(
+            'SELECT center_id FROM Centers WHERE center_id = $1',
+            [id]
+        );
+
+        if (centerExists.rows.length === 0) {
+            res.status(404).json({ message: 'Centro no encontrado.' });
+            return;
+        }
+
+        // Si no está "Cerrado Temporalmente", limpiar la nota pública
+        const noteToSave = operationalStatus === 'Cerrado Temporalmente' ? publicNote : null;
+
+        // Actualizar el estado operativo y nota pública
+        const updatedCenter = await pool.query(
+            `UPDATE Centers 
+             SET operational_status = $1, public_note = $2, updated_at = CURRENT_TIMESTAMP 
+             WHERE center_id = $3 
+             RETURNING center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude, updated_at`,
+            [operationalStatus, noteToSave, id]
+        );
+
+        res.status(200).json({
+            message: 'Estado operativo actualizado exitosamente',
+            center: updatedCenter.rows[0]
+        });
+    } catch (error) {
+        console.error(`Error al actualizar estado operativo del centro ${id}:`, error);
         if (error instanceof Error) {
             res.status(500).json({ message: 'Error interno del servidor.', error: error.message });
         } else {

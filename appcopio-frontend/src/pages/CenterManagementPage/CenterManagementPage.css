@@ -3,6 +3,94 @@
   padding: 20px;
 }
 
+.filters-section {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+}
+
+.filters-section h3 {
+  margin: 0 0 15px 0;
+  color: #337ab7;
+  font-size: 1.3em;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-group label {
+  font-weight: bold;
+  color: #555;
+  font-size: 0.9em;
+}
+
+.filter-group select,
+.filter-group input {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+  outline: none;
+  border-color: #337ab7;
+  box-shadow: 0 0 0 2px rgba(51, 122, 183, 0.2);
+}
+
+.filter-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.clear-filters-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.clear-filters-btn:hover {
+  background-color: #5a6268;
+}
+
+.results-info {
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  background-color: #e9ecef;
+  border-left: 4px solid #337ab7;
+  border-radius: 4px;
+}
+
+.results-info p {
+  margin: 0;
+  color: #495057;
+  font-size: 0.95em;
+}
+
+.offline-indicator {
+  color: #dc3545;
+  font-weight: bold;
+}
+
 .center-list {
   list-style: none;
   padding: 0;
@@ -46,6 +134,12 @@
   color: #666;
 }
 
+.fullness-info {
+  font-weight: bold;
+  color: #337ab7 !important;
+  margin-top: 5px !important;
+}
+
 .center-actions {
   display: flex;
   align-items: center;
@@ -64,6 +158,16 @@
 
 .info-button:hover {
   background-color: #138496;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #dee2e6;
 }
 
 /* Estilos para el Switch (basado en W3Schools) */
@@ -148,4 +252,49 @@ input:checked + .slider:before {
 }
 .inventory-btn:hover {
   background-color: #138496;
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .center-management-container {
+    padding: 15px;
+  }
+  
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .center-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .center-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 480px) {
+  .center-actions {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .inventory-btn,
+  .info-button {
+    text-align: center;
+    margin-right: 0;
+  }
 }
