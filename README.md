@@ -103,22 +103,30 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 300, false, -33.039500, -71.628500);
 
 	-- Tabla de Usuarios
-	CREATE TABLE Users (
-		user_id SERIAL PRIMARY KEY,
-		username VARCHAR(100) UNIQUE NOT NULL,
-		password_hash VARCHAR(255) NOT NULL,
-		email VARCHAR(100) UNIQUE,
-		role_id INT NOT NULL REFERENCES Roles(role_id),
-		center_id VARCHAR(10),
-		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (center_id) REFERENCES Centers(center_id) ON DELETE SET NULL
+	CREATE TABLE users (
+		user_id SERIAL PRIMARY KEY,   
+		rut VARCHAR(20) UNIQUE,       
+		password_hash VARCHAR(255) NOT NULL,    
+		email VARCHAR(100) UNIQUE NOT NULL,      
+		role_id INT NOT NULL REFERENCES roles(role_id),
+		center_id VARCHAR(10) REFERENCES centers(center_id) ON DELETE SET NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		imagen_perfil TEXT,
+		nombre VARCHAR(150),
+		genero VARCHAR(20),
+		celular VARCHAR(20),
+		is_active BOOLEAN NOT NULL DEFAULT TRUE
 	);
 
+
+
 	-- Usuarios de ejemplo
-	INSERT INTO Users (username, password_hash, email, role_id, center_id)
-	VALUES 
-	('admin_jrojas', 'temporal123', 'jrojas@admin.cl', 1, NULL),
-	('admin_sofia', 'temporal456', 'sofia@admin.cl', 1, NULL);
+	INSERT INTO users (user_id, rut, password_hash, email, role_id, center_id, nombre, is_active)
+	VALUES
+	(1,'12345678-9', 'temporal123', 'jrojas@admin.cl', 1, NULL, 'admin_jrojas', TRUE),
+	(2,'98765432-1', 'temporal456', 'sofia@admin.cl', 1, NULL, 'admin_sofia', TRUE);
+
+
 
 	-- Tabla de Productos (Modificada para usar category_id)
 	CREATE TABLE Products (
