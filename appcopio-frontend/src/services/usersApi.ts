@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? ""; // ej: http://localhost:3000
+const API_BASE = import.meta.env.VITE_API_BASE ?? ""; 
 
 function qs(params: Record<string, any>) {
   const s = new URLSearchParams();
