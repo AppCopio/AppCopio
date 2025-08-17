@@ -237,6 +237,7 @@ Ahora vamos con la parte visual.
 
         ```env
         VITE_Maps_API_KEY=TU_PROPIA_CLAVE_DE_API_DE_Maps
+		VITE_API_URL=http://localhost:4000/api
         ```
     * Recuerda configurar la facturación y las restricciones HTTP en tu clave para que funcione en `localhost`.
 
