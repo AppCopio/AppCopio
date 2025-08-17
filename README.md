@@ -105,6 +105,7 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 	-- Tabla de Usuarios
 	CREATE TABLE users (
 		user_id SERIAL PRIMARY KEY,   
+		username VARCHAR(100) UNIQUE NOT NULL,
 		rut VARCHAR(20) UNIQUE,       
 		password_hash VARCHAR(255) NOT NULL,    
 		email VARCHAR(100) UNIQUE NOT NULL,      
@@ -121,10 +122,10 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
 
 
 	-- Usuarios de ejemplo
-	INSERT INTO users (user_id, rut, password_hash, email, role_id, center_id, nombre, is_active)
+	INSERT INTO users (user_id, rut, password_hash, email, role_id, center_id, nombre, username, is_active)
 	VALUES
-	(1,'12345678-9', 'temporal123', 'jrojas@admin.cl', 1, NULL, 'admin_jrojas', TRUE),
-	(2,'98765432-1', 'temporal456', 'sofia@admin.cl', 1, NULL, 'admin_sofia', TRUE);
+	(1,'12345678-9', 'temporal123', 'jrojas@admin.cl', 1, NULL, 'admin_jrojas', 'admin_jrojas', TRUE),
+	(2,'98765432-1', 'temporal456', 'sofia@admin.cl', 1, NULL, 'admin_sofia', 'admin_sofia', TRUE);
 
 
 
