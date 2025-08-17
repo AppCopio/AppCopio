@@ -38,6 +38,7 @@ const Navbar: React.FC = () => {
             {/* 4. HEMOS ELIMINADO el enlace 'Dashboard' de aquí porque ahora está en 'Inicio' */}
             <li><NavLink to="/admin/centers">Centros</NavLink></li>
             <li><NavLink to="/admin/incidents">Incidencias</NavLink></li>
+            <li><NavLink to="/admin/users">Usuarios</NavLink></li>
           </>
         )}
 

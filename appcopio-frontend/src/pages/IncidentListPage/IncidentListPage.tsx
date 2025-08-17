@@ -103,29 +103,38 @@ const IncidentListPage: React.FC = () => {
 
   // Efecto para obtener la lista de administradores una sola vez.
   // Se le aplica el patrón para evitar memory leaks si el componente se desmonta.
-  useEffect(() => {
-    const controller = new AbortController();
-    
-    const fetchAdmins = async () => {
-      try {
-        const data = await fetchWithAbort<AdminUser[]>(
-            `${apiUrl}/users?role=Emergencias`, 
-            controller.signal
-        );
-        setAdminUsers(data);
-      } catch (err) {
-        if (err instanceof Error && err.name !== 'AbortError') {
-          console.error('Error al cargar usuarios de emergencia:', err);
-        }
-      }
-    };
 
-    fetchAdmins();
-    
-    return () => {
-        controller.abort();
+useEffect(() => {
+  const controller = new AbortController();
+
+  const fetchAdmins = async () => {
+    try {
+      const data = await fetchWithAbort<any>(
+        `${apiUrl}/users?role=Emergencias&page=1&pageSize=200`,
+        controller.signal
+      );
+
+      const list = Array.isArray(data) ? data
+                 : Array.isArray(data?.users) ? data.users
+                 : [];
+
+      const admins: AdminUser[] = list.map((u: any) => ({
+        user_id: u.user_id,
+        username: u.username,
+      }));
+
+      setAdminUsers(admins);
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.error("Error al cargar usuarios de emergencia:", err);
+        setAdminUsers([]); 
+      }
     }
-  }, [apiUrl]);
+  };
+
+  fetchAdmins();
+  return () => controller.abort();
+}, [apiUrl]);
 
   const handleAssign = async (incidentId: number, userId: number) => {
     try {

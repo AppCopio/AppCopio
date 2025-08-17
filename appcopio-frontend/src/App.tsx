@@ -21,6 +21,7 @@ import IncidentListPage from "./pages/IncidentListPage/IncidentListPage";
 import InventoryHistoryPage from "./pages/InventoryHistoryPage/InventoryHistoryPage";
 
 import "./App.css";
+import UsersManagementPage from "./pages/UsersManagementPage/UsersManagementPage";
 
 function App() {
   return (
@@ -41,6 +42,8 @@ function App() {
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="centers" element={<CenterManagementPage />} />
               <Route path="incidents" element={<IncidentListPage />} />
+              <Route path="users" element={<UsersManagementPage />} />
+
             </Route>
           </Route>
 
