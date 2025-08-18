@@ -33,19 +33,127 @@ INSERT INTO Categories (name) VALUES
 
 -- Tabla de Centros
 CREATE TABLE Centers (
+  --identificación y estado
 	center_id VARCHAR(10) PRIMARY KEY,
 	name VARCHAR(255) NOT NULL,
 	address VARCHAR(255),
-	type VARCHAR(50) NOT NULL CHECK (type IN ('Acopio', 'Albergue')),
-	capacity INT DEFAULT 0,
-	is_active BOOLEAN DEFAULT FALSE,
-	latitude DECIMAL(9, 6),
+  latitude DECIMAL(9, 6),
 	longitude DECIMAL(9, 6),
+	type VARCHAR(50) NOT NULL CHECK (type IN ('Acopio', 'Albergue')),
+	is_active BOOLEAN DEFAULT FALSE,
+  capacity INT DEFAULT 0, ---dato antiguo
 	fullness_percentage INT DEFAULT 0,
 	operational_status VARCHAR(50) DEFAULT 'Abierto',
 	public_note TEXT,
 	created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+  -- Caracterización del Inmueble
+  tipo_inmueble VARCHAR(255),
+  numero_habitaciones INT,
+  estado_conservacion VARCHAR(255),
+  material_muros VARCHAR(255),
+  material_pisos VARCHAR(255),
+  material_techo VARCHAR(255),
+  observaciones_acceso_y_espacios_comunes TEXT,
+
+  -- Acceso y Espacios Comunes (Escala de Likert)
+  espacio_10_afectados INT,
+  diversidad_funcional INT,
+  areas_comunes_accesibles INT,
+  espacio_recreacion INT,
+
+  -- Servicios Básicos (Escala de Likert)
+  agua_potable INT,
+  agua_estanques INT,
+  electricidad INT,
+  calefaccion INT,
+  alcantarillado INT,
+  observaciones_servicios_basicos TEXT,
+
+  -- Baños y Servicios Higiénicos (Escala de Likert)
+  estado_banos INT,
+  wc_proporcion_personas INT,
+  banos_genero INT,
+  banos_grupos_prioritarios INT,
+  cierre_banos_emergencia INT,
+  lavamanos_proporcion_personas INT,
+  dispensadores_jabon INT,
+  dispensadores_alcohol_gel INT,
+  papeleros_banos INT,
+  papeleros_cocina INT,
+  duchas_proporcion_personas INT,
+  lavadoras_proporcion_personas INT,
+  observaciones_banos_y_servicios_higienicos TEXT,
+  cantidad_banos_operativos INT,
+  duchas_calefaccion BOOLEAN,
+
+  -- Distribución de posibles habitaciones (Escala de Likert)
+  posee_habitaciones INT,
+  separacion_familias INT,
+  sala_lactancia INT,
+  observaciones_distribucion_habitaciones TEXT,
+
+  -- Herramientas y Mobiliario (Escala de Likert)
+  cuenta_con_mesas_sillas INT,
+  cocina_comedor_adecuados INT,
+  cuenta_equipamiento_basico_cocina INT,
+  cuenta_con_refrigerador INT,
+  cuenta_set_extraccion INT,
+  observaciones_herramientas_mobiliario TEXT,
+
+  -- Seguridad y Protección (Escala de Likert)
+  sistema_evacuacion_definido INT,
+  cuenta_con_senaleticas_adecuadas INT,
+  cuenta_con_luz_solar BOOLEAN,
+  observaciones_condiciones_seguridad_proteccion_generales TEXT,
+
+  -- Dimensión Animal (Escala de Likert y Checkbox)
+  existe_lugar_animales_dentro INT,
+  existe_lugar_animales_fuera INT,
+  existe_jaula_mascota BOOLEAN,
+  existe_recipientes_mascota BOOLEAN,
+  existe_correa_bozal BOOLEAN,
+  reconoce_personas_dentro_de_su_comunidad BOOLEAN,
+  no_reconoce_personas_dentro_de_su_comunidad BOOLEAN,
+  observaciones_dimension_animal TEXT,
+
+  -- Elementos de Seguridad y Protección Personal (Checkbox)
+  existen_cascos BOOLEAN,
+  existen_gorros_cabello BOOLEAN,
+  existen_gafas BOOLEAN,
+  existen_caretas BOOLEAN,
+  existen_mascarillas BOOLEAN,
+  existen_respiradores BOOLEAN,
+  existen_mascaras_gas BOOLEAN,
+  existen_guantes_latex BOOLEAN,
+  existen_mangas_protectoras BOOLEAN,
+  existen_calzados_seguridad BOOLEAN,
+  existen_botas_impermeables BOOLEAN,
+  existen_chalecos_reflectantes BOOLEAN,
+  existen_overoles_trajes BOOLEAN,
+  existen_camillas_catre BOOLEAN,
+
+  -- Elementos de Seguridad Comunitaria (Checkbox)
+  existen_alarmas_incendios BOOLEAN,
+  existen_hidrantes_mangueras BOOLEAN,
+  existen_senaleticas BOOLEAN,
+  existen_luces_emergencias BOOLEAN,
+  existen_extintores BOOLEAN,
+  existen_generadores BOOLEAN,
+  existen_baterias_externas BOOLEAN,
+  existen_altavoces BOOLEAN,
+  existen_botones_alarmas BOOLEAN,
+  existen_sistemas_monitoreo BOOLEAN,
+  existen_radio_recargable BOOLEAN,
+  existen_barandillas_escaleras BOOLEAN,
+  existen_puertas_emergencia_rapida BOOLEAN,
+  existen_rampas BOOLEAN,
+  existen_ascensores_emergencia BOOLEAN,
+
+  -- Preguntas de Evaluación (Checkbox)
+  importa_elementos_seguridad BOOLEAN,
+  importa_conocimientos_capacitaciones BOOLEAN
 );
 
 -- Centros de ejemplo
