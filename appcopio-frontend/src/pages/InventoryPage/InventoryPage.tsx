@@ -191,10 +191,15 @@ const InventoryPage: React.FC = () => {
       const newCategory: Category = await response.json();
       setCategories(prev => [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
       setNewCategoryName('');
+      // CORRECCIÓN 1: Se añade la alerta de éxito
+      alert(`Categoría "${newCategoryName.trim()}" añadida con éxito.`);
     } catch (err) {
       if (!navigator.onLine) {
         addRequestToOutbox(request);
         registerForSync();
+        // CORRECCIÓN 2: Se añade la actualización optimista para el modo offline
+        setCategories(prev => [...prev, { category_id: Date.now(), name: newCategoryName.trim() }].sort((a, b) => a.name.localeCompare(b.name)));
+        setNewCategoryName('');
         alert('Sin conexión. La categoría se añadirá al recuperar la conexión.');
       } else {
         alert(`Error: ${(err as Error).message}`);
@@ -215,10 +220,13 @@ const InventoryPage: React.FC = () => {
       if (!response.ok) throw new Error('Error del servidor.');
       setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
       setCategoryToDelete('');
+       // CORRECCIÓN 1: Se añade la alerta de éxito
+      alert('Categoría eliminada con éxito.');
     } catch (err) {
       if (!navigator.onLine) {
         addRequestToOutbox(request);
         registerForSync();
+         // CORRECCIÓN 2: Se añade la actualización optimista para el modo offline
         setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
         setCategoryToDelete('');
         alert('Sin conexión. La categoría se eliminará al recuperar la conexión.');
@@ -254,7 +262,6 @@ const InventoryPage: React.FC = () => {
     const itemToSave = { ...editingItem };
     const itemId = itemToSave.item_id;
     setIsSubmitting(true);
-    
     setInventory(prev => {
         const newInventory = { ...prev };
         const categoryKey = itemToSave.category || 'Sin Categoría';
@@ -265,7 +272,6 @@ const InventoryPage: React.FC = () => {
         }
         return newInventory;
     });
-    
     try {
       const request = {
         url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
@@ -300,12 +306,10 @@ const InventoryPage: React.FC = () => {
   const handleDeleteItem = async () => {
     if (!editingItem || !centerId) return;
     if (!window.confirm(`¿Seguro que quieres eliminar "${editingItem.name}"?`)) return;
-
     const itemToDelete = { ...editingItem };
     const itemId = itemToDelete.item_id;
     const originalInventory = inventory;
     setIsSubmitting(true);
-    
     setInventory(prev => {
         const newInventory = { ...prev };
         const categoryKey = itemToDelete.category || 'Sin Categoría';
@@ -317,7 +321,6 @@ const InventoryPage: React.FC = () => {
         }
         return newInventory;
     });
-
     try {
       const request = {
         url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
