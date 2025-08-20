@@ -10,10 +10,11 @@ import centerRoutes from './routes/centerRoutes';
 import productRoutes from './routes/productRoutes';
 
 import inventoryRoutes from './routes/inventoryRoutes';
-import userRouter from './routes/user.router';
+import userRouter from './routes/userRoutes';
 import incidentRoutes from './routes/incidentRoutes';
 
 import categoryRoutes from './routes/categoryRoutes';
+import assignmentRoutes from './routes/assignmentRoutes';
 dotenv.config();
 
 const app = express(); // Esta es tu instancia de 'Application'
@@ -36,6 +37,8 @@ app.use('/api/incidents', incidentRoutes);
 app.use('/api/users', userRouter);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/assignments', assignmentRoutes);
+
 
 
 app.listen(port, () => {

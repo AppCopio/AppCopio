@@ -1,35 +1,57 @@
 // src/components/auth/ProtectedRoute.tsx
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Definimos qué props puede recibir nuestro guardián
 interface ProtectedRouteProps {
-  allowedRoles: Array<'Emergencias' | 'Encargado'>;
+  allowedRoles: string[];
+  checkSupportAdmin?: boolean;
+  checkCenterAssignment?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
-  const { isAuthenticated, user } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  allowedRoles, 
+  checkSupportAdmin = false, 
+  checkCenterAssignment = false 
+}) => {
+  const { isAuthenticated, user, isLoading } = useAuth();
+  const { centerId } = useParams<{ centerId: string }>();
 
-  // 1. Chequeo: ¿Está el usuario autenticado?
-  if (!isAuthenticated) {
-    // Si no, lo redirigimos al login. 
-    // 'replace' evita que el usuario pueda volver a la página protegida con el botón "atrás" del navegador.
+  // Mientras se carga la sesión, no mostrar nada para evitar parpadeos
+  if (isLoading) {
+    return <div>Cargando...</div>; 
+  }
+
+  // Si no está autenticado, redirigir al login
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
 
-  // 2. Chequeo: ¿Tiene el usuario el rol permitido para esta ruta?
-  // Usamos 'user?' para asegurarnos de que user no sea null antes de acceder a 'role'
-  if (user && !allowedRoles.includes(user.role)) {
-    // Si no tiene el rol, lo redirigimos a una página de "No Autorizado" o al inicio.
-    // Por ahora, lo enviaremos al inicio.
-    console.warn(`Acceso denegado: El rol '${user.role}' no tiene permiso.`);
-    return <Navigate to="/" replace />;
+  // Comprobación de rol base
+  const hasRequiredRole = allowedRoles.includes(user.role_name);
+  
+  // Comprobación de permiso de Apoyo Administrador
+  const isSupportAdmin = checkSupportAdmin && user.es_apoyo_admin;
+
+  // Comprobación de asignación de centro
+  // Esta se activa solo si la ruta tiene un :centerId y la regla está habilitada
+  let isAssignedToCenter = true; // Asumimos que es verdad por defecto
+  if (checkCenterAssignment && centerId) {
+    // Un admin o apoyo puede acceder a cualquier centro. Un trabajador solo a los asignados.
+    isAssignedToCenter = 
+      user.role_name === 'Administrador' || 
+      user.es_apoyo_admin || 
+      user.assignedCenters.includes(centerId);
   }
 
-  // 3. Si pasó ambos chequeos, le permitimos ver el contenido.
-  // <Outlet /> renderizará la ruta hija que esté protegida (ej. AdminLayout o CenterLayout).
-  return <Outlet />;
+  // El usuario tiene acceso si cumple con alguna de las condiciones de permiso
+  // y, si es necesario, está asignado al centro.
+  if ((hasRequiredRole || isSupportAdmin) && isAssignedToCenter) {
+    return <Outlet />; // Si tiene permiso, muestra el contenido de la ruta
+  } else {
+    // Si no tiene permisos, lo redirigimos (podría ser a una página de "Acceso Denegado")
+    return <Navigate to="/" replace />;
+  }
 };
 
 export default ProtectedRoute;
