@@ -67,7 +67,7 @@ const InventoryPage: React.FC = () => {
         `${apiUrl}/centers/${centerId}/inventory`,
         new AbortController().signal
       );
-      const groupedData = data.reduce((acc, item) => {
+      const groupedData = (data || []).reduce((acc, item) => {
         const category = item.category || 'Sin Categoría';
         if (!acc[category]) acc[category] = [];
         acc[category].push(item);
@@ -84,7 +84,7 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  // --- EFECTOS ---
+  // --- EFECTO CORREGIDO Y MÁS ROBUSTO ---
   useEffect(() => {
     if (!centerId) {
         setIsLoading(false);
@@ -99,20 +99,49 @@ const InventoryPage: React.FC = () => {
                 fetchWithAbort<InventoryItem[]>(`${apiUrl}/centers/${centerId}/inventory`, controller.signal),
                 fetchWithAbort<Category[]>(`${apiUrl}/categories`, controller.signal)
             ]);
-            const groupedData = inventoryData.reduce((acc, item) => {
+
+            const groupedData = (inventoryData || []).reduce((acc, item) => {
                 const category = item.category || 'Sin Categoría';
                 if (!acc[category]) acc[category] = [];
                 acc[category].push(item);
                 return acc;
             }, {} as GroupedInventory);
             setInventory(groupedData);
-            setCategories(categoriesData);
-            if (categoriesData.length > 0 && newItemCategory === '') {
-                setNewItemCategory(String(categoriesData[0].category_id));
+
+            const validCategories = categoriesData || [];
+            setCategories(validCategories);
+            if (validCategories.length > 0 && newItemCategory === '') {
+                setNewItemCategory(String(validCategories[0].category_id));
             }
+            
+            localStorage.setItem(`inventory_cache_${centerId}`, JSON.stringify(inventoryData));
+            localStorage.setItem('categories_cache', JSON.stringify(categoriesData));
+
         } catch (err) {
             if (err instanceof Error && err.name !== 'AbortError') {
-                setError("No se pudieron cargar los datos de la página.");
+                console.warn("ADVERTENCIA: No se pudieron cargar los datos de la red. Intentando desde caché local.");
+                try {
+                    const cachedInventory = localStorage.getItem(`inventory_cache_${centerId}`);
+                    const cachedCategories = localStorage.getItem('categories_cache');
+
+                    if (cachedInventory) {
+                        const inventoryData: InventoryItem[] = JSON.parse(cachedInventory);
+                        const groupedData = (inventoryData || []).reduce((acc, item) => {
+                            const category = item.category || 'Sin Categoría';
+                            if (!acc[category]) acc[category] = [];
+                            acc[category].push(item);
+                            return acc;
+                        }, {} as GroupedInventory);
+                        setInventory(groupedData);
+                    }
+
+                    if (cachedCategories) {
+                        const categoriesData: Category[] = JSON.parse(cachedCategories);
+                        setCategories(categoriesData || []);
+                    }
+                } catch (cacheError) {
+                    setError("No se pudieron cargar los datos y el caché local está dañado.");
+                }
             }
         } finally {
             if (!controller.signal.aborted) {
@@ -120,7 +149,9 @@ const InventoryPage: React.FC = () => {
             }
         }
     };
+    
     loadInitialData();
+
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'SYNC_COMPLETED') {
         fetchInventory(false); 
@@ -134,7 +165,7 @@ const InventoryPage: React.FC = () => {
   }, [centerId, apiUrl]);
 
   // --- MANEJADORES DE EVENTOS ---
-
+  
   const handleAddItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!centerId || !newItemCategory) return alert("Por favor, selecciona una categoría.");
@@ -191,13 +222,11 @@ const InventoryPage: React.FC = () => {
       const newCategory: Category = await response.json();
       setCategories(prev => [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
       setNewCategoryName('');
-      // CORRECCIÓN 1: Se añade la alerta de éxito
       alert(`Categoría "${newCategoryName.trim()}" añadida con éxito.`);
     } catch (err) {
       if (!navigator.onLine) {
         addRequestToOutbox(request);
         registerForSync();
-        // CORRECCIÓN 2: Se añade la actualización optimista para el modo offline
         setCategories(prev => [...prev, { category_id: Date.now(), name: newCategoryName.trim() }].sort((a, b) => a.name.localeCompare(b.name)));
         setNewCategoryName('');
         alert('Sin conexión. La categoría se añadirá al recuperar la conexión.');
@@ -220,13 +249,11 @@ const InventoryPage: React.FC = () => {
       if (!response.ok) throw new Error('Error del servidor.');
       setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
       setCategoryToDelete('');
-       // CORRECCIÓN 1: Se añade la alerta de éxito
       alert('Categoría eliminada con éxito.');
     } catch (err) {
       if (!navigator.onLine) {
         addRequestToOutbox(request);
         registerForSync();
-         // CORRECCIÓN 2: Se añade la actualización optimista para el modo offline
         setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
         setCategoryToDelete('');
         alert('Sin conexión. La categoría se eliminará al recuperar la conexión.');
@@ -346,7 +373,7 @@ const InventoryPage: React.FC = () => {
 
   // --- RENDERIZADO ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
-  if (error) return <div className="inventory-container error-message">Error: {error}</div>;
+  if (error && !inventory) return <div className="inventory-container error-message">Error: {error}</div>;
 
   return (
     <div className="inventory-container">
@@ -361,7 +388,6 @@ const InventoryPage: React.FC = () => {
         )}
       </div>
 
-      {/* Modal para Añadir Item */}
       {isAddModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -383,7 +409,6 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal para Editar Item */}
       {isEditModalOpen && editingItem && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -402,7 +427,6 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal para Gestionar Categorías */}
       {isCategoryModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -432,7 +456,6 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
       
-      {/* Renderizado de la Tabla de Inventario */}
       {Object.keys(inventory).length === 0 ? (<p>Este centro no tiene items en inventario.</p>) : (Object.entries(inventory).map(([category, items]) => (
         <div key={category} className="category-section">
           <h4>{category}</h4>

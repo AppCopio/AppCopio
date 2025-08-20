@@ -1,12 +1,12 @@
-// src/pages/NeedsFormPage/NeedsFormPage.tsx
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { addRequestToOutbox } from '../../utils/offlineDb';
-// Se corrige la importación al nuevo archivo que acabamos de crear
+// NOTA: Asumo que ya creaste este archivo como te indiqué anteriormente.
+// Si no, créalo en src/utils/syncManager.ts
 import { registerForSync } from '../../utils/syncManager'; 
 import './NeedsFormPage.css';
 
-const NeedsFormPage: React.FC = () => {
+const NeedsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -43,11 +43,11 @@ const NeedsFormPage: React.FC = () => {
       setUrgency('Media');
     } catch (error) {
       console.error('Error al enviar la incidencia:', error);
+      // --- LÓGICA OFFLINE CORREGIDA ---
       if (!navigator.onLine) {
         alert('Estás sin conexión. La incidencia se guardó y se enviará cuando te conectes.');
         addRequestToOutbox(request);
-        // Se llama a la función importada con una etiqueta específica para las incidencias
-        registerForSync('sync-incidents');
+        registerForSync('sync-incidents'); // Usamos la etiqueta que el SW ahora entiende
       } else {
         alert('Error al enviar la solicitud. Intenta nuevamente.');
       }
@@ -94,4 +94,4 @@ const NeedsFormPage: React.FC = () => {
   );
 };
 
-export default NeedsFormPage;
+export default NeedsPage; 
