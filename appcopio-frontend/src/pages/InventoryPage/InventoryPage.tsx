@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { addRequestToOutbox } from '../../utils/offlineDb';
 import { fetchWithAbort } from '../../services/api';
+import { registerForSync } from '../../utils/syncManager';
 import './InventoryPage.css';
 
 // --- INTERFACES ---
@@ -48,26 +49,32 @@ const InventoryPage: React.FC = () => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryToDelete, setCategoryToDelete] = useState('');
 
+  // --- LÓGICA DE PERMISOS (PASO 5) ---
+  const isAdminOrSupport = user?.role_name === 'Administrador' || user?.es_apoyo_admin;
+  const isAssignedToCenter = user?.assignedCenters?.includes(centerId || '');
+  // El usuario puede gestionar si es admin/apoyo O si es un trabajador asignado a este centro.
+  const canManage = isAdminOrSupport || isAssignedToCenter;
+
   // --- FUNCIONES ---
 
-  const registerForSync = () => {
+    const registerForSync = () => {
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
       navigator.serviceWorker.ready.then(swRegistration => {
         swRegistration.sync.register(SYNC_TAG);
       }).catch(err => console.error('Error al registrar la sincronización:', err));
     }
   };
-  
+
+
   const fetchInventory = async (showLoadingSpinner = true) => {
     if (!centerId) return;
     if (showLoadingSpinner) setIsLoading(true);
-    
     try {
       const data = await fetchWithAbort<InventoryItem[]>(
         `${apiUrl}/centers/${centerId}/inventory`,
         new AbortController().signal
       );
-      const groupedData = data.reduce((acc, item) => {
+      const groupedData = (data || []).reduce((acc, item) => {
         const category = item.category || 'Sin Categoría';
         if (!acc[category]) acc[category] = [];
         acc[category].push(item);
@@ -99,20 +106,49 @@ const InventoryPage: React.FC = () => {
                 fetchWithAbort<InventoryItem[]>(`${apiUrl}/centers/${centerId}/inventory`, controller.signal),
                 fetchWithAbort<Category[]>(`${apiUrl}/categories`, controller.signal)
             ]);
-            const groupedData = inventoryData.reduce((acc, item) => {
+
+            const groupedData = (inventoryData || []).reduce((acc, item) => {
                 const category = item.category || 'Sin Categoría';
                 if (!acc[category]) acc[category] = [];
                 acc[category].push(item);
                 return acc;
             }, {} as GroupedInventory);
             setInventory(groupedData);
-            setCategories(categoriesData);
-            if (categoriesData.length > 0 && newItemCategory === '') {
-                setNewItemCategory(String(categoriesData[0].category_id));
+
+            const validCategories = categoriesData || [];
+            setCategories(validCategories);
+            if (validCategories.length > 0 && newItemCategory === '') {
+                setNewItemCategory(String(validCategories[0].category_id));
             }
+            
+            localStorage.setItem(`inventory_cache_${centerId}`, JSON.stringify(inventoryData));
+            localStorage.setItem('categories_cache', JSON.stringify(categoriesData));
+
         } catch (err) {
             if (err instanceof Error && err.name !== 'AbortError') {
-                setError("No se pudieron cargar los datos de la página.");
+                console.warn("ADVERTENCIA: No se pudieron cargar los datos de la red. Intentando desde caché local.");
+                try {
+                    const cachedInventory = localStorage.getItem(`inventory_cache_${centerId}`);
+                    const cachedCategories = localStorage.getItem('categories_cache');
+
+                    if (cachedInventory) {
+                        const inventoryData: InventoryItem[] = JSON.parse(cachedInventory);
+                        const groupedData = (inventoryData || []).reduce((acc, item) => {
+                            const category = item.category || 'Sin Categoría';
+                            if (!acc[category]) acc[category] = [];
+                            acc[category].push(item);
+                            return acc;
+                        }, {} as GroupedInventory);
+                        setInventory(groupedData);
+                    }
+
+                    if (cachedCategories) {
+                        const categoriesData: Category[] = JSON.parse(cachedCategories);
+                        setCategories(categoriesData || []);
+                    }
+                } catch (cacheError) {
+                    setError("No se pudieron cargar los datos y el caché local está dañado.");
+                }
             }
         } finally {
             if (!controller.signal.aborted) {
@@ -120,7 +156,9 @@ const InventoryPage: React.FC = () => {
             }
         }
     };
+    
     loadInitialData();
+
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'SYNC_COMPLETED') {
         fetchInventory(false); 
@@ -132,50 +170,49 @@ const InventoryPage: React.FC = () => {
       navigator.serviceWorker.removeEventListener('message', handleMessage);
     };
   }, [centerId, apiUrl]);
-
   // --- MANEJADORES DE EVENTOS ---
-
   const handleAddItemSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!centerId || !newItemCategory) return alert("Por favor, selecciona una categoría.");
-    setIsSubmitting(true);
-    const request = {
-        url: `${apiUrl}/centers/${centerId}/inventory`,
-        method: 'POST',
-        body: { 
-            itemName: newItemName, 
-            categoryId: parseInt(newItemCategory, 10),
-            quantity: newItemQuantity 
-        },
+      e.preventDefault();
+      if (!centerId || !newItemCategory) return alert("Por favor, selecciona una categoría.");
+      setIsSubmitting(true);
+      const request = {
+          url: `${apiUrl}/centers/${centerId}/inventory`,
+          method: 'POST',
+          body: { 
+              itemName: newItemName, 
+              categoryId: parseInt(newItemCategory, 10),
+              quantity: newItemQuantity 
+          },
+      };
+      try {
+        const response = await fetch(request.url, {
+          method: request.method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(request.body),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.msg || 'Error del servidor al añadir el item');
+        }
+      } catch (err) {
+        if (!navigator.onLine) {
+          addRequestToOutbox(request);
+          registerForSync();
+          alert('Estás sin conexión. El nuevo item se añadirá cuando vuelvas a tener internet.');
+        } else {
+          alert(`No se pudo añadir el item: ${(err as Error).message}`);
+        }
+      } finally {
+        setIsAddModalOpen(false);
+        setNewItemName('');
+        setNewItemQuantity(1);
+        await fetchInventory(false);
+        setIsSubmitting(false);
+      }
     };
-    try {
-      const response = await fetch(request.url, {
-        method: request.method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request.body),
-      });
-      if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.msg || 'Error del servidor al añadir el item');
-      }
-    } catch (err) {
-      if (!navigator.onLine) {
-        addRequestToOutbox(request);
-        registerForSync();
-        alert('Estás sin conexión. El nuevo item se añadirá cuando vuelvas a tener internet.');
-      } else {
-        alert(`No se pudo añadir el item: ${(err as Error).message}`);
-      }
-    } finally {
-      setIsAddModalOpen(false);
-      setNewItemName('');
-      setNewItemQuantity(1);
-      await fetchInventory(false);
-      setIsSubmitting(false);
-    }
-  };
-  
-  const handleAddCategory = async (e: React.FormEvent) => {
+
+
+const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newCategoryName.trim() === '') return alert('El nombre de la categoría no puede estar vacío.');
     setIsSubmitting(true);
@@ -191,10 +228,13 @@ const InventoryPage: React.FC = () => {
       const newCategory: Category = await response.json();
       setCategories(prev => [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
       setNewCategoryName('');
+      alert(`Categoría "${newCategoryName.trim()}" añadida con éxito.`);
     } catch (err) {
       if (!navigator.onLine) {
         addRequestToOutbox(request);
         registerForSync();
+        setCategories(prev => [...prev, { category_id: Date.now(), name: newCategoryName.trim() }].sort((a, b) => a.name.localeCompare(b.name)));
+        setNewCategoryName('');
         alert('Sin conexión. La categoría se añadirá al recuperar la conexión.');
       } else {
         alert(`Error: ${(err as Error).message}`);
@@ -204,7 +244,8 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  const handleDeleteCategory = async () => {
+
+const handleDeleteCategory = async () => {
     if (categoryToDelete === '') return alert('Selecciona una categoría para eliminar.');
     if (!window.confirm(`¿Seguro que deseas eliminar esta categoría?`)) return;
     setIsSubmitting(true);
@@ -215,6 +256,7 @@ const InventoryPage: React.FC = () => {
       if (!response.ok) throw new Error('Error del servidor.');
       setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
       setCategoryToDelete('');
+      alert('Categoría eliminada con éxito.');
     } catch (err) {
       if (!navigator.onLine) {
         addRequestToOutbox(request);
@@ -229,32 +271,27 @@ const InventoryPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-  
+
+
   const handleOpenEditModal = (item: InventoryItem) => {
     setEditingItem(item);
     setIsEditModalOpen(true);
   };
-
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
     setEditingItem(null);
   };
-
   const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (!editingItem) return;
     const { name, value } = e.target;
-    setEditingItem({
-      ...editingItem,
-      [name]: name === 'quantity' ? Number(value) : value,
-    });
+    setEditingItem({ ...editingItem, [name]: name === 'quantity' ? Number(value) : value });
   };
 
-  const handleSaveChanges = async () => {
+const handleSaveChanges = async () => {
     if (!editingItem || !centerId) return;
     const itemToSave = { ...editingItem };
     const itemId = itemToSave.item_id;
     setIsSubmitting(true);
-    
     setInventory(prev => {
         const newInventory = { ...prev };
         const categoryKey = itemToSave.category || 'Sin Categoría';
@@ -265,7 +302,6 @@ const InventoryPage: React.FC = () => {
         }
         return newInventory;
     });
-    
     try {
       const request = {
         url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
@@ -297,15 +333,15 @@ const InventoryPage: React.FC = () => {
     }
   };
 
+
+
   const handleDeleteItem = async () => {
     if (!editingItem || !centerId) return;
     if (!window.confirm(`¿Seguro que quieres eliminar "${editingItem.name}"?`)) return;
-
     const itemToDelete = { ...editingItem };
     const itemId = itemToDelete.item_id;
     const originalInventory = inventory;
     setIsSubmitting(true);
-    
     setInventory(prev => {
         const newInventory = { ...prev };
         const categoryKey = itemToDelete.category || 'Sin Categoría';
@@ -317,7 +353,6 @@ const InventoryPage: React.FC = () => {
         }
         return newInventory;
     });
-
     try {
       const request = {
         url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
@@ -340,25 +375,30 @@ const InventoryPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+  
 
   // --- RENDERIZADO ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
-  if (error) return <div className="inventory-container error-message">Error: {error}</div>;
+  if (error && Object.keys(inventory).length === 0) return <div className="inventory-container error-message">Error: {error}</div>;
 
   return (
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
-        {(user?.role === 'Encargado' || user?.role === 'Emergencias') && (
+        {/* La visibilidad de los botones ahora depende de la nueva lógica 'canManage' */}
+        {canManage && (
           <div style={{ display: 'flex', gap: '10px' }}>
             <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>+ Añadir Item</button>
-            <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
+            {/* Solo los admins/apoyo pueden gestionar el catálogo de categorías */}
+            {isAdminOrSupport && (
+                <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
+            )}
             <Link to={`/center/${centerId}/history`} className="action-btn">Ver Historial</Link>
           </div>
         )}
       </div>
 
-      {/* Modal para Añadir Item */}
+      {/* MODAL PARA AÑADIR ITEM */}
       {isAddModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -380,7 +420,7 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal para Editar Item */}
+      {/* MODAL PARA EDITAR ITEM */}
       {isEditModalOpen && editingItem && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -399,7 +439,7 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal para Gestionar Categorías */}
+      {/* MODAL PARA GESTIONAR CATEGORÍAS */}
       {isCategoryModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -429,18 +469,18 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
       
-      {/* Renderizado de la Tabla de Inventario */}
+      {/* RENDERIZADO DE LA TABLA DE INVENTARIO */}
       {Object.keys(inventory).length === 0 ? (<p>Este centro no tiene items en inventario.</p>) : (Object.entries(inventory).map(([category, items]) => (
         <div key={category} className="category-section">
           <h4>{category}</h4>
           <table className="inventory-table">
-            <thead><tr><th>Item</th><th>Cantidad</th>{(user?.role === 'Encargado' || user?.role === 'Emergencias') && <th>Acciones</th>}</tr></thead>
+            <thead><tr><th>Item</th><th>Cantidad</th>{canManage && <th>Acciones</th>}</tr></thead>
             <tbody>
               {items.map(item => (
                 <tr key={item.item_id}>
                   <td>{item.name}</td>
                   <td>{item.quantity}</td>
-                  {(user?.role === 'Encargado' || user?.role === 'Emergencias') && (
+                  {canManage && (
                     <td><button className="action-btn" onClick={() => handleOpenEditModal(item)}>Editar</button></td>
                   )}
                 </tr>

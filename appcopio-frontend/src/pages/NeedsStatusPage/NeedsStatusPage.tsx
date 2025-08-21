@@ -1,38 +1,30 @@
+// src/pages/NeedsStatusPage/NeedsStatusPage.tsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchWithAbort } from "../../services/api";
 import "./NeedsStatusPage.css";
 
-// Es buena práctica mover las interfaces compartidas a un archivo (ej: src/types.ts)
 interface Incident {
-  id: number;
+  incident_id: number; // Ajustado para coincidir con la BD
   description: string;
   urgency: string;
-  created_at: string;
-  status: "pendiente" | "aceptado" | "rechazado";
+  registered_at: string; // Ajustado
+  status: "pendiente" | "aceptada" | "rechazada";
   resolution_comment?: string | null;
   resolved_at?: string | null;
-  assigned_to_username?: string | null;
+  assigned_to_username?: string | null; // Nuevo campo
 }
 
 const NeedsStatusPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const apiUrl = import.meta.env.VITE_API_URL;
+  const cacheKey = `incidents_cache_${centerId}`; // Clave única para el caché de este centro
 
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Efecto para obtener las incidencias de un centro específico.
-  // Se refactoriza para ser resiliente a desmontajes y cambios rápidos.
   useEffect(() => {
-    // Si no hay centerId, no se ejecuta la petición.
-    if (!centerId) {
-        setIsLoading(false);
-        setError("No se ha especificado un centro.");
-        return;
-    }
-
     const controller = new AbortController();
 
     const fetchIncidents = async () => {
@@ -45,41 +37,50 @@ const NeedsStatusPage: React.FC = () => {
           controller.signal
         );
         setIncidents(data);
+        // Guardamos los datos en localStorage si la petición fue exitosa.
+        localStorage.setItem(cacheKey, JSON.stringify(data));
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {
-          console.error("Error al cargar las incidencias:", err);
-          setError(err.message);
+          console.error("Error de red al cargar incidencias, intentando desde caché.", err);
+          // --- LÓGICA OFFLINE ---
+          // Si falla, intentamos cargar desde el caché.
+          try {
+            const cachedData = localStorage.getItem(cacheKey);
+            if (cachedData) {
+              setIncidents(JSON.parse(cachedData));
+            } else {
+              setError("No se pudieron cargar las incidencias y no hay datos en caché.");
+            }
+          } catch (cacheError) {
+            setError("Error al leer los datos de caché.");
+          }
         }
       } finally {
-        // Asegura que el estado de carga se desactive solo si la petición no fue abortada.
         if (!controller.signal.aborted) {
           setIsLoading(false);
         }
       }
     };
 
-    fetchIncidents();
+    if (centerId) {
+      fetchIncidents();
+    }
 
-    // La función de limpieza cancela la petición si el componente se desmonta
-    // o si el centerId cambia antes de que la petición se complete.
     return () => {
       controller.abort();
     };
-  }, [centerId, apiUrl]); // Se depende del centerId y de la apiUrl.
+  }, [centerId, apiUrl, cacheKey]);
 
-  if (isLoading) {
-    return <div className="status-page">Cargando incidencias...</div>;
-  }
-  
-  if (error) {
-    return <div className="status-page error-message">Error: {error}</div>;
-  }
+  if (isLoading) return <p>Cargando...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   return (
     <div className="status-page">
       <h3>Estado de Solicitudes / Incidencias del Centro {centerId}</h3>
+      {!navigator.onLine && <p className="offline-notice">Estás sin conexión. Mostrando últimos datos guardados.</p>}
+      
       {incidents.length === 0 ? (
-        <p>No hay incidencias registradas para este centro.</p>
+        <p>No hay incidencias registradas.</p>
       ) : (
         <table className="status-table">
           <thead>
@@ -88,21 +89,15 @@ const NeedsStatusPage: React.FC = () => {
               <th>Descripción</th>
               <th>Urgencia</th>
               <th>Estado</th>
-              <th>Resuelto por</th>
-              <th>Comentario</th>
-              <th>Fecha resolución</th>
             </tr>
           </thead>
           <tbody>
             {incidents.map((inc) => (
-              <tr key={inc.id}>
-                <td>{new Date(inc.created_at).toLocaleString()}</td>
+              <tr key={inc.incident_id}>
+                <td>{new Date(inc.registered_at).toLocaleString()}</td>
                 <td>{inc.description}</td>
                 <td>{inc.urgency}</td>
                 <td className={`status ${inc.status}`}>{inc.status}</td>
-                <td>{inc.assigned_to_username || "—"}</td>
-                <td>{inc.resolution_comment || "—"}</td>
-                <td>{inc.resolved_at ? new Date(inc.resolved_at).toLocaleString() : "—"}</td>
               </tr>
             ))}
           </tbody>
