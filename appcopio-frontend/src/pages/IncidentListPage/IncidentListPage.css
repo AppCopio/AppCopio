@@ -26,3 +26,50 @@ button {
 button:hover {
   background-color: #0056b3;
 }
+
+/* Estilo base para la celda del estado */
+.status {
+  font-weight: bold;
+  text-transform: capitalize;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* Colores por estado */
+.status.pendiente {
+  background-color: #f0f0f0;
+  color: #555;
+}
+
+.status.aceptada {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status.rechazada {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+td select {
+  padding: 0.25rem;
+  margin-bottom: 0.3rem;
+  width: 100%;
+}
+
+button:nth-child(2) {
+  background-color: #28a745;
+  color: white;
+}
+
+button:nth-child(3) {
+  background-color: #dc3545;
+  color: white;
+}
+
+table select {
+  max-width: 120px;
+  font-size: 0.85rem;
+  padding: 4px;
+}

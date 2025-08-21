@@ -1,54 +1,79 @@
-// src/pages/MapPage/MapPage.tsx
-import React, { useState, useEffect }from 'react';
-import MapComponent from '../../components/map/MapComponent'; // <-- 1. IMPORTA el componente del mapa
+import React, { useState, useEffect } from 'react';
+import MapComponent from '../../components/map/MapComponent';
+import { fetchWithAbort } from '../../services/api';
 
+// La interfaz se puede mover a un archivo de tipos compartido (ej: src/types.ts)
 interface Center {
-    center_id: string;
-    name: string;
-    address: string;
-    type: 'Acopio' | 'Albergue';
-    capacity: number;
-    is_active: boolean;
-    latitude: number; // Important: use number, as the backend sends numbers
-    longitude: number; // Important: use number
-    fullnessPercentage: number; // This field comes from the backend
+  center_id: string;
+  name: string;
+  address: string;
+  type: 'Acopio' | 'Albergue';
+  capacity: number;
+  is_active: boolean;
+  latitude: number;
+  longitude: number;
+  fullnessPercentage: number;
 }
 
 const MapPage: React.FC = () => {
   const [centers, setCenters] = useState<Center[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const apiUrl = import.meta.env.VITE_API_URL;
 
+  // Efecto para obtener los centros.
+  // Se aplica el patrón AbortController para robustez y consistencia.
   useEffect(() => {
-        const fetchCenters = async () => {
-            try {
-                // The URL must point to the route we created in centerRoutes.ts in your backend
-                const response = await fetch('http://localhost:4000/api/centers'); // Or the port you are using (e.g., 3000, 4000)
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data: Center[] = await response.json();
-                setCenters(data);
-            } catch (err: any) {
-                console.error("Error fetching center data:", err); // Log the error
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const controller = new AbortController();
 
-        fetchCenters();
-    }, []);
+    const fetchCenters = async () => {
+      // Reinicia el estado al iniciar la carga
+      setLoading(true);
+      setError(null);
 
-    if (loading) return <div>Cargando centros...</div>;
-    if (error) return <div>Error: {error}</div>;
+      try {
+        const data = await fetchWithAbort<Center[]>(
+            `${apiUrl}/centers`,
+            controller.signal
+        );
+        setCenters(data);
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error("Error fetching center data:", err);
+          setError("No se pudieron cargar los datos de los centros.");
+        }
+      } finally {
+        // Asegura que el estado de carga se desactive solo si la petición no fue abortada.
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
 
-    return (
-        <div className="map-page-container">
-            {/* Pass the centers (now with fullness percentage) to the MapComponent */}
-            <MapComponent centers ={centers} /> 
-        </div>
-    );
+    fetchCenters();
+
+    // La función de limpieza cancela la petición si el componente se desmonta.
+    return () => {
+      controller.abort();
+    };
+  }, [apiUrl]); // Se añade apiUrl a las dependencias.
+
+  if (loading) {
+    return <div className="map-page-container">Cargando mapa y centros de acopio...</div>;
+  }
+  
+  if (error) {
+    return <div className="map-page-container error-message">Error: {error}</div>;
+  }
+
+  return (
+    <div className="map-page-container">
+      {/* Este componente ahora actúa como un "contenedor" que se encarga de la lógica de datos
+        y le pasa la información al MapComponent, que se enfoca en la presentación.
+      */}
+      <MapComponent centers={centers} />
+    </div>
+  );
 };
 
 export default MapPage;

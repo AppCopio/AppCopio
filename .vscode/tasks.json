@@ -1,0 +1,46 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Instalar dependencias frontend",
+			"type": "shell",
+			"command": "cd appcopio-frontend; npm install",
+			"group": "build",
+			"isBackground": false
+		},
+		{
+			"label": "Iniciar Backend",
+			"type": "shell",
+			"command": "cd appcopio-backend; npm start",
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Iniciar Frontend",
+			"type": "shell",
+			"command": "cd appcopio-frontend; npm run dev",
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Iniciar Frontend (PowerShell)",
+			"type": "shell",
+			"command": "powershell",
+			"args": ["-Command", "cd appcopio-frontend; npm run dev"],
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Iniciar Backend (PowerShell)",
+			"type": "shell",
+			"command": "powershell",
+			"args": ["-Command", "cd appcopio-backend; npm start"],
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}
