@@ -12,6 +12,8 @@ export interface User {
   celular?: string | null;
   is_active: boolean;
   role_name?: string | null; 
+  es_apoyo_admin?: boolean;
+  
 }
 
 export interface UsersApiResponse {

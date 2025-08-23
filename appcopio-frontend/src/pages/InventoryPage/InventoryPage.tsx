@@ -6,12 +6,16 @@ import { fetchWithAbort } from '../../services/api';
 import { registerForSync } from '../../utils/syncManager';
 import './InventoryPage.css';
 
-// --- INTERFACES ---
+// --- INTERFACES (MODIFICADAS) ---
+// Se actualiza la interfaz para reflejar los nuevos datos que envía el backend
 interface InventoryItem {
   item_id: number;
   quantity: number;
   name: string;
-  category: string; 
+  category: string;
+  unit: string | null; // Se añade la unidad
+  updated_at: string; // Se añade para trazabilidad
+  updated_by_user: string | null; // Se añade para trazabilidad
   description?: string | null;
 }
 
@@ -30,7 +34,7 @@ const SYNC_TAG = 'sync-inventory-updates';
 // --- COMPONENTE PRINCIPAL ---
 const InventoryPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
-  const { user } = useAuth();
+  const { user, token } = useAuth(); // Se obtiene el token de autenticación
   const apiUrl = import.meta.env.VITE_API_URL;
 
   // --- ESTADOS ---
@@ -44,20 +48,22 @@ const InventoryPage: React.FC = () => {
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState<string>('');
   const [newItemQuantity, setNewItemQuantity] = useState(1);
+  const [newItemUnit, setNewItemUnit] = useState(''); // Estado para la nueva unidad
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryToDelete, setCategoryToDelete] = useState('');
 
-  // --- LÓGICA DE PERMISOS (PASO 5) ---
+  // --- LÓGICA DE PERMISOS ---
   const isAdminOrSupport = user?.role_name === 'Administrador' || user?.es_apoyo_admin;
   const isAssignedToCenter = user?.assignedCenters?.includes(centerId || '');
-  // El usuario puede gestionar si es admin/apoyo O si es un trabajador asignado a este centro.
   const canManage = isAdminOrSupport || isAssignedToCenter;
 
   // --- FUNCIONES ---
-
-    const registerForSync = () => {
+  
+  // NOTA: Esta función ya está definida en syncManager.ts, considera importarla desde allí
+  // para no duplicar código. Por ahora la mantenemos como estaba en tu archivo original.
+  const registerForSyncLocal = () => {
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
       navigator.serviceWorker.ready.then(swRegistration => {
         swRegistration.sync.register(SYNC_TAG);
@@ -65,11 +71,11 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-
   const fetchInventory = async (showLoadingSpinner = true) => {
     if (!centerId) return;
     if (showLoadingSpinner) setIsLoading(true);
     try {
+      // La URL no cambia, pero el tipo de dato <InventoryItem[]> sí
       const data = await fetchWithAbort<InventoryItem[]>(
         `${apiUrl}/centers/${centerId}/inventory`,
         new AbortController().signal
@@ -170,24 +176,33 @@ const InventoryPage: React.FC = () => {
       navigator.serviceWorker.removeEventListener('message', handleMessage);
     };
   }, [centerId, apiUrl]);
+
   // --- MANEJADORES DE EVENTOS ---
   const handleAddItemSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!centerId || !newItemCategory) return alert("Por favor, selecciona una categoría.");
       setIsSubmitting(true);
+      
+      // MODIFICADO: Se añade 'unit' al cuerpo de la petición y la cabecera de autorización.
       const request = {
           url: `${apiUrl}/centers/${centerId}/inventory`,
           method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+          },
           body: { 
-              itemName: newItemName, 
-              categoryId: parseInt(newItemCategory, 10),
-              quantity: newItemQuantity 
+            itemName: newItemName, 
+            categoryId: parseInt(newItemCategory, 10),
+            quantity: newItemQuantity,
+            unit: newItemUnit
           },
       };
+
       try {
         const response = await fetch(request.url, {
           method: request.method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: request.headers,
           body: JSON.stringify(request.body),
         });
         if (!response.ok) {
@@ -197,7 +212,7 @@ const InventoryPage: React.FC = () => {
       } catch (err) {
         if (!navigator.onLine) {
           addRequestToOutbox(request);
-          registerForSync();
+          registerForSyncLocal();
           alert('Estás sin conexión. El nuevo item se añadirá cuando vuelvas a tener internet.');
         } else {
           alert(`No se pudo añadir el item: ${(err as Error).message}`);
@@ -206,21 +221,31 @@ const InventoryPage: React.FC = () => {
         setIsAddModalOpen(false);
         setNewItemName('');
         setNewItemQuantity(1);
+        setNewItemUnit(''); // Limpiar el campo de unidad
         await fetchInventory(false);
         setIsSubmitting(false);
       }
     };
 
 
-const handleAddCategory = async (e: React.FormEvent) => {
+  const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newCategoryName.trim() === '') return alert('El nombre de la categoría no puede estar vacío.');
     setIsSubmitting(true);
-    const request = { url: `${apiUrl}/categories`, method: 'POST', body: { name: newCategoryName.trim() } };
+    // MODIFICADO: Se añade la cabecera de autorización.
+    const request = { 
+        url: `${apiUrl}/categories`, 
+        method: 'POST', 
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: { name: newCategoryName.trim() } 
+    };
     try {
       const response = await fetch(request.url, {
         method: request.method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: request.headers,
         body: JSON.stringify(request.body),
       });
       if (response.status === 409) throw new Error('La categoría ya existe.');
@@ -232,7 +257,7 @@ const handleAddCategory = async (e: React.FormEvent) => {
     } catch (err) {
       if (!navigator.onLine) {
         addRequestToOutbox(request);
-        registerForSync();
+        registerForSyncLocal();
         setCategories(prev => [...prev, { category_id: Date.now(), name: newCategoryName.trim() }].sort((a, b) => a.name.localeCompare(b.name)));
         setNewCategoryName('');
         alert('Sin conexión. La categoría se añadirá al recuperar la conexión.');
@@ -249,9 +274,15 @@ const handleDeleteCategory = async () => {
     if (categoryToDelete === '') return alert('Selecciona una categoría para eliminar.');
     if (!window.confirm(`¿Seguro que deseas eliminar esta categoría?`)) return;
     setIsSubmitting(true);
-    const request = { url: `${apiUrl}/categories/${categoryToDelete}`, method: 'DELETE', body: null };
+    // MODIFICADO: Se añade la cabecera de autorización.
+    const request = { 
+        url: `${apiUrl}/categories/${categoryToDelete}`, 
+        method: 'DELETE', 
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: null 
+    };
     try {
-      const response = await fetch(request.url, { method: request.method });
+      const response = await fetch(request.url, { method: request.method, headers: request.headers });
       if (response.status === 400) throw new Error('No se puede eliminar: la categoría tiene productos asociados.');
       if (!response.ok) throw new Error('Error del servidor.');
       setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
@@ -260,7 +291,7 @@ const handleDeleteCategory = async () => {
     } catch (err) {
       if (!navigator.onLine) {
         addRequestToOutbox(request);
-        registerForSync();
+        registerForSyncLocal();
         setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
         setCategoryToDelete('');
         alert('Sin conexión. La categoría se eliminará al recuperar la conexión.');
@@ -272,7 +303,6 @@ const handleDeleteCategory = async () => {
     }
   };
 
-
   const handleOpenEditModal = (item: InventoryItem) => {
     setEditingItem(item);
     setIsEditModalOpen(true);
@@ -281,17 +311,19 @@ const handleDeleteCategory = async () => {
     setIsEditModalOpen(false);
     setEditingItem(null);
   };
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!editingItem) return;
     const { name, value } = e.target;
-    setEditingItem({ ...editingItem, [name]: name === 'quantity' ? Number(value) : value });
+    setEditingItem({ ...editingItem, [name]: Number(value) });
   };
 
-const handleSaveChanges = async () => {
+  const handleSaveChanges = async () => {
     if (!editingItem || !centerId) return;
     const itemToSave = { ...editingItem };
     const itemId = itemToSave.item_id;
     setIsSubmitting(true);
+    
+    // Optimistic UI update
     setInventory(prev => {
         const newInventory = { ...prev };
         const categoryKey = itemToSave.category || 'Sin Categoría';
@@ -302,30 +334,33 @@ const handleSaveChanges = async () => {
         }
         return newInventory;
     });
+
+    // MODIFICADO: Se añade la cabecera de autorización.
+    const request = {
+      url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+      },
+      body: { quantity: itemToSave.quantity }
+    };
+
     try {
-      const request = {
-        url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
-        method: 'PUT',
-        body: { quantity: itemToSave.quantity }
-      };
       const response = await fetch(request.url, {
         method: request.method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: request.headers,
         body: JSON.stringify(request.body)
       });
       if (!response.ok) throw new Error('Falló la actualización.');
     } catch (err) {
       if (!navigator.onLine) {
-        addRequestToOutbox({
-          url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
-          method: 'PUT',
-          body: { quantity: itemToSave.quantity }
-        });
-        registerForSync();
+        addRequestToOutbox(request);
+        registerForSyncLocal();
         alert('Sin conexión. El cambio se guardará cuando recuperes la conexión.');
       } else {
         alert('No se pudieron guardar los cambios. Revisa tu conexión.');
-        fetchInventory(false);
+        fetchInventory(false); // Revertir si falla en línea
       }
     } finally {
         handleCloseEditModal(); 
@@ -333,15 +368,16 @@ const handleSaveChanges = async () => {
     }
   };
 
-
-
   const handleDeleteItem = async () => {
     if (!editingItem || !centerId) return;
     if (!window.confirm(`¿Seguro que quieres eliminar "${editingItem.name}"?`)) return;
+    
     const itemToDelete = { ...editingItem };
     const itemId = itemToDelete.item_id;
     const originalInventory = inventory;
     setIsSubmitting(true);
+
+    // Optimistic UI update
     setInventory(prev => {
         const newInventory = { ...prev };
         const categoryKey = itemToDelete.category || 'Sin Categoría';
@@ -353,29 +389,32 @@ const handleSaveChanges = async () => {
         }
         return newInventory;
     });
+    
+    // MODIFICADO: Se añade la cabecera de autorización.
+    const request = {
+      url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: null
+    };
+
     try {
-      const request = {
-        url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
-        method: 'DELETE',
-        body: null
-      };
-      const response = await fetch(request.url, { method: request.method });
+      const response = await fetch(request.url, { method: request.method, headers: request.headers });
       if (!response.ok) throw new Error('No se pudo eliminar el item del servidor.');
     } catch (err) {
       if (!navigator.onLine) {
-        addRequestToOutbox({ url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`, method: 'DELETE', body: null });
-        registerForSync();
+        addRequestToOutbox(request);
+        registerForSyncLocal();
         alert('Sin conexión. El item se eliminará cuando recuperes la conexión.');
       } else {
         alert('No se pudo eliminar el item. Revisa tu conexión.');
-        setInventory(originalInventory);
+        setInventory(originalInventory); // Revertir si falla
       }
     } finally {
       handleCloseEditModal();
       setIsSubmitting(false);
     }
   };
-  
 
   // --- RENDERIZADO ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
@@ -385,11 +424,9 @@ const handleSaveChanges = async () => {
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
-        {/* La visibilidad de los botones ahora depende de la nueva lógica 'canManage' */}
         {canManage && (
           <div style={{ display: 'flex', gap: '10px' }}>
             <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>+ Añadir Item</button>
-            {/* Solo los admins/apoyo pueden gestionar el catálogo de categorías */}
             {isAdminOrSupport && (
                 <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
             )}
@@ -398,7 +435,7 @@ const handleSaveChanges = async () => {
         )}
       </div>
 
-      {/* MODAL PARA AÑADIR ITEM */}
+      {/* MODAL PARA AÑADIR ITEM (MODIFICADO) */}
       {isAddModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -411,6 +448,8 @@ const handleSaveChanges = async () => {
                 </select>
               </div>
               <div className="form-group"><label htmlFor="quantity">Cantidad:</label><input id="quantity" type="number" value={newItemQuantity} onChange={e => setNewItemQuantity(Number(e.target.value))} min="1" required /></div>
+              {/* Se añade campo para la unidad */}
+              <div className="form-group"><label htmlFor="unit">Unidad (kg, lts, un):</label><input id="unit" type="text" value={newItemUnit} onChange={e => setNewItemUnit(e.target.value)} placeholder="Ej: kg, lts, un" /></div>
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)} disabled={isSubmitting}>Cancelar</button>
                 <button type="submit" className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Añadiendo...' : 'Añadir'}</button>
@@ -420,13 +459,12 @@ const handleSaveChanges = async () => {
         </div>
       )}
 
-      {/* MODAL PARA EDITAR ITEM */}
+      {/* MODAL PARA EDITAR ITEM (MODIFICADO) */}
       {isEditModalOpen && editingItem && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>Editar Item del Inventario</h3>
-            <div className="form-group"><label htmlFor="editItemName">Nombre:</label><input id="editItemName" name="name" type="text" value={editingItem.name} onChange={handleEditFormChange} /></div>
-            <div className="form-group"><label htmlFor="editItemCategory">Categoría:</label><input type="text" value={editingItem.category} disabled /></div>
+            <h3>Editar Item: {editingItem.name}</h3>
+            {/* Solo se permite editar la cantidad para evitar inconsistencias */}
             <div className="form-group"><label htmlFor="editItemQuantity">Cantidad:</label><input id="editItemQuantity" name="quantity" type="number" value={editingItem.quantity} onChange={handleEditFormChange} min="0" /></div>
             <div className="modal-actions edit-actions">
               <button onClick={handleDeleteItem} className="btn-danger" disabled={isSubmitting}>Eliminar</button>
@@ -439,7 +477,7 @@ const handleSaveChanges = async () => {
         </div>
       )}
 
-      {/* MODAL PARA GESTIONAR CATEGORÍAS */}
+      {/* MODAL PARA GESTIONAR CATEGORÍAS (Sin cambios funcionales, solo de token) */}
       {isCategoryModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -469,17 +507,29 @@ const handleSaveChanges = async () => {
         </div>
       )}
       
-      {/* RENDERIZADO DE LA TABLA DE INVENTARIO */}
+      {/* RENDERIZADO DE LA TABLA DE INVENTARIO (MODIFICADO) */}
       {Object.keys(inventory).length === 0 ? (<p>Este centro no tiene items en inventario.</p>) : (Object.entries(inventory).map(([category, items]) => (
         <div key={category} className="category-section">
           <h4>{category}</h4>
           <table className="inventory-table">
-            <thead><tr><th>Item</th><th>Cantidad</th>{canManage && <th>Acciones</th>}</tr></thead>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Cantidad</th>
+                <th>Última Actualización</th>
+                {canManage && <th>Acciones</th>}
+              </tr>
+            </thead>
             <tbody>
               {items.map(item => (
                 <tr key={item.item_id}>
                   <td>{item.name}</td>
-                  <td>{item.quantity}</td>
+                  <td>{item.quantity} {item.unit || ''}</td>
+                  <td>
+                    {item.updated_by_user || 'Sistema'}
+                    <br />
+                    <small>{new Date(item.updated_at).toLocaleString()}</small>
+                  </td>
                   {canManage && (
                     <td><button className="action-btn" onClick={() => handleOpenEditModal(item)}>Editar</button></td>
                   )}

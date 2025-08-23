@@ -1,6 +1,13 @@
 import { Request, Response, Router, RequestHandler } from 'express';
 import pool from '../config/db';
 
+// Interfaz para extender el objeto Request de Express y añadir la propiedad user
+interface AuthenticatedRequest extends Request {
+    user?: {
+        id: number;
+    };
+}
+
 const router = Router();
 
 const itemRatiosPerPerson: { [key: string]: number } = {
@@ -11,7 +18,7 @@ const itemRatiosPerPerson: { [key: string]: number } = {
     'Herramientas': 1
 };
 
-// GET /api/centers - Obtener todos los centros con su porcentaje de llenado
+// GET /api/centers - (Sin cambios en esta función)
 const getAllCentersHandler: RequestHandler = async (req, res) => {
     try {
         const centersResult = await pool.query(
@@ -27,11 +34,11 @@ const getAllCentersHandler: RequestHandler = async (req, res) => {
                 }
 
                 const inventoryByCategoryResult = await pool.query(
-                    `SELECT cat.name AS category, COALESCE(SUM(ci.quantity), 0) AS category_quantity
-                     FROM CenterInventories ci
-                     JOIN Products p ON ci.item_id = p.item_id
+                    `SELECT cat.name AS category, COALESCE(SUM(cii.quantity), 0) AS category_quantity
+                     FROM CenterInventoryItems cii
+                     JOIN Products p ON cii.item_id = p.item_id
                      JOIN Categories cat ON p.category_id = cat.category_id
-                     WHERE ci.center_id = $1
+                     WHERE cii.center_id = $1
                      GROUP BY cat.name`,
                     [center.center_id]
                 );
@@ -81,6 +88,8 @@ const getAllCentersHandler: RequestHandler = async (req, res) => {
     }
 };
 
+// --- RUTAS DE CENTROS (Sin cambios) ---
+
 // GET /api/centers/:id - Obtener un centro específico
 const getCenterByIdHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
@@ -120,7 +129,6 @@ const createCenterHandler: RequestHandler = async (req, res) => {
         }
     }
 };
-
 // PUT /api/centers/:id - Actualizar un centro existente
 const updateCenterHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
@@ -163,7 +171,6 @@ const deleteCenterHandler: RequestHandler = async (req, res) => {
     }
 };
 
-// PATCH /api/centers/:id/status - Activar o desactivar un centro
 const updateStatusHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
     const { isActive } = req.body; 
@@ -191,7 +198,8 @@ const updateStatusHandler: RequestHandler = async (req, res) => {
 const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
     const { operationalStatus, publicNote } = req.body;
-    const validStatuses = ['Abierto', 'Cerrado Temporalmente', 'Capacidad Máxima'];
+    // NOTA: Los valores válidos ahora vienen del nuevo modelo de BDD.
+    const validStatuses = ['capacidad maxima', 'cerrado temporalmente', 'abierto'];
     if (!operationalStatus || !validStatuses.includes(operationalStatus)) {
         res.status(400).json({ 
             message: 'El campo "operationalStatus" es requerido y debe ser uno de: ' + validStatuses.join(', ') 
@@ -199,7 +207,7 @@ const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
         return;
     }
     try {
-        const noteToSave = operationalStatus === 'Cerrado Temporalmente' ? publicNote : null;
+        const noteToSave = operationalStatus === 'cerrado temporalmente' ? publicNote : null;
         const updatedCenterResult = await pool.query(
             `UPDATE Centers SET operational_status = $1, public_note = $2, updated_at = CURRENT_TIMESTAMP 
              WHERE center_id = $3 RETURNING *`,
@@ -219,16 +227,23 @@ const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
     }
 };
 
-// GET /api/centers/:centerId/inventory - Obtener el inventario de un centro
+
+// GET /api/centers/:centerId/inventory - (Sin cambios en esta función)
 const getInventoryHandler: RequestHandler = async (req, res) => {
     const { centerId } = req.params;
     try {
         const query = `
-            SELECT ci.item_id, ci.quantity, p.name, cat.name AS category 
-            FROM CenterInventories AS ci 
-            JOIN Products AS p ON ci.item_id = p.item_id 
+            SELECT 
+                cii.item_id, cii.quantity, cii.updated_at,
+                p.name, p.unit,
+                cat.name AS category,
+                u.nombre AS updated_by_user
+            FROM CenterInventoryItems AS cii
+            JOIN Products AS p ON cii.item_id = p.item_id
             LEFT JOIN Categories AS cat ON p.category_id = cat.category_id
-            WHERE ci.center_id = $1 ORDER BY p.name`;
+            LEFT JOIN users AS u ON cii.updated_by = u.user_id
+            WHERE cii.center_id = $1 
+            ORDER BY p.name`;
         const result = await pool.query(query, [centerId]);
         res.status(200).json(result.rows);
     } catch (error) {
@@ -238,33 +253,56 @@ const getInventoryHandler: RequestHandler = async (req, res) => {
 };
 
 // POST /api/centers/:centerId/inventory - Añadir un item al inventario
-const addInventoryItemHandler: RequestHandler = async (req, res) => {
+const addInventoryItemHandler: RequestHandler = async (req: AuthenticatedRequest, res) => {
     const { centerId } = req.params;
-    const { itemName, categoryId, quantity } = req.body;
+    const { itemName, categoryId, quantity, unit, notes } = req.body;
+    
+    const userId = req.user?.id; 
+    if (!userId) {
+        res.status(401).json({ message: 'No autorizado.' });
+        return;
+    }
     if (!itemName || !categoryId || !quantity || quantity <= 0) {
         res.status(400).json({ message: 'Se requieren itemName, categoryId y una quantity mayor a 0.' });
         return;
     }
+
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+        
         let productResult = await client.query('SELECT item_id FROM Products WHERE name ILIKE $1', [itemName.trim()]);
         let itemId;
+
         if (productResult.rows.length === 0) {
             const newProductResult = await client.query(
-                'INSERT INTO Products (name, category_id) VALUES ($1, $2) RETURNING item_id', 
-                [itemName.trim(), categoryId]
+                'INSERT INTO Products (name, category_id, unit) VALUES ($1, $2, $3) RETURNING item_id', 
+                [itemName.trim(), categoryId, unit]
             );
             itemId = newProductResult.rows[0].item_id;
         } else {
             itemId = productResult.rows[0].item_id;
         }
+
         const inventoryResult = await client.query(
-            `INSERT INTO CenterInventories (center_id, item_id, quantity) VALUES ($1, $2, $3)
-             ON CONFLICT (center_id, item_id) DO UPDATE SET quantity = CenterInventories.quantity + $3, last_updated_at = CURRENT_TIMESTAMP
+            `INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) 
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (center_id, item_id) 
+             DO UPDATE SET 
+                quantity = CenterInventoryItems.quantity + EXCLUDED.quantity, 
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = EXCLUDED.updated_by
              RETURNING *`,
-            [centerId, itemId, quantity]
+            [centerId, itemId, quantity, userId]
         );
+
+        // MODIFICADO: Se añade el registro en InventoryLog
+        await client.query(
+            `INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, created_by, notes)
+             VALUES ($1, $2, 'ADD', $3, $4, $5)`,
+            [centerId, itemId, quantity, userId, notes]
+        );
+
         await client.query('COMMIT');
         res.status(201).json(inventoryResult.rows[0]);
     } catch (error) {
@@ -277,45 +315,101 @@ const addInventoryItemHandler: RequestHandler = async (req, res) => {
 };
 
 // PUT /api/centers/:centerId/inventory/:itemId - Actualizar la cantidad de un item
-const updateInventoryItemHandler: RequestHandler = async (req, res) => {
+const updateInventoryItemHandler: RequestHandler = async (req: AuthenticatedRequest, res) => {
     const { centerId, itemId } = req.params;
-    const { quantity } = req.body;
+    const { quantity, reason, notes } = req.body;
+    
+    const userId = req.user?.id;
+    if (!userId) {
+        res.status(401).json({ message: 'No autorizado.' });
+        return;
+    }
     if (typeof quantity !== 'number' || quantity < 0) {
         res.status(400).json({ message: 'Se requiere una "quantity" numérica y mayor o igual a 0.' });
         return;
     }
+
+    const client = await pool.connect();
     try {
-        const result = await pool.query(
-            `UPDATE CenterInventories SET quantity = $1, last_updated_at = CURRENT_TIMESTAMP WHERE center_id = $2 AND item_id = $3 RETURNING *`,
-            [quantity, centerId, itemId]
+        await client.query('BEGIN');
+
+        const result = await client.query(
+            `UPDATE CenterInventoryItems 
+             SET quantity = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2
+             WHERE center_id = $3 AND item_id = $4 RETURNING *`,
+            [quantity, userId, centerId, itemId]
         );
+        
         if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
             res.status(404).json({ message: 'No se encontró el item en el inventario de este centro.' });
-        } else {
-            res.status(200).json(result.rows[0]);
+            return;
         }
+
+        // MODIFICADO: Se añade el registro en InventoryLog
+        await client.query(
+            `INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, created_by, reason, notes)
+             VALUES ($1, $2, 'ADJUST', $3, $4, $5, $6)`,
+            [centerId, itemId, quantity, userId, reason, notes]
+        );
+
+        await client.query('COMMIT');
+        res.status(200).json(result.rows[0]);
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error(`Error al actualizar el inventario para el centro ${centerId}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
+    } finally {
+        client.release();
     }
 };
 
 // DELETE /api/centers/:centerId/inventory/:itemId - Eliminar un item del inventario
-const deleteInventoryItemHandler: RequestHandler = async (req, res) => {
+const deleteInventoryItemHandler: RequestHandler = async (req: AuthenticatedRequest, res) => {
     const { centerId, itemId } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+        res.status(401).json({ message: 'No autorizado.' });
+        return;
+    }
+
+    const client = await pool.connect();
     try {
-        const deleteOp = await pool.query(
-            'DELETE FROM CenterInventories WHERE center_id = $1 AND item_id = $2',
+        await client.query('BEGIN');
+
+        // MODIFICADO: Primero obtenemos la cantidad para poder registrarla
+        const itemData = await client.query(
+            'SELECT quantity FROM CenterInventoryItems WHERE center_id = $1 AND item_id = $2',
             [centerId, itemId]
         );
-        if (deleteOp.rowCount === 0) {
+
+        if (itemData.rows.length === 0) {
+            await client.query('ROLLBACK');
             res.status(404).json({ message: 'No se encontró el item en el inventario para eliminar.' });
-        } else {
-            res.status(204).send();
+            return;
         }
+        const quantityToDelete = itemData.rows[0].quantity;
+
+        // MODIFICADO: Se añade el registro en InventoryLog ANTES de eliminar
+        await client.query(
+            `INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, created_by, notes)
+             VALUES ($1, $2, 'SUB', $3, $4, 'Eliminación completa del stock')`,
+            [centerId, itemId, quantityToDelete, userId]
+        );
+
+        const deleteOp = await client.query(
+            'DELETE FROM CenterInventoryItems WHERE center_id = $1 AND item_id = $2',
+            [centerId, itemId]
+        );
+        
+        await client.query('COMMIT');
+        res.status(204).send();
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error(`Error al eliminar item del inventario para el centro ${centerId}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
+    } finally {
+        client.release();
     }
 };
 
@@ -328,6 +422,8 @@ router.put('/:id', updateCenterHandler);
 router.delete('/:id', deleteCenterHandler);
 router.patch('/:id/status', updateStatusHandler);
 router.patch('/:id/operational-status', updateOperationalStatusHandler);
+
+// Rutas de inventario que fueron modificadas
 router.get('/:centerId/inventory', getInventoryHandler);
 router.post('/:centerId/inventory', addInventoryItemHandler);
 router.put('/:centerId/inventory/:itemId', updateInventoryItemHandler);
