@@ -1,39 +1,59 @@
--- Eliminación en orden para evitar errores de dependencia
-DROP TABLE IF EXISTS UserCenterAssignments; -- Se añade la nueva tabla a la eliminación
-DROP TABLE IF EXISTS CenterInventories;
-DROP TABLE IF EXISTS Products;
-DROP TABLE IF EXISTS Incidents;
-DROP TABLE IF EXISTS InventoryLog;
-DROP TABLE IF EXISTS Users;
-DROP TABLE IF EXISTS Centers;
-DROP TABLE IF EXISTS Categories;
-DROP TABLE IF EXISTS Roles;
+-- ==========================================================
+-- PASO 1: ELIMINACIÓN SEGURA DE TODAS LAS TABLAS CON CASCADE
+-- Garantiza una base de datos limpia en cada ejecución.
+-- ==========================================================
+DROP TABLE IF EXISTS FamilyGroupMembers CASCADE;
+DROP TABLE IF EXISTS FamilyGroups CASCADE;
+DROP TABLE IF EXISTS Persons CASCADE;
+DROP TABLE IF EXISTS CenterInventoryItems CASCADE;
+DROP TABLE IF EXISTS CenterChangesHistory CASCADE;
+DROP TABLE IF EXISTS CentersActivations CASCADE;
+DROP TABLE IF EXISTS UpdateRequests CASCADE;
+DROP TABLE IF EXISTS CenterAssignments CASCADE;
+DROP TABLE IF EXISTS UserCenterAssignments CASCADE; -- Obsoleta
+DROP TABLE IF EXISTS InventoryLog CASCADE;
+DROP TABLE IF EXISTS CentersDescription CASCADE;
+DROP TABLE IF EXISTS Products CASCADE;
+DROP TABLE IF EXISTS Categories CASCADE;
+DROP TABLE IF EXISTS Incidents CASCADE; -- Obsoleta
+DROP TABLE IF EXISTS CenterInventories CASCADE; -- Obsoleta
+DROP TABLE IF EXISTS Centers CASCADE;
+DROP TABLE IF EXISTS Users CASCADE;
+DROP TABLE IF EXISTS Roles CASCADE;
 
 
--- Tabla de Roles (MODIFICADA)
+-- ==========================================================
+-- PASO 2: CREACIÓN DE TABLAS EN ORDEN LÓGICO DE DEPENDENCIAS
+-- ==========================================================
+
+-- Tablas base (sin dependencias)
 CREATE TABLE Roles (
     role_id SERIAL PRIMARY KEY,
     role_name VARCHAR(50) UNIQUE NOT NULL
 );
 
--- Se insertan los nuevos roles base
-INSERT INTO Roles (role_name) VALUES ('Administrador'), ('Trabajador Municipal'), ('Contacto Ciudadano');
-
--- Tabla de Categorías (Sin cambios)
 CREATE TABLE Categories (
     category_id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL
 );
 
-INSERT INTO Categories (name) VALUES 
-('Alimentos y Bebidas'), 
-('Ropa de Cama y Abrigo'), 
-('Higiene Personal'), 
-('Mascotas'),
-('Herramientas');
+-- Tablas de primer nivel
+CREATE TABLE Users (
+    user_id SERIAL PRIMARY KEY,   
+    username VARCHAR(100) UNIQUE NOT NULL,
+    rut VARCHAR(20) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,     
+    email VARCHAR(100) UNIQUE NOT NULL,       
+    role_id INT NOT NULL REFERENCES Roles(role_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    imagen_perfil TEXT,
+    nombre VARCHAR(150),
+    genero VARCHAR(20),
+    celular VARCHAR(20),
+    es_apoyo_admin BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT FALSE
+);
 
-
--- Tabla de Centros (MODIFICADA Y ACTUALIZADA)
 CREATE TABLE Centers (
     center_id VARCHAR(10) PRIMARY KEY,
     name TEXT NOT NULL,
@@ -47,27 +67,114 @@ CREATE TABLE Centers (
     operational_status TEXT DEFAULT 'abierto', 
     public_note TEXT,
     should_be_active BOOLEAN DEFAULT FALSE,
-    
-    -- Foreign Keys a la tabla de usuarios
     comunity_charge_id INT REFERENCES Users(user_id) ON DELETE SET NULL,
     municipal_manager_id INT REFERENCES Users(user_id) ON DELETE SET NULL,
-    
-    -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Centros de ejemplo (Sin cambios)
-INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude) VALUES
-('C001', 'Gimnasio Municipal San roque', 'San roque 123', 'Albergue', 200 , false, -33.073440, -71.583330),
-('C002', 'Liceo Bicentenario Valparaíso', 'Calle Independencia 456', 'Acopio', 100, true, -33.045800, -71.619700),
-('C003', 'Sede Vecinal Cerro Cordillera', 'Pasaje Esmeralda 789', 'Acopio', 300, false, -33.039500, -71.628500);
+CREATE TABLE Products (
+    item_id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    unit TEXT,
+    category_id INT REFERENCES Categories(category_id)
+);
 
+CREATE TABLE Persons (
+    person_id SERIAL PRIMARY KEY,
+    rut VARCHAR(20) UNIQUE NOT NULL,
+    nombre TEXT NOT NULL,
+    primer_apellido TEXT NOT NULL,
+    segundo_apellido TEXT,
+    nacionalidad TEXT CHECK (nacionalidad IN ('CH', 'EXT')),
+    genero TEXT CHECK (genero IN ('F', 'M', 'Otro')),
+    edad INT,
+    estudia BOOLEAN,
+    trabaja BOOLEAN,
+    perdida_trabajo BOOLEAN,
+    rubro TEXT,
+    discapacidad BOOLEAN,
+    dependencia BOOLEAN,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 
+-- Tablas de segundo nivel e intermedias
+CREATE TABLE CenterInventoryItems (
+    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
+    item_id INT NOT NULL REFERENCES Products(item_id) ON DELETE CASCADE,
+    quantity INT NOT NULL CHECK (quantity >= 0),
+    updated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (center_id, item_id)
+);
 
--- ==========================================================
--- NUEVA TABLA DE DESCRIPCIÓN DETALLADA DE CENTROS (CATASTRO)
--- ==========================================================
+CREATE TABLE InventoryLog (
+    log_id SERIAL PRIMARY KEY,
+    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
+    item_id INT NOT NULL REFERENCES Products(item_id) ON DELETE RESTRICT,
+    action_type TEXT NOT NULL CHECK (action_type IN ('ADD', 'SUB', 'ADJUST')),
+    quantity INT NOT NULL,
+    reason TEXT,
+    notes TEXT,
+    created_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE CenterAssignments (
+    assignment_id SERIAL PRIMARY KEY,
+    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('trabajador municipal', 'contacto comunidad')),
+    valid_from TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    valid_to TIMESTAMP WITH TIME ZONE,
+    changed_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (center_id, user_id, role)
+);
+
+CREATE TABLE UpdateRequests (
+    request_id SERIAL PRIMARY KEY,
+    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'canceled')),
+    urgency VARCHAR(20) NOT NULL,
+    requested_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    assigned_to INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    resolved_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP,
+    resolution_comment TEXT
+);
+
+CREATE TABLE CentersActivations (
+    activation_id SERIAL PRIMARY KEY,
+    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMP WITH TIME ZONE,
+    activated_by INT NOT NULL REFERENCES Users(user_id) ON DELETE SET NULL,
+    deactivated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    notes TEXT
+);
+
+CREATE TABLE FamilyGroups (
+    family_id SERIAL PRIMARY KEY,
+    activation_id INT NOT NULL REFERENCES CentersActivations(activation_id) ON DELETE CASCADE,
+    jefe_hogar_person_id INT REFERENCES Persons(person_id) ON DELETE SET NULL,
+    observaciones TEXT,
+    necesidades_basicas INTEGER[14],
+    UNIQUE (activation_id, jefe_hogar_person_id)
+);
+
+CREATE TABLE FamilyGroupMembers (
+    member_id SERIAL PRIMARY KEY,
+    family_id INT NOT NULL REFERENCES FamilyGroups(family_id) ON DELETE CASCADE,
+    person_id INT NOT NULL REFERENCES Persons(person_id) ON DELETE CASCADE,
+    parentesco TEXT NOT NULL,
+    UNIQUE(family_id, person_id)
+);
+
 CREATE TABLE CentersDescription (
     center_id VARCHAR(10) PRIMARY KEY,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -187,239 +294,81 @@ CREATE TABLE CentersDescription (
         ON DELETE CASCADE
 );
 
+-- ==========================================================
+-- PASO 3: INSERCIÓN DE DATOS DE PRUEBA COMPLETOS
+-- ==========================================================
 
+-- Roles base
+INSERT INTO Roles (role_name) VALUES ('Administrador'), ('Trabajador Municipal'), ('Contacto Ciudadano');
 
-
-
-
-
--- Tabla de Usuarios (MODIFICADA Y ACTUALIZADA)
-CREATE TABLE users (
-    user_id SERIAL PRIMARY KEY,   
-    username VARCHAR(100) UNIQUE NOT NULL,
-    rut VARCHAR(20) UNIQUE, -- Se mantiene por su importancia como identificador
-    password_hash VARCHAR(255) NOT NULL,     
-    email VARCHAR(100) UNIQUE NOT NULL,       
-    role_id INT NOT NULL REFERENCES roles(role_id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    imagen_perfil TEXT,
-    nombre VARCHAR(150),
-    genero VARCHAR(20), -- MODIFICADO: Ahora es un array para mayor flexibilidad
-    celular VARCHAR(20),
-    es_apoyo_admin BOOLEAN NOT NULL DEFAULT FALSE, -- Se mantiene por ser clave en la lógica de roles
-    is_active BOOLEAN NOT NULL DEFAULT FALSE -- MODIFICADO: Se renombra para mayor claridad
-);
-
--- Usuarios de ejemplo actualizados a la nueva estructura
-INSERT INTO users (user_id, rut, password_hash, email, role_id, nombre, username, is_active_user)
+-- Usuarios de prueba (contraseña para todos: '12345')
+INSERT INTO Users (user_id, username, password_hash, email, role_id, nombre, rut, is_active, es_apoyo_admin)
+OVERRIDING SYSTEM VALUE
 VALUES
-(1, '11111111-1', 'hash_seguro_admin', 'admin@municipalidad.cl', 1, 'Admin Principal', 'admin_principal', TRUE),
-(2, '22222222-2', '1234', 'trabajador1@municipalidad.cl', 2, 'Juan Rojas', 'juan.rojas', TRUE);
+(1, 'admin', '$2b$10$f/3p.QQe.dTUj5xG32GvAOPxPh4C9dJ2e5d.Xk/2t.T.a.E3g/fWq', 'admin@appcopio.cl', 1, 'Admin AppCopio', '11.111.111-1', TRUE, TRUE),
+(2, 'juan.perez', '$2b$10$f/3p.QQe.dTUj5xG32GvAOPxPh4C9dJ2e5d.Xk/2t.T.a.E3g/fWq', 'juan.perez@municipalidad.cl', 2, 'Juan Pérez', '22.222.222-2', TRUE, FALSE),
+(3, 'carla.rojas', '$2b$10$f/3p.QQe.dTUj5xG32GvAOPxPh4C9dJ2e5d.Xk/2t.T.a.E3g/fWq', 'carla.rojas@comunidad.cl', 3, 'Carla Rojas', '33.333.333-3', TRUE, FALSE);
 
--- ==========================================================
--- NUEVA TABLA DE ASIGNACIONES
--- ==========================================================
-CREATE TABLE UserCenterAssignments (
-    user_id INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    center_id VARCHAR(10) NOT NULL REFERENCES centers(center_id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, center_id) -- Llave primaria compuesta para evitar duplicados
-);
+-- Centros de prueba
+INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude, municipal_manager_id) VALUES
+('C001', 'Gimnasio Municipal de Valparaíso', 'Av. Argentina 123', 'albergue', 150, true, -33.0458, -71.6197, 1),
+('C002', 'Liceo Bicentenario', 'Independencia 456', 'albergue comunitario', 80, true, -33.0465, -71.6212, 2),
+('C003', 'Sede Vecinal Cerro Alegre', 'Lautaro Rosas 789', 'albergue comunitario', 50, false, -33.0401, -71.6285, 2),
+('C004', 'Escuela República de Uruguay', 'Av. Uruguay 321', 'albergue', 120, false, -33.0475, -71.6143, 1);
 
--- Ejemplo: Se asigna el centro C001 y C002 al trabajador municipal Juan Rojas (user_id = 2)
-INSERT INTO UserCenterAssignments (user_id, center_id) VALUES
-(2, 'C001'),
-(2, 'C002');
+-- Categorías de productos
+INSERT INTO Categories (name) VALUES 
+('Alimentos y Bebidas'), ('Ropa y Abrigo'), ('Higiene Personal'), 
+('Artículos para Mascotas'), ('Herramientas y Equipamiento'), ('Botiquín y Primeros Auxilios');
 
--- ==========================================================
+-- Productos de prueba
+INSERT INTO Products (item_id, name, unit, category_id)
+OVERRIDING SYSTEM VALUE
+VALUES
+(1, 'Agua Embotellada 1.5L', 'un', 1), (2, 'Frazadas (1.5 plazas)', 'un', 2),
+(3, 'Kit de Higiene Personal (Adulto)', 'un', 3), (4, 'Pañales para Niños (Talla G)', 'paquete', 3),
+(5, 'Saco de Comida para Perro (10kg)', 'saco', 4), (6, 'Pilas AA', 'pack 4un', 5),
+(7, 'Paracetamol 500mg', 'caja', 6), (8, 'Arroz (1kg)', 'kg', 1);
 
--- Tabla de Productos (Sin cambios)
-CREATE TABLE Products (
-    item_id SERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    category_id INT REFERENCES Categories(category_id)
-);
+-- Inventario de prueba
+INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) VALUES
+('C001', 1, 200, 1), ('C001', 2, 150, 1), ('C001', 8, 100, 1),
+('C002', 1, 80, 2), ('C002', 4, 50, 2);
 
--- Productos de ejemplo (Sin cambios)
-INSERT INTO Products (name, category_id) VALUES
-('Agua Embotellada 1.5L', 1),
-('Frazadas (1.5 plazas)', 2),
-('Pañales para Adultos (Talla M)', 3),
-('Pañales para Niños (Talla G)', 3),
-('Comida para Mascotas (Perro)', 4),
-('Conservas (Atún, Legumbres)', 1);
+-- Log de inventario correspondiente al stock inicial
+INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, reason, created_by) VALUES
+('C001', 1, 'ADD', 200, 'Stock Inicial', 1), ('C001', 2, 'ADD', 150, 'Stock Inicial', 1),
+('C001', 8, 'ADD', 100, 'Stock Inicial', 1), ('C002', 1, 'ADD', 80, 'Stock Inicial', 2),
+('C002', 4, 'ADD', 50, 'Stock Inicial', 2);
 
--- Tabla de Productos (MODIFICADA para añadir 'unit')
-CREATE TABLE Products (
-    item_id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
-    description TEXT,
-    unit TEXT, -- Nuevo campo para la unidad de medida
-    category_id INT REFERENCES Categories(category_id)
-);
+-- Asignaciones de prueba
+INSERT INTO CenterAssignments (user_id, center_id, role, changed_by) VALUES
+(2, 'C001', 'trabajador municipal', 1), (2, 'C003', 'trabajador municipal', 1);
 
--- ==========================================================
--- REEMPLAZO DE TABLA DE INVENTARIO
--- Se reemplaza 'CenterInventories' por 'CenterInventoryItems' para mayor claridad y trazabilidad.
--- ==========================================================
-CREATE TABLE CenterInventoryItems (
-    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
-    item_id INT NOT NULL REFERENCES Products(item_id) ON DELETE CASCADE,
-    quantity INT NOT NULL CHECK (quantity >= 0),
-    
-    -- Nuevos campos para trazabilidad
-    updated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Llave primaria compuesta para asegurar un único ítem por centro
-    PRIMARY KEY (center_id, item_id)
-);
+-- Solicitudes de prueba
+INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUES
+('C002', 'Se necesitan con urgencia frazadas adicionales para niños y adultos mayores.', 'Alta', 3);
 
--- Inventario de ejemplo (Sin cambios)
-INSERT INTO CenterInventories (center_id, item_id, quantity) VALUES
-('C002', 6, 30),
-('C003', 1, 120),
-('C003', 4, 120),
-('C003', 6, 20),
-('C001', 1, 100),
-('C002', 3, 30);
+-- Activación de un centro
+INSERT INTO CentersActivations (activation_id, center_id, activated_by, notes)
+OVERRIDING SYSTEM VALUE
+VALUES
+(1, 'C001', 1, 'Activación por emergencia de incendio forestal en la zona alta de Valparaíso.');
 
--- ==========================================================
--- NUEVA TABLA DE SOLICITUDES DE ACTUALIZACIÓN (Reemplaza Incidents)
--- ==========================================================
-CREATE TABLE UpdateRequests (
-    request_id SERIAL PRIMARY KEY,
-    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
-    description TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'canceled')),
-    urgency VARCHAR(20) NOT NULL, -- Mantenemos VARCHAR para tener múltiples niveles (ej: 'Alta', 'Media', 'Baja')
-    
-    -- Campos de Trazabilidad
-    requested_by INT REFERENCES Users(user_id) ON DELETE SET NULL, -- Quién la creó
-    assigned_to INT REFERENCES Users(user_id) ON DELETE SET NULL,  -- A quién se le asignó
-    resolved_by INT REFERENCES Users(user_id) ON DELETE SET NULL,   -- Quién la resolvió
+-- Personas y grupos familiares de prueba
+INSERT INTO Persons (person_id, rut, nombre, primer_apellido, edad, genero)
+OVERRIDING SYSTEM VALUE
+VALUES
+(101, '15.111.111-1', 'María', 'González', 34, 'F'),
+(102, '21.222.222-2', 'Pedro', 'Soto', 8, 'M');
 
-    -- Timestamps y Comentarios
-    registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    resolved_at TIMESTAMP,
-    resolution_comment TEXT
-);
--- ==========================================================
--- NUEVA TABLA DE HISTORIAL DE CAMBIOS EN CENTROS (AUDITORÍA)
--- ==========================================================
-CREATE TABLE CenterChangesHistory (
-    audit_id SERIAL PRIMARY KEY,
-    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
-    action TEXT NOT NULL CHECK (action IN ('insert', 'update', 'delete')),
-    changed_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
-    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    before_data JSONB, -- Contendrá el estado de la fila ANTES del cambio (null en INSERT)
-    after_data JSONB,  -- Contendrá el estado de la fila DESPUÉS del cambio (null en DELETE)
-    changed_cols TEXT[], -- Un array con los nombres de las columnas que cambiaron
-    change_note TEXT -- Un campo opcional para notas manuales
-);
+INSERT INTO FamilyGroups (family_id, activation_id, jefe_hogar_person_id, observaciones)
+OVERRIDING SYSTEM VALUE
+VALUES
+(201, 1, 101, 'Familia monoparental, requieren apoyo especial para menor de edad.');
 
+INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
+(201, 101, 'Jefe de Hogar'), (201, 102, 'Hijo/a');
 
-
--- ==========================================================
--- NUEVA TABLA DE HISTORIAL DE ACTIVACIONES DE CENTROS
--- ==========================================================
-CREATE TABLE CentersActivations (
-    activation_id SERIAL PRIMARY KEY,
-    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
-    
-    -- Período de activación
-    started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ended_at TIMESTAMP WITH TIME ZONE, -- Se deja en NULL mientras el centro esté activo
-
-    -- Auditoría de la activación
-    activated_by INT NOT NULL REFERENCES Users(user_id) ON DELETE SET NULL,
-    deactivated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
-
-    -- Información adicional
-    notes TEXT
-);
-
--- Incidencia de ejemplo (Sin cambios)
-INSERT INTO Incidents (description, status, registered_at, center_id, assigned_to, urgency)
-VALUES ('Falta urgente de agua potable para 50 personas', 'pendiente', NOW(), 'C001', NULL, 'Media');
-
--- ==========================================================
--- REEMPLAZO DE TABLA DE LOG DE INVENTARIO
--- Se mejora la estructura para una auditoría más robusta y detallada.
--- ==========================================================
-CREATE TABLE InventoryLog (
-    log_id SERIAL PRIMARY KEY,
-    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
-    item_id INT NOT NULL REFERENCES Products(item_id) ON DELETE RESTRICT, -- RESTRICT para no perder logs si se borra un producto
-    
-    action_type TEXT NOT NULL CHECK (action_type IN ('ADD', 'SUB', 'ADJUST')), -- Nuevos valores
-    quantity INT NOT NULL, -- La cantidad afectada en la acción
-    
-    -- Campos de contexto y auditoría
-    reason TEXT, -- Motivo del ajuste (ej: "Vencimiento", "Donación específica")
-    notes TEXT, -- Notas adicionales
-    created_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- ==========================================================
--- NUEVA TABLA DE GRUPOS FAMILIARES (FIBE)
--- ==========================================================
-CREATE TABLE FamilyGroups (
-    family_id SERIAL PRIMARY KEY,
-    activation_id INT NOT NULL REFERENCES CentersActivations(activation_id) ON DELETE CASCADE,
-    
-    -- RECOMENDACIÓN: Apunta directamente a la tabla Persons para evitar dependencia circular.
-    jefe_hogar_person_id INT REFERENCES Persons(person_id) ON DELETE SET NULL,
-    
-    observaciones TEXT,
-    -- RECOMENDACIÓN: Se usa un array de enteros para las 14 necesidades básicas.
-    necesidades_basicas INTEGER[14],
-
-    -- La unicidad se puede manejar a nivel de aplicación o con un trigger más complejo
-    -- si es necesario evitar que el mismo jefe_hogar cree dos grupos en la misma activación.
-    UNIQUE (activation_id, jefe_hogar_person_id)
-);
-
--- ==========================================================
--- NUEVA TABLA DE MIEMBROS DE GRUPOS FAMILIARES (FIBE)
--- ==========================================================
-CREATE TABLE FamilyGroupMembers (
-    member_id SERIAL PRIMARY KEY, -- RECOMENDACIÓN: Añadir una clave primaria propia.
-    family_id INT NOT NULL REFERENCES FamilyGroups(family_id) ON DELETE CASCADE,
-    person_id INT NOT NULL REFERENCES Persons(person_id) ON DELETE CASCADE,
-    parentesco TEXT NOT NULL, -- Relación con el jefe de hogar (ej: 'Cónyuge', 'Hijo/a', etc.)
-
-    UNIQUE(family_id, person_id) -- Evita que la misma persona esté dos veces en la misma familia
-);
-
-
-CREATE TABLE Persons (
-    person_id SERIAL PRIMARY KEY,
-    rut VARCHAR(20) UNIQUE NOT NULL, -- Usamos VARCHAR para formato completo
-    nombre TEXT NOT NULL,
-    primer_apellido TEXT NOT NULL,
-    segundo_apellido TEXT,
-    nacionalidad TEXT CHECK (nacionalidad IN ('CH', 'EXT')),
-    genero TEXT CHECK (genero IN ('F', 'M', 'Otro')),
-    edad INT,
-    
-    -- Campos específicos de la ficha FIBE
-    estudia BOOLEAN,
-    trabaja BOOLEAN,
-    perdida_trabajo BOOLEAN,
-    rubro TEXT,
-    discapacidad BOOLEAN,
-    dependencia BOOLEAN,
-
-    -- Timestamps de auditoría
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-
-
-
--- Confirmación
-SELECT 'Todas las tablas han sido creadas e inicializadas con la nueva estructura de roles.';
+-- Confirmación final
+SELECT 'Script definitivo ejecutado. Todas las tablas y datos de prueba han sido creados.';
