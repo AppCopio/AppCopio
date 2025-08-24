@@ -305,9 +305,9 @@ INSERT INTO Roles (role_name) VALUES ('Administrador'), ('Trabajador Municipal')
 INSERT INTO Users (user_id, username, password_hash, email, role_id, nombre, rut, is_active, es_apoyo_admin)
 OVERRIDING SYSTEM VALUE
 VALUES
-(1, 'admin', '$2b$10$f/3p.QQe.dTUj5xG32GvAOPxPh4C9dJ2e5d.Xk/2t.T.a.E3g/fWq', 'admin@appcopio.cl', 1, 'Admin AppCopio', '11.111.111-1', TRUE, TRUE),
-(2, 'juan.perez', '$2b$10$f/3p.QQe.dTUj5xG32GvAOPxPh4C9dJ2e5d.Xk/2t.T.a.E3g/fWq', 'juan.perez@municipalidad.cl', 2, 'Juan Pérez', '22.222.222-2', TRUE, FALSE),
-(3, 'carla.rojas', '$2b$10$f/3p.QQe.dTUj5xG32GvAOPxPh4C9dJ2e5d.Xk/2t.T.a.E3g/fWq', 'carla.rojas@comunidad.cl', 3, 'Carla Rojas', '33.333.333-3', TRUE, FALSE);
+(1, 'admin', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'admin@appcopio.cl', 1, 'Admin AppCopio', '11.111.111-1', TRUE, TRUE),
+(2, 'juan.perez', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'juan.perez@municipalidad.cl', 2, 'Juan Pérez', '22.222.222-2', TRUE, FALSE),
+(3, 'carla.rojas', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'carla.rojas@comunidad.cl', 3, 'Carla Rojas', '33.333.333-3', TRUE, FALSE);
 
 -- Centros de prueba
 INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude, municipal_manager_id) VALUES

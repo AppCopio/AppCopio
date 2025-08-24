@@ -191,7 +191,7 @@ const loginHandler: RequestHandler = async (req, res) => {
             return;
         }
         const roleResult = await pool.query('SELECT role_name FROM roles WHERE role_id = $1', [user.role_id]);
-        const assignmentsResult = await pool.query('SELECT center_id FROM UserCenterAssignments WHERE user_id = $1', [user.user_id]);
+        const assignmentsResult = await pool.query('SELECT center_id FROM centerassignments WHERE user_id = $1', [user.user_id]);
         const assignedCenters = assignmentsResult.rows.map(r => r.center_id);
         const role_name = roleResult.rows[0]?.role_name;
         const sessionUser = {
