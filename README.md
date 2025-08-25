@@ -215,4 +215,10 @@ Necesitarás **dos terminales abiertas** para correr la aplicación completa.
 
 ¡Y listo! Con ambos servidores corriendo, la aplicación debería ser completamente funcional. Si navegas a la sección `/map`, deberías ver los pines cargados desde la base de datos que configuraste.
 
+<<<<<<< Updated upstream
 Cualquier duda consultarle al bruno! :D
+=======
+Cualquier duda consultarle al bruno! :D
+
+# se puee levantar todo con el docker-compose up
+>>>>>>> Stashed changes
