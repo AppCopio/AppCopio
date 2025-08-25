@@ -1,0 +1,105 @@
+.fibe-page {
+  /* ===== Título de la página ===== */
+  & .page-title {
+    font-size: 3rem;
+    line-height: 2rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    color: #111827;
+  }
+
+  /* Barra de progreso del stepper */
+  & .stepper-progress {
+    position: relative;
+    height: 4px;
+    background: #eef2f7;
+    border-radius: 999px;
+    overflow: hidden;
+
+    & .stepper-bar {
+      height: 100%;
+      background: #2563eb;
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+  }
+
+  /* ===== Contenedor del formulario/secciones ===== */
+  & .form-card {
+    margin: 5rem;
+    margin-top: 0.5rem;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 12px;
+  }
+
+  /* Solo visibilidad; los estilos de campos viven en StepQuestions.css */
+  & .form-section { display: none; }
+  & .form-section.active { display: block; }
+
+  /* ===== Navegación (Anterior / Siguiente / Enviar) ===== */
+  & .nav-actions {
+    
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    flex-wrap: wrap;
+  }
+
+  & .nav-link {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    padding: .25rem .5rem;
+    color: #111827;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    cursor: pointer;
+    transition: color .15s ease, opacity .15s ease;
+
+    &:focus-visible {
+      outline: 2px solid rgba(37, 99, 235, .35);
+      outline-offset: 2px;
+    }
+  }
+
+  /* Prev (gris, con flecha a la izquierda) */
+  & .nav-link--prev {
+    color: #4b5563;
+    font-weight: 500;
+
+    &::before {
+      content: "←";
+      opacity: .6;
+    }
+
+    &:hover { color: #111827; }
+  }
+
+  /* Next/Submit (oscuro, con flecha a la derecha) */
+  & .nav-link--next {
+    color: #111827;
+    font-weight: 600;
+
+    &::after {
+      content: "→";
+      opacity: .6;
+    }
+
+    &:hover { color: #fdfdfd; }
+  }
+
+  /* Disabled (para “Anterior” en step 0) */
+  & .nav-link:disabled {
+    color: #ffffff;
+    cursor: default;
+
+    &::before,
+    &::after { opacity: .35; }
+  }
+}

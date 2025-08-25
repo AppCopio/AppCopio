@@ -19,6 +19,7 @@ import NeedsStatusPage from "./pages/NeedsStatusPage/NeedsStatusPage";
 import IncidentListPage from "./pages/IncidentListPage/IncidentListPage";
 import InventoryHistoryPage from "./pages/InventoryHistoryPage/InventoryHistoryPage";
 import MisCentrosPage from './pages/MisCentrosPage/MisCentrosPage';
+import FibePage from "./pages/FibePage/FibePage";
 
 import "./App.css";
 
@@ -47,6 +48,7 @@ function App() {
               <Route path="/admin/centers" element={<CenterManagementPage />} />
               <Route path="/admin/users" element={<UsersManagementPage />} />
               <Route path="/admin/incidents" element={<IncidentListPage />} />
+              <Route path="/admin/fibe" element={<FibePage />} />
 
               {/* Ruta de Trabajador Municipal */}
               <Route path="/mis-centros" element={<MisCentrosPage />} />

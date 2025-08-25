@@ -63,6 +63,11 @@ const Navbar: React.FC = () => {
                     Incidencias
                   </NavLink>
                 </li>
+                <li>
+                  <NavLink to="/admin/fibe" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                    FIBE
+                  </NavLink>
+                </li>
               </>
             )}
             {user?.role_name === 'Trabajador Municipal' && !user?.es_apoyo_admin && (
