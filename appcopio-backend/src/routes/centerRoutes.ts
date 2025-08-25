@@ -18,6 +18,19 @@ const itemRatiosPerPerson: { [key: string]: number } = {
     'Herramientas': 1
 };
 
+//
+// Por lo que entendí esto es para verificar el rol de administrador (DIDECO)
+const isAdmin: RequestHandler = (req, res, next) => {
+    // Implementación de autenticación con token JWT
+    // Por ahora, un placeholder
+    const userRole = (req as any).user.role; 
+    if (userRole === 'Administrador') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Acceso denegado. Se requiere rol de Administrador.' });
+    }
+};
+
 // GET /api/centers - (Sin cambios en esta función)
 const getAllCentersHandler: RequestHandler = async (req, res) => {
     try {
@@ -106,27 +119,104 @@ const getCenterByIdHandler: RequestHandler = async (req, res) => {
     }
 };
 
-// POST /api/centers - Crear un nuevo centro
+// POST /api/centers - Crear un nuevo centro y su descrpción en una transacción
 const createCenterHandler: RequestHandler = async (req, res) => {
-    const { center_id, name, address, type, capacity, is_active = false, latitude, longitude } = req.body;
-    if (!center_id || !name || !type) {
-        res.status(400).json({ message: 'center_id, name, y type son campos requeridos.' });
-        return;
-    }
+    const client = await pool.connect();
     try {
-        const newCenter = await pool.query(
-            `INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [center_id, name, address, type, capacity || 0, is_active, latitude, longitude]
-        );
-        res.status(201).json(newCenter.rows[0]);
-    } catch (error: any) {
-        console.error('Error al crear el centro:', error);
-        if (error.code === '23505') {
-            res.status(409).json({ message: `El center_id '${center_id}' ya existe.` });
-        } else {
-            res.status(500).json({ message: 'Error interno del servidor.' });
+        await client.query('BEGIN'); // Iniciar la transacción
+
+        const {
+            center_id, name, address, type, capacity, latitude, longitude, should_be_active,
+            comunity_charge_id, municipal_manager_id,
+            // Campos de la sección "Detalles del inmueble y la organización"
+            tipo_inmueble, numero_habitaciones, estado_conservacion,
+            material_muros, material_pisos, material_techo, observaciones_acceso_y_espacios_comunes,
+            // Campos de la sección "Accesos y espacios comunes"
+            espacio_10_afectados, diversidad_funcional, areas_comunes_accesibles,
+            espacio_recreacion, observaciones_espacios_comunes,
+            // Campos de la sección "Servicios básicos"
+            agua_potable, agua_estanques, electricidad, calefaccion, alcantarillado,
+            observaciones_servicios_basicos,
+            // Campos de la sección "Baños y servicios higiénicos"
+            estado_banos, wc_proporcion_personas, banos_genero, banos_grupos_prioritarios,
+            cierre_banos_emergencia, lavamanos_proporcion_personas, dispensadores_jabon,
+            dispensadores_alcohol_gel, papeleros_banos, papeleros_cocina, duchas_proporcion_personas,
+            lavadoras_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+            // Campos de la sección "Distribución de Habitaciones"
+            posee_habitaciones, separacion_familias, sala_lactancia,
+            observaciones_distribucion_habitaciones,
+            // Campos de la sección "Herramientas y Mobiliario"
+            cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_equipamiento_basico_cocina,
+            cuenta_con_refrigerador, cuenta_set_extraccion, observaciones_herramientas_mobiliario,
+            // Campos de la sección "Condiciones de Seguridad y Protección Generales"
+            sistema_evacuacion_definido, cuenta_con_senaleticas_adecuadas,
+            observaciones_condiciones_seguridad_proteccion_generales,
+            // Campos de la sección "Dimensión Animal"
+            existe_lugar_animales_dentro, existe_lugar_animales_fuera, existe_jaula_mascota,
+            existe_recipientes_mascota, existe_correa_bozal, reconoce_personas_dentro_de_su_comunidad,
+            no_reconoce_personas_dentro_de_su_comunidad, observaciones_dimension_animal,
+            // Campos de la sección "Elementos de Protección Personal (EPP)" y "Seguridad Comunitaria"
+            existen_cascos, existen_gorros_cabello, existen_gafas, existen_caretas,
+            existen_mascarillas, existen_respiradores, existen_mascaras_gas,
+            existen_guantes_latex, existen_mangas_protectoras, existen_calzados_seguridad,
+            existen_botas_impermeables, existen_chalecos_reflectantes, existen_overoles_trajes,
+            existen_camillas_catre, existen_alarmas_incendios, existen_hidrantes_mangueras,
+            existen_senaleticas, existen_luces_emergencias, existen_extintores,
+            existen_generadores, existen_baterias_externas, existen_altavoces,
+            existen_botones_alarmas, existen_sistemas_monitoreo, existen_radio_recargable,
+            existen_barandillas_escaleras, existen_puertas_emergencia_rapida,
+            existen_rampas, existen_ascensores_emergencia, observaciones_seguridad_comunitaria,
+            // Campos de la sección "Necesidades Adicionales"
+            importa_elementos_seguridad, observaciones_importa_elementos_seguridad,
+            importa_conocimientos_capacitaciones, observaciones_importa_conocimientos_capacitaciones,
+            catastroData
+        } = req.body;
+
+        if (!center_id || !name || !type || typeof latitude !== 'number' || typeof longitude !== 'number') {
+            await client.query('ROLLBACK');
+            res.status(400).json({ message: 'Campos principales requeridos: center_id, name, type, latitude, longitude.' });
+            return;
         }
+
+        // 1. Insertar en la tabla Centers con el ID proporcionado
+        const insertCenterQuery = `
+            INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude, should_be_active, comunity_charge_id, municipal_manager_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING *`;
+        
+        const centerValues = [
+            center_id, name, address || null, type, capacity || 0, false, latitude, longitude, should_be_active || false,
+            comunity_charge_id || null, municipal_manager_id || null
+        ];
+        
+        await client.query(insertCenterQuery, centerValues);
+
+        // 2. Insertar en la tabla CentersDescription
+        const catastroColumns = Object.keys(catastroData);
+        const catastroValues = Object.values(catastroData);
+        const catastroPlaceholders = catastroValues.map((_, i) => `$${i + 2}`).join(', ');
+
+        const insertCatastroQuery = `
+            INSERT INTO CentersDescription (
+                center_id,
+                ${catastroColumns.join(', ')}
+            ) VALUES (
+                $1,
+                ${catastroPlaceholders}
+            ) RETURNING *`;
+        
+        const allCatastroValues = [center_id, ...catastroValues];
+
+        await client.query(insertCatastroQuery, allCatastroValues);
+
+        await client.query('COMMIT'); // Confirmar la transacción
+        res.status(201).json({ message: 'Centro y descripción de catastro creados exitosamente.', center_id: center_id });
+    } catch (error: any) {
+        await client.query('ROLLBACK'); // Revertir la transacción si algo falla
+        console.error('Error al crear el centro:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    } finally {
+        client.release();
     }
 };
 // PUT /api/centers/:id - Actualizar un centro existente
