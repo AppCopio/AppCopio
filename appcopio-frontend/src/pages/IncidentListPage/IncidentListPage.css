@@ -56,6 +56,25 @@ td select {
   padding: 0.25rem;
   margin-bottom: 0.3rem;
   width: 100%;
+  color: #333;
+  background-color: white;
+}
+
+/* Estilos específicos para las opciones del select */
+td select option {
+  color: #333;
+  background-color: white;
+  padding: 4px 8px;
+}
+
+td select option:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+td select option:checked {
+  background-color: #337ab7;
+  color: white;
 }
 
 button:nth-child(2) {
@@ -72,4 +91,23 @@ table select {
   max-width: 120px;
   font-size: 0.85rem;
   padding: 4px;
+  color: #333;
+  background-color: white;
+}
+
+/* Estilos específicos para las opciones del select en tabla */
+table select option {
+  color: #333;
+  background-color: white;
+  padding: 2px 4px;
+}
+
+table select option:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+table select option:checked {
+  background-color: #337ab7;
+  color: white;
 }

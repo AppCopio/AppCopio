@@ -8,7 +8,7 @@ const router = Router();
 router.get('/categories', async (req: Request, res: Response) => {
   try {
     // SELECT DISTINCT asegura que solo obtengamos cada nombre de categoría una vez
-    const result = await pool.query('SELECT DISTINCT category FROM Products ORDER BY category');
+    const result = await pool.query('SELECT DISTINCT category FROM products ORDER BY category');
     // Mapeamos el resultado para devolver un array de strings simple: ["Alimentos", "Higiene", ...]
     const categories = result.rows.map(row => row.category);
     res.status(200).json(categories);
@@ -29,7 +29,7 @@ router.put('/:itemId', async (req: Request, res: Response) => {
 
   try {
     const result = await pool.query(
-      'UPDATE Products SET name = $1, category = $2 WHERE item_id = $3 RETURNING *',
+      'UPDATE products SET name = $1, category = $2 WHERE item_id = $3 RETURNING *',
       [name, category, itemId]
     );
 

@@ -20,9 +20,18 @@ interface RequestParams {
 // GET (funciona)
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const centersResult = await pool.query(
-      'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers'
-    );
+    // Intentar primero con center_id, si falla intentar con id
+    let centersResult;
+    try {
+      centersResult = await pool.query(
+        'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM centers'
+      );
+    } catch (firstError) {
+      console.log('Intentando con columna "id" en lugar de "center_id"');
+      centersResult = await pool.query(
+        'SELECT id as center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM centers'
+      );
+    }
     const centers = centersResult.rows;
     const centersWithFullness = await Promise.all(centers.map(async (center) => {
             try {
@@ -40,18 +49,16 @@ router.get('/', async (req: Request, res: Response) => {
                 }
                 // Obtener el inventario del centro agrupado por categoría de producto
                 const inventoryByCategoryResult = await pool.query(
-                    `SELECT p.category, COALESCE(SUM(ci.quantity), 0) AS category_quantity
-                     FROM CenterInventories ci
-                     JOIN Products p ON ci.item_id = p.item_id
-                     WHERE ci.center_id = $1
+                    `SELECT p.category, COALESCE(SUM(i.quantity), 0) AS category_quantity
+                     FROM inventory i
+                     JOIN products p ON i.product_id = p.id
+                     WHERE i.center_id = $1
                      GROUP BY p.category`,
                     [center.center_id]
                 );
 
-
-
                 const inventoryResult = await pool.query(
-                    'SELECT COALESCE(SUM(quantity), 0) AS total_quantity FROM CenterInventories WHERE center_id = $1',
+                    'SELECT COALESCE(SUM(quantity), 0) AS total_quantity FROM inventory WHERE center_id = $1',
                     [center.center_id]
                 );
 
@@ -132,7 +139,8 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM Centers WHERE center_id = $1', [id]);
+    // Usar la estructura real de la tabla (campo 'id', no 'center_id')
+    const result = await pool.query('SELECT *, id as center_id FROM centers WHERE id = $1', [id]);
 
     if (result.rows.length === 0) {
       res.status(404).json({ message: 'Centro no encontrado.' });
@@ -195,19 +203,32 @@ router.put('/:id', async (req: Request<{ id: string }>, res: Response) => {
     res.status(400).json({ message: 'name y type son campos requeridos para la actualización.' });
     return;
   }
-  if (type && !['Acopio', 'Albergue'].includes(type)) {
-    res.status(400).json({ message: 'El tipo de centro debe ser "Acopio" o "Albergue".' });
+  if (type && !['Centro de Acopio', 'Hospital de Campaña', 'Refugio'].includes(type)) {
+    res.status(400).json({ message: 'El tipo de centro debe ser "Centro de Acopio", "Hospital de Campaña" o "Refugio".' });
     return;
   }
 
   try {
-    const updatedCenter = await pool.query(
-      `UPDATE Centers
-       SET name = $1, address = $2, type = $3, capacity = $4, is_active = $5, latitude = $6, longitude = $7, updated_at = CURRENT_TIMESTAMP
-       WHERE center_id = $8
-       RETURNING *`,
-      [name, address, type, capacity, is_active, latitude, longitude, id]
-    );
+    // Intentar primero con center_id, si falla intentar con id
+    let updatedCenter;
+    try {
+      updatedCenter = await pool.query(
+        `UPDATE centers
+         SET name = $1, address = $2, type = $3, capacity = $4, is_active = $5, latitude = $6, longitude = $7, updated_at = CURRENT_TIMESTAMP
+         WHERE center_id = $8
+         RETURNING *`,
+        [name, address, type, capacity, is_active, latitude, longitude, id]
+      );
+    } catch (firstError) {
+      console.log('Intentando actualizar con columna "id" en lugar de "center_id"');
+      updatedCenter = await pool.query(
+        `UPDATE centers
+         SET name = $1, address = $2, type = $3, capacity = $4, is_active = $5, latitude = $6, longitude = $7, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $8
+         RETURNING *, id as center_id`,
+        [name, address, type, capacity, is_active, latitude, longitude, id]
+      );
+    }
 
     if (updatedCenter.rows.length === 0) {
       res.status(404).json({ message: 'Centro no encontrado para actualizar.' });
@@ -228,7 +249,14 @@ router.put('/:id', async (req: Request<{ id: string }>, res: Response) => {
 router.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
   const { id } = req.params;
   try {
-    const deleteOp = await pool.query('DELETE FROM Centers WHERE center_id = $1 RETURNING *', [id]);
+    // Intentar primero con center_id, si falla intentar con id
+    let deleteOp;
+    try {
+      deleteOp = await pool.query('DELETE FROM centers WHERE center_id = $1 RETURNING *', [id]);
+    } catch (firstError) {
+      console.log('Intentando eliminar con columna "id" en lugar de "center_id"');
+      deleteOp = await pool.query('DELETE FROM centers WHERE id = $1 RETURNING *', [id]);
+    }
 
     if (deleteOp.rowCount === 0) { // o deleteOp.rows.length === 0
       res.status(404).json({ message: 'Centro no encontrado para eliminar.' });
@@ -256,8 +284,9 @@ router.patch('/:id/status', async (req: Request<{ id: string }>, res: Response) 
     }
 
     try {
+        // Usar la estructura real de la tabla (campo 'id', no 'center_id')
         const updatedCenter = await pool.query(
-            'UPDATE Centers SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE center_id = $2 RETURNING *',
+            'UPDATE centers SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *, id as center_id',
             [isActive, id]
         );
 
@@ -292,10 +321,19 @@ router.patch('/:id/operational-status', async (req: Request<{ id: string }>, res
 
     try {
         // Primero verificar que el centro existe
-        const centerExists = await pool.query(
-            'SELECT center_id FROM Centers WHERE center_id = $1',
-            [id]
-        );
+        let centerExists;
+        try {
+            centerExists = await pool.query(
+                'SELECT center_id FROM centers WHERE center_id = $1',
+                [id]
+            );
+        } catch (firstError) {
+            console.log('Intentando verificar existencia con columna "id" en lugar de "center_id"');
+            centerExists = await pool.query(
+                'SELECT id as center_id FROM centers WHERE id = $1',
+                [id]
+            );
+        }
 
         if (centerExists.rows.length === 0) {
             res.status(404).json({ message: 'Centro no encontrado.' });
@@ -306,13 +344,25 @@ router.patch('/:id/operational-status', async (req: Request<{ id: string }>, res
         const noteToSave = operationalStatus === 'Cerrado Temporalmente' ? publicNote : null;
 
         // Actualizar el estado operativo y nota pública
-        const updatedCenter = await pool.query(
-            `UPDATE Centers 
-             SET operational_status = $1, public_note = $2, updated_at = CURRENT_TIMESTAMP 
-             WHERE center_id = $3 
-             RETURNING center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude, updated_at`,
-            [operationalStatus, noteToSave, id]
-        );
+        let updatedCenter;
+        try {
+            updatedCenter = await pool.query(
+                `UPDATE centers 
+                 SET operational_status = $1, public_note = $2, updated_at = CURRENT_TIMESTAMP 
+                 WHERE center_id = $3 
+                 RETURNING center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude, updated_at`,
+                [operationalStatus, noteToSave, id]
+            );
+        } catch (firstError) {
+            console.log('Intentando actualizar estado operativo con columna "id" en lugar de "center_id"');
+            updatedCenter = await pool.query(
+                `UPDATE centers 
+                 SET operational_status = $1, public_note = $2, updated_at = CURRENT_TIMESTAMP 
+                 WHERE id = $3 
+                 RETURNING id as center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude, updated_at`,
+                [operationalStatus, noteToSave, id]
+            );
+        }
 
         res.status(200).json({
             message: 'Estado operativo actualizado exitosamente',
@@ -332,15 +382,22 @@ router.patch('/:id/operational-status', async (req: Request<{ id: string }>, res
 router.get('/:centerId/inventory', async (req: Request<{ centerId: string }>, res: Response) => {
   const { centerId } = req.params;
   try {
+    // Usar la estructura real de las tablas
     const query = `
-      SELECT ci.item_id, ci.quantity, p.name, p.category 
-      FROM CenterInventories AS ci JOIN Products AS p ON ci.item_id = p.item_id 
-      WHERE ci.center_id = $1 ORDER BY p.name`;
+      SELECT i.product_id as item_id, i.quantity, p.name, p.category 
+      FROM inventory AS i 
+      JOIN products AS p ON i.product_id = p.id 
+      WHERE i.center_id = $1 
+      ORDER BY p.name`;
+    
     const result = await pool.query(query, [centerId]);
     res.status(200).json(result.rows);
   } catch (error) {
     console.error(`Error al obtener inventario para el centro ${centerId}:`, error);
-    res.status(500).json({ message: 'Error interno del servidor.' });
+    res.status(500).json({ 
+      message: 'Error al obtener el inventario del centro',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
   }
 });
 

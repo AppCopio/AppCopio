@@ -9,7 +9,7 @@ export interface Center {
   center_id: string;
   name: string;
   address: string;
-  type: 'Acopio' | 'Albergue';
+  type: 'Centro de Acopio' | 'Hospital de Campaña' | 'Refugio';
   capacity: number;
   is_active: boolean;
   operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
@@ -248,8 +248,9 @@ const CenterManagementPage: React.FC = () => {
               onChange={(e) => setTypeFilter(e.target.value)}
             >
               <option value="todos">Todos los tipos</option>
-              <option value="Acopio">Acopio</option>
-              <option value="Albergue">Albergue</option>
+              <option value="Centro de Acopio">Centro de Acopio</option>
+              <option value="Hospital de Campaña">Hospital de Campaña</option>
+              <option value="Refugio">Refugio</option>
             </select>
           </div>
 

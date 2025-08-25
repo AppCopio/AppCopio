@@ -2,12 +2,51 @@
 .map-wrapper {
   width: 100%;
   height: calc(100vh - 60px); 
+  color: #333; /* Asegurar texto oscuro por defecto */
 }
 
 .error-message {
   padding: 20px;
   color: red;
   text-align: center;
+}
+
+/* Estilos para mejorar contraste de texto */
+.map-details-panel {
+  background-color: white !important;
+  color: #333 !important;
+}
+
+.map-details-panel * {
+  color: #333 !important;
+}
+
+.map-details-panel strong {
+  color: #222 !important;
+}
+
+.map-details-text {
+  color: #333 !important;
+  background-color: white !important;
+}
+
+/* Forzar contraste en todos los elementos de texto del mapa */
+.map-wrapper div {
+  color: #333;
+}
+
+.map-wrapper div strong {
+  color: #222;
+}
+
+.map-wrapper h4 {
+  color: #333 !important;
+}
+
+/* Asegurar que el texto sea visible incluso con CSS conflictivo */
+.map-wrapper [style*="color: white"],
+.map-wrapper [style*="color:white"] {
+  color: #333 !important;
 }
 
 /* Estilo base para el pin personalizado */

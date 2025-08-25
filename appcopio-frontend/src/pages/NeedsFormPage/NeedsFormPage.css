@@ -45,6 +45,25 @@ select {
   font-size: 1rem;
   font-family: inherit;
   resize: vertical;
+  color: #333;
+  background-color: white;
+}
+
+/* Estilos específicos para las opciones del select */
+select option {
+  color: #333;
+  background-color: white;
+  padding: 4px 8px;
+}
+
+select option:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+select option:checked {
+  background-color: #337ab7;
+  color: white;
 }
 
 textarea:focus,

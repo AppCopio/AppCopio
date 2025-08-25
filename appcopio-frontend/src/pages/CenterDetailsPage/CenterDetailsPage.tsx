@@ -9,7 +9,7 @@ interface CenterDetails {
   center_id: string;
   name: string;
   address: string;
-  type: 'Acopio' | 'Albergue';
+  type: 'Centro de Acopio' | 'Hospital de Campaña' | 'Refugio';
   capacity: number;
   is_active: boolean;
   operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';

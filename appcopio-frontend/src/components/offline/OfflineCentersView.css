@@ -83,6 +83,24 @@
   border-radius: 4px;
   font-size: 14px;
   background-color: white;
+  color: #333;
+}
+
+/* Estilos específicos para las opciones del select */
+.filter-group select option {
+  color: #333;
+  background-color: white;
+  padding: 4px 8px;
+}
+
+.filter-group select option:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.filter-group select option:checked {
+  background-color: #337ab7;
+  color: white;
 }
 
 .filter-group select:focus,
