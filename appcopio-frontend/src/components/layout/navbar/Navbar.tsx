@@ -59,6 +59,11 @@ const Navbar: React.FC = () => {
                   </NavLink>
                 </li>
                 <li>
+                  <NavLink to="/admin/centers/new" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                    Crear Centro
+                  </NavLink>
+                </li>
+                <li>
                   <NavLink to="/admin/incidents" className={({ isActive }) => (isActive ? 'active-link' : '')}>
                     Incidencias
                   </NavLink>

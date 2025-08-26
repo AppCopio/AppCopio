@@ -19,6 +19,7 @@ import NeedsStatusPage from "./pages/NeedsStatusPage/NeedsStatusPage";
 import IncidentListPage from "./pages/IncidentListPage/IncidentListPage";
 import InventoryHistoryPage from "./pages/InventoryHistoryPage/InventoryHistoryPage";
 import MisCentrosPage from './pages/MisCentrosPage/MisCentrosPage';
+import CreateCenterPage from './pages/CreateCenterPage/CreateCenterPage';
 
 import "./App.css";
 
@@ -45,6 +46,7 @@ function App() {
               
               {/* Rutas de Admin y Apoyo */}
               <Route path="/admin/centers" element={<CenterManagementPage />} />
+              <Route path="/admin/centers/new" element={<CreateCenterPage />} />
               <Route path="/admin/users" element={<UsersManagementPage />} />
               <Route path="/admin/incidents" element={<IncidentListPage />} />
 

@@ -3,7 +3,7 @@ services:
     image: postgres:14
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: benja
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: appcopio_db
     volumes:
       - dbdata:/var/lib/postgresql/data
