@@ -108,7 +108,6 @@ const createUserHandler: RequestHandler = async (req, res) => {
       return;
     }
     const hash = await bcrypt.hash(password, 10);
-
     // Se elimina 'center_id' de la consulta de inserción.
     const insertSql = `
       INSERT INTO users

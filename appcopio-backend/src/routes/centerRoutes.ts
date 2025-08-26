@@ -306,9 +306,8 @@ const getInventoryHandler: RequestHandler = async (req, res) => {
 // POST /api/centers/:centerId/inventory - Añadir un item al inventario
 const addInventoryItemHandler: RequestHandler = async (req: AuthenticatedRequest, res) => {
     const { centerId } = req.params;
-    const { itemName, categoryId, quantity, unit, notes } = req.body;
-    
-    const userId = req.user?.id; 
+    const { itemName, categoryId, quantity, unit, notes,user } = req.body;
+    const userId = user?.user_id; 
     if (!userId) {
         res.status(401).json({ message: 'No autorizado.' });
         return;

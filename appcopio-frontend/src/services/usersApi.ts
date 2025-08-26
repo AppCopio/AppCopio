@@ -71,7 +71,8 @@ export async function updateUser(id: number, payload: Partial<{
   username: string;
   role_id: number;
   nombre: string | null;
-  es_apoyo_admin: boolean; // Se añade el nuevo permiso
+  es_apoyo_admin: boolean; 
+  is_active: boolean
   // ... otros campos ...
 }>) {
   return fetchJSON<any>(`${API_BASE}/users/${id}`, {
@@ -127,4 +128,10 @@ export async function setPassword(id: number, password: string) {
     method: "PATCH",
     body: JSON.stringify({ password }),
   });
+}
+
+export async function getRoles(signal?: AbortSignal) {
+  const res = await fetch(`${API_BASE}/roles`, { signal });
+  if (!res.ok) throw new Error("No se pudieron cargar los roles");
+  return res.json() as Promise<{ roles: { role_id: number; role_name: string }[] }>;
 }

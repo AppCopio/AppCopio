@@ -1,7 +1,6 @@
 // src/components/layout/CenterLayout/CenterLayout.tsx
 import React from 'react';
 import { Outlet, useParams, Link } from 'react-router-dom';
-import Navbar from '../navbar/Navbar';
 import { potentialCentersData } from '../../../data/potentialCenters';
 import './CenterLayout.css';
 
@@ -11,7 +10,6 @@ const CenterLayout: React.FC = () => {
 
   return (
     <div className="center-layout">
-      <Navbar />
 
       <div className="center-header">
         <h2>
