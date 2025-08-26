@@ -1,17 +1,16 @@
 // src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// --- PASO 1: Se actualiza la interfaz del Usuario ---
-// Esta es la nueva "tarjeta de identidad" del usuario en toda la aplicación.
+// Se actualiza la interfaz del Usuario para incluir el token
 interface User {
   user_id: number;
   username: string;
   role_name: string; // Ej: 'Administrador', 'Trabajador Municipal'
   es_apoyo_admin: boolean;
   assignedCenters: string[]; // Un arreglo con los IDs de los centros asignados
+  token: string; // ¡Este es el campo que nos faltaba!
 }
 
-// Se actualiza el tipo del contexto para reflejar la nueva interfaz de User
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
@@ -24,7 +23,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  // Añadimos un estado de carga para evitar parpadeos al cargar la sesión
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -43,7 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // --- PASO 2: La función login ahora espera el nuevo objeto User ---
+  // La función login ahora espera el objeto User completo, incluyendo el token
   const login = (userData: User) => {
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);

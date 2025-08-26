@@ -1,52 +1,84 @@
-// src/pages/CreateCenterPage/CreateCenterPage.tsx
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Accordion, AccordionSummary, AccordionDetails, TextField, Button, Box, Typography, Grid } from '@mui/material';
+import { NavLink, useNavigate } from 'react-router-dom';
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Button,
+  Box,
+  Typography,
+  Grid,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
+  Alert
+} from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import './CreateCenterPage.css';
 
-interface FormData {
-  organizationName: string;
-  address: string;
-  directorName: string;
-  directorRole: string;
-  contactPhones: string;
-  evaluationDate: string;
-  coordinateEast: string;
-  coordinateNorth: string;
-  folioNumber: string;
-  // Agrega más campos a medida que avanzamos en el formulario.
-}
+import { createCenter } from '../../services/centerApi';
+import { CenterData } from '../../types/center';
 
 const CreateCenterPage: React.FC = () => {
-  const [formData, setFormData] = useState<FormData>({
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState<CenterData>({
     organizationName: '',
     address: '',
     directorName: '',
     directorRole: '',
     contactPhones: '',
     evaluationDate: '',
-    coordinateEast: '',
-    coordinateNorth: '',
+    coordinateEste: 0,
+    coordinateNorte: 0,
     folioNumber: '',
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prevState => ({
       ...prevState,
-      [name]: value,
+      [name]: (name === 'coordinateEste' || name === 'coordinateNorte') ? Number(value) : value,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData);
-    // Lógica para manejar el registro offline o la llamada a la API
+    
+    // --- LÓGICA DE AUTENTICACIÓN TEMPORALMENTE DESHABILITADA ---
+    // En lugar de obtener el token del localStorage, usaremos un string vacío.
+    // Esto es solo para fines de prueba, no para producción.
+    const token = '';
+
+    const backendData = {
+        center_id: "C009",
+        name: formData.organizationName,
+        type: 'Albergue',
+        latitude: formData.coordinateNorte,
+        longitude: formData.coordinateEste,
+        address: formData.address,
+    };
+    
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const newCenter = await createCenter(backendData, token);
+      setSuccess(`Centro "${newCenter.name}" creado con éxito.`);
+      setTimeout(() => navigate('/admin/centers'), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <Box sx={{ maxWidth: 900, margin: '2rem auto', padding: '2rem', backgroundColor: '#f9f9f9', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+    <Box sx={{ maxWidth: 900, margin: '2rem auto', padding: '2rem', backgroundColor: '#f9f9f9', borderRadius: '8px', boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}>
       <Typography variant="h4" component="h1" align="center" gutterBottom>
         Registro de Nuevo Centro de Acopio
       </Typography>
@@ -60,106 +92,140 @@ const CreateCenterPage: React.FC = () => {
               Datos de la Organización y ubicación del centro según el catastro.
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={50} md={41} lg={50}>
-                <TextField
-                  fullWidth
-                  label="Nombre de la Organización"
-                  id="organizationName"
-                  name="organizationName"
-                  value={formData.organizationName}
-                  onChange={handleChange}
-                  required
-                />
+              {/* Nombre de la Organización */}
+              <Grid item xs={12}>
+                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                  <InputLabel htmlFor="organizationName-input" required>Nombre de la Organización</InputLabel>
+                  <OutlinedInput
+                    id="organizationName-input"
+                    name="organizationName"
+                    value={formData.organizationName}
+                    onChange={handleChange}
+                    label="Nombre de la Organización"
+                  />
+                </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Dirección"
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  required
-                />
+
+              {/* Dirección */}
+              <Grid item xs={12}>
+                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                  <InputLabel htmlFor="address-input" required>Dirección</InputLabel>
+                  <OutlinedInput
+                    id="address-input"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    label="Dirección"
+                  />
+                </FormControl>
               </Grid>
+
+              {/* Nombre Directiva o Dirigente/a */}
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Nombre Directiva o Dirigente/a"
-                  id="directorName"
-                  name="directorName"
-                  value={formData.directorName}
-                  onChange={handleChange}
-                  required
-                />
+                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                  <InputLabel htmlFor="directorName-input">Nombre Directiva o Dirigente/a</InputLabel>
+                  <OutlinedInput
+                    id="directorName-input"
+                    name="directorName"
+                    value={formData.directorName}
+                    onChange={handleChange}
+                    label="Nombre Directiva o Dirigente/a"
+                  />
+                </FormControl>
               </Grid>
+
+              {/* Cargo/Rol */}
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Cargo/Rol"
-                  id="directorRole"
-                  name="directorRole"
-                  value={formData.directorRole}
-                  onChange={handleChange}
-                />
+                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                  <InputLabel htmlFor="directorRole-input">Cargo/Rol</InputLabel>
+                  <OutlinedInput
+                    id="directorRole-input"
+                    name="directorRole"
+                    value={formData.directorRole}
+                    onChange={handleChange}
+                    label="Cargo/Rol"
+                  />
+                </FormControl>
               </Grid>
+
+              {/* Teléfonos de Contacto */}
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Teléfonos de Contacto"
-                  id="contactPhones"
-                  name="contactPhones"
-                  value={formData.contactPhones}
-                  onChange={handleChange}
-                />
+                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                  <InputLabel htmlFor="contactPhones-input">Teléfonos de Contacto</InputLabel>
+                  <OutlinedInput
+                    id="contactPhones-input"
+                    name="contactPhones"
+                    value={formData.contactPhones}
+                    onChange={handleChange}
+                    label="Teléfonos de Contacto"
+                  />
+                </FormControl>
               </Grid>
+              
+              {/* Fecha de Evaluación */}
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Fecha de Evaluación"
-                  type="date"
-                  id="evaluationDate"
-                  name="evaluationDate"
-                  value={formData.evaluationDate}
-                  onChange={handleChange}
-                  InputLabelProps={{ shrink: true }}
-                />
+                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                  <InputLabel htmlFor="evaluationDate-input" shrink>Fecha de Evaluación</InputLabel>
+                  <OutlinedInput
+                    id="evaluationDate-input"
+                    name="evaluationDate"
+                    type="date"
+                    value={formData.evaluationDate}
+                    onChange={handleChange}
+                    label="Fecha de Evaluación"
+                  />
+                </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Coordenada Este"
-                  id="coordinateEast"
-                  name="coordinateEast"
-                  value={formData.coordinateEast}
-                  onChange={handleChange}
-                />
+              
+              {/* Coordenadas */}
+              <Grid item xs={12}>
+                <Grid container spacing={1} sx={{ my: 1 }}>
+                    <Grid item xs={6}>
+                      <FormControl fullWidth variant="outlined">
+                        <InputLabel htmlFor="coordinateEste-input" shrink>Coordenada Este</InputLabel>
+                        <OutlinedInput
+                          id="coordinateEste-input"
+                          name="coordinateEste"
+                          type="number"
+                          value={formData.coordinateEste}
+                          onChange={handleChange}
+                          label="Coordenada Este"
+                        />
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <FormControl fullWidth variant="outlined">
+                        <InputLabel htmlFor="coordinateNorte-input" shrink>Coordenada Norte</InputLabel>
+                        <OutlinedInput
+                          id="coordinateNorte-input"
+                          name="coordinateNorte"
+                          type="number"
+                          value={formData.coordinateNorte}
+                          onChange={handleChange}
+                          label="Coordenada Norte"
+                        />
+                      </FormControl>
+                    </Grid>
+                  </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Coordenada Norte"
-                  id="coordinateNorth"
-                  name="coordinateNorth"
-                  value={formData.coordinateNorth}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="N° FOLIO"
-                  id="folioNumber"
-                  name="folioNumber"
-                  value={formData.folioNumber}
-                  onChange={handleChange}
-                />
+
+              {/* N° FOLIO */}
+              <Grid item xs={12}>
+                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                  <InputLabel htmlFor="folioNumber-input">N° FOLIO</InputLabel>
+                  <OutlinedInput
+                    id="folioNumber-input"
+                    name="folioNumber"
+                    value={formData.folioNumber}
+                    onChange={handleChange}
+                    label="N° FOLIO"
+                  />
+                </FormControl>
               </Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>
 
-        {/* Sección II: Caracterización del Inmueble (próximamente) */}
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography variant="h6">2. Caracterización del Inmueble</Typography>
@@ -169,11 +235,14 @@ const CreateCenterPage: React.FC = () => {
           </AccordionDetails>
         </Accordion>
 
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        {success && <Alert severity="success" sx={{ mt: 2 }}>{success}</Alert>}
+
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-          <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
-            Crear Centro
+          <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }} disabled={isLoading}>
+            {isLoading ? 'Creando...' : 'Crear Centro'}
           </Button>
-          <Button component={NavLink} to="/admin/centers" variant="outlined" color="secondary">
+          <Button component={NavLink} to="/admin/centers" variant="outlined" color="secondary" disabled={isLoading}>
             Volver
           </Button>
         </Box>
