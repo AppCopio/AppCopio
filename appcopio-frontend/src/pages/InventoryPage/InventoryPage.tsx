@@ -432,7 +432,7 @@ const handleDeleteCategory = async () => {
             {isAdminOrSupport && (
                 <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
             )}
-            <Link to={`/center/${centerId}/history`} className="action-btn">Ver Historial</Link>
+            <Link to={`/center/${centerId}/inventory/history`} className="action-btn">Ver Historial</Link>
           </div>
         )}
       </div>

@@ -20,6 +20,7 @@ import IncidentListPage from "./pages/IncidentListPage/IncidentListPage";
 import InventoryHistoryPage from "./pages/InventoryHistoryPage/InventoryHistoryPage";
 import MisCentrosPage from './pages/MisCentrosPage/MisCentrosPage';
 import CreateCenterPage from './pages/CreateCenterPage/CreateCenterPage';
+import CenterResidentsPage from "./pages/CenterResidentsPage/CenterResidentsPage";
 
 import "./App.css";
 
@@ -60,6 +61,8 @@ function App() {
                 <Route path="inventory/history" element={<InventoryHistoryPage />} />
                 <Route path="needs/new" element={<NeedsFormPage />} />
                 <Route path="needs/status" element={<NeedsStatusPage />} />
+                <Route path="residents" element={<CenterResidentsPage />} />
+
               </Route>
             </Route>
           </Route>
