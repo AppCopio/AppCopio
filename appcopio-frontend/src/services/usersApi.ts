@@ -42,8 +42,11 @@ export async function listUsers(params: {
   return fetchJSON<{ users: any[]; total: number }>(url);
 }
 
-export async function getUser(id: number) {
-  return fetchJSON<any>(`${API_BASE}/users/${id}`);
+
+export async function getUser(userId: number | string, signal?: AbortSignal) {
+  const r = await fetch(`${API_BASE}/users/${userId}`, { signal });
+  if (!r.ok) throw new Error('getUser failed');
+  return r.json();
 }
 
 // MODIFICADO: Se elimina center_id del payload de creación
@@ -89,10 +92,10 @@ export async function deleteUser(id: number) {
  * @param user_id - ID del usuario
  * @param center_id - ID del centro a asignar
  */
-export async function assignCenterToUser(user_id: number, center_id: string) {
+export async function assignCenterToUser(user_id: number, center_id: string, role: string) {
   return fetchJSON<any>(`${API_BASE}/assignments`, {
     method: "POST",
-    body: JSON.stringify({ user_id, center_id }),
+    body: JSON.stringify({ user_id, center_id, role }),
   });
 }
 
@@ -112,8 +115,8 @@ export async function removeCenterFromUser(user_id: number, center_id: string) {
 // --- FUNCIONES EXISTENTES (pueden necesitar revisión de nombres de columna) ---
 
 export async function setActive(id: number, is_active: boolean) {
-  // Nota: La columna en la BD es 'is_active_user'. El backend debe manejar esta traducción.
-  return fetchJSON<{ user_id: number; is_active_user: boolean }>(
+  // Nota: La columna en la BD es 'is_active'. El backend debe manejar esta traducción.
+  return fetchJSON<{ user_id: number; is_active: boolean }>(
     `${API_BASE}/users/${id}/activate`,
     { method: "PATCH", body: JSON.stringify({ is_active }) }
   );

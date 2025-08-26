@@ -32,7 +32,7 @@ const listUsersHandler: RequestHandler<unknown, any, any, ListUsersQuery> = asyn
     where.push(`u.role_id = ${addVal(p, Number(role_id))}`);
   }
   if (active === "1" || active === "0") {
-    where.push(`u.is_active_user = ${addVal(p, active === "1")}`);
+    where.push(`u.is_active = ${addVal(p, active === "1")}`);
   }
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
@@ -44,7 +44,7 @@ const listUsersHandler: RequestHandler<unknown, any, any, ListUsersQuery> = asyn
   const listSql = `
     SELECT
       u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
-      u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active_user, u.es_apoyo_admin,
+      u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
       r.role_name
     FROM users u
     JOIN roles r ON r.role_id = u.role_id
@@ -71,13 +71,13 @@ const getUserByIdHandler: RequestHandler<{ id: string }> = async (req, res) => {
   try {
     const userQuery = `
         SELECT u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
-               u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active_user, u.es_apoyo_admin,
+               u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
                r.role_name
         FROM users u
         JOIN roles r ON r.role_id = u.role_id
         WHERE u.user_id = $1`;
     
-    const assignmentsQuery = `SELECT center_id FROM UserCenterAssignments WHERE user_id = $1`;
+    const assignmentsQuery = `SELECT center_id FROM centerassignments WHERE user_id = $1`;
     
     const [userResult, assignmentsResult] = await Promise.all([
         pool.query(userQuery, [id]),
@@ -114,7 +114,7 @@ const createUserHandler: RequestHandler = async (req, res) => {
       INSERT INTO users
         (rut, username, password_hash, email, role_id, nombre, genero, celular, imagen_perfil, es_apoyo_admin)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING user_id, rut, username, email, role_id, created_at, nombre, is_active_user, es_apoyo_admin
+      RETURNING user_id, rut, username, email, role_id, created_at, nombre, is_active, es_apoyo_admin
     `;
     const rs = await pool.query(insertSql, [rut, username, hash, email, Number(role_id), nombre, genero, celular, imagen_perfil, es_apoyo_admin]);
     res.status(201).json(rs.rows[0]);
@@ -133,7 +133,7 @@ const updateUserHandler: RequestHandler<{ id: string }> = async (req, res) => {
   const id = Number(req.params.id);
   try {
     // Se elimina 'center_id'.
-    const { email, username, role_id, nombre, genero, celular, imagen_perfil, is_active_user, es_apoyo_admin } = req.body || {};
+    const { email, username, role_id, nombre, genero, celular, imagen_perfil, is_active, es_apoyo_admin } = req.body || {};
     const fields: string[] = [];
     const vals: any[] = [];
     let idx = 1;
@@ -146,7 +146,7 @@ const updateUserHandler: RequestHandler<{ id: string }> = async (req, res) => {
     if (genero !== undefined) { fields.push(`genero = $${idx++}`); vals.push(genero); }
     if (celular !== undefined) { fields.push(`celular = $${idx++}`); vals.push(celular); }
     if (imagen_perfil !== undefined) { fields.push(`imagen_perfil = $${idx++}`); vals.push(imagen_perfil); }
-    if (is_active_user !== undefined) { fields.push(`is_active_user = $${idx++}`); vals.push(!!is_active_user); }
+    if (is_active !== undefined) { fields.push(`is_active = $${idx++}`); vals.push(!!is_active); }
     if (es_apoyo_admin !== undefined) { fields.push(`es_apoyo_admin = $${idx++}`); vals.push(!!es_apoyo_admin); }
 
     if (!fields.length) {

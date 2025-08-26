@@ -25,27 +25,48 @@ export const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) =
 
   useEffect(() => {
     const controller = new AbortController();
+    let ignore = false; 
+
     const loadData = async () => {
       try {
         const [userData, centersData] = await Promise.all([
-          getUser(user.user_id),
-          fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal)
+          getUser(user.user_id, controller.signal),
+          fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal),
         ]);
 
-        const userAssignedCenters = new Set(userData.assignedCenters || []);
+        if (ignore) return;
+
+        const userAssignedCenters = new Set<string>(
+          ((userData.assignedCenters || []) as (string | number)[]).map(String)
+        );
+
         setSelectedCenters(userAssignedCenters);
         setInitialAssignments(userAssignedCenters);
-        setAllCenters(centersData || []);
-      } catch (err) {
+        setAllCenters((centersData || []).map(c => ({
+          ...c, center_id: String(c.center_id)
+        })));
+      } catch (err: any) {
+        // Si la petición fue abortada, no lo tratamos como error
+        if (controller.signal.aborted || err?.name === 'AbortError') {
+          return;
+        }
         setError("No se pudieron cargar los datos para la asignación.");
         console.error(err);
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted && !ignore) {
+          setIsLoading(false);
+        }
       }
     };
+
     loadData();
-    return () => controller.abort();
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
   }, [user.user_id, apiUrl]);
+
 
   const handleCheckboxChange = (centerId: string) => {
     setSelectedCenters(prev => {
@@ -66,7 +87,7 @@ export const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) =
 
     try {
       await Promise.all([
-        ...toAdd.map(center_id => assignCenterToUser(user.user_id, center_id)),
+        ...toAdd.map(center_id => assignCenterToUser(user.user_id, center_id, user.role_name ?? "")),
         ...toRemove.map(center_id => removeCenterFromUser(user.user_id, center_id))
       ]);
       onSave();
