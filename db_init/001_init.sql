@@ -78,6 +78,12 @@ CREATE TABLE Products (
     category_id INT REFERENCES Categories(category_id)
 );
 
+-- CAMBIO CREANDO TABLA CATEGORIAS
+CREATE TABLE Categories (
+    category_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
 CREATE TABLE Persons (
     person_id SERIAL PRIMARY KEY,
     rut VARCHAR(20) UNIQUE NOT NULL,

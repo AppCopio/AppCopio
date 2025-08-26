@@ -45,6 +45,8 @@ const InventoryPage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  //AGREGADO PARA FILTRAR
+  const [categoriaFiltrada, setCategoriaFiltrada] = useState<string>(''); 
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState<string>('');
   const [newItemQuantity, setNewItemQuantity] = useState(1);
@@ -431,9 +433,33 @@ const handleDeleteCategory = async () => {
             {isAdminOrSupport && (
                 <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
             )}
-            <Link to={`/center/${centerId}/history`} className="action-btn">Ver Historial</Link>
+            <Link to={`/center/${centerId}/inventory/history`} className="action-btn">Ver Historial</Link>
           </div>
         )}
+      </div>
+      {/* FILTRO CATEGORIAS */}
+      <div className="filter-container" style={{ marginBottom: '20px' }}>
+        <label htmlFor="categoriaFiltrada" style={{ marginRight: '10px' }}>
+          <strong>Filtrar por Categoría:</strong>
+        </label>
+        <select
+          id="categoriaFiltrada"
+          value={categoriaFiltrada}
+          onChange={e => setCategoriaFiltrada(e.target.value)}
+        >
+          <option value="">Todas las categorías</option>
+          {categories.map(cat => (
+            <option key={cat.category_id} value={cat.name}>
+              {cat.name}
+            </option>
+          ))}
+      </select>
+        <button 
+          onClick={() => setCategoriaFiltrada('')}
+          className="btn-clear-filter"
+        >
+          Limpiar Filtro
+        </button>
       </div>
 
       {/* MODAL PARA AÑADIR ITEM (MODIFICADO) */}
@@ -507,39 +533,89 @@ const handleDeleteCategory = async () => {
           </div>
         </div>
       )}
-      
-      {/* RENDERIZADO DE LA TABLA DE INVENTARIO (MODIFICADO) */}
-      {Object.keys(inventory).length === 0 ? (<p>Este centro no tiene items en inventario.</p>) : (Object.entries(inventory).map(([category, items]) => (
-        <div key={category} className="category-section">
-          <h4>{category}</h4>
-          <table className="inventory-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Cantidad</th>
-                <th>Última Actualización</th>
-                {canManage && <th>Acciones</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.item_id}>
-                  <td>{item.name}</td>
-                  <td>{item.quantity} {item.unit || ''}</td>
-                  <td>
-                    {item.updated_by_user || 'Sistema'}
-                    <br />
-                    <small>{new Date(item.updated_at).toLocaleString()}</small>
-                  </td>
-                  {canManage && (
-                    <td><button className="action-btn" onClick={() => handleOpenEditModal(item)}>Editar</button></td>
+
+      {/* RENDERIZADO DE LA TABLA DE INVENTARIO (MODIFICADO)(con categorías vacías al filtrar) */}
+      {(() => {
+        // 1) Si no hay filtro y no hay inventario -> mensaje general
+        if (!categoriaFiltrada && Object.keys(inventory).length === 0) {
+          return <p>Este centro no tiene items en inventario.</p>;
+        }
+
+        // 2) Determinar qué categorías mostrar
+        const categoriasVisibles = categoriaFiltrada
+          ? [categoriaFiltrada]                // siempre mostrar la categoría filtrada (aunque esté vacía)
+          : Object.keys(inventory);            // si no hay filtro, mostrar solo las que tienen ítems
+
+        // 3) Si hay filtro y esa categoría no existe en inventory -> renderizar igual vacía
+        if (categoriaFiltrada && !inventory[categoriaFiltrada]) {
+          return (
+            <div className="category-section">
+              <h4>{categoriaFiltrada}</h4>
+              <table className="inventory-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Cantidad</th>
+                    <th>Última Actualización</th>
+                    {canManage && <th>Acciones</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colSpan={canManage ? 4 : 3}>No hay items en esta categoría.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+
+        // 4) Render normal (con o sin filtro)
+        return categoriasVisibles.map((category) => {
+          const items = inventory[category] ?? []; // si no hay, queda []
+          return (
+            <div key={category} className="category-section">
+              <h4>{category}</h4>
+              <table className="inventory-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Cantidad</th>
+                    <th>Última Actualización</th>
+                    {canManage && <th>Acciones</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length === 0 ? (
+                    <tr>
+                      <td colSpan={canManage ? 4 : 3}>No hay items en esta categoría.</td>
+                    </tr>
+                  ) : (
+                    items.map((item) => (
+                      <tr key={item.item_id}>
+                        <td>{item.name}</td>
+                        <td>{item.quantity} {item.unit || ''}</td>
+                        <td>
+                          {item.updated_by_user || 'Sistema'}
+                          <br />
+                          <small>{new Date(item.updated_at).toLocaleString()}</small>
+                        </td>
+                        {canManage && (
+                          <td>
+                            <button className="action-btn" onClick={() => handleOpenEditModal(item)}>
+                              Editar
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))
                   )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )))}
+                </tbody>
+              </table>
+            </div>
+          );
+        });
+      })()}
     </div>
   );
 };
