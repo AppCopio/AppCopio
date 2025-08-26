@@ -11,7 +11,7 @@ import productRoutes from './routes/productRoutes';
 
 import inventoryRoutes from './routes/inventoryRoutes';
 import userRouter from './routes/userRoutes';
-import incidentRoutes from './routes/incidentRoutes';
+import updateRoutes from './routes/updateRoutes';
 
 import categoryRoutes from './routes/categoryRoutes';
 import assignmentRoutes from './routes/assignmentRoutes';
@@ -33,7 +33,7 @@ app.get('/api', (req: Request, res: Response) => {
 // app.use() espera middleware o un router. 'centerRoutes' DEBE ser un router.
 app.use('/api/centers', centerRoutes); 
 app.use('/api/products', productRoutes);
-app.use('/api/incidents', incidentRoutes);
+app.use('/api/updates', updateRoutes);
 app.use('/api/users', userRouter);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/categories', categoryRoutes);
