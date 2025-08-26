@@ -1,7 +1,8 @@
 // src/components/fibe/StepHogar.tsx
 import * as React from "react";
 import { Box, TextField, FormControl, Typography, FormHelperText, Chip } from "@mui/material";
-import type { HouseholdData, NEEDS_OPTIONS as _O, StepHandle } from "../../types/fibe";
+import type { HouseholdData } from "../../types/family";
+import type { NEEDS_OPTIONS as _O, StepHandle } from "../../types/fibe";
 import { NEEDS_OPTIONS } from "../../types/fibe";
 
 type Props = {

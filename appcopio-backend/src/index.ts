@@ -17,6 +17,8 @@ import categoryRoutes from './routes/categoryRoutes';
 import assignmentRoutes from './routes/assignmentRoutes';
 
 import personsRoutes from './routes/personsRoutes';
+import familyRoutes from './routes/familyRoutes';
+import familyMembersRoutes from './routes/familyMembersRouts';
 
 dotenv.config();
 
@@ -42,7 +44,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/persons', personsRoutes);
-
+app.use('/api/family', familyRoutes);
+app.use('/api/family-members', familyMembersRoutes);
 
 
 app.listen(port, () => {

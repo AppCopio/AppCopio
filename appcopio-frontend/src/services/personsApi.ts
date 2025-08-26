@@ -1,4 +1,4 @@
-// Tipos
+/////////////////////// REVISAR SI SE USARÁ, YA QUE POR ATOMICIDAD DEBIERA CREARSE UN ÚINCO SERVICIO "FIBE" QUE MANEJE TODO
 import type { Person } from "../types/person"; // usa la ruta real de tu proyecto
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";

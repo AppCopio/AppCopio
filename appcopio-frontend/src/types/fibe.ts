@@ -1,20 +1,25 @@
 import type { Person } from "./person";
-
-export type HouseholdData = {
-  fibeFolio: string;
-  observations: string;
-  selectedNeeds: string[]; // máx 3
-};
+import type { HouseholdData } from "./family";
 
 export type FormData = {
   hogar: HouseholdData;
   personas: Person[];
 };
 
-export const NEEDS_OPTIONS = ["Alimentos", "Agua", "Alimentación lactantes",
-  "Colchones/frazadas", "Artículos de higiene personal", "Solución habitacional transitoria",
-  "Pañales adulto", "Pañales niño", "Vestuario", "Calefacción", "Artículos de aseo", 
-  "Materiales de cocina", "Materiales de construcción"];
+export const NEEDS_OPTIONS = [
+  "Alimentos", 
+  "Agua", 
+  "Alimentación lactantes",
+  "Colchones/frazadas", 
+  "Artículos de higiene personal", 
+  "Solución habitacional transitoria",
+  "Pañales adulto", 
+  "Pañales niño", 
+  "Vestuario", 
+  "Calefacción", 
+  "Artículos de aseo", 
+  "Materiales de cocina", 
+  "Materiales de construcción"];
 
 export const initialPerson = (isHead = false): Person => ({
   rut: "",

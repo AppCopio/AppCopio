@@ -1,181 +1,196 @@
 // src/routes/familiesRoutes.ts
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
-import { PoolClient } from 'pg';
-
-// import addPersonHandler from './personRoutes';
-import { insertPersonTx, PersonInsert } from './personsRoutes';
 
 const router = Router();
 
-/* ===================================================
-   Helpers básicos (validación y normalización)
-=================================================== */
-
-const isNonEmptyString = (v: unknown): v is string =>
-  typeof v === 'string' && v.trim() !== '';
-
-const toIntOrNull = (v: unknown): number | null => {
-  if (v === null || v === undefined || v === '') return null;
-  const n = Number(v);
-  return Number.isInteger(n) ? n : null;
+export type HouseholdData = {
+  fibeFolio: string;
+  observations: string;
+  selectedNeeds: string[]; // máx 3
 };
 
-const normalizeParentesco = (v: unknown): string => {
-  if (!isNonEmptyString(v)) throw new Error('VALIDATION_PARENTESCO');
-  return v.trim();
-};
+export const NEEDS_OPTIONS = [
+  "Alimentos", 
+  "Agua", 
+  "Alimentación lactantes",
+  "Colchones/frazadas", 
+  "Artículos de higiene personal", 
+  "Solución habitacional transitoria",
+  "Pañales adulto", 
+  "Pañales niño", 
+  "Vestuario", 
+  "Calefacción", 
+  "Artículos de aseo", 
+  "Materiales de cocina", 
+  "Materiales de construcción"];
 
-const isHeadParentesco = (p: string) => {
-  const s = p.trim().toLowerCase();
-  return (
-    s === 'jefe de hogar'
-  );
-};
-
-const validateNecesidades = (arr?: unknown): number[] | null => {
-  if (arr === undefined || arr === null) return null;
-  if (!Array.isArray(arr)) throw new Error('VALIDATION_NECESIDADES');
-  if (arr.length !== 14) throw new Error('VALIDATION_NECESIDADES_LEN');
-  const casted = arr.map((x) => {
-    const n = toIntOrNull(x);
-    if (n === null) throw new Error('VALIDATION_NECESIDADES');
-    return n;
+// Transforma selectedNeeds (string[]) a vector 14 de 0/1 (INTEGER[14])
+function needsVectorFromSelected(selected: string[] | undefined | null): number[] {
+  const vec = new Array(14).fill(0);
+  if (!selected || selected.length === 0) return vec;
+  const set = new Set(selected.map((s) => s.toLowerCase().trim()));
+  NEEDS_OPTIONS.forEach((name, idx) => {
+    if (set.has(name.toLowerCase())) vec[idx] = 1;
   });
-  return casted;
-};
+  return vec;
+}
 
-/* ================================
-   POST /families  (FamilyGroups)
-================================ */
-const addFamilyGroupHandler: RequestHandler = async (req, res) => {
-  const { activation_id, jefe_hogar_person_id, observaciones, necesidades_basicas } = req.body ?? {};
 
+// ---------- GET /families  (list) ----------
+export const listFamiliesHandler: RequestHandler = async (_req, res, next) => {
   try {
-    const sql = `
-      INSERT INTO FamilyGroups (
-        activation_id, jefe_hogar_person_id, observaciones, necesidades_basicas
-      ) VALUES ($1, $2, $3, $4)
-      RETURNING *;
-    `;
-    const params = [activation_id, jefe_hogar_person_id ?? null, observaciones ?? null, necesidades_basicas ?? null];
-    const { rows } = await pool.query(sql, params);
-    res.status(201).json(rows[0]);
-    return;
-  } catch (err) {
-    console.error('Error al crear FamilyGroup:', err);
-    res.status(500).send('Error del servidor');
-    return;
+    const { rows } = await pool.query(`
+      SELECT
+        family_id,
+        activation_id,
+        jefe_hogar_person_id,
+        observaciones,
+        necesidades_basicas
+      FROM FamilyGroups
+      ORDER BY family_id DESC
+      LIMIT 100
+    `);
+    res.json(rows);
+  } catch (e) {
+    next(e);
   }
 };
 
-/* ============================================
-   POST /families/:family_id/members (Members)
-============================================ */
-const addFamilyGroupMemberHandler: RequestHandler = async (req, res) => {
-  const { family_id } = req.params;
-  const { person_id, parentesco } = req.body ?? {};
-
+// ---------- GET /families/:id  (show) ----------
+export const getFamilyHandler: RequestHandler<{ id: string }> = async (req, res, next) => {
   try {
-    const sql = `
-      INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco)
-      VALUES ($1, $2, $3)
-      RETURNING *;
-    `;
-    const params = [Number(family_id), person_id, parentesco];
-    const { rows } = await pool.query(sql, params);
-    res.status(201).json(rows[0]);
-    return;
-  } catch (err) {
-    console.error('Error al crear FamilyGroupMember:', err);
-    res.status(500).send('Error del servidor');
-    return;
-  }
-};
-
-/* ===========================================================
-   POST /families/full  (flujo completo en una transacción)
-   Body esperado (base, sin validaciones):
-
-   {
-     "activation_id": 123,
-     "observaciones": "texto opcional",
-     "necesidades_basicas": [ ...14 enteros... ] // opcional
-     "members": [
-       {
-         "parentesco": "Jefe de hogar",
-         "es_jefe": true,              // usar para marcar jefe
-         "person": { ...payload addPerson... }
-       },
-       {
-         "parentesco": "Hijo",
-         "person": { ...payload addPerson... }
-       }
-     ]
-   }
-=========================================================== */
-const createFamilyWithMembersHandler: RequestHandler = async (req, res) => {
-  const { activation_id, observaciones, necesidades_basicas, members } = req.body ?? {};
-
-  const client: PoolClient = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // 1) Insertar personas y recolectar sus IDs
-    //    Se asume que addPersonTx(client, payload) -> Promise<number>
-    const resolved = await Promise.all(
-      (members ?? []).map(async (m: any) => {
-        const pid = await insertPersonTx(client, m.person as PersonInsert);
-        return { person_id: pid, parentesco: m.parentesco, es_jefe: !!m.es_jefe };
-      })
+    const id = Number(req.params.id);
+    const { rows } = await pool.query(
+      `
+      SELECT
+        family_id,
+        activation_id,
+        jefe_hogar_person_id,
+        observaciones,
+        necesidades_basicas
+      FROM FamilyGroups
+      WHERE family_id = $1
+      `,
+      [id]
     );
-
-    // 2) Determinar jefe de hogar (si hay varios marcados, se usa el primero; si ninguno, el primero del array)
-    const jefe = resolved.find((r) => r.es_jefe) ?? resolved[0];
-    const jefeId = jefe ? jefe.person_id : null;
-
-    // 3) Crear FamilyGroup
-    const insertFamilySql = `
-      INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones, necesidades_basicas)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *;
-    `;
-    const familyParams = [activation_id, jefeId, observaciones ?? null, necesidades_basicas ?? null];
-    const { rows: familyRows } = await client.query(insertFamilySql, familyParams);
-    const family = familyRows[0];
-
-    // 4) Insertar miembros
-    const insertMemberSql = `
-      INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco)
-      VALUES ($1, $2, $3)
-      RETURNING *;
-    `;
-    const insertedMembers = [];
-    for (const r of resolved) {
-      const { rows } = await client.query(insertMemberSql, [family.family_id, r.person_id, r.parentesco]);
-      insertedMembers.push(rows[0]);
+    if (rows.length === 0) {
+      res.status(404).json({ message: "Family not found" });
+      return;
     }
-
-    await client.query('COMMIT');
-
-    // 5) Respuesta
-    res.status(201).json({ family, members: insertedMembers });
-    return;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error en creación completa de familia:', err);
-    res.status(500).send('Error del servidor');
-    return;
-  } finally {
-    client.release();
+    res.json(rows[0]);
+  } catch (e) {
+    next(e);
   }
 };
 
-/* =======================
-   Rutas
-======================= */
-router.post('/', addFamilyGroupHandler);
-router.post('/full', createFamilyWithMembersHandler);
-router.post('/:family_id/members', addFamilyGroupMemberHandler);
+// ---------- POST /families  (create) ----------
+// Body: { activation_id: number; jefe_hogar_person_id?: number | null; data: HouseholdData }
+export const createFamilyHandler: RequestHandler<
+  any,
+  { family_id: number },
+  { activation_id: number; jefe_hogar_person_id?: number | null; data: HouseholdData }
+> = async (req, res, next) => {
+  try {
+    const family_id = await createFamilyGroupFromHousehold(req.body);
+    res.status(201).json({ family_id });
+  } catch (e: any) {
+    // 23505 = unique_violation por UNIQUE (activation_id, jefe_hogar_person_id)
+    if (e?.code === "23505") {
+      res
+        .status(409)
+        .json({ message: "Family head already registered for this activation" });
+      return;
+    }
+    next(e);
+  }
+};
+
+
+// Crea el registro en FamilyGroups y retorna el ID generado
+export async function createFamilyGroupFromHousehold(args: {
+  activation_id: number;
+  jefe_hogar_person_id?: number | null;
+  data: HouseholdData;
+}): Promise<number> {
+  const necesidades = needsVectorFromSelected(args.data?.selectedNeeds);
+  const sql = `
+    INSERT INTO FamilyGroups (
+      activation_id, jefe_hogar_person_id, observaciones, necesidades_basicas
+    )
+    VALUES ($1, $2, $3, $4::int[])
+    RETURNING family_id
+  `;
+  const params = [
+    args.activation_id,
+    args.jefe_hogar_person_id ?? null,
+    args.data?.observations ?? null,
+    necesidades,
+  ];
+  const { rows } = await pool.query<{ family_id: number }>(sql, params);
+  return rows[0].family_id;
+}
+
+// ---------- PUT /families/:id  (replace -> retorna ID) ----------
+// Body igual a POST
+export const replaceFamilyHandler: RequestHandler<
+  { id: string },
+  { family_id: number },
+  { activation_id: number; jefe_hogar_person_id?: number | null; data: HouseholdData }
+> = async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const family_id = await replaceFamilyGroupFromHousehold(id, req.body);
+    res.json({ family_id });
+  } catch (e: any) {
+    if (e?.code === "23505") {
+      res
+        .status(409)
+        .json({ message: "Family head already registered for this activation" });
+      return;
+    }
+    if (e?.message === "FAMILY_NOT_FOUND") {
+      res.status(404).json({ message: "Family not found" });
+      return;
+    }
+    next(e);
+  }
+};
+
+// Reemplaza el registro de FamilyGroups y retorna el ID
+export async function replaceFamilyGroupFromHousehold(
+  family_id: number,
+  args: { activation_id: number; jefe_hogar_person_id?: number | null; data: HouseholdData }
+): Promise<number> {
+  const necesidades = needsVectorFromSelected(args.data?.selectedNeeds);
+  const sql = `
+    UPDATE FamilyGroups
+    SET
+      activation_id = $1,
+      jefe_hogar_person_id = $2,
+      observaciones = $3,
+      necesidades_basicas = $4::int[]
+    WHERE family_id = $5
+    RETURNING family_id
+  `;
+  const params = [
+    args.activation_id,
+    args.jefe_hogar_person_id ?? null,
+    args.data?.observations ?? null,
+    necesidades,
+    family_id,
+  ];
+  const { rows } = await pool.query<{ family_id: number }>(sql, params);
+  if (rows.length === 0) {
+    throw new Error("FAMILY_NOT_FOUND");
+  }
+  return rows[0].family_id;
+}
+
+// ---------- Enrutar ----------
+router.get("/", listFamiliesHandler);
+router.get("/:id", getFamilyHandler);
+router.post("/", createFamilyHandler);
+router.put("/:id", replaceFamilyHandler);
 
 export default router;
