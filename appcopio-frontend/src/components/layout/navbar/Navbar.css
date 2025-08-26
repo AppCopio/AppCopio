@@ -1,0 +1,85 @@
+/* src/components/layout/navbar/Navbar.css */
+
+
+
+.main-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  height: 60px;
+  background-color: #000000; /* <-- CORRECCIÓN: Fondo Negro */
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ... el resto de tu CSS se mantiene igual ... */
+.navbar-logo a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.navbar-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem; /* <-- Espacio entre los enlaces */
+}
+
+.navbar-links a {
+  color: #f0f0f0;
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 0.5rem 0;
+  position: relative;
+  transition: color 0.2s ease-in-out;
+}
+
+.navbar-links a:hover {
+  color: white;
+}
+
+/* Estilo para el enlace activo */
+.navbar-links a.active-link {
+  color: white;
+  font-weight: bold;
+}
+
+/* Línea sutil debajo del enlace activo */
+.navbar-links a.active-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #ffffff;
+}
+
+.login-button-nav {
+  background-color: white;
+  color: #004a99 !important; /* El !important asegura que sobreescriba el color base */
+  padding: 0.5rem 1rem !important;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.logout-button {
+  background-color: transparent;
+  color: white;
+  border: 1px solid white;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: white;
+  color: #004a99;
+}

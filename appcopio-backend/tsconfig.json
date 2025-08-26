@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    /* ----- Language and Environment ----- */
+    "target": "es2020", /* Usamos una versión moderna de JS compatible con Node.js LTS */
+    // "lib": ["es2020"], /* Puedes especificar librerías si es necesario, pero TS suele inferirlas bien con el target */
+    
+    /* ----- Modules ----- */
+    "module": "commonjs", /* El sistema de módulos estándar para Node.js (require/exports) */
+    "rootDir": "./src",   /* Le decimos que nuestro código fuente está en la carpeta 'src' */
+    "moduleResolution": "node", /* Cómo TS busca los módulos, 'node' es lo estándar aquí */
+    "resolveJsonModule": true, /* Permite importar archivos .json */
+
+    /* ----- JavaScript Support ----- */
+    // "allowJs": false, /* No permitimos JS para ser más estrictos con TS */
+
+    /* ----- Emit ----- */
+    "outDir": "./dist",   /* Aquí es donde TS pondrá los archivos JavaScript compilados */
+    "sourceMap": true,    /* Genera 'map files' que ayudan a depurar: ves tu código TS en lugar del JS compilado */
+    "removeComments": true, /* Quita los comentarios del código compilado (opcional) */
+
+    /* ----- Interop Constraints ----- */
+    "esModuleInterop": true, /* Facilita la importación de módulos CommonJS */
+    "forceConsistentCasingInFileNames": true, /* Evita problemas entre Windows (no sensible) y Linux/macOS (sensible) */
+
+    /* ----- Type Checking ----- */
+    "strict": true, /* Activa todas las opciones de chequeo estricto (¡muy recomendado!) */
+    
+    /* ----- Completeness ----- */
+    "skipLibCheck": true /* Evita que TS revise los archivos de declaración (.d.ts) de las librerías, acelera la compilación */
+  },
+  /* ----- Includes y Excludes ----- */
+  "include": ["src/**/*"], /* Le decimos a TS que compile todo lo que está dentro de 'src' */
+  "exclude": ["node_modules", "**/*.spec.ts"] /* Le decimos que ignore la carpeta de node_modules y archivos de prueba */
+}
