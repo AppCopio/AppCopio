@@ -7,36 +7,78 @@ const router = Router();
 
 // Obtener incidencias filtradas por estado
 router.get('/', async (req, res) => {
-    const { status, page = 1, limit = 10 } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
+  const { status, page = 1, limit = 10 } = req.query;
+  const offset = (Number(page) - 1) * Number(limit);
 
-    try {
-        const result = await pool.query(
-            `
-      SELECT i.*, u.username AS assigned_username
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        i.incident_id,
+        i.description,
+        i.status,
+        i.registered_at,
+        i.center_id,
+        i.assigned_to,
+        i.resolution_comment,
+        u.username AS assigned_username
       FROM incidents i
       LEFT JOIN users u ON i.assigned_to = u.user_id
       WHERE i.status = $1
       ORDER BY i.registered_at DESC
       LIMIT $2 OFFSET $3
       `,
-            [status, limit, offset]
-        );
+      [status, limit, offset]
+    );
 
-        const countResult = await pool.query(
-            `SELECT COUNT(*) FROM incidents WHERE status = $1`,
-            [status]
-        );
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM incidents WHERE status = $1`,
+      [status]
+    );
 
-        res.json({
-            total: Number(countResult.rows[0].count),
-            incidents: result.rows
-        });
-    } catch (error) {
-        console.error('Error al obtener incidencias:', error);
-        res.status(500).json({ error: 'Error al obtener incidencias' });
-    }
+    res.json({
+      total: Number(countResult.rows[0].count),
+      incidents: result.rows
+    });
+  } catch (error) {
+    console.error('Error al obtener incidencias:', error);
+    res.status(500).json({ error: 'Error al obtener incidencias' });
+  }
 });
+
+
+
+router.get('/center/:centerId', async (req, res) => {
+  const { centerId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT 
+         i.incident_id AS id,
+         i.description,
+         i.urgency,
+         i.status,
+         i.registered_at AS created_at,
+         i.resolution_comment,
+         i.resolved_at,
+         u.username AS assigned_to_username
+       FROM incidents i
+       LEFT JOIN users u ON i.assigned_to = u.user_id
+       WHERE i.center_id = $1
+       ORDER BY i.registered_at DESC`,
+      [centerId]
+    );
+
+    res.json(result.rows);
+    console.log('Incidencias obtenidas:', result.rows);
+  } catch (error) {
+    console.error('Error al obtener incidencias:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+
+
 
 
 // Asignar una incidencia a un usuario
@@ -99,7 +141,23 @@ router.post('/:id/reject', async (req, res) => {
   }
 });
 
+router.post('/',  async (req, res) => {
+  const { center_id, description, urgency } = req.body;
 
+  try {
+    const result = await pool.query(
+      `INSERT INTO Incidents (center_id, description, urgency, status, registered_at)
+       VALUES ($1, $2, $3, 'pendiente', NOW())
+       RETURNING *`,
+      [center_id, description, urgency]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error al crear incidencia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 
 
 

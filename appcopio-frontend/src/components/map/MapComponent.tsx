@@ -1,127 +1,122 @@
-    // src/components/map/MapComponent.tsx (Versión final y correcta)
-    import React, { useState, useEffect } from 'react';
-    import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin} from '@vis.gl/react-google-maps';
-    import './MapComponent.css';
+import React, { useState } from 'react';
+import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+import { useAuth } from '../../contexts/AuthContext';
+import './MapComponent.css';
 
-  interface Center {
-        center_id: string;
-        name: string;
-        address: string;
-        type: 'Acopio' | 'Albergue';
-        capacity: number;
-        is_active: boolean;
-        // Aunque TypeScript los define como number, la DB puede devolverlos como string.
-        // La conversión se hará antes de pasarlos al componente de Google Maps.
-        latitude: number | string; 
-        longitude: number | string;
-        fullnessPercentage: number; 
-    }
-    
-    interface MapComponentProps {
-    centers: Center[]; // Un array de objetos Center
-    }
-    
-    const apiKey = import.meta.env.VITE_Maps_API_KEY;
-    const valparaisoCoords = { lat: -33.04, lng: -71.61 };
+// Interfaz actualizada para incluir el estado operativo
+interface Center {
+  center_id: string;
+  name: string;
+  address: string;
+  type: 'Acopio' | 'Albergue';
+  is_active: boolean;
+  operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
+  public_note?: string;
+  latitude: number | string; 
+  longitude: number | string;
+  fullnessPercentage: number; 
+}
 
-    const MapComponent: React.FC<MapComponentProps> = ({centers}) => {
-    //const [centes, setCenters] = useState<Center[]>([]);
-    const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
+// Se mantiene la interfaz para las props que el componente recibe
+interface MapComponentProps {
+  centers: Center[];
+}
 
-    const getPinColor = (percentage: number): string => {
-        if (percentage >= 80) {
-            return '#4CAF50'; // Verde
-        } else if (percentage >= 50 && percentage < 80) {
-            return '#FFC107'; // Naranjo
-        } else {
-            return '#F44336'; // Rojo
-        }
-    };
+const apiKey = import.meta.env.VITE_Maps_API_KEY;
+const valparaisoCoords = { lat: -33.04, lng: -71.61 };
 
-    const selectedCenter = centers.find(c => c.center_id === selectedCenterId);
+// Lógica de estilos actualizada para considerar el estado operativo
+const getPinStatusClass = (center: Center): string => {
+  if (!center.is_active) {
+    return 'status-inactive'; // Gris
+  }
+  
+  // Se da prioridad al estado operativo sobre el nivel de abastecimiento
+  if (center.operational_status === 'Cerrado Temporalmente') {
+    return 'status-temporarily-closed';
+  } else if (center.operational_status === 'Capacidad Máxima') {
+    return 'status-full-capacity';
+  }
+  
+  // Si está 'Abierto' o no tiene estado operativo, se usa el porcentaje
+  if (center.fullnessPercentage < 33) {
+    return 'status-critical'; // Rojo
+  } else if (center.fullnessPercentage < 66) {
+    return 'status-warning'; 	// Naranja
+  } else {
+    return 'status-ok'; 		// Verde
+  }
+};
 
-    // Si la clave API no está configurada, muestra un mensaje de error
-    if (!apiKey) {
-        return <div className="error-message">Error: Falta la Clave API de Google Maps (VITE_Maps_API_KEY). Revisa tu archivo .env.local</div>;
-    }
+// Se corrige la firma del componente para que acepte las props correctamente
+const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
+  const { isAuthenticated } = useAuth();
+  const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
 
+  const centersToDisplay = isAuthenticated
+    ? centers
+    : centers.filter(center => center.is_active);
 
-    /*useEffect(() => {
-        const apiUrl = 'http://localhost:4000/api/centers';
-        fetch(apiUrl)
-        .then(response => {
-            if (!response.ok) throw new Error('Error al obtener datos de la API');
-            return response.json();
-        })
-        .then((data: Center[]) => setCenters(data))
-        .catch(error => console.error("Hubo un problema con la llamada fetch:", error));
-    }, []);*/
-    
-    //const selectedCenter = centers.find(c => c.center_id === selectedCenterId);
+  const selectedCenter = centers.find(c => c.center_id === selectedCenterId);
 
-    return (
-        <APIProvider apiKey={apiKey}>
-        <div className="map-wrapper w-full h-full rounded-xl overflow-hidden shadow-lg">
-            <Map
-            defaultCenter={valparaisoCoords}
-            defaultZoom={13}
-            mapId="appcopio-map-main"
-            gestureHandling={'greedy'}
-            disableDefaultUI={true}
-            fullscreenControl={true}
-            style={{ width: '100%', height: '100%' }}
+  if (!apiKey) {
+    return <div className="error-message">Error: Falta la Clave API de Google Maps.</div>;
+  }
+
+  return (
+    <APIProvider apiKey={apiKey}>
+      <div className="map-wrapper">
+        <Map
+          defaultCenter={valparaisoCoords}
+          defaultZoom={13}
+          mapId="appcopio-map-main"
+          gestureHandling={'greedy'}
+          disableDefaultUI={true}
+          fullscreenControl={true}
+        >
+          {centersToDisplay.map(center => (
+            <AdvancedMarker
+              key={center.center_id}
+              position={{ lat: Number(center.latitude), lng: Number(center.longitude) }}
+              title={`${center.name} - ${center.operational_status || `Abastecido al ${center.fullnessPercentage.toFixed(0)}%`}`}
+              onClick={() => setSelectedCenterId(center.center_id)}
             >
-            {/*centers.map(center => (
-                <AdvancedMarker
-                key={center.center_id}
-                position={{ lat: Number(center.latitude), lng: Number(center.longitude) }}
-                title={center.name}
-                onClick={() => setSelectedCenterId(center.center_id)}
-                >
-                <div className={`marker-pin ${center.is_active ? 'active' : 'inactive'}`}>
-                    <span>{center.type === 'Albergue' ? '🏠' : '📦'}</span>
-                </div>
+              <div className={`marker-pin ${getPinStatusClass(center)}`}>
+                <span>{center.type === 'Albergue' ? '🏠' : '📦'}</span>
+              </div>
+            </AdvancedMarker>
+          ))}
 
-                </AdvancedMarker>
-            ))*/}
-            {centers.map(center => {
-                const pinColor = getPinColor(center.fullnessPercentage); // Get the color based on the percentage
-                return (
-                    <AdvancedMarker
-                        key={center.center_id} // Unique key for React
-                        // CRITICAL FIX HERE: Convert latitude and longitude to Number
-                        position={{ lat: Number(center.latitude), lng: Number(center.longitude) }} 
-                        title={`${center.name} (${center.fullnessPercentage.toFixed(0)}% full)`} // Title on hover
-                        onClick={() => setSelectedCenterId(center.center_id)} // On click, select this center
-                    >
-                        {/* Pin component to customize the marker */}
-                        <Pin background={pinColor} // Pin background color
-                            borderColor={pinColor} // Pin border color (same as background for a solid color)
-                            glyphColor={'#FFF'} // Glyph/icon color inside the pin (white for contrast)
-                        />
-                    </AdvancedMarker>
-                );
-            })}
+          {selectedCenter && (
+            <InfoWindow
+              position={{ lat: Number(selectedCenter.latitude), lng: Number(selectedCenter.longitude) }}
+              onCloseClick={() => setSelectedCenterId(null)}
+              pixelOffset={[0, -40]}
+            >
+              <div className="infowindow-content">
+                <h4>{selectedCenter.name}</h4>
+                <p><strong>Tipo:</strong> {selectedCenter.type}</p>
+                <p><strong>Estado:</strong> {selectedCenter.is_active ? 'Activo' : 'Inactivo'}</p>
+                
+                {/* Se añade la lógica para mostrar el estado operativo y la nota pública */}
+                {selectedCenter.operational_status && (
+                  <p><strong>Estado Operativo:</strong> {selectedCenter.operational_status}</p>
+                )}
+                
+                {selectedCenter.operational_status === 'Cerrado Temporalmente' && selectedCenter.public_note && (
+                  <div className="public-note">
+                    <p><strong>Nota:</strong> {selectedCenter.public_note}</p>
+                  </div>
+                )}
 
-            {selectedCenter && (
-                <InfoWindow
-                    position={{ lat: Number(selectedCenter.latitude), lng: Number(selectedCenter.longitude) }}
-                    onCloseClick={() => setSelectedCenterId(null)} // Close the InfoWindow on click outside
-                    pixelOffset={[0, -40]}
-                >
-                <div className="infowindow-content">
-                    <h4>{selectedCenter.name}</h4>
-                    <p><strong>Tipo:</strong> {selectedCenter.type}</p>
-                    <p><strong>Estado:</strong> {selectedCenter.is_active ? 'Activo' : 'Inactivo'}</p>
-                    <p className="text-sm mt-1"><strong>Llenado:</strong> {selectedCenter.fullnessPercentage.toFixed(0)}%</p>
-                    <p>{selectedCenter.address}</p>
-                </div>
-                </InfoWindow>
-            )}
-            </Map>
-        </div>
-        </APIProvider>
-    );
-    };
+                <p><strong>Nivel de Abastecimiento:</strong> {selectedCenter.fullnessPercentage.toFixed(0)}%</p>
+              </div>
+            </InfoWindow>
+          )}
+        </Map>
+      </div>
+    </APIProvider>
+  );
+};
 
-    export default MapComponent;
+export default MapComponent;

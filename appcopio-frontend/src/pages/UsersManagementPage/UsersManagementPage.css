@@ -1,0 +1,16 @@
+/* src/pages/UsersManagementPage/UsersManagementPage.css */
+.users-management-page { padding: 2rem; max-width: 1200px; margin: 2rem auto; }
+.filters-container { display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem; }
+.users-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+.users-table th, .users-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e0e0e0; text-align: left; }
+.users-table th { background-color: #f8f9fa; }
+.users-table .actions-cell button { margin-right: 0.5rem; }
+
+/* Estilos para el interruptor (toggle switch) */
+.switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+.slider.round { border-radius: 24px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: #28a745; }
+input:checked + .slider:before { transform: translateX(26px); }
