@@ -5,8 +5,8 @@ import { Box, Stepper, Step, StepLabel, Typography, Button } from "@mui/material
 import StepHogar from "./StepHogar";
 import StepGrupoFamiliar from "./StepGrupoFamiliar";
 import StepResumen from "./StepResumen";
-import type { FormData, StepHandle } from "./types";
-import { initialData } from "./types";
+import type { FormData, StepHandle } from "../../types/fibe";
+import { initialData } from "../../types/fibe";
 
 import "./FibePage.css";
 

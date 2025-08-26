@@ -1,6 +1,4 @@
-// src/components/fibe/types.ts
-export type Gender = "F" | "M" | "Otro";
-export type Nationality = "CH" | "EXT";
+import type { Person } from "./person";
 
 export type HouseholdData = {
   fibeFolio: string;
@@ -8,30 +6,15 @@ export type HouseholdData = {
   selectedNeeds: string[]; // máx 3
 };
 
-export type Person = {
-  rut: string;
-  nombre: string;
-  primer_apellido: string;
-  segundo_apellido: string;
-  nacionalidad: Nationality | "";
-  genero: Gender | "";
-  edad: number | "";
-  estudia: boolean;
-  trabaja: boolean;
-  perdida_trabajo: boolean;
-  rubro: string;
-  discapacidad: boolean;
-  dependencia: boolean;
-  parentesco: string; // 1ra persona fijo "Jefe de hogar"
-};
-
 export type FormData = {
   hogar: HouseholdData;
   personas: Person[];
 };
 
-export const NEEDS_OPTIONS = ["Alimentos", "Agua", "Alimentación lactantes","Colchones/frazadas","Art{iculos de higiene personal","Solución habitacional transitoria","Pañales adulto","Pañales niño","Vestuario","Calefacción",
-  "Artículos de aseo", "Materiales de cocina", "Materiales de construcción"];
+export const NEEDS_OPTIONS = ["Alimentos", "Agua", "Alimentación lactantes",
+  "Colchones/frazadas", "Artículos de higiene personal", "Solución habitacional transitoria",
+  "Pañales adulto", "Pañales niño", "Vestuario", "Calefacción", "Artículos de aseo", 
+  "Materiales de cocina", "Materiales de construcción"];
 
 export const initialPerson = (isHead = false): Person => ({
   rut: "",
@@ -57,9 +40,9 @@ export const initialData: FormData = {
 
 export const parentescoOpciones = [
   "Jefe de hogar",
-  "Cónyuge / Pareja",
+  "Cónyuge/Pareja",
   "Hijo/a",
-  "Padre / Madre",
+  "Padre/Madre",
   "Hermano/a",
   "Otro",
 ];

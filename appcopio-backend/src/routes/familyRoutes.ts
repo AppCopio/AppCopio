@@ -4,7 +4,7 @@ import pool from '../config/db';
 import { PoolClient } from 'pg';
 
 // import addPersonHandler from './personRoutes';
-import { insertPersonTx, PersonInsert } from './personRoutes';
+import { insertPersonTx, PersonInsert } from './personsRoutes';
 
 const router = Router();
 

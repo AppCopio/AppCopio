@@ -15,6 +15,9 @@ import incidentRoutes from './routes/incidentRoutes';
 
 import categoryRoutes from './routes/categoryRoutes';
 import assignmentRoutes from './routes/assignmentRoutes';
+
+import personsRoutes from './routes/personsRoutes';
+
 dotenv.config();
 
 const app = express(); // Esta es tu instancia de 'Application'
@@ -38,6 +41,7 @@ app.use('/api/users', userRouter);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/persons', personsRoutes);
 
 
 

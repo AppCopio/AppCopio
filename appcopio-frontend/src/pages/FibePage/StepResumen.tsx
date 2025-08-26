@@ -1,7 +1,7 @@
 // src/components/fibe/StepResumen.tsx
 import * as React from "react";
 import { Box, Typography, Grid, Card, CardContent, Divider } from "@mui/material";
-import type { FormData } from "./types";
+import type { FormData } from "../../types/fibe";
 
 export default function StepResumen({ data }: { data: FormData }) {
   return (

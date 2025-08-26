@@ -1,21 +1,10 @@
 // src/components/fibe/PersonFormCard.tsx
 import * as React from "react";
-import {
-  Card,
-  CardContent,
-  Box,
-  Typography,
-  IconButton,
-  TextField,
-  MenuItem,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-} from "@mui/material";
+import { Card, CardContent, Box, Typography, IconButton, TextField, MenuItem, FormGroup,  FormControlLabel, Checkbox, } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import DeleteIcon from "@mui/icons-material/Delete";
-import type { Gender, Nationality, Person } from "./types";
-import { parentescoOpciones } from "./types";
+import type { Gender, Nationality, Person } from "../../types/person";
+import { parentescoOpciones } from "../../types/fibe";
 
 type Props = {
   person: Person;

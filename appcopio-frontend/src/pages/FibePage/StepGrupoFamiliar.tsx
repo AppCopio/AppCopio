@@ -1,8 +1,9 @@
 // src/components/fibe/StepGrupoFamiliar.tsx
 import * as React from "react";
 import { Box, Button, Typography } from "@mui/material";
-import type { FormData, Person, StepHandle } from "./types";
-import { initialPerson } from "./types";
+import type { Person } from "../../types/person";
+import type { FormData, StepHandle } from "../../types/fibe";
+import { initialPerson } from "../../types/fibe";
 import PersonFormCard from "./PersonFormCard";
 import { Add as AddIcon } from "@mui/icons-material";
 
