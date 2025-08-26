@@ -7,6 +7,8 @@
  * @returns Una promesa que resuelve con los datos en formato JSON.
  * @throws Lanza un error si la respuesta no es 'ok' o si la petición fue cancelada.
  */
+
+
 export const fetchWithAbort = async <T>(url: string, signal: AbortSignal): Promise<T> => {
     const response = await fetch(url, { signal });
 
