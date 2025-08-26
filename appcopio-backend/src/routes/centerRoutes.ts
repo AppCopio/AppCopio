@@ -464,6 +464,32 @@ const deleteInventoryItemHandler: RequestHandler = async (req: AuthenticatedRequ
     }
 };
 
+const getCurrentResidentsHandler: RequestHandler = async (req, res) => {
+  const { centerId } = req.params;
+
+  const query = `
+    SELECT 
+      p.rut,
+      CONCAT(p.nombre, ' ', p.primer_apellido) AS nombre_completo,
+      COUNT(fgm.person_id) AS integrantes_grupo
+    FROM CentersActivations ca
+    JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id
+    JOIN FamilyGroupMembers fgm ON fgm.family_id = fg.family_id
+    JOIN Persons p ON p.person_id = fg.jefe_hogar_person_id
+    WHERE ca.center_id = $1 AND ca.ended_at IS NULL
+    GROUP BY p.rut, p.nombre, p.primer_apellido
+    ORDER BY nombre_completo
+  `;
+
+  try {
+    const result = await pool.query(query, [centerId]);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error(`Error al obtener residentes del centro ${centerId}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+};
+
 
 // --- REGISTRO DE TODAS LAS RUTAS ---
 router.get('/', getAllCentersHandler);
@@ -479,5 +505,8 @@ router.get('/:centerId/inventory', getInventoryHandler);
 router.post('/:centerId/inventory', addInventoryItemHandler);
 router.put('/:centerId/inventory/:itemId', updateInventoryItemHandler);
 router.delete('/:centerId/inventory/:itemId', deleteInventoryItemHandler);
+
+//Para obtener los residentes del centro
+router.get('/:centerId/residents', getCurrentResidentsHandler);
 
 export default router;

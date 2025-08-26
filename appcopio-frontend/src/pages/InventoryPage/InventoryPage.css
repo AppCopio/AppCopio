@@ -166,3 +166,16 @@
   background-color: #dc3545;
   color: white;
 }
+.btn-clear-filter {
+  background-color: #4FC3F7 !important; /* celeste */
+  color: white !important;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-clear-filter:hover {
+  background-color: #039BE5 !important; /* celeste más fuerte al pasar el mouse */
+}
