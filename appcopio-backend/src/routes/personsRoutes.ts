@@ -1,26 +1,9 @@
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
 
-const router = Router();
+import type { Person } from '../types/person';
 
-export type Gender = "F" | "M" | "Otro";
-export type Nationality = "CH" | "EXT";
-export type Person = {
-  rut: string;
-  nombre: string;
-  primer_apellido: string;
-  segundo_apellido: string;
-  nacionalidad: Nationality | "";
-  genero: Gender | "";
-  edad: number | "";
-  estudia: boolean;
-  trabaja: boolean;
-  perdida_trabajo: boolean;
-  rubro: string;
-  discapacidad: boolean;
-  dependencia: boolean;
-  parentesco: string; // 1ra persona fijo "Jefe de hogar"
-};
+const router = Router();
 
 // ---------- GET /persons  (list) ----------
 export const listPersonsHandler: RequestHandler = async (_req, res) => {
@@ -61,10 +44,8 @@ export const getPersonHandler: RequestHandler<{ id: string }> = async (req, res)
   return;
 };
 
-
-
 // ---------- POST /persons  (create -> retorna ID) ----------
-export const createPersonHandler: RequestHandler<any, { person_id: number }, Person> = async (req, res, next) => {
+export const createPersonHandler: RequestHandler<any, { person_id: number } | { message: string }, Person> = async (req, res, next) => {
   try {
     const person_id = await createPerson(req.body);
     res.status(201).json({ person_id });
@@ -79,8 +60,14 @@ export const createPersonHandler: RequestHandler<any, { person_id: number }, Per
 };
 
 
-// Crea la persona y retorna el ID generado
 export async function createPerson(p: Person): Promise<number> {
+  return createPersonDB(pool, p);
+}
+
+// Crea la persona y retorna el ID generado -> transacciones complejas
+export type Db = { query: (q: string, p?: any[]) => Promise<{ rows: any[]; rowCount: number }> };
+
+export async function createPersonDB(db: Db, p: Person): Promise<number> {
   const sql = `
     INSERT INTO Persons (
       rut, nombre, primer_apellido, segundo_apellido,
@@ -97,7 +84,7 @@ export async function createPerson(p: Person): Promise<number> {
     p.segundo_apellido,
     p.nacionalidad,
     p.genero,
-    p.edad as number,      // asumimos normalizado, validaciones después
+    p.edad as number,
     p.estudia,
     p.trabaja,
     p.perdida_trabajo,
@@ -105,13 +92,13 @@ export async function createPerson(p: Person): Promise<number> {
     p.discapacidad,
     p.dependencia,
   ];
-  const { rows } = await pool.query<{ person_id: number }>(sql, params);
-  return rows[0].person_id;
+  const { rows } = await db.query(sql, params);
+  return rows[0].person_id as number;
 }
 
 
 // ---------- PUT /persons/:id  (replace) ----------
-export const replacePersonHandler: RequestHandler<{ id: string }, { person_id: number }, Person> = async (req, res, next) => {
+export const replacePersonHandler: RequestHandler<{ id: string }, { person_id: number } | { message: string }, Person> = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const p = req.body;

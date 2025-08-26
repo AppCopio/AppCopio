@@ -1,29 +1,10 @@
 // src/routes/familiesRoutes.ts
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
+import type { HouseholdData } from '../types/family';
+import { NEEDS_OPTIONS } from "../types/fibe";
 
 const router = Router();
-
-export type HouseholdData = {
-  fibeFolio: string;
-  observations: string;
-  selectedNeeds: string[]; // máx 3
-};
-
-export const NEEDS_OPTIONS = [
-  "Alimentos", 
-  "Agua", 
-  "Alimentación lactantes",
-  "Colchones/frazadas", 
-  "Artículos de higiene personal", 
-  "Solución habitacional transitoria",
-  "Pañales adulto", 
-  "Pañales niño", 
-  "Vestuario", 
-  "Calefacción", 
-  "Artículos de aseo", 
-  "Materiales de cocina", 
-  "Materiales de construcción"];
 
 // Transforma selectedNeeds (string[]) a vector 14 de 0/1 (INTEGER[14])
 function needsVectorFromSelected(selected: string[] | undefined | null): number[] {
@@ -88,7 +69,7 @@ export const getFamilyHandler: RequestHandler<{ id: string }> = async (req, res,
 // Body: { activation_id: number; jefe_hogar_person_id?: number | null; data: HouseholdData }
 export const createFamilyHandler: RequestHandler<
   any,
-  { family_id: number },
+  { family_id: number } | { message: string },
   { activation_id: number; jefe_hogar_person_id?: number | null; data: HouseholdData }
 > = async (req, res, next) => {
   try {
@@ -109,10 +90,20 @@ export const createFamilyHandler: RequestHandler<
 
 // Crea el registro en FamilyGroups y retorna el ID generado
 export async function createFamilyGroupFromHousehold(args: {
-  activation_id: number;
-  jefe_hogar_person_id?: number | null;
-  data: HouseholdData;
+  activation_id: number; jefe_hogar_person_id?: number | null; data: HouseholdData;
 }): Promise<number> {
+  return createFamilyGroupFromHouseholdDB(pool, {
+    activation_id: args.activation_id,
+    jefe_hogar_person_id: args.jefe_hogar_person_id ?? null,
+    data: args.data,
+  });
+}
+
+export type Db = { query: (q: string, p?: any[]) => Promise<{ rows: any[]; rowCount: number }> };
+export async function createFamilyGroupFromHouseholdDB(
+  db: Db,
+  args: { activation_id: number; jefe_hogar_person_id: number | null; data: HouseholdData }
+): Promise<number> {
   const necesidades = needsVectorFromSelected(args.data?.selectedNeeds);
   const sql = `
     INSERT INTO FamilyGroups (
@@ -121,21 +112,17 @@ export async function createFamilyGroupFromHousehold(args: {
     VALUES ($1, $2, $3, $4::int[])
     RETURNING family_id
   `;
-  const params = [
-    args.activation_id,
-    args.jefe_hogar_person_id ?? null,
-    args.data?.observations ?? null,
-    necesidades,
-  ];
-  const { rows } = await pool.query<{ family_id: number }>(sql, params);
-  return rows[0].family_id;
+  const params = [args.activation_id, args.jefe_hogar_person_id, args.data?.observations ?? null, necesidades];
+  const { rows } = await db.query(sql, params);
+  return rows[0].family_id as number;
 }
+
 
 // ---------- PUT /families/:id  (replace -> retorna ID) ----------
 // Body igual a POST
 export const replaceFamilyHandler: RequestHandler<
   { id: string },
-  { family_id: number },
+  { family_id: number } | { message: string },
   { activation_id: number; jefe_hogar_person_id?: number | null; data: HouseholdData }
 > = async (req, res, next) => {
   try {

@@ -18,7 +18,8 @@ import assignmentRoutes from './routes/assignmentRoutes';
 
 import personsRoutes from './routes/personsRoutes';
 import familyRoutes from './routes/familyRoutes';
-import familyMembersRoutes from './routes/familyMembersRouts';
+import familyMembersRoutes from './routes/familyMembersRoutes';
+import fibeRoutes from "./routes/fibeRoutes";
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/persons', personsRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/family-members', familyMembersRoutes);
+app.use("/api/fibe", fibeRoutes);
 
 
 app.listen(port, () => {

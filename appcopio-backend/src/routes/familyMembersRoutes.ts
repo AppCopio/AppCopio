@@ -4,11 +4,7 @@ import pool from "../config/db";
 
 const router = Router();
 
-export type FamilyMemberCreate = {
-  family_id: number;
-  person_id: number;
-  parentesco: string; // ej: 'Jefe de hogar', 'Hijo', etc.
-};
+import type { FamilyMemberCreate } from "../types/family";
 
 // ---------- GET /family-members (list) ----------
 export const listFamilyMembersHandler: RequestHandler = async (_req, res, next) => {
@@ -56,9 +52,28 @@ export const getFamilyMemberHandler: RequestHandler<{ id: string }> = async (req
 };
 
 // ---------- POST /family-members (create -> retorna ID) ----------
+export type Db = { query: (q: string, p?: any[]) => Promise<{ rows: any[]; rowCount: number }> };
+
+export async function createFamilyMemberDB(
+  db: Db,
+  args: FamilyMemberCreate
+): Promise<number> {
+  const sql = `
+    INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco)
+    VALUES ($1, $2, $3)
+    RETURNING member_id
+  `;
+  const { rows } = await db.query(sql, [args.family_id, args.person_id, args.parentesco]);
+  return rows[0].member_id as number;
+}
+
+export async function createFamilyMember(p: FamilyMemberCreate): Promise<number> {
+  return createFamilyMemberDB(pool, p);
+}
+
 export const createFamilyMemberHandler: RequestHandler<
   any,
-  { member_id: number },
+  { member_id: number } | { message: string },
   FamilyMemberCreate
 > = async (req, res, next) => {
   try {
@@ -74,24 +89,10 @@ export const createFamilyMemberHandler: RequestHandler<
   }
 };
 
-// Crea el miembro y retorna el ID generado
-export async function createFamilyMember(p: FamilyMemberCreate): Promise<number> {
-  const sql = `
-    INSERT INTO FamilyGroupMembers (
-      family_id, person_id, parentesco
-    )
-    VALUES ($1, $2, $3)
-    RETURNING member_id
-  `;
-  const params = [p.family_id, p.person_id, p.parentesco];
-  const { rows } = await pool.query<{ member_id: number }>(sql, params);
-  return rows[0].member_id;
-}
-
 // ---------- PUT /family-members/:id (replace -> retorna ID) ----------
 export const replaceFamilyMemberHandler: RequestHandler<
   { id: string },
-  { member_id: number },
+  { member_id: number } | { message: string },
   FamilyMemberCreate
 > = async (req, res, next) => {
   try {

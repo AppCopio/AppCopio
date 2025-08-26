@@ -35,46 +35,12 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
 export async function listPersons(params?: { search?: string; limit?: number }) {
   const url = `${API_BASE}/persons${qs(params ?? {})}`;
   // Ajusta el tipo de retorno si tu backend devuelve otro formato
-  return fetchJSON<Array<{
-    person_id: number;
-    rut: string;
-    nombre: string;
-    primer_apellido: string;
-    segundo_apellido: string | null;
-    nacionalidad: "CH" | "EXT" | "";
-    genero: "F" | "M" | "Otro" | "";
-    edad: number | null;
-    estudia: boolean;
-    trabaja: boolean;
-    perdida_trabajo: boolean;
-    rubro: string | null;
-    discapacidad: boolean;
-    dependencia: boolean;
-    created_at: string;
-    updated_at: string;
-  }>>(url);
+  return fetchJSON<Array<Person>>(url);
 }
 
 // ---------- GET by ID ----------
 export async function getPerson(id: number) {
-  return fetchJSON<{
-    person_id: number;
-    rut: string;
-    nombre: string;
-    primer_apellido: string;
-    segundo_apellido: string | null;
-    nacionalidad: "CH" | "EXT" | "";
-    genero: "F" | "M" | "Otro" | "";
-    edad: number | null;
-    estudia: boolean;
-    trabaja: boolean;
-    perdida_trabajo: boolean;
-    rubro: string | null;
-    discapacidad: boolean;
-    dependencia: boolean;
-    created_at: string;
-    updated_at: string;
-  }>(`${API_BASE}/persons/${id}`);
+  return fetchJSON<Person>(`${API_BASE}/persons/${id}`);
 }
 
 // ---------- POST (retorna ID) ----------
