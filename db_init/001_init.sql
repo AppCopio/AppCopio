@@ -10,13 +10,10 @@ DROP TABLE IF EXISTS CenterChangesHistory CASCADE;
 DROP TABLE IF EXISTS CentersActivations CASCADE;
 DROP TABLE IF EXISTS UpdateRequests CASCADE;
 DROP TABLE IF EXISTS CenterAssignments CASCADE;
-DROP TABLE IF EXISTS UserCenterAssignments CASCADE; -- Obsoleta
 DROP TABLE IF EXISTS InventoryLog CASCADE;
 DROP TABLE IF EXISTS CentersDescription CASCADE;
 DROP TABLE IF EXISTS Products CASCADE;
 DROP TABLE IF EXISTS Categories CASCADE;
-DROP TABLE IF EXISTS Incidents CASCADE; -- Obsoleta
-DROP TABLE IF EXISTS CenterInventories CASCADE; -- Obsoleta
 DROP TABLE IF EXISTS Centers CASCADE;
 DROP TABLE IF EXISTS Users CASCADE;
 DROP TABLE IF EXISTS Roles CASCADE;
@@ -81,6 +78,12 @@ CREATE TABLE Products (
     category_id INT REFERENCES Categories(category_id)
 );
 
+-- CAMBIO CREANDO TABLA CATEGORIAS
+CREATE TABLE Categories (
+    category_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
 CREATE TABLE Persons (
     person_id SERIAL PRIMARY KEY,
     rut VARCHAR(20) UNIQUE NOT NULL,
@@ -126,7 +129,6 @@ CREATE TABLE CenterAssignments (
     assignment_id SERIAL PRIMARY KEY,
     center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
     user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('trabajador municipal', 'contacto comunidad')),
     valid_from TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     valid_to TIMESTAMP WITH TIME ZONE,
     changed_by INT REFERENCES Users(user_id) ON DELETE SET NULL,

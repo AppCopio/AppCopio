@@ -16,10 +16,15 @@ import CenterDetailsPage from "./pages/CenterDetailsPage/CenterDetailsPage";
 import InventoryPage from "./pages/InventoryPage/InventoryPage";
 import NeedsFormPage from "./pages/NeedsFormPage/NeedsFormPage";
 import NeedsStatusPage from "./pages/NeedsStatusPage/NeedsStatusPage";
-import IncidentListPage from "./pages/IncidentListPage/IncidentListPage";
+
+import UpdatesPage from './pages/UpdatesPage/UpdatesPage'; 
 import InventoryHistoryPage from "./pages/InventoryHistoryPage/InventoryHistoryPage";
 import MisCentrosPage from './pages/MisCentrosPage/MisCentrosPage';
 import FibePage from "./pages/FibePage/FibePage";
+
+import CreateCenterPage from './pages/CreateCenterPage/CreateCenterPage';
+import CenterResidentsPage from "./pages/CenterResidentsPage/CenterResidentsPage";
+
 
 import "./App.css";
 
@@ -46,9 +51,12 @@ function App() {
               
               {/* Rutas de Admin y Apoyo */}
               <Route path="/admin/centers" element={<CenterManagementPage />} />
+              <Route path="/admin/centers/new" element={<CreateCenterPage />} />
               <Route path="/admin/users" element={<UsersManagementPage />} />
+
               <Route path="/admin/incidents" element={<IncidentListPage />} />
               <Route path="/admin/fibe" element={<FibePage />} />
+              <Route path="/admin/updates" element={<UpdatesPage />} />
 
               {/* Ruta de Trabajador Municipal */}
               <Route path="/mis-centros" element={<MisCentrosPage />} />
@@ -60,6 +68,8 @@ function App() {
                 <Route path="inventory/history" element={<InventoryHistoryPage />} />
                 <Route path="needs/new" element={<NeedsFormPage />} />
                 <Route path="needs/status" element={<NeedsStatusPage />} />
+                <Route path="residents" element={<CenterResidentsPage />} />
+
               </Route>
             </Route>
           </Route>

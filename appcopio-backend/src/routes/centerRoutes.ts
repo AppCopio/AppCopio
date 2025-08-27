@@ -18,6 +18,19 @@ const itemRatiosPerPerson: { [key: string]: number } = {
     'Herramientas': 1
 };
 
+//
+// Por lo que entendí esto es para verificar el rol de administrador (DIDECO)
+const isAdmin: RequestHandler = (req, res, next) => {
+    // Implementación de autenticación con token JWT
+    // Por ahora, un placeholder
+    const userRole = (req as any).user.role; 
+    if (userRole === 'Administrador') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Acceso denegado. Se requiere rol de Administrador.' });
+    }
+};
+
 // GET /api/centers - (Sin cambios en esta función)
 const getAllCentersHandler: RequestHandler = async (req, res) => {
     try {
@@ -106,27 +119,65 @@ const getCenterByIdHandler: RequestHandler = async (req, res) => {
     }
 };
 
-// POST /api/centers - Crear un nuevo centro
 const createCenterHandler: RequestHandler = async (req, res) => {
-    const { center_id, name, address, type, capacity, is_active = false, latitude, longitude } = req.body;
-    if (!center_id || !name || !type) {
-        res.status(400).json({ message: 'center_id, name, y type son campos requeridos.' });
-        return;
-    }
+    const client = await pool.connect();
     try {
-        const newCenter = await pool.query(
-            `INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [center_id, name, address, type, capacity || 0, is_active, latitude, longitude]
-        );
-        res.status(201).json(newCenter.rows[0]);
-    } catch (error: any) {
-        console.error('Error al crear el centro:', error);
-        if (error.code === '23505') {
-            res.status(409).json({ message: `El center_id '${center_id}' ya existe.` });
-        } else {
-            res.status(500).json({ message: 'Error interno del servidor.' });
+        await client.query('BEGIN'); // Iniciar la transacción
+
+        const {
+            center_id, name, address, type, capacity, latitude, longitude, should_be_active,
+            comunity_charge_id, municipal_manager_id,
+            // Campos del catastro que se irán a CentersDescription
+            ...catastroData
+        } = req.body;
+
+        if (!center_id || !name || typeof latitude !== 'number' || typeof longitude !== 'number') {
+            await client.query('ROLLBACK');
+            res.status(400).json({ message: 'Campos principales requeridos: center_id, name, type, latitude, longitude.' });
+            return;
         }
+
+        // 1. Insertar en la tabla Centers con el ID proporcionado
+        const insertCenterQuery = `
+            INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude, should_be_active, comunity_charge_id, municipal_manager_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING *`;
+        
+        const centerValues = [
+            center_id, name, address || null, type, capacity || 0, false, latitude, longitude, should_be_active || false,
+            comunity_charge_id || null, municipal_manager_id || null
+        ];
+        
+        await client.query(insertCenterQuery, centerValues);
+
+        // 2. Insertar en la tabla CentersDescription solo si hay datos en catastroData
+        const catastroColumns = Object.keys(catastroData);
+        if (catastroColumns.length > 0) {
+            const catastroValues = Object.values(catastroData);
+            const catastroPlaceholders = catastroValues.map((_, i) => `$${i + 2}`).join(', ');
+
+            const insertCatastroQuery = `
+                INSERT INTO CentersDescription (
+                    center_id,
+                    ${catastroColumns.join(', ')}
+                ) VALUES (
+                    $1,
+                    ${catastroPlaceholders}
+                ) RETURNING *`;
+            
+            const allCatastroValues = [center_id, ...catastroValues];
+
+            await client.query(insertCatastroQuery, allCatastroValues);
+        }
+
+        await client.query('COMMIT'); // Confirmar la transacción
+        res.status(201).json({ message: 'Centro y descripción de catastro creados exitosamente.', center_id: center_id });
+    } catch (error: any) {
+        await client.query('ROLLBACK'); // Revertir la transacción si algo falla
+        console.error('Error al crear el centro:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    } finally {
+        client.release();
     }
 };
 // PUT /api/centers/:id - Actualizar un centro existente
@@ -255,9 +306,8 @@ const getInventoryHandler: RequestHandler = async (req, res) => {
 // POST /api/centers/:centerId/inventory - Añadir un item al inventario
 const addInventoryItemHandler: RequestHandler = async (req: AuthenticatedRequest, res) => {
     const { centerId } = req.params;
-    const { itemName, categoryId, quantity, unit, notes } = req.body;
-    
-    const userId = req.user?.id; 
+    const { itemName, categoryId, quantity, unit, notes,user } = req.body;
+    const userId = user?.user_id; 
     if (!userId) {
         res.status(401).json({ message: 'No autorizado.' });
         return;
@@ -413,6 +463,32 @@ const deleteInventoryItemHandler: RequestHandler = async (req: AuthenticatedRequ
     }
 };
 
+const getCurrentResidentsHandler: RequestHandler = async (req, res) => {
+  const { centerId } = req.params;
+
+  const query = `
+    SELECT 
+      p.rut,
+      CONCAT(p.nombre, ' ', p.primer_apellido) AS nombre_completo,
+      COUNT(fgm.person_id) AS integrantes_grupo
+    FROM CentersActivations ca
+    JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id
+    JOIN FamilyGroupMembers fgm ON fgm.family_id = fg.family_id
+    JOIN Persons p ON p.person_id = fg.jefe_hogar_person_id
+    WHERE ca.center_id = $1 AND ca.ended_at IS NULL
+    GROUP BY p.rut, p.nombre, p.primer_apellido
+    ORDER BY nombre_completo
+  `;
+
+  try {
+    const result = await pool.query(query, [centerId]);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error(`Error al obtener residentes del centro ${centerId}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+};
+
 
 // --- REGISTRO DE TODAS LAS RUTAS ---
 router.get('/', getAllCentersHandler);
@@ -428,5 +504,8 @@ router.get('/:centerId/inventory', getInventoryHandler);
 router.post('/:centerId/inventory', addInventoryItemHandler);
 router.put('/:centerId/inventory/:itemId', updateInventoryItemHandler);
 router.delete('/:centerId/inventory/:itemId', deleteInventoryItemHandler);
+
+//Para obtener los residentes del centro
+router.get('/:centerId/residents', getCurrentResidentsHandler);
 
 export default router;
