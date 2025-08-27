@@ -15,7 +15,14 @@ import updateRoutes from './routes/updateRoutes';
 
 import categoryRoutes from './routes/categoryRoutes';
 import assignmentRoutes from './routes/assignmentRoutes';
+
+import personsRoutes from './routes/personsRoutes';
+import familyRoutes from './routes/familyRoutes';
+import familyMembersRoutes from './routes/familyMembersRoutes';
+import fibeRoutes from "./routes/fibeRoutes";
+
 import roleRoutes from './routes/roleRoutes';
+
 dotenv.config();
 
 const app = express(); // Esta es tu instancia de 'Application'
@@ -39,9 +46,13 @@ app.use('/api/users', userRouter);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/assignments', assignmentRoutes);
+
+app.use('/api/persons', personsRoutes);
+app.use('/api/family', familyRoutes);
+app.use('/api/family-members', familyMembersRoutes);
+app.use("/api/fibe", fibeRoutes);
+
 app.use('/api/roles', roleRoutes);
-
-
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
