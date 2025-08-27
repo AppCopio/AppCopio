@@ -28,18 +28,40 @@ const StepGrupoFamiliar = React.forwardRef<StepHandle, Props>(({ personas, onCha
     onChangeAll(arr.length ? arr : [initialPerson(true)]);
   };
 
-  // Validación: al menos 1 persona con campos mínimos
+  /* * * * * * V A L I D A C I Ó N   C A M P O S   V A C Í O S * * * * * */
+  const [validateTick, setValidateTick] = React.useState(-1); // para forzar validación en PersonFormCard
+
   React.useImperativeHandle(ref, () => ({
     validate: () => {
       if (personas.length < 1) return false;
-      const head = personas[0];
-      const ok =
-        head.rut.trim() !== "" &&
-        head.nombre.trim() !== "" &&
-        head.primer_apellido.trim() !== "" &&
-        head.genero !== "" &&
-        head.edad !== "";
-      return ok;
+
+      // Busca el primer índice inválido
+      const firstBad = personas.findIndex((p, i) => {
+        const reqOk =
+          (p.rut?.trim() ?? "") !== "" &&
+          (p.nombre?.trim() ?? "") !== "" &&
+          (p.primer_apellido?.trim() ?? "") !== "" &&
+          (p.nacionalidad ?? "") !== "" &&
+          (p.genero ?? "") !== "" &&
+          (p.edad !== "" && p.edad !== undefined && p.edad !== null);
+
+        const parentescoOk = i === 0 ? true : (p.parentesco?.trim() ?? "") !== "";
+
+        return !(reqOk && parentescoOk);
+      });
+
+      const allOk = firstBad === -1;
+
+      if (!allOk) {
+        // Fuerza mostrar errores en todas las tarjetas
+        setValidateTick((t) => t + 1);
+        const elId = `person-card-${firstBad}`;
+        requestAnimationFrame(() => {
+          document.getElementById(elId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+
+      return allOk;
     },
   }));
 
@@ -53,6 +75,7 @@ const StepGrupoFamiliar = React.forwardRef<StepHandle, Props>(({ personas, onCha
           onChange={updatePerson}
           onRemove={removePerson}
           isRemovable={i !== 0}
+          forceValidate={validateTick}
         />
       ))}
 
@@ -63,7 +86,7 @@ const StepGrupoFamiliar = React.forwardRef<StepHandle, Props>(({ personas, onCha
       </Box>
 
       <Typography variant="body2" color="text.secondary">
-        * Debes completar RUT, Nombre, Primer apellido, Género y Edad del Jefe de hogar.
+        * Campos obligatorios.
       </Typography>
     </Box>
   );

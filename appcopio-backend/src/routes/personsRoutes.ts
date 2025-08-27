@@ -96,7 +96,6 @@ export async function createPersonDB(db: Db, p: Person): Promise<number> {
   return rows[0].person_id as number;
 }
 
-
 // ---------- PUT /persons/:id  (replace) ----------
 export const replacePersonHandler: RequestHandler<{ id: string }, { person_id: number } | { message: string }, Person> = async (req, res, next) => {
   try {

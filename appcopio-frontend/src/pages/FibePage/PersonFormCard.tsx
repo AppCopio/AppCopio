@@ -12,6 +12,7 @@ type Props = {
   onChange: (index: number, patch: Partial<Person>) => void;
   onRemove: (index: number) => void;
   isRemovable: boolean;
+  forceValidate?: number;
 };
 
 export default function PersonFormCard({
@@ -20,6 +21,7 @@ export default function PersonFormCard({
   onChange,
   onRemove,
   isRemovable,
+  forceValidate,
 }: Props) {
   const isHead = index === 0;
 
@@ -43,37 +45,112 @@ export default function PersonFormCard({
     edad: false,
     parentesco: false,
   });
+
   const markTouched = (k: keyof typeof touched) =>
     setTouched((t) => ({ ...t, [k]: true }));
 
   const isEmpty = (v: any) =>
     v === null || v === undefined || (typeof v === "string" && v.trim() === "");
 
+  /* * * * * * V A L I D A C I Ó N   C A M P O S   V A C Í O S * * * * * */
+  const lastValidateTickRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (forceValidate === undefined) return;
+
+    if (lastValidateTickRef.current === null) {
+      lastValidateTickRef.current = forceValidate;
+      return;
+    }
+
+    if (forceValidate !== lastValidateTickRef.current) {
+      lastValidateTickRef.current = forceValidate;
+      setTouched((t) => ({
+        ...t,
+        rut: true,
+        nombre: true,
+        primer_apellido: true,
+        nacionalidad: true,
+        genero: true,
+        edad: true,
+        parentesco: isHead ? t.parentesco : true, // jefe no requiere parentesco
+      }));
+    }
+  }, [forceValidate, isHead]);
+
+
+  /* * * * * * F O R M A T E O   R U T * * * * * */
+  // Limpia a [0-9K], mayúscula
+  const cleanRut = (v: string) => v.replace(/[^0-9kK]/g, "").toUpperCase();
+
+  // Aplica puntos y guión sobre el valor ya limpio
+  const formatRut = (v: string) => {
+    const s = cleanRut(v);
+    if (s.length <= 1) return s; // sin guión aún
+
+    const body = s.slice(0, -1);
+    const dv = s.slice(-1);
+    const bodyWithDots = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return `${bodyWithDots}-${dv}`;
+  };
+
+  const computeDV = (bodyDigits: string) => {
+    let sum = 0, mul = 2;
+    for (let i = bodyDigits.length - 1; i >= 0; i--) {
+      sum += parseInt(bodyDigits[i], 10) * mul;
+      mul = mul === 7 ? 2 : mul + 1;
+    }
+    const r = 11 - (sum % 11);
+    return r === 11 ? "0" : r === 10 ? "K" : String(r);
+  };
+
+  const isValidRut = (rutFormattedOrNot: string) => {
+    const s = cleanRut(rutFormattedOrNot);
+    if (s.length < 2) return false;
+    const body = s.slice(0, -1);
+    const dv = s.slice(-1);
+    return computeDV(body) === dv.toUpperCase();
+  };
+
+  const rutDVInvalid = React.useMemo(() => {
+    const s = cleanRut(person.rut || "");
+      if (!touched.rut || s.length < 2) return false; // espera a que haya cuerpo+DV
+      return !isValidRut(s);
+    }, [touched.rut, person.rut]);
+  
+
+  /* * * * * * E R R O R E S   D E   V A L I D A C I Ó N * * * * * */
   const errors = {
     rut: required.rut && isEmpty(person.rut),
+    rutDV: rutDVInvalid,
     nombre: required.nombre && isEmpty(person.nombre),
     primer_apellido: required.primer_apellido && isEmpty(person.primer_apellido),
     nacionalidad: required.nacionalidad && isEmpty(person.nacionalidad),
     genero: required.genero && isEmpty(person.genero),
     edad: required.edad && (person.edad === "" || Number.isNaN(person.edad)),
-    parentesco: required.parentesco && isEmpty(person.parentesco),
+    parentesco: required.parentesco && isEmpty(person.parentesco),  
   };
 
   return (
-    <Card variant="outlined">
+    <Card id={`person-card-${index}`} variant="outlined">
       <CardContent>
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
           <Typography variant="subtitle1">
             Persona {index + 1} {isHead ? "(Jefe de hogar)" : ""}
           </Typography>
           {isRemovable && (
-            <IconButton aria-label="Eliminar persona" onClick={() => onRemove(index)}>
+            <IconButton aria-label="Eliminar persona" onClick={() => onRemove(index)} 
+            sx={{
+              bgcolor: "#0c3a80ff !important", 
+              color: "#FFFFFF",
+              '&:hover': { bgcolor: "#686868ff !important" },
+            }}>
               <DeleteIcon />
             </IconButton>
           )}
         </Box>
 
-        {/* === Layout con Box + CSS grid (dos filas: 4 cols y 5 cols) === */}
+        {/* === Layout con Box + CSS grid === */}
         <Box sx={{ display: "grid", gap: 1 }}>
           {/* Fila 1 — 4 columnas */}
           <Box
@@ -88,12 +165,26 @@ export default function PersonFormCard({
               className="field"
               label="RUT"
               value={person.rut}
-              onChange={(e) => onChange(index, { rut: e.target.value })}
+              // ⬇️ NUEVO onChange: formatea en vivo
+              onChange={(e) => {
+                const formatted = formatRut(e.target.value);
+                onChange(index, { rut: formatted });
+              }}
               onBlur={() => markTouched("rut")}
               required={required.rut}
-              error={touched.rut && errors.rut}
-              helperText={touched.rut && errors.rut ? "Ingresa el RUT." : " "}
-            />
+              // ⬇️ (opcional) hint de teclado y patrón
+              inputProps={{ inputMode: "numeric", pattern: "[0-9kK\\.-]*" }}
+              placeholder="12.345.678-5"
+              error={touched.rut && errors.rut /* ver punto 3 si usas DV */}
+              helperText={touched.rut
+                ? errors.rut
+                  ? "Ingresa el RUT."
+                  : errors.rutDV
+                    ? "RUT inválido."
+                    : " "
+                : " "}
+              />
+
             <TextField
               className="field"
               label="Nombre"
@@ -236,7 +327,7 @@ export default function PersonFormCard({
           </Box>
         </Box>
 
-        {/* Checkboxes centradas */}
+        {/* Checkboxes */}
         <Box
           sx={{
             mt: 1,
