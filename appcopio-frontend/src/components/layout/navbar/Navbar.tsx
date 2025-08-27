@@ -64,8 +64,8 @@ const Navbar: React.FC = () => {
                   </NavLink>
                 </li>
                 <li>
-                  <NavLink to="/admin/incidents" className={({ isActive }) => (isActive ? 'active-link' : '')}>
-                    Incidencias
+                  <NavLink to="/admin/updates" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                    Actualizaciones
                   </NavLink>
                 </li>
               </>
@@ -79,7 +79,7 @@ const Navbar: React.FC = () => {
             )}
             <li>
               <button onClick={handleLogout} className="logout-button">
-                Cerrar Sesión ({user.username})
+                Cerrar Sesión
               </button>
             </li>
           </>
