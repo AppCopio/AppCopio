@@ -197,7 +197,8 @@ const InventoryPage: React.FC = () => {
             itemName: newItemName, 
             categoryId: parseInt(newItemCategory, 10),
             quantity: newItemQuantity,
-            unit: newItemUnit
+            unit: newItemUnit,
+            user: user,
           },
       };
 

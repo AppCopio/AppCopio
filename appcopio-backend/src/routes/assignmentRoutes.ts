@@ -11,19 +11,24 @@ const router = Router();
  * @body    { "user_id": number, "center_id": "string" }
  */
 const addAssignmentHandler: RequestHandler = async (req, res) => {
-    const { user_id, center_id } = req.body;
+    const { user_id, center_id, role } = req.body;
 
-    if (!user_id || !center_id) {
-        res.status(400).json({ error: "Se requieren user_id y center_id." });
+    if (!user_id || !center_id || !role) {
+        res.status(400).json({ error: "Se requieren user_id, center_id y role." });
         return;
     }
+    
 
     try {
         const newAssignment = await pool.query(
-            `INSERT INTO UserCenterAssignments (user_id, center_id)
-             VALUES ($1, $2)
-             RETURNING *`,
-            [user_id, center_id]
+            `
+            INSERT INTO centerassignments (user_id, center_id, role)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (user_id, center_id, role)
+            DO NOTHING
+            RETURNING *;
+            `,
+            [user_id, center_id, role]
         );
         res.status(201).json(newAssignment.rows[0]);
     } catch (e: any) {
@@ -58,7 +63,7 @@ const removeAssignmentHandler: RequestHandler = async (req, res) => {
 
     try {
         const deleteOp = await pool.query(
-            `DELETE FROM UserCenterAssignments 
+            `DELETE FROM centerassignments 
              WHERE user_id = $1 AND center_id = $2`,
             [user_id, center_id]
         );
