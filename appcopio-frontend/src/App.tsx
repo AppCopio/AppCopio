@@ -54,7 +54,7 @@ function App() {
               <Route path="/admin/centers/new" element={<CreateCenterPage />} />
               <Route path="/admin/users" element={<UsersManagementPage />} />
 
-              <Route path="/admin/incidents" element={<IncidentListPage />} />
+              {/*<Route path="/admin/incidents" element={<IncidentListPage />} />*/}
               <Route path="/admin/fibe" element={<FibePage />} />
               <Route path="/admin/updates" element={<UpdatesPage />} />
 
