@@ -166,6 +166,14 @@ CREATE TABLE FamilyGroups (
     jefe_hogar_person_id INT REFERENCES Persons(person_id) ON DELETE SET NULL,
     observaciones TEXT,
     necesidades_basicas INTEGER[14],
+    
+    --Esto es lo nuevo: 
+
+    status VARCHAR(20) NOT NULL DEFAULT 'activo' CHECK (status IN ('activo', 'inactivo')),
+    departure_date TIMESTAMPTZ,
+    departure_reason TEXT,
+    destination_activation_id INT REFERENCES CentersActivations(activation_id) ON DELETE SET NULL,
+    -- Restricciones existentes
     UNIQUE (activation_id, jefe_hogar_person_id)
 );
 

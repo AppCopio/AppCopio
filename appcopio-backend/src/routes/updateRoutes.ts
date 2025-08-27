@@ -1,3 +1,4 @@
+
 // src/routes/updateRoutes.ts
 import { Router, Request, Response, RequestHandler } from 'express';
 import pool from '../config/db';
@@ -26,6 +27,8 @@ const getAllUpdatesHandler: RequestHandler = async (req, res) => {
         const result = await pool.query(
             `SELECT 
                 ur.request_id,
+              
+                ur.center_id, 
                 ur.description,
                 ur.status,
                 ur.urgency,
