@@ -1,60 +1,61 @@
 // src/contexts/AuthContext.tsx
-import { createContext, useState, useContext, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// La interfaz User no cambia
+// Se actualiza la interfaz del Usuario para incluir el token
 interface User {
   user_id: number;
   username: string;
-  role: 'Emergencias' | 'Encargado';
-  centerId?: string | null;
+  role_name: string; // Ej: 'Administrador', 'Trabajador Municipal'
+  es_apoyo_admin: boolean;
+  assignedCenters: string[]; // Un arreglo con los IDs de los centros asignados
+  token: string; // ¡Este es el campo que nos faltaba!
 }
 
 interface AuthContextType {
+  isAuthenticated: boolean;
   user: User | null;
   login: (userData: User) => void;
   logout: () => void;
-  isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // --- CAMBIO 1: INICIALIZACIÓN DEL ESTADO ---
-  // Ahora, al iniciar, intentamos leer el usuario desde localStorage.
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const storedUser = window.localStorage.getItem('user');
-      return storedUser ? JSON.parse(storedUser) : null;
-    } catch (error) {
-      console.error("Error al leer el usuario del localStorage", error);
-      return null;
-    }
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = (userData: User) => {
-    // --- CAMBIO 2: GUARDAR EN LOCALSTORAGE AL HACER LOGIN ---
+  useEffect(() => {
+    // Al cargar la app, se revisa si hay una sesión guardada en localStorage
     try {
-      window.localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        // Se parsea el usuario guardado y se establece en el estado
+        setUser(JSON.parse(storedUser));
+      }
     } catch (error) {
-      console.error("Error al guardar el usuario en localStorage", error);
+      console.error("Error al cargar la sesión del usuario:", error);
+      localStorage.removeItem('user'); // Limpia el storage si está corrupto
+    } finally {
+      setIsLoading(false); // Termina la carga
     }
+  }, []);
+
+  // La función login ahora espera el objeto User completo, incluyendo el token
+  const login = (userData: User) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
   };
 
   const logout = () => {
-    // --- CAMBIO 3: BORRAR DE LOCALSTORAGE AL HACER LOGOUT ---
-    try {
-      window.localStorage.removeItem('user');
-      setUser(null);
-    } catch (error) {
-      console.error("Error al borrar el usuario de localStorage", error);
-    }
+    localStorage.removeItem('user');
+    setUser(null);
   };
 
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

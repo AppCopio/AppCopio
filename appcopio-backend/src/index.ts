@@ -10,8 +10,19 @@ import centerRoutes from './routes/centerRoutes';
 import productRoutes from './routes/productRoutes';
 
 import inventoryRoutes from './routes/inventoryRoutes';
-import userRoutes from './routes/userRoutes';
-import incidentRoutes from './routes/incidentRoutes';
+import userRouter from './routes/userRoutes';
+import updateRoutes from './routes/updateRoutes';
+
+import categoryRoutes from './routes/categoryRoutes';
+import assignmentRoutes from './routes/assignmentRoutes';
+
+import personsRoutes from './routes/personsRoutes';
+import familyRoutes from './routes/familyRoutes';
+import familyMembersRoutes from './routes/familyMembersRoutes';
+import fibeRoutes from "./routes/fibeRoutes";
+
+import roleRoutes from './routes/roleRoutes';
+
 dotenv.config();
 
 const app = express(); // Esta es tu instancia de 'Application'
@@ -30,10 +41,18 @@ app.get('/api', (req: Request, res: Response) => {
 // app.use() espera middleware o un router. 'centerRoutes' DEBE ser un router.
 app.use('/api/centers', centerRoutes); 
 app.use('/api/products', productRoutes);
-app.use('/api/incidents', incidentRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/updates', updateRoutes);
+app.use('/api/users', userRouter);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/assignments', assignmentRoutes);
 
+app.use('/api/persons', personsRoutes);
+app.use('/api/family', familyRoutes);
+app.use('/api/family-members', familyMembersRoutes);
+app.use("/api/fibe", fibeRoutes);
+
+app.use('/api/roles', roleRoutes);
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);

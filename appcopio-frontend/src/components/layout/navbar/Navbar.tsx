@@ -1,58 +1,93 @@
 // src/components/layout/navbar/Navbar.tsx
 import React from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import './Navbar.css';
 
 const Navbar: React.FC = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    if (window.confirm('¿Estás seguro de que quieres salir?')) {
-      logout();
-      navigate('/');
-    }
+    logout();
+    navigate('/login');
   };
 
-  // --- LÓGICA DE RUTAS DINÁMICAS ---
-  // 1. Definimos cuál será la ruta "home" dependiendo del rol del usuario.
-  const homePath = user?.role === 'Emergencias' ? '/admin/dashboard' : '/';
+  const isAdminOrSupport = user?.role_name === 'Administrador' || user?.es_apoyo_admin;
 
   return (
-    <nav className="navbar">
-      <div className="navbar-brand">
-        {/* 2. El logo ahora apunta a la ruta 'home' dinámica */}
-        <Link to={homePath} style={{ color: 'white', textDecoration: 'none' }}>
+    <nav className="main-navbar">
+      <div className="navbar-logo">
+        <NavLink to={isAuthenticated ? (isAdminOrSupport ? "/admin/centers" : "/mis-centros") : "/"}>
           AppCopio
-        </Link>
+        </NavLink>
       </div>
       <ul className="navbar-links">
-        {/* 3. El enlace de "Inicio" también usa la ruta dinámica */}
-        <li><NavLink to={homePath}>Inicio</NavLink></li>
-        <li><NavLink to="/map">Mapa</NavLink></li>
-        
-        {/* Links condicionales para el rol 'Emergencias' */}
-        {user?.role === 'Emergencias' && (
-          <>
-            {/* 4. HEMOS ELIMINADO el enlace 'Dashboard' de aquí porque ahora está en 'Inicio' */}
-            <li><NavLink to="/admin/centers">Centros</NavLink></li>
-            <li><NavLink to="/admin/incidents">Incidencias</NavLink></li>
-          </>
-        )}
+        {/* === Enlaces para Todos (públicos y logueados) === */}
+        <li>
+          <NavLink to="/" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+            Inicio
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/map" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+            Mapa
+          </NavLink>
+        </li>
 
-        {/* Links condicionales para el rol 'Encargado' */}
-        {user?.role === 'Encargado' && user.centerId && (
-          <>
-            <li><NavLink to={`/center/${user.centerId}/inventory`}>Mi Centro</NavLink></li>
-          </>
-        )}
-
-        {/* Botón de Login o Logout */}
-        {isAuthenticated ? (
-          <li><button onClick={handleLogout} className="logout-btn">Salir</button></li>
+        {/* --- Lógica Condicional de Enlaces --- */}
+        {!isAuthenticated ? (
+          // --- Enlaces solo para usuarios NO logueados ---
+          <li>
+            <NavLink to="/login" className="login-button-nav">
+              Iniciar Sesión
+            </NavLink>
+          </li>
         ) : (
-          <li><NavLink to="/login">Acceder</NavLink></li>
+          // --- Enlaces solo para usuarios SÍ logueados ---
+          <>
+            {isAdminOrSupport && (
+              <>
+                <li>
+                  <NavLink to="/admin/centers" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                    Gestión Centros
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/admin/users" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                    Gestión Usuarios
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/admin/centers/new" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                    Crear Centro
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/admin/updates" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                    Actualizaciones
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/admin/fibe" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                    FIBE
+                  </NavLink>
+                </li>
+              </>
+            )}
+            {user?.role_name === 'Trabajador Municipal' && !user?.es_apoyo_admin && (
+                <li>
+                    <NavLink to="/mis-centros" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                        Mis Centros
+                    </NavLink>
+                </li>
+            )}
+            <li>
+              <button onClick={handleLogout} className="logout-button">
+                Cerrar Sesión
+              </button>
+            </li>
+          </>
         )}
       </ul>
     </nav>

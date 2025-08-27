@@ -75,24 +75,3 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
-
-/* Estilos específicos para elementos de formulario para garantizar visibilidad */
-select, input[type="text"], input[type="search"] {
-  color: #333 !important;
-  background-color: white !important;
-}
-
-select option {
-  color: #333 !important;
-  background-color: white !important;
-}
-
-select option:hover {
-  background-color: #f0f0f0 !important;
-  color: #333 !important;
-}
-
-select option:checked {
-  background-color: #337ab7 !important;
-  color: white !important;
-}

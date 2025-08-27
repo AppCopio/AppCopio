@@ -343,3 +343,58 @@
     align-self: flex-end;
   }
 }
+
+/* Estilos para la sección de responsables */
+.responsible-section {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.responsible-section h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+.responsible-info {
+  display: grid;
+  gap: 15px;
+}
+
+.manager-info,
+.community-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+}
+
+.manager-info label,
+.community-info label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9em;
+}
+
+.manager-info span,
+.community-info span {
+  color: #333;
+  font-size: 1em;
+}
+
+.no-managers {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px dashed #dee2e6;
+}

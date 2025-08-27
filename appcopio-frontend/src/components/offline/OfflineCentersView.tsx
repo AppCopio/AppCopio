@@ -13,6 +13,8 @@ interface Center {
   operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
   public_note?: string;
   fullnessPercentage?: number;
+  municipal_manager_name?: string;
+  community_charge_name?: string;
 }
 
 interface OfflineCentersViewProps {
@@ -29,6 +31,7 @@ const OfflineCentersView: React.FC<OfflineCentersViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [typeFilter, setTypeFilter] = useState<string>('todos');
   const [locationFilter, setLocationFilter] = useState<string>('');
+  const [communeFilter, setCommuneFilter] = useState<string>('todos');
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
   useEffect(() => {
@@ -78,13 +81,42 @@ const OfflineCentersView: React.FC<OfflineCentersViewProps> = ({
       );
     }
 
+    // Filtro por comuna/cerro
+    if (communeFilter !== 'todos') {
+      filtered = filtered.filter(center => {
+        const address = center.address.toLowerCase();
+        const name = center.name.toLowerCase();
+        switch (communeFilter) {
+          case 'valparaiso':
+            return address.includes('valparaíso') || address.includes('valparaiso') || name.includes('valparaíso') || name.includes('valparaiso');
+          case 'vina':
+            return address.includes('viña del mar') || address.includes('vina del mar');
+          case 'concon':
+            return address.includes('concón') || address.includes('concon');
+          case 'cerro_playa':
+            return address.includes('playa ancha') || address.includes('playa');
+          case 'cerro_cordillera':
+            return address.includes('cordillera');
+          case 'cerro_alegre':
+            return address.includes('alegre') || name.includes('alegre');
+          case 'cerro_concepcion':
+            return address.includes('concepción') || address.includes('concepcion');
+          case 'cerro_baron':
+            return address.includes('barón') || address.includes('baron');
+          default:
+            return true;
+        }
+      });
+    }
+
     setFilteredCenters(filtered);
-  }, [centers, statusFilter, typeFilter, locationFilter, showFilters]);
+  }, [centers, statusFilter, typeFilter, locationFilter, communeFilter, showFilters]);
 
   const clearFilters = () => {
     setStatusFilter('todos');
     setTypeFilter('todos');
     setLocationFilter('');
+    setCommuneFilter('todos');
   };
 
   const formatLastUpdated = (dateString: string) => {
@@ -145,7 +177,30 @@ const OfflineCentersView: React.FC<OfflineCentersViewProps> = ({
             </div>
 
             <div className="filter-group">
-              <label htmlFor="location-filter">Ubicación:</label>
+              <label htmlFor="commune-filter">Comuna/Cerro:</label>
+              <select 
+                id="commune-filter"
+                value={communeFilter} 
+                onChange={(e) => setCommuneFilter(e.target.value)}
+              >
+                <option value="todos">Todas las ubicaciones</option>
+                <optgroup label="Comunas">
+                  <option value="valparaiso">Valparaíso</option>
+                  <option value="vina">Viña del Mar</option>
+                  <option value="concon">Concón</option>
+                </optgroup>
+                <optgroup label="Cerros de Valparaíso">
+                  <option value="cerro_playa">Playa Ancha</option>
+                  <option value="cerro_cordillera">Cordillera</option>
+                  <option value="cerro_alegre">Alegre</option>
+                  <option value="cerro_concepcion">Concepción</option>
+                  <option value="cerro_baron">Barón</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label htmlFor="location-filter">Buscar:</label>
               <input
                 id="location-filter"
                 type="text"
@@ -179,20 +234,33 @@ const OfflineCentersView: React.FC<OfflineCentersViewProps> = ({
             <li key={center.center_id} className={`center-item ${center.is_active ? 'item-active' : 'item-inactive'}`}>
               <div className="center-info">
                 <h4>{center.name}</h4>
-                <p>{center.address}</p>
+                <p className="center-address">{center.address}</p>
                 <div className="center-meta">
                   <span className={`type-badge ${center.type.toLowerCase()}`}>
                     {center.type}
                   </span>
                   <span className={`status-badge ${center.is_active ? 'active' : 'inactive'}`}>
-                    {center.is_active ? 'Activo' : 'Inactivo'}
+                    {center.is_active ? '🟢 Activo' : '🔴 Inactivo'}
                   </span>
+                  {center.operational_status && center.is_active && (
+                    <span className={`operational-status-badge ${center.operational_status.toLowerCase().replace(' ', '-')}`}>
+                      {center.operational_status === 'Abierto' && '✅'}
+                      {center.operational_status === 'Cerrado Temporalmente' && '⏸️'}
+                      {center.operational_status === 'Capacidad Máxima' && '🚫'}
+                      {' '}{center.operational_status}
+                    </span>
+                  )}
                   {center.fullnessPercentage !== undefined && (
                     <span className="fullness-badge">
-                      {center.fullnessPercentage.toFixed(1)}% abastecido
+                      📦 {center.fullnessPercentage.toFixed(1)}% abastecido
                     </span>
                   )}
                 </div>
+                {center.operational_status === 'Cerrado Temporalmente' && center.public_note && (
+                  <div className="public-note-offline">
+                    <strong>Nota:</strong> {center.public_note}
+                  </div>
+                )}
               </div>
               <div className="center-actions">
                 <Link 

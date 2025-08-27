@@ -3,13 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperationalStatusControl from '../../components/center/OperationalStatusControl';
+import { transformToBackend, transformToFrontend } from '../../utils/operationalStatusUtils';
 import './CenterDetailsPage.css';
 
 interface CenterDetails {
   center_id: string;
   name: string;
   address: string;
-  type: 'Centro de Acopio' | 'Hospital de Campaña' | 'Refugio';
+  type: 'Acopio' | 'Albergue';
   capacity: number;
   is_active: boolean;
   operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
@@ -19,6 +20,8 @@ interface CenterDetails {
   created_at?: string;
   updated_at?: string;
   fullnessPercentage?: number;
+  community_charge_name?: string;
+  municipal_manager_name?: string;
 }
 
 interface Resource {
@@ -50,7 +53,13 @@ const CenterDetailsPage: React.FC = () => {
           throw new Error('Error al obtener los detalles del centro');
         }
         const centerData = await centerResponse.json();
-        setCenter(centerData);
+        
+        // Transformar el estado operativo del backend al frontend
+        const transformedCenter = {
+          ...centerData,
+          operational_status: centerData.operational_status ? transformToFrontend(centerData.operational_status) : undefined
+        };
+        setCenter(transformedCenter);
 
         // Obtener recursos disponibles (inventario)
         const resourcesResponse = await fetch(`http://localhost:4000/api/centers/${centerId}/inventory`);
@@ -129,13 +138,16 @@ const CenterDetailsPage: React.FC = () => {
     setIsUpdatingOperationalStatus(true);
 
     try {
+      // Convertir estado a formato del backend usando la utilidad
+      const backendStatus = transformToBackend(newStatus);
+      
       const response = await fetch(`http://localhost:4000/api/centers/${centerId}/operational-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          operationalStatus: newStatus,
+          operationalStatus: backendStatus,
           publicNote: publicNote || ''
         }),
       });
@@ -302,7 +314,7 @@ const CenterDetailsPage: React.FC = () => {
             </div>
 
             {/* Control de estado operativo para encargados */}
-            {user?.role === 'Encargado' && center.operational_status && (
+            {user?.role_name === 'Contacto Ciudadano' && center.operational_status && (
               <OperationalStatusControl
                 centerId={centerId!}
                 currentStatus={center.operational_status}
@@ -312,8 +324,8 @@ const CenterDetailsPage: React.FC = () => {
               />
             )}
 
-            {/* Solo mostrar controles de administración para usuarios con rol Emergencias */}
-            {user?.role === 'Emergencias' && (
+            {/* Solo mostrar controles de administración para usuarios con rol Trabajador Municipal o Administrador */}
+            {(user?.role_name === 'Trabajador Municipal' || user?.role_name === 'Administrador' || user?.es_apoyo_admin) && (
               <div className="admin-controls">
                 <button 
                   onClick={handleToggleStatus}
@@ -351,11 +363,25 @@ const CenterDetailsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Información del responsable - placeholder para futuras implementaciones */}
+        {/* Información del responsable */}
         <div className="responsible-section">
-          <h3>Responsable</h3>
+          <h3>Responsables</h3>
           <div className="responsible-info">
-            <p>Por definir en futuras versiones</p>
+            {center.municipal_manager_name && (
+              <div className="manager-info">
+                <label>Encargado Municipal:</label>
+                <span>{center.municipal_manager_name}</span>
+              </div>
+            )}
+            {center.community_charge_name && (
+              <div className="community-info">
+                <label>Contacto Comunitario:</label>
+                <span>{center.community_charge_name}</span>
+              </div>
+            )}
+            {!center.municipal_manager_name && !center.community_charge_name && (
+              <p className="no-managers">No hay responsables asignados a este centro</p>
+            )}
           </div>
         </div>
       </div>

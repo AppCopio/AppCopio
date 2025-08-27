@@ -1,13 +1,11 @@
 // src/utils/offlineDb.ts
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { openDB, DBSchema } from 'idb';
 
-const DB_NAME = 'appcopio-offline-db';
-const STORE_NAME = 'sync-requests';
-
-interface AppCopioDB extends DBSchema {
-  [STORE_NAME]: {
+interface AppDBSchema extends DBSchema {
+  outbox: {
     key: number;
     value: {
+      id: number;
       url: string;
       method: string;
       body: any;
@@ -17,33 +15,34 @@ interface AppCopioDB extends DBSchema {
   };
 }
 
-let dbPromise: Promise<IDBPDatabase<AppCopioDB>> | null = null;
+// Se incrementa la versión a 2 para forzar la actualización del esquema.
+const dbPromise = openDB<AppDBSchema>('appcopio-db', 2, {
+  upgrade(db, oldVersion) {
+    if (oldVersion < 2) {
+      // Si la base de datos vieja existe (versión < 2), la borramos para empezar de cero.
+      if (db.objectStoreNames.contains('outbox')) {
+        db.deleteObjectStore('outbox');
+      }
+      const store = db.createObjectStore('outbox', {
+        keyPath: 'id',
+        autoIncrement: true,
+      });
+      store.createIndex('by-timestamp', 'timestamp');
+    }
+  },
+});
 
-function getDb() {
-  if (!dbPromise) {
-    dbPromise = openDB<AppCopioDB>(DB_NAME, 1, {
-      upgrade(db) {
-        const store = db.createObjectStore(STORE_NAME, {
-          keyPath: 'timestamp', // Usaremos el timestamp como clave única
-        });
-        store.createIndex('by-timestamp', 'timestamp');
-      },
-    });
-  }
-  return dbPromise;
-}
+export const addRequestToOutbox = async (request: any) => {
+  const db = await dbPromise;
+  await db.add('outbox', { ...request, timestamp: Date.now() });
+};
 
-export async function addRequestToOutbox(request: Omit<AppCopioDB[typeof STORE_NAME]['value'], 'timestamp'>) {
-  const db = await getDb();
-  await db.add(STORE_NAME, { ...request, timestamp: Date.now() });
-}
+export const getAllRequestsFromOutbox = async () => {
+  const db = await dbPromise;
+  return db.getAllFromIndex('outbox', 'by-timestamp');
+};
 
-export async function getAllRequestsFromOutbox() {
-    const db = await getDb();
-    return await db.getAllFromIndex(STORE_NAME, 'by-timestamp');
-}
-
-export async function deleteRequestFromOutbox(timestamp: number) {
-    const db = await getDb();
-    await db.delete(STORE_NAME, timestamp);
-}
+export const deleteRequestFromOutbox = async (id: number) => {
+  const db = await dbPromise;
+  await db.delete('outbox', id);
+};
