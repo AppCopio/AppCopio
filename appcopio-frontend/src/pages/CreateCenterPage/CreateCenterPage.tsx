@@ -11,7 +11,8 @@ import {
   FormControl,
   InputLabel,
   OutlinedInput,
-  Alert
+  Alert,
+  InputAdornment
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import './CreateCenterPage.css';
@@ -54,7 +55,7 @@ const CreateCenterPage: React.FC = () => {
     const token = '';
 
     const backendData = {
-        center_id: "C009",
+        center_id: "C010", //Esto es lo que hay que ir cambiando al crear un centro ya que el id no se está generando solo. 
         name: formData.organizationName,
         type: 'Albergue',
         latitude: formData.coordinateNorte,
@@ -93,8 +94,7 @@ const CreateCenterPage: React.FC = () => {
             </Typography>
             <Grid container spacing={2}>
               {/* Nombre de la Organización */}
-              <Grid item xs={12}>
-                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                <FormControl fullWidth variant="outlined">
                   <InputLabel htmlFor="organizationName-input" required>Nombre de la Organización</InputLabel>
                   <OutlinedInput
                     id="organizationName-input"
@@ -104,11 +104,11 @@ const CreateCenterPage: React.FC = () => {
                     label="Nombre de la Organización"
                   />
                 </FormControl>
-              </Grid>
+
 
               {/* Dirección */}
-              <Grid item xs={12}>
-                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+
+                <FormControl fullWidth variant="outlined">
                   <InputLabel htmlFor="address-input" required>Dirección</InputLabel>
                   <OutlinedInput
                     id="address-input"
@@ -118,11 +118,11 @@ const CreateCenterPage: React.FC = () => {
                     label="Dirección"
                   />
                 </FormControl>
-              </Grid>
+
 
               {/* Nombre Directiva o Dirigente/a */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+
+                <FormControl fullWidth variant="outlined">
                   <InputLabel htmlFor="directorName-input">Nombre Directiva o Dirigente/a</InputLabel>
                   <OutlinedInput
                     id="directorName-input"
@@ -132,11 +132,11 @@ const CreateCenterPage: React.FC = () => {
                     label="Nombre Directiva o Dirigente/a"
                   />
                 </FormControl>
-              </Grid>
+
 
               {/* Cargo/Rol */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+
+                <FormControl fullWidth variant="outlined">
                   <InputLabel htmlFor="directorRole-input">Cargo/Rol</InputLabel>
                   <OutlinedInput
                     id="directorRole-input"
@@ -146,11 +146,11 @@ const CreateCenterPage: React.FC = () => {
                     label="Cargo/Rol"
                   />
                 </FormControl>
-              </Grid>
+
 
               {/* Teléfonos de Contacto */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+
+                <FormControl fullWidth variant="outlined">
                   <InputLabel htmlFor="contactPhones-input">Teléfonos de Contacto</InputLabel>
                   <OutlinedInput
                     id="contactPhones-input"
@@ -160,11 +160,11 @@ const CreateCenterPage: React.FC = () => {
                     label="Teléfonos de Contacto"
                   />
                 </FormControl>
-              </Grid>
+
               
               {/* Fecha de Evaluación */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+
+                <FormControl fullWidth variant="outlined">
                   <InputLabel htmlFor="evaluationDate-input" shrink>Fecha de Evaluación</InputLabel>
                   <OutlinedInput
                     id="evaluationDate-input"
@@ -175,43 +175,38 @@ const CreateCenterPage: React.FC = () => {
                     label="Fecha de Evaluación"
                   />
                 </FormControl>
-              </Grid>
+
               
               {/* Coordenadas */}
-              <Grid item xs={12}>
-                <Grid container spacing={1} sx={{ my: 1 }}>
-                    <Grid item xs={6}>
+                <Grid container spacing={1}>
                       <FormControl fullWidth variant="outlined">
                         <InputLabel htmlFor="coordinateEste-input" shrink>Coordenada Este</InputLabel>
                         <OutlinedInput
                           id="coordinateEste-input"
                           name="coordinateEste"
-                          type="number"
+                          type="text" // Cambiamos a tipo text para permitir el signo '-'
                           value={formData.coordinateEste}
                           onChange={handleChange}
                           label="Coordenada Este"
+                          startAdornment={<InputAdornment position="start">+/-</InputAdornment>} // Icono de adorno
                         />
                       </FormControl>
-                    </Grid>
-                    <Grid item xs={6}>
                       <FormControl fullWidth variant="outlined">
                         <InputLabel htmlFor="coordinateNorte-input" shrink>Coordenada Norte</InputLabel>
                         <OutlinedInput
                           id="coordinateNorte-input"
                           name="coordinateNorte"
-                          type="number"
+                          type="text" // Cambiamos a tipo text
                           value={formData.coordinateNorte}
                           onChange={handleChange}
                           label="Coordenada Norte"
+                          startAdornment={<InputAdornment position="start">+/-</InputAdornment>} // Icono de adorno
                         />
                       </FormControl>
-                    </Grid>
-                  </Grid>
               </Grid>
 
               {/* N° FOLIO */}
-              <Grid item xs={12}>
-                <FormControl fullWidth variant="outlined" sx={{ my: 1 }}>
+                <FormControl fullWidth variant="outlined">
                   <InputLabel htmlFor="folioNumber-input">N° FOLIO</InputLabel>
                   <OutlinedInput
                     id="folioNumber-input"
@@ -221,7 +216,6 @@ const CreateCenterPage: React.FC = () => {
                     label="N° FOLIO"
                   />
                 </FormControl>
-              </Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>
