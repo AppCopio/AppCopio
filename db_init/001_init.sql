@@ -56,6 +56,7 @@ CREATE TABLE Centers (
     name TEXT NOT NULL,
     address TEXT,
     type TEXT NOT NULL, 
+    folio TEXT,
     latitude DECIMAL(9, 6),
     longitude DECIMAL(9, 6),
     capacity INT DEFAULT 0,
@@ -182,6 +183,10 @@ CREATE TABLE FamilyGroupMembers (
 CREATE TABLE CentersDescription (
     center_id VARCHAR(10) PRIMARY KEY,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    nombre_organizacion TEXT,
+    nombre_dirigente TEXT,
+    cargo_dirigent TEXT,
+    telefono_contacto VARCHAR(12),
 
     -- Sección: Acceso y Espacios Comunes
     tipo_inmueble TEXT,

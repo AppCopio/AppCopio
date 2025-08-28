@@ -101,13 +101,17 @@ const getAllCentersHandler: RequestHandler = async (req, res) => {
     }
 };
 
-// --- RUTAS DE CENTROS (Sin cambios) ---
 
 // GET /api/centers/:id - Obtener un centro específico
 const getCenterByIdHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await pool.query('SELECT * FROM Centers WHERE center_id = $1', [id]);
+        const result = await pool.query(
+            `SELECT c.*, d.*
+             FROM Centers c
+             LEFT JOIN CentersDescription d ON c.center_id = d.center_id
+             WHERE c.center_id = $1`, [id]
+        );
         if (result.rows.length === 0) {
             res.status(404).json({ message: 'Centro no encontrado.' });
         } else {
@@ -183,28 +187,71 @@ const createCenterHandler: RequestHandler = async (req, res) => {
 // PUT /api/centers/:id - Actualizar un centro existente
 const updateCenterHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
-    const { name, address, type, capacity, is_active, latitude, longitude } = req.body;
-    if (!name || !type) {
-        res.status(400).json({ message: 'name y type son campos requeridos.' });
-        return;
-    }
+    const client = await pool.connect();
+
     try {
-        const updatedCenter = await pool.query(
-            `UPDATE Centers
-             SET name = $1, address = $2, type = $3, capacity = $4, is_active = $5, latitude = $6, longitude = $7, updated_at = CURRENT_TIMESTAMP
-             WHERE center_id = $8 RETURNING *`,
-            [name, address, type, capacity, is_active, latitude, longitude, id]
-        );
-        if (updatedCenter.rows.length === 0) {
-            res.status(404).json({ message: 'Centro no encontrado para actualizar.' });
-        } else {
-            res.status(200).json(updatedCenter.rows[0]);
+        await client.query('BEGIN');
+
+        const {
+            center_id, name, address, type, capacity, is_active, latitude, longitude, should_be_active,
+            comunity_charge_id, municipal_manager_id,
+            // Campos del catastro que se irán a CentersDescription
+            ...catastroData
+        } = req.body;
+
+        if (!name || !type || typeof latitude !== 'number' || typeof longitude !== 'number') {
+            await client.query('ROLLBACK');
+            res.status(400).json({ message: 'Campos principales requeridos: name, type, latitude, longitude.' });
+            return;
         }
+
+        // Actualizar tabla Centers
+        const centerFields = ['name', 'address', 'type', 'capacity', 'is_active', 'latitude', 'longitude', 'should_be_active', 'comunity_charge_id', 'municipal_manager_id'];
+        const centerValues = [name, address || null, type, capacity || 0, is_active, latitude, longitude, should_be_active, comunity_charge_id || null, municipal_manager_id || null, id];
+
+        const centerUpdateQuery = `
+            UPDATE Centers SET 
+                name = $1, address = $2, type = $3, capacity = $4, is_active = $5, latitude = $6, longitude = $7, should_be_active = $8, comunity_charge_id = $9, municipal_manager_id = $10, updated_at = CURRENT_TIMESTAMP
+            WHERE center_id = $11
+            RETURNING *`;
+        
+        const updatedCenter = await client.query(centerUpdateQuery, centerValues);
+
+        if (updatedCenter.rows.length === 0) {
+            await client.query('ROLLBACK');
+            res.status(404).json({ message: 'Centro no encontrado para actualizar.' });
+            return;
+        }
+
+        // Actualizar o insertar en CentersDescription
+        const catastroColumns = Object.keys(catastroData);
+        if (catastroColumns.length > 0) {
+            const catastroValues = Object.values(catastroData);
+            const updateParts = catastroColumns.map((col, i) => `${col} = $${i + 2}`).join(', ');
+            
+            const updateCatastroQuery = `
+                INSERT INTO CentersDescription (center_id, ${catastroColumns.join(', ')})
+                VALUES ($1, ${catastroValues.map((_, i) => `$${i + 2}`).join(', ')})
+                ON CONFLICT (center_id) DO UPDATE SET ${updateParts}, updated_at = CURRENT_TIMESTAMP
+                RETURNING *`;
+            
+            const allCatastroValues = [id, ...catastroValues];
+
+            await client.query(updateCatastroQuery, allCatastroValues);
+        }
+
+        await client.query('COMMIT');
+        res.status(200).json(updatedCenter.rows[0]);
+
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error(`Error al actualizar el centro ${id}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
+    } finally {
+        client.release();
     }
 };
+
 
 // DELETE /api/centers/:id - Eliminar un centro
 const deleteCenterHandler: RequestHandler = async (req, res) => {

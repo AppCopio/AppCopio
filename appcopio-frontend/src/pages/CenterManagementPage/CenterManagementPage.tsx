@@ -304,6 +304,7 @@ const CenterManagementPage: React.FC = () => {
                             <Link to={`/center/${center.center_id}/inventory`} className="inventory-btn">Gestionar</Link>
                             <button className="info-button" onClick={() => handleShowInfo(center.center_id)}>Ver Detalles</button>
                             <StatusSwitch center={center} onToggle={handleToggleActive} />
+                            <Link to={`/admin/centers/${center.center_id}/edit`} className="edit-btn">Editar</Link> {/* <-- Botón de edición */}
                             {user?.es_apoyo_admin === true && (
                                 <button onClick={() => handleDeleteClick(center.center_id)} className="delete-btn">
                                     Eliminar

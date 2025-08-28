@@ -1,6 +1,5 @@
-// src/pages/CenterDetailsPage/CenterDetailsPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperationalStatusControl from '../../components/center/OperationalStatusControl';
 import './CenterDetailsPage.css';
@@ -44,7 +43,6 @@ const CenterDetailsPage: React.FC = () => {
       if (!centerId) return;
 
       try {
-        // Obtener detalles del centro
         const centerResponse = await fetch(`http://localhost:4000/api/centers/${centerId}`);
         if (!centerResponse.ok) {
           throw new Error('Error al obtener los detalles del centro');
@@ -52,7 +50,6 @@ const CenterDetailsPage: React.FC = () => {
         const centerData = await centerResponse.json();
         setCenter(centerData);
 
-        // Obtener recursos disponibles (inventario)
         const resourcesResponse = await fetch(`http://localhost:4000/api/centers/${centerId}/inventory`);
         if (resourcesResponse.ok) {
           const resourcesData = await resourcesResponse.json();
@@ -60,8 +57,6 @@ const CenterDetailsPage: React.FC = () => {
         }
       } catch (err) {
         console.error('Error al cargar los detalles del centro:', err);
-        
-        // Intentar cargar desde almacenamiento offline
         if ('serviceWorker' in navigator && !navigator.onLine) {
           try {
             const offlineData = localStorage.getItem(`center_${centerId}`);
@@ -86,7 +81,6 @@ const CenterDetailsPage: React.FC = () => {
     fetchCenterDetails();
   }, [centerId]);
 
-  // Guardar datos en almacenamiento offline cuando estén disponibles
   useEffect(() => {
     if (center && centerId) {
       const dataToStore = {
@@ -152,7 +146,6 @@ const CenterDetailsPage: React.FC = () => {
         public_note: newStatus === 'Cerrado Temporalmente' ? publicNote : undefined
       } : null);
       
-      // Actualizar datos offline
       if (center && centerId) {
         const dataToStore = {
           center: { ...center, operational_status: newStatus },
@@ -162,17 +155,13 @@ const CenterDetailsPage: React.FC = () => {
         localStorage.setItem(`center_${centerId}`, JSON.stringify(dataToStore));
       }
 
-      // Mostrar mensaje de éxito
       alert(`Estado operativo actualizado a "${newStatus}" exitosamente`);
     } catch (err) {
       console.error('Error al actualizar el estado operativo:', err);
       
-      // Si estamos offline, guardar la acción para sincronizar después
       if ('serviceWorker' in navigator && !navigator.onLine) {
-        // Actualizar localmente para UX inmediata
         setCenter(prev => prev ? { ...prev, operational_status: newStatus } : null);
         
-        // Guardar acción pendiente para sincronización
         const pendingActions = JSON.parse(localStorage.getItem('pending_actions') || '[]');
         pendingActions.push({
           type: 'update_operational_status',
@@ -248,6 +237,9 @@ const CenterDetailsPage: React.FC = () => {
           ← Volver
         </button>
         <h1>Detalles del Centro</h1>
+        <Link to={`/admin/centers/${centerId}/edit`} className="edit-button">
+            Editar Detalles
+        </Link>
       </div>
 
       <div className="center-details-content">
@@ -301,7 +293,6 @@ const CenterDetailsPage: React.FC = () => {
               )}
             </div>
 
-            {/* Control de estado operativo para encargados */}
             {user?.role === 'Encargado' && center.operational_status && (
               <OperationalStatusControl
                 centerId={centerId!}
@@ -312,7 +303,6 @@ const CenterDetailsPage: React.FC = () => {
               />
             )}
 
-            {/* Solo mostrar controles de administración para usuarios con rol Emergencias */}
             {user?.role === 'Emergencias' && (
               <div className="admin-controls">
                 <button 
@@ -351,7 +341,6 @@ const CenterDetailsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Información del responsable - placeholder para futuras implementaciones */}
         <div className="responsible-section">
           <h3>Responsable</h3>
           <div className="responsible-info">
