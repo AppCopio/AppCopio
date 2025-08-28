@@ -129,11 +129,11 @@ CREATE TABLE CenterAssignments (
     assignment_id SERIAL PRIMARY KEY,
     center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
     user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('trabajador municipal', 'contacto ciudadano')),
     valid_from TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     valid_to TIMESTAMP WITH TIME ZONE,
     changed_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
-    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (center_id, user_id, role)
+    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE UpdateRequests (
