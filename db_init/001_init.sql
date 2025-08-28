@@ -10,13 +10,10 @@ DROP TABLE IF EXISTS CenterChangesHistory CASCADE;
 DROP TABLE IF EXISTS CentersActivations CASCADE;
 DROP TABLE IF EXISTS UpdateRequests CASCADE;
 DROP TABLE IF EXISTS CenterAssignments CASCADE;
-DROP TABLE IF EXISTS UserCenterAssignments CASCADE; -- Obsoleta
 DROP TABLE IF EXISTS InventoryLog CASCADE;
 DROP TABLE IF EXISTS CentersDescription CASCADE;
 DROP TABLE IF EXISTS Products CASCADE;
 DROP TABLE IF EXISTS Categories CASCADE;
-DROP TABLE IF EXISTS Incidents CASCADE; -- Obsoleta
-DROP TABLE IF EXISTS CenterInventories CASCADE; -- Obsoleta
 DROP TABLE IF EXISTS Centers CASCADE;
 DROP TABLE IF EXISTS Users CASCADE;
 DROP TABLE IF EXISTS Roles CASCADE;
@@ -81,12 +78,6 @@ CREATE TABLE Products (
     category_id INT REFERENCES Categories(category_id)
 );
 
--- CAMBIO CREANDO TABLA CATEGORIAS
-CREATE TABLE Categories (
-    category_id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL
-);
-
 CREATE TABLE Persons (
     person_id SERIAL PRIMARY KEY,
     rut VARCHAR(20) UNIQUE NOT NULL,
@@ -132,12 +123,11 @@ CREATE TABLE CenterAssignments (
     assignment_id SERIAL PRIMARY KEY,
     center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
     user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('trabajador municipal', 'contacto comunidad')),
+    role TEXT NOT NULL CHECK (role IN ('trabajador municipal', 'contacto ciudadano')),
     valid_from TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     valid_to TIMESTAMP WITH TIME ZONE,
     changed_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
-    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (center_id, user_id, role)
+    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE UpdateRequests (
@@ -170,6 +160,14 @@ CREATE TABLE FamilyGroups (
     jefe_hogar_person_id INT REFERENCES Persons(person_id) ON DELETE SET NULL,
     observaciones TEXT,
     necesidades_basicas INTEGER[14],
+    
+    --Esto es lo nuevo: 
+
+    status VARCHAR(20) NOT NULL DEFAULT 'activo' CHECK (status IN ('activo', 'inactivo')),
+    departure_date TIMESTAMPTZ,
+    departure_reason TEXT,
+    destination_activation_id INT REFERENCES CentersActivations(activation_id) ON DELETE SET NULL,
+    -- Restricciones existentes
     UNIQUE (activation_id, jefe_hogar_person_id)
 );
 
@@ -308,12 +306,12 @@ CREATE TABLE CentersDescription (
 INSERT INTO Roles (role_name) VALUES ('Administrador'), ('Trabajador Municipal'), ('Contacto Ciudadano');
 
 -- Usuarios de prueba (contraseña para todos: '12345')
-INSERT INTO Users (user_id, username, password_hash, email, role_id, nombre, rut, is_active, es_apoyo_admin)
+INSERT INTO Users (username, password_hash, email, role_id, nombre, rut, is_active, es_apoyo_admin)
 OVERRIDING SYSTEM VALUE
 VALUES
-(1, 'admin', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'admin@appcopio.cl', 1, 'Admin AppCopio', '11.111.111-1', TRUE, TRUE),
-(2, 'juan.perez', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'juan.perez@municipalidad.cl', 2, 'Juan Pérez', '22.222.222-2', TRUE, FALSE),
-(3, 'carla.rojas', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'carla.rojas@comunidad.cl', 3, 'Carla Rojas', '33.333.333-3', TRUE, FALSE);
+('admin', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'admin@appcopio.cl', 1, 'Admin AppCopio', '11.111.111-1', TRUE, TRUE),
+('juan.perez', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'juan.perez@municipalidad.cl', 2, 'Juan Pérez', '22.222.222-2', TRUE, FALSE),
+('carla.rojas', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'carla.rojas@comunidad.cl', 3, 'Carla Rojas', '33.333.333-3', TRUE, FALSE);
 
 -- Centros de prueba
 INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude, municipal_manager_id) VALUES
@@ -328,13 +326,13 @@ INSERT INTO Categories (name) VALUES
 ('Artículos para Mascotas'), ('Herramientas y Equipamiento'), ('Botiquín y Primeros Auxilios');
 
 -- Productos de prueba
-INSERT INTO Products (item_id, name, unit, category_id)
+INSERT INTO Products (name, unit, category_id)
 OVERRIDING SYSTEM VALUE
 VALUES
-(1, 'Agua Embotellada 1.5L', 'un', 1), (2, 'Frazadas (1.5 plazas)', 'un', 2),
-(3, 'Kit de Higiene Personal (Adulto)', 'un', 3), (4, 'Pañales para Niños (Talla G)', 'paquete', 3),
-(5, 'Saco de Comida para Perro (10kg)', 'saco', 4), (6, 'Pilas AA', 'pack 4un', 5),
-(7, 'Paracetamol 500mg', 'caja', 6), (8, 'Arroz (1kg)', 'kg', 1);
+('Agua Embotellada 1.5L', 'un', 1), ('Frazadas (1.5 plazas)', 'un', 2),
+('Kit de Higiene Personal (Adulto)', 'un', 3), ('Pañales para Niños (Talla G)', 'paquete', 3),
+('Saco de Comida para Perro (10kg)', 'saco', 4), ('Pilas AA', 'pack 4un', 5),
+('Paracetamol 500mg', 'caja', 6), ('Arroz (1kg)', 'kg', 1);
 
 -- Inventario de prueba
 INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) VALUES
@@ -356,25 +354,25 @@ INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUE
 ('C002', 'Se necesitan con urgencia frazadas adicionales para niños y adultos mayores.', 'Alta', 3);
 
 -- Activación de un centro
-INSERT INTO CentersActivations (activation_id, center_id, activated_by, notes)
+INSERT INTO CentersActivations (center_id, activated_by, notes)
 OVERRIDING SYSTEM VALUE
 VALUES
-(1, 'C001', 1, 'Activación por emergencia de incendio forestal en la zona alta de Valparaíso.');
+('C001', 1, 'Activación por emergencia de incendio forestal en la zona alta de Valparaíso.');
 
 -- Personas y grupos familiares de prueba
-INSERT INTO Persons (person_id, rut, nombre, primer_apellido, edad, genero)
+INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
 OVERRIDING SYSTEM VALUE
 VALUES
-(101, '15.111.111-1', 'María', 'González', 34, 'F'),
-(102, '21.222.222-2', 'Pedro', 'Soto', 8, 'M');
+('15.111.111-1', 'María', 'González', 34, 'F'),
+('21.222.222-2', 'Pedro', 'Soto', 8, 'M');
 
-INSERT INTO FamilyGroups (family_id, activation_id, jefe_hogar_person_id, observaciones)
+INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones)
 OVERRIDING SYSTEM VALUE
 VALUES
-(201, 1, 101, 'Familia monoparental, requieren apoyo especial para menor de edad.');
+(1, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.');
 
 INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
-(201, 101, 'Jefe de Hogar'), (201, 102, 'Hijo/a');
+(1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
 
 -- Confirmación final
 SELECT 'Script definitivo ejecutado. Todas las tablas y datos de prueba han sido creados.';
