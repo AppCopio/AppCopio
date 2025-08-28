@@ -133,7 +133,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
           const toAdd = centerId && !currentAssigned.includes(centerId) ? [centerId] : [];
           await Promise.all([
             ...toRemove.map((id) => removeCenterFromUser(user.user_id, id)),
-            ...toAdd.map((id) => assignCenterToUser(user.user_id, id, "Contacto Comunidad")),
+            ...toAdd.map((id) => assignCenterToUser(user.user_id, id, "Contacto Ciudadano")),
           ]);
         } else if (currentAssigned.length > 0) {
           await Promise.all(currentAssigned.map((id) => removeCenterFromUser(user.user_id, id)));
@@ -150,7 +150,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
         });
 
         if (needsCenter && centerId) {
-          await assignCenterToUser(created.user_id, centerId, "Contacto Comunidad");
+          await assignCenterToUser(created.user_id, centerId, "Contacto Ciudadano");
         }
       }
 

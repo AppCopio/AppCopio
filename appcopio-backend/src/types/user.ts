@@ -1,1 +1,1 @@
-export type AssignmentRole = 'trabajador municipal' | 'contacto comunidad';
+export type AssignmentRole = 'trabajador municipal' | 'contacto ciudadano';
