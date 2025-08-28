@@ -209,16 +209,25 @@ const updateCenterHandler: RequestHandler = async (req, res) => {
 // DELETE /api/centers/:id - Eliminar un centro
 const deleteCenterHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
+    const client = await pool.connect();
     try {
-        const deleteOp = await pool.query('DELETE FROM Centers WHERE center_id = $1', [id]);
+        await client.query('BEGIN'); // Iniciar la transacción
+        // La eliminación en cascada se encargará de las tablas dependientes.
+        const deleteOp = await client.query('DELETE FROM Centers WHERE center_id = $1', [id]);
+
         if (deleteOp.rowCount === 0) {
+            await client.query('ROLLBACK');
             res.status(404).json({ message: 'Centro no encontrado para eliminar.' });
-        } else {
-            res.status(204).send();
+            return;
         }
+        await client.query('COMMIT'); // Confirmar la transacción
+        res.status(204).send();
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error(`Error al eliminar el centro ${id}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
+    } finally {
+        client.release();
     }
 };
 

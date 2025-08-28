@@ -27,6 +27,7 @@ import CenterResidentsPage from "./pages/CenterResidentsPage/CenterResidentsPage
 
 
 import "./App.css";
+import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
 
 function App() {
   return (
@@ -51,7 +52,7 @@ function App() {
               
               {/* Rutas de Admin y Apoyo */}
               <Route path="/admin/centers" element={<CenterManagementPage />} />
-              <Route path="/admin/centers/new" element={<CreateCenterPage />} />
+              <Route path="/admin/centers/new" element={<MultiStepCenterForm />} />
               <Route path="/admin/users" element={<UsersManagementPage />} />
 
               {/*<Route path="/admin/incidents" element={<IncidentListPage />} />*/}
