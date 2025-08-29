@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchWithAbort } from '../../services/api';
-import OfflineCentersView from '../../components/offline/OfflineCentersView';
+
 import { useAuth } from '../../contexts/AuthContext';
 import './CenterManagementPage.css';
 
@@ -71,35 +71,27 @@ const CenterManagementPage: React.FC = () => {
     };
   }, []);
 
-      const fetchCenters = async () => {
-        const controller = new AbortController();
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = await fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal);
-            setCenters(data);
-            localStorage.setItem('centers_list', JSON.stringify({ data, lastUpdated: new Date().toISOString() }));
-        } catch (err) {
-            if (err instanceof Error && err.name !== 'AbortError') {
-                setError(err.message);
-                console.error("Error al obtener los centros:", err);
-                try {
-                    const offlineData = localStorage.getItem('centers_list');
-                    if (offlineData) {
-                        const parsedData = JSON.parse(offlineData);
-                        setCenters(parsedData.data || []);
-                        setError(null); 
-                    }
-                } catch (offlineError) {
-                    console.error('Error al cargar datos offline:', offlineError);
-                }
-            }
-        } finally {
-            if (!controller.signal.aborted) {
-                setIsLoading(false);
-            }
+    const fetchCenters = async () => {
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+        const data = await fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal);
+        setCenters(data);
+    } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+            // Ahora, solo mostramos un error. El Service Worker se encargará de
+            // mostrar los datos cacheados si están disponibles.
+            setError('No se pudieron cargar los centros. Puede que estés viendo datos desactualizados.');
+            console.error("Error al obtener los centros:", err);
         }
-    };
+    } finally {
+        if (!controller.signal.aborted) {
+            setIsLoading(false);
+        }
+    }
+};
 
     // Efecto para la carga inicial de datos.
     useEffect(() => {
@@ -235,9 +227,6 @@ const CenterManagementPage: React.FC = () => {
     return <div className="center-management-container">Cargando centros...</div>;
   }
   
-  if (isOffline && centers.length === 0 && !error) {
-    return <OfflineCentersView title="Gestión de Centros (Sin Conexión)" showFilters={false} />;
-  }
 
   if (error && centers.length === 0) {
     return <div className="center-management-container error-message">Error: {error}</div>;
