@@ -71,115 +71,134 @@ const CreateCenterPage: React.FC = () => {
     const { user } = useAuth();
     const [formData, setFormData] = useState<CenterData>({
         // Campos de la tabla Centers
-        center_id: '',
-        name: '',
-        address: '',
-        type: 'albergue',
-        capacity: 0,
-        latitude: 0,
-        longitude: 0,
-        should_be_active: false,
-        comunity_charge_id: null,
-        municipal_manager_id: null,
-        
-        // Campos de la tabla CentersDescription
-        tipo_inmueble: '',
-        numero_habitaciones: null,
-        estado_conservacion: null,
-        material_muros: null,
-        material_pisos: null,
-        material_techo: null,
-        observaciones_acceso_y_espacios_comunes: '',
+center_id: '',
+    name: '',
+    address: '',
+    type: 'albergue',
+    folio: '',
+    capacity: 0,
+    latitude: 0,
+    longitude: 0,
+    should_be_active: false,
+    comunity_charge_id: null,
+    municipal_manager_id: null,
+    is_active:false,
 
-        espacio_10_afectados: null,
-        diversidad_funcional: null,
-        areas_comunes_accesibles: null,
-        espacio_recreacion: null,
-        observaciones_espacios_comunes: '',
+    // Campos de CentersDescription
+    nombre_dirigente: '',
+    cargo_dirigente: '',
+    telefono_contacto: '',
 
-        agua_potable: null,
-        agua_estanques: null,
-        electricidad: null,
-        calefaccion: null,
-        alcantarillado: null,
-        observaciones_servicios_basicos: '',
+    tipo_inmueble: '',
+    numero_habitaciones: null,
+    estado_conservacion: null,
+    muro_hormigon: false,
+    muro_albaneria: false,
+    muro_tabique: false,
+    muro_adobe: false,
+    muro_mat_precario: false,
+    piso_parquet: false,
+    piso_ceramico: false,
+    piso_alfombra: false,
+    piso_baldosa:false,
+    piso_radier: false,
+    piso_enchapado:false,
+    piso_tierra: false,
+    techo_tejas: false,
+    techo_losa: false,
+    techo_planchas:false,
+    techo_fonolita: false,    
+    techo_mat_precario: false,
+    techo_sin_cubierta: false,
 
-        estado_banos: null,
-        wc_proporcion_personas: null,
-        banos_genero: null,
-        banos_grupos_prioritarios: null,
-        cierre_banos_emergencia: null,
-        lavamanos_proporcion_personas: null,
-        dispensadores_jabon: null,
-        dispensadores_alcohol_gel: null,
-        papeleros_banos: null,
-        papeleros_cocina: null,
-        duchas_proporcion_personas: null,
-        lavadoras_proporcion_personas: null,
-        observaciones_banos_y_servicios_higienicos: '',
-
-        posee_habitaciones: null,
-        separacion_familias: null,
-        sala_lactancia: null,
-        observaciones_distribucion_habitaciones: '',
-
-        cuenta_con_mesas_sillas: null,
-        cocina_comedor_adecuados: null,
-        cuenta_equipamiento_basico_cocina: null,
-        cuenta_con_refrigerador: null,
-        cuenta_set_extraccion: null,
-        observaciones_herramientas_mobiliario: '',
-
-        sistema_evacuacion_definido: null,
-        cuenta_con_senaleticas_adecuadas: null,
-        observaciones_condiciones_seguridad_proteccion_generales: '',
-
-        existe_lugar_animales_dentro: null,
-        existe_lugar_animales_fuera: null,
-        existe_jaula_mascota: false,
-        existe_recipientes_mascota: false,
-        existe_correa_bozal: false,
-        reconoce_personas_dentro_de_su_comunidad: false,
-        no_reconoce_personas_dentro_de_su_comunidad: false,
-        observaciones_dimension_animal: '',
-
-        existen_cascos: false,
-        existen_gorros_cabello: false,
-        existen_gafas: false,
-        existen_caretas: false,
-        existen_mascarillas: false,
-        existen_respiradores: false,
-        existen_mascaras_gas: false,
-        existen_guantes_latex: false,
-        existen_mangas_protectoras: false,
-        existen_calzados_seguridad: false,
-        existen_botas_impermeables: false,
-        existen_chalecos_reflectantes: false,
-        existen_overoles_trajes: false,
-        existen_camillas_catre: false,
-
-        existen_alarmas_incendios: false,
-        existen_hidrantes_mangueras: false,
-        existen_senaleticas: false,
-        existen_luces_emergencias: false,
-        existen_extintores: false,
-        existen_generadores: false,
-        existen_baterias_externas: false,
-        existen_altavoces: false,
-        existen_botones_alarmas: false,
-        existen_sistemas_monitoreo: false,
-        existen_radio_recargable: false,
-        existen_barandillas_escaleras: false,
-        existen_puertas_emergencia_rapida: false,
-        existen_rampas: false,
-        existen_ascensores_emergencia: false,
-        observaciones_seguridad_comunitaria: '',
-        importa_elementos_seguridad: false,
-        observaciones_importa_elementos_seguridad: '',
-        importa_conocimientos_capacitaciones: false,
-        observaciones_importa_conocimientos_capacitaciones: ''
+    espacio_10_afectados: null,
+    diversidad_funcional: null,
+    areas_comunes_accesibles: null,
+    espacio_recreacion: null,
+    observaciones_espacios_comunes: '',
+    agua_potable: null,
+    agua_estanques: null,
+    electricidad: null,
+    calefaccion: null,
+    alcantarillado: null,
+    observaciones_servicios_basicos: '',
+    estado_banos: null,
+    wc_proporcion_personas: null,
+    banos_genero: null,
+    banos_grupos_prioritarios: null,
+    cierre_banos_emergencia: null,
+    lavamanos_proporcion_personas: null,
+    dispensadores_jabon: null,
+    dispensadores_alcohol_gel: null,
+    papeleros_banos: null,
+    papeleros_cocina: null,
+    duchas_proporcion_personas: null,
+    lavadoras_proporcion_personas: null,
+    observaciones_banos_y_servicios_higienicos: '',
+    posee_habitaciones: null,
+    separacion_familias: null,
+    sala_lactancia: null,
+    observaciones_distribucion_habitaciones: '',
+    cuenta_con_mesas_sillas: null,
+    cocina_comedor_adecuados: null,
+    cuenta_equipamiento_basico_cocina: null,
+    cuenta_con_refrigerador: null,
+    cuenta_set_extraccion: null,
+    observaciones_herramientas_mobiliario: '',
+    sistema_evacuacion_definido: null,
+    cuenta_con_senaleticas_adecuadas: null,
+    observaciones_condiciones_seguridad_proteccion_generales: '',
+    existe_lugar_animales_dentro: null,
+    existe_lugar_animales_fuera: null,
+    existe_jaula_mascota: false,
+    existe_recipientes_mascota: false,
+    existe_correa_bozal: false,
+    reconoce_personas_dentro_de_su_comunidad: false,
+    no_reconoce_personas_dentro_de_su_comunidad: false,
+    observaciones_dimension_animal: '',
+    existen_cascos: false,
+    existen_gorros_cabello: false,
+    existen_gafas: false,
+    existen_caretas: false,
+    existen_mascarillas: false,
+    existen_respiradores: false,
+    existen_mascaras_gas: false,
+    existen_guantes_latex: false,
+    existen_mangas_protectoras: false,
+    existen_calzados_seguridad: false,
+    existen_botas_impermeables: false,
+    existen_chalecos_reflectantes: false,
+    existen_overoles_trajes: false,
+    existen_camillas_catre: false,
+    existen_alarmas_incendios: false,
+    existen_hidrantes_mangueras: false,
+    existen_senaleticas: false,
+    existen_luces_emergencias: false,
+    existen_extintores: false,
+    existen_generadores: false,
+    existen_baterias_externas: false,
+    existen_altavoces: false,
+    existen_botones_alarmas: false,
+    existen_sistemas_monitoreo: false,
+    existen_radio_recargable: false,
+    existen_barandillas_escaleras: false,
+    existen_puertas_emergencia_rapida: false,
+    existen_rampas: false,
+    existen_ascensores_emergencia: false,
+    existen_botiquines: false,
+    existen_camilla_emergencia: false,
+    existen_sillas_ruedas: false,
+    existen_muletas : false,
+    existen_desfibriladores: false,
+    existen_senales_advertencia: false,
+    existen_senales_informativas : false,
+    existen_senales_exclusivas:false,
+    observaciones_seguridad_comunitaria: '',
+    importa_elementos_seguridad: false,
+    observaciones_importa_elementos_seguridad: '',
+    importa_conocimientos_capacitaciones: false,
+    observaciones_importa_conocimientos_capacitaciones: ''
     });
-
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -199,7 +218,7 @@ const CreateCenterPage: React.FC = () => {
         const errors: string[] = [];
         const requiredFields: (keyof CenterData)[] = [
             'center_id', 'name', 'address', 'type', 'capacity', 'latitude', 'longitude',
-            'tipo_inmueble', 'numero_habitaciones', 'estado_conservacion', 'material_muros', 'material_pisos', 'material_techo',
+            'tipo_inmueble', 'numero_habitaciones', 'estado_conservacion',
             'espacio_10_afectados', 'diversidad_funcional', 'areas_comunes_accesibles', 'espacio_recreacion',
             'agua_potable', 'agua_estanques', 'electricidad', 'calefaccion', 'alcantarillado',
             'estado_banos', 'wc_proporcion_personas', 'banos_genero', 'banos_grupos_prioritarios', 'cierre_banos_emergencia',
@@ -286,9 +305,16 @@ const CreateCenterPage: React.FC = () => {
 
                                 <TextField fullWidth label="ID del Centro" name="center_id" value={formData.center_id} onChange={handleChange} required />
 
-                                <TextField fullWidth label="Nombre del Centro" name="name" value={formData.name} onChange={handleChange} required />
+                                <TextField fullWidth label="Nombre de la organización" name="name" value={formData.name} onChange={handleChange} required /> 
 
                                 <TextField fullWidth label="Dirección" name="address" value={formData.address} onChange={handleChange} required />
+
+                                <TextField fullWidth label="Nombre Directiva o Dirigenta" name="nombre_dirigente" value={formData.nombre_dirigente} onChange={handleChange} required />
+
+                                <TextField fullWidth label="Cargo Directiva o Dirigente" name="cargo_dirigente" value={formData.cargo_dirigente} onChange={handleChange} required />
+
+                                <TextField fullWidth label="Teléfono de contacto" name="telefono_contacto" value={formData.telefono_contacto} onChange={handleChange} required />
+
 
                                 <FormControl fullWidth required>
                                     <InputLabel>Tipo de Centro</InputLabel>
@@ -327,13 +353,6 @@ const CreateCenterPage: React.FC = () => {
 
                                 <LikertScaleInput label="Estado de conservación" name="estado_conservacion" value={formData.estado_conservacion} onChange={handleChange} />
 
-                                <LikertScaleInput label="Material de muros" name="material_muros" value={formData.material_muros} onChange={handleChange} />
-
-                                <LikertScaleInput label="Material de pisos" name="material_pisos" value={formData.material_pisos} onChange={handleChange} />
-
-                                <LikertScaleInput label="Material de techo" name="material_techo" value={formData.material_techo} onChange={handleChange} />
-
-                                <TextField fullWidth label="Observaciones de acceso y espacios comunes" name="observaciones_acceso_y_espacios_comunes" value={formData.observaciones_acceso_y_espacios_comunes} onChange={handleChange} multiline rows={2} />
 
                         </Grid>
                     </AccordionDetails>

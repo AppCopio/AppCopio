@@ -22,27 +22,34 @@ const StepGeneral = React.forwardRef<any, StepGeneralProps>(({ value, onChange }
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Typography variant="h6">Información General del Centro</Typography>
-            <TextField fullWidth label="Nombre de la organización" name="name" value={value.name} onChange={(e) => onChange('name', e.target.value)} required />
-            <TextField fullWidth label="Dirección" name="address" value={value.address} onChange={(e) => onChange('address', e.target.value)} required />
+            <TextField fullWidth label="Nombre de la organización" name="name" value={value.name} onChange={(e) => onChange('name', e.target.value)} required disabled />
+            <TextField fullWidth label="Dirección" name="address" value={value.address} onChange={(e) => onChange('address', e.target.value)} required disabled />
             <TextField fullWidth label="Nombre Directiva o Dirigenta" name="nombre_dirigente" value={value.nombre_dirigente} onChange={(e) => onChange('nombre_dirigente', e.target.value)} required />
             <TextField fullWidth label="Cargo Directiva o Dirigente" name="cargo_dirigente" value={value.cargo_dirigente} onChange={(e) => onChange('cargo_dirigente', e.target.value)} required />
             <TextField fullWidth label="Teléfono de contacto" name="telefono_contacto" value={value.telefono_contacto} onChange={(e) => onChange('telefono_contacto', e.target.value)} required />
         
             
-            <FormControl fullWidth required>
+            <FormControl fullWidth required disabled>
                 <InputLabel>Tipo de Centro</InputLabel>
                 <Select name="type" value={value.type} label="Tipo de Centro" onChange={(e) => onChange('type', e.target.value)}>
                     <MenuItem value="albergue">Albergue</MenuItem>
                     <MenuItem value="acopio">Albergue comunitario</MenuItem>
                 </Select>
             </FormControl>
-            <TextField fullWidth label="Capacidad" name="capacity" type="number" inputProps={{ min: 0 }}  value={value.capacity} onChange={(e) => onChange('capacity', Number(e.target.value))} required />
-            <TextField fullWidth label="Latitud" name="latitude" type="number" inputProps={{ step: "any" }} inputMode="decimal"  value={value.latitude ?? ""} onChange={(e) => onChange('latitude', e.target.value === "" ? null : Number(e.target.value))}required />
-            <TextField fullWidth label="Longitud" name="longitude" type="number" inputProps={{ step: "any" }} inputMode="decimal"  value={value.longitude ?? ""} onChange={(e) => onChange('longitude', e.target.value === "" ? null : Number(e.target.value))} required />
+            <TextField fullWidth label="Capacidad" name="capacity" type="number" inputProps={{ min: 0 }}  value={value.capacity} onChange={(e) => onChange('capacity', Number(e.target.value))} required disabled />
+            <TextField fullWidth label="Latitud" name="latitude" type="number" inputProps={{ step: "any" }} inputMode="decimal"  value={value.latitude ?? ""} onChange={(e) => onChange('latitude', e.target.value === "" ? null : Number(e.target.value))}required disabled />
+            <TextField fullWidth label="Longitud" name="longitude" type="number" inputProps={{ step: "any" }} inputMode="decimal"  value={value.longitude ?? ""} onChange={(e) => onChange('longitude', e.target.value === "" ? null : Number(e.target.value))} required disabled />
             <TextField fullWidth label="Folio" name="folio" type="text" value={value.folio} onChange={(e) => onChange('folio', Number(e.target.value))}  />
-
+            <TextField
+                fullWidth
+                label="Estado Activo"
+                name="is_active"
+                value={value.is_active ? 'Sí' : 'No'}
+                disabled
+                sx={{ mt: 2 }}
+            />
             <FormControlLabel
-                control={<Checkbox checked={value.should_be_active} onChange={(e) => onChange('should_be_active', e.target.checked)} name="should_be_active" />}
+                control={<Checkbox checked={value.should_be_active} onChange={(e) => onChange('should_be_active', e.target.checked)} name="should_be_active" disabled />}
                 label="Debería estar activo"
             />
         </Box>

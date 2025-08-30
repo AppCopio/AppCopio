@@ -24,14 +24,13 @@ import FibePage from "./pages/FibePage/FibePage";
 
 import CreateCenterPage from './pages/CreateCenterPage/CreateCenterPage';
 import CenterResidentsPage from "./pages/CenterResidentsPage/CenterResidentsPage";
-
+import CenterEditPage from './pages/CenterEditPage/CenterEditPage';
 
 import "./App.css";
 import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
 
 function App() {
   return (
-    // Se elimina el <Router> de aquí, ya que debe estar en main.tsx
     <div className="App">
       <main className="content">
         <Routes>
@@ -47,22 +46,17 @@ function App() {
               allowedRoles={["Administrador", "Trabajador Municipal", "Contacto Ciudadano"]} 
               checkSupportAdmin={true} 
             />}>
-            {/* Todas las rutas aquí dentro usarán el AdminLayout y tendrán Navbar */}
             <Route element={<AdminLayout />}>
               
-              {/* Rutas de Admin y Apoyo */}
               <Route path="/admin/centers" element={<CenterManagementPage />} />
               <Route path="/admin/centers/new" element={<MultiStepCenterForm />} />
               <Route path="/admin/users" element={<UsersManagementPage />} />
 
-              {/*<Route path="/admin/incidents" element={<IncidentListPage />} />*/}
               <Route path="/admin/fibe" element={<FibePage />} />
               <Route path="/admin/updates" element={<UpdatesPage />} />
 
-              {/* Ruta de Trabajador Municipal */}
               <Route path="/mis-centros" element={<MisCentrosPage />} />
 
-              {/* Rutas de gestión de un centro específico (requieren validación extra) */}
               <Route path="/center/:centerId" element={<CenterLayout />}>
                 <Route path="details" element={<CenterDetailsPage />} />
                 <Route path="inventory" element={<InventoryPage />} />
@@ -70,12 +64,14 @@ function App() {
                 <Route path="needs/new" element={<NeedsFormPage />} />
                 <Route path="needs/status" element={<NeedsStatusPage />} />
                 <Route path="residents" element={<CenterResidentsPage />} />
-
               </Route>
+              
+              {/* Ruta de Edición de centros */}
+              <Route path="admin/centers/:centerId/edit" element={<CenterEditPage />} />
+
             </Route>
           </Route>
 
-          {/* --- Ruta para página no encontrada --- */}
           <Route path="*" element={<h2>404 - Página no encontrada</h2>} />
         </Routes>
       </main>
@@ -83,4 +79,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;

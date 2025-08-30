@@ -1,6 +1,5 @@
-// src/pages/CenterDetailsPage/CenterDetailsPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperationalStatusControl from '../../components/center/OperationalStatusControl';
 import './CenterDetailsPage.css';
@@ -40,45 +39,56 @@ const CenterDetailsPage: React.FC = () => {
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState<boolean>(false);
 
 useEffect(() => {
-    const fetchCenterDetails = async () => {
-        if (!centerId) return;
+  const fetchCenterDetails = async () => {
+    if (!centerId) return;
 
-        setIsLoading(true);
-        setError(null);
+    setIsLoading(true);
+    setError(null);
 
+    try {
+      // 1. Obtener detalles del centro
+      const centerResponse = await fetch(`http://localhost:4000/api/centers/${centerId}`);
+      if (!centerResponse.ok) {
+        throw new Error('Error al obtener los detalles del centro');
+      }
+      const centerData = await centerResponse.json();
+      setCenter(centerData);
+
+      // 2. Obtener inventario del centro
+      const resourcesResponse = await fetch(`http://localhost:4000/api/centers/${centerId}/inventory`);
+      if (resourcesResponse.ok) {
+        const resourcesData = await resourcesResponse.json();
+        setResources(resourcesData);
+      } else {
+        console.warn('No se pudo cargar el inventario del centro.');
+        setResources([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar los detalles del centro:', err);
+
+      // Fallback offline
+      if ('serviceWorker' in navigator && !navigator.onLine) {
         try {
-            // 1. Obtener detalles del centro
-            const centerResponse = await fetch(`http://localhost:4000/api/centers/${centerId}`);
-            if (!centerResponse.ok) {
-                throw new Error('Error al obtener los detalles del centro');
-            }
-            const centerData = await centerResponse.json();
-            setCenter(centerData);
-
-            // 2. Obtener recursos disponibles (inventario)
-            const resourcesResponse = await fetch(`http://localhost:4000/api/centers/${centerId}/inventory`);
-            if (resourcesResponse.ok) {
-                const resourcesData = await resourcesResponse.json();
-                setResources(resourcesData);
-            } else {
-                // Si falla solo el inventario, no rompemos todo, solo lo registramos.
-                console.warn('No se pudo cargar el inventario del centro.');
-                setResources([]);
-            }
-        } catch (err) {
-            console.error('Error al cargar los detalles del centro:', err);
-            // Simplemente mostramos un error. El Service Worker ya habrá servido
-            // la versión en caché de estas peticiones si estaban disponibles.
-            setError('No se pudieron cargar los detalles actualizados. Revisa tu conexión.');
-        } finally {
-            setIsLoading(false);
+          const offlineData = localStorage.getItem(`center_${centerId}`);
+          if (offlineData) {
+            const parsedData = JSON.parse(offlineData);
+            setCenter(parsedData.center);
+            setResources(parsedData.resources || []);
+          }
+        } catch (parseErr) {
+          console.error('Error al leer datos offline:', parseErr);
         }
-    };
+      } else {
+        setError('No se pudieron cargar los detalles actualizados. Revisa tu conexión.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchCenterDetails();
+  fetchCenterDetails();
 }, [centerId]);
 
-  // Guardar datos en almacenamiento offline cuando estén disponibles
   useEffect(() => {
     if (center && centerId) {
       const dataToStore = {
@@ -144,7 +154,6 @@ useEffect(() => {
         public_note: newStatus === 'Cerrado Temporalmente' ? publicNote : undefined
       } : null);
       
-      // Actualizar datos offline
       if (center && centerId) {
         const dataToStore = {
           center: { ...center, operational_status: newStatus },
@@ -154,17 +163,13 @@ useEffect(() => {
         localStorage.setItem(`center_${centerId}`, JSON.stringify(dataToStore));
       }
 
-      // Mostrar mensaje de éxito
       alert(`Estado operativo actualizado a "${newStatus}" exitosamente`);
     } catch (err) {
       console.error('Error al actualizar el estado operativo:', err);
       
-      // Si estamos offline, guardar la acción para sincronizar después
       if ('serviceWorker' in navigator && !navigator.onLine) {
-        // Actualizar localmente para UX inmediata
         setCenter(prev => prev ? { ...prev, operational_status: newStatus } : null);
         
-        // Guardar acción pendiente para sincronización
         const pendingActions = JSON.parse(localStorage.getItem('pending_actions') || '[]');
         pendingActions.push({
           type: 'update_operational_status',
@@ -240,6 +245,9 @@ useEffect(() => {
           ← Volver
         </button>
         <h1>Detalles del Centro</h1>
+        <Link to={`/admin/centers/${centerId}/edit`} className="edit-button">
+            Editar Detalles
+        </Link>
       </div>
 
       <div className="center-details-content">
@@ -293,7 +301,6 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Control de estado operativo para encargados */}
             {user?.role === 'Encargado' && center.operational_status && (
               <OperationalStatusControl
                 centerId={centerId!}
@@ -304,7 +311,6 @@ useEffect(() => {
               />
             )}
 
-            {/* Solo mostrar controles de administración para usuarios con rol Emergencias */}
             {user?.role === 'Emergencias' && (
               <div className="admin-controls">
                 <button 
@@ -343,7 +349,6 @@ useEffect(() => {
           )}
         </div>
 
-        {/* Información del responsable - placeholder para futuras implementaciones */}
         <div className="responsible-section">
           <h3>Responsable</h3>
           <div className="responsible-info">
