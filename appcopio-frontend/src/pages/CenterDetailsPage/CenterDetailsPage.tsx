@@ -38,48 +38,56 @@ const CenterDetailsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchCenterDetails = async () => {
-      if (!centerId) return;
+useEffect(() => {
+  const fetchCenterDetails = async () => {
+    if (!centerId) return;
 
-      try {
-        const centerResponse = await fetch(`http://localhost:4000/api/centers/${centerId}`);
-        if (!centerResponse.ok) {
-          throw new Error('Error al obtener los detalles del centro');
-        }
-        const centerData = await centerResponse.json();
-        setCenter(centerData);
+    setIsLoading(true);
+    setError(null);
 
-        const resourcesResponse = await fetch(`http://localhost:4000/api/centers/${centerId}/inventory`);
-        if (resourcesResponse.ok) {
-          const resourcesData = await resourcesResponse.json();
-          setResources(resourcesData);
-        }
-      } catch (err) {
-        console.error('Error al cargar los detalles del centro:', err);
-        if ('serviceWorker' in navigator && !navigator.onLine) {
-          try {
-            const offlineData = localStorage.getItem(`center_${centerId}`);
-            if (offlineData) {
-              const parsedData = JSON.parse(offlineData);
-              setCenter(parsedData.center);
-              setResources(parsedData.resources || []);
-            } else {
-              setError('No hay datos disponibles offline para este centro');
-            }
-          } catch (offlineError) {
-            setError('Error al cargar datos offline');
-          }
-        } else {
-          setError(err instanceof Error ? err.message : 'Error desconocido');
-        }
-      } finally {
-        setIsLoading(false);
+    try {
+      // 1. Obtener detalles del centro
+      const centerResponse = await fetch(`http://localhost:4000/api/centers/${centerId}`);
+      if (!centerResponse.ok) {
+        throw new Error('Error al obtener los detalles del centro');
       }
-    };
+      const centerData = await centerResponse.json();
+      setCenter(centerData);
 
-    fetchCenterDetails();
-  }, [centerId]);
+      // 2. Obtener inventario del centro
+      const resourcesResponse = await fetch(`http://localhost:4000/api/centers/${centerId}/inventory`);
+      if (resourcesResponse.ok) {
+        const resourcesData = await resourcesResponse.json();
+        setResources(resourcesData);
+      } else {
+        console.warn('No se pudo cargar el inventario del centro.');
+        setResources([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar los detalles del centro:', err);
+
+      // Fallback offline
+      if ('serviceWorker' in navigator && !navigator.onLine) {
+        try {
+          const offlineData = localStorage.getItem(`center_${centerId}`);
+          if (offlineData) {
+            const parsedData = JSON.parse(offlineData);
+            setCenter(parsedData.center);
+            setResources(parsedData.resources || []);
+          }
+        } catch (parseErr) {
+          console.error('Error al leer datos offline:', parseErr);
+        }
+      } else {
+        setError('No se pudieron cargar los detalles actualizados. Revisa tu conexión.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchCenterDetails();
+}, [centerId]);
 
   useEffect(() => {
     if (center && centerId) {
