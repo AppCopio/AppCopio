@@ -30,7 +30,7 @@ const LikertScaleInput: React.FC<LikertScaleInputProps> = ({ label, name, value,
                 <FormControlLabel
                     key={option.value}
                     value={String(option.value)}
-                    control={<Radio required />}
+                    control={<Radio />}
                     label={`${option.value}: ${option.label}`}
                     labelPlacement="bottom"
                 />

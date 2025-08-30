@@ -3,7 +3,7 @@ import { Box, Stepper, Step, StepLabel, Button, Typography, Alert } from '@mui/m
 import StepGeneral from './StepGeneral';
 import StepInmueble from './StepInmueble';
 import StepEvaluacion from './StepEvaluacion';
-//import StepFotos from './StepFotos';
+import StepFotos from './StepFotos';
 import { CenterData, initialCenterData } from '../../types/center';
 import { useNavigate } from 'react-router-dom';
 import { createCenter } from '../../services/centerApi';
@@ -65,28 +65,29 @@ const MultiStepCenterForm: React.FC = () => {
     };
 
     const handleFormSubmit = async () => {
-        setIsSaving(true);
-        if (navigator.onLine) {
-            try {
-                const token = user?.token || '';
-                const newCenter = await createCenter(formData, token);
-                alert(`Centro "${newCenter.name}" creado con éxito.`);
-                navigate('/admin/centros');
-            } catch (err: any) {
-                setError(err.message || 'Ocurrió un error inesperado al registrar el centro.');
-            } finally {
-                setIsSaving(false);
-                setIsConfirmationOpen(false);
-            }
-        } else {
-            localStorage.setItem('pendingCenterRegistrationForm', JSON.stringify(formData));
-            registerForSync('sync-centers');
-            alert('Sin conexión. El formulario se guardó y se sincronizará cuando recuperes la red.');
-            setIsSaving(false);
-            setIsConfirmationOpen(false);
-            navigate('/admin/centros');
-        }
-    };
+      setIsSaving(true);
+      if (navigator.onLine) {
+          try {
+              const token = user?.token || '';
+              // El objeto formData ya tiene la estructura correcta para el backend
+              const newCenter = await createCenter(formData, token);
+              alert(`Centro "${newCenter.name}" creado con éxito.`);
+              navigate('/admin/centers');
+          } catch (err: any) {
+              setError(err.message || 'Ocurrió un error inesperado al registrar el centro.');
+          } finally {
+              setIsSaving(false);
+              setIsConfirmationOpen(false);
+          }
+      } else {
+          localStorage.setItem('pendingCenterRegistrationForm', JSON.stringify(formData));
+          registerForSync('sync-centers');
+          alert('Sin conexión. El formulario se guardó y se sincronizará cuando recuperes la red.');
+          setIsSaving(false);
+          setIsConfirmationOpen(false);
+          navigate('/admin/centros');
+      }
+  };
 
     return (
         <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', p: 3 }}>
