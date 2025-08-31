@@ -347,7 +347,8 @@ INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, reason, cre
 
 -- Asignaciones de prueba
 INSERT INTO CenterAssignments (user_id, center_id, role, changed_by) VALUES
-(2, 'C001', 'trabajador municipal', 1), (2, 'C003', 'trabajador municipal', 1);
+(2, 'C001', 'trabajador municipal', 1), (2, 'C002', 'trabajador municipal', 1);
+
 
 -- Solicitudes de prueba
 INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUES
@@ -357,22 +358,29 @@ INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUE
 INSERT INTO CentersActivations (center_id, activated_by, notes)
 OVERRIDING SYSTEM VALUE
 VALUES
-('C001', 1, 'Activación por emergencia de incendio forestal en la zona alta de Valparaíso.');
+('C001', 1, 'Activación por emergencia de incendio forestal en la zona alta de Valparaíso.'),
+('C002', 1, 'Activación por emergencia de incendio forestal en la zona alta de Quilpue.');
 
 -- Personas y grupos familiares de prueba
 INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
 OVERRIDING SYSTEM VALUE
 VALUES
 ('15.111.111-1', 'María', 'González', 34, 'F'),
-('21.222.222-2', 'Pedro', 'Soto', 8, 'M');
+('21.222.222-2', 'Pedro', 'Soto', 8, 'M'),
+('14.411.111-1', 'Fernando', 'Gatica', 25, 'M'),
+('20.422.222-2', 'Rocio', 'Garcia', 8, 'F');
 
 INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones)
 OVERRIDING SYSTEM VALUE
 VALUES
-(1, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.');
+(1, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.'),
+(2, 2, 'Familia monoparental, requieren apoyo especial para menor de edad.');
+
 
 INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
-(1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
+(1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a'),
+(2, 3, 'Jefe de Hogar'), (2, 4, 'Hijo/a');
+
 
 -- Confirmación final
 SELECT 'Script definitivo ejecutado. Todas las tablas y datos de prueba han sido creados.';

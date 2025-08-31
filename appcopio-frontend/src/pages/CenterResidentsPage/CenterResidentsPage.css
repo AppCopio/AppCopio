@@ -40,3 +40,13 @@
 .export-btn:hover {
   background-color: #0056b3;
 }
+.capacity-info {
+  background-color: #f0f0f0;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.capacity-info p {
+  margin: 0;
+  font-size: 1.1rem;
+}
