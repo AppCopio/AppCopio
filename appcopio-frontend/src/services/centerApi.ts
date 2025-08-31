@@ -25,3 +25,44 @@ export const createCenter = async (centerData: CenterData, token: string) => {
     throw error;
   }
 };
+
+export const updateCenter = async (centerId: string, centerData: CenterData, token: string) => {
+  try {
+    const response = await fetch(`${API_URL}/centers/${centerId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(centerData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Error al actualizar el centro.');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("API Error:", error);
+    throw error;
+  }
+};
+export const deleteCenter = async (centerId: string, token: string) => {
+    try {
+        const response = await fetch(`${API_URL}/centers/${centerId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error al eliminar el centro.');
+        }
+    } catch (error) {
+        console.error("API Error:", error);
+        throw error;
+    }
+};

@@ -4,22 +4,42 @@ export interface CenterData {
     center_id: string;
     name: string;
     address: string;
-    type: 'Albergue' | 'Acopio' | 'albergue' | 'acopio' | '';
+    type: 'Albergue' | 'Acopio' | 'Albergue Comunitario' | 'acopio' | '';
+    folio: string;
     capacity: number;
     latitude: number;
     longitude: number;
     should_be_active: boolean;
-    comunity_charge_id: number | null;
+    comunity_charge_id: number | null; //esto no se si se está pocupabndo
     municipal_manager_id: number | null;
 
     // Campos de CentersDescription
+    nombre_dirigente: string;
+    cargo_dirigente: string;
+    telefono_contacto: string;
+
     tipo_inmueble: string;
     numero_habitaciones: number | null;
     estado_conservacion: number | null;
-    material_muros: number | null;
-    material_pisos: number | null;
-    material_techo: number | null;
-    observaciones_acceso_y_espacios_comunes: string;
+    muro_hormigon?: boolean;
+    muro_albaneria?: boolean;
+    muro_tabique?: boolean;
+    muro_adobe?: boolean;
+    muro_mat_precario?: boolean;
+    piso_parquet?: boolean;
+    piso_ceramico?: boolean;
+    piso_alfombra?: boolean;
+    piso_baldosa?: boolean;
+    piso_radier?: boolean;
+    piso_enchapado?: boolean;
+    piso_tierra?: boolean;
+    techo_tejas?: boolean;
+    techo_losa?: boolean;
+    techo_planchas?: boolean;
+    techo_fonolita?: boolean;
+    techo_mat_precario?: boolean;
+    techo_sin_cubierta?: boolean;
+
     espacio_10_afectados: number | null;
     diversidad_funcional: number | null;
     areas_comunes_accesibles: number | null;
@@ -94,6 +114,14 @@ export interface CenterData {
     existen_puertas_emergencia_rapida: boolean;
     existen_rampas: boolean;
     existen_ascensores_emergencia: boolean;
+    existen_botiquines: boolean;
+    existen_camilla_emergencia: boolean;
+    existen_sillas_ruedas: boolean;
+    existen_muletas : boolean;
+    existen_desfibriladores: boolean;
+    existen_senales_advertencia: boolean;
+    existen_senales_informativas : boolean;
+    existen_senales_exclusivas: boolean;
     observaciones_seguridad_comunitaria: string;
     importa_elementos_seguridad: boolean;
     observaciones_importa_elementos_seguridad: string;
@@ -106,20 +134,41 @@ export const initialCenterData: CenterData = {
     name: '',
     address: '',
     type: 'albergue',
+    folio: '',
     capacity: 0,
     latitude: 0,
     longitude: 0,
     should_be_active: false,
     comunity_charge_id: null,
     municipal_manager_id: null,
-    
+
+    // Campos de CentersDescription
+    nombre_dirigente: '',
+    cargo_dirigente: '',
+    telefono_contacto: '',
+
     tipo_inmueble: '',
     numero_habitaciones: null,
     estado_conservacion: null,
-    material_muros: null,
-    material_pisos: null,
-    material_techo: null,
-    observaciones_acceso_y_espacios_comunes: '',
+    muro_hormigon: false,
+    muro_albaneria: false,
+    muro_tabique: false,
+    muro_adobe: false,
+    muro_mat_precario: false,
+    piso_parquet: false,
+    piso_ceramico: false,
+    piso_alfombra: false,
+    piso_baldosa:false,
+    piso_radier: false,
+    piso_enchapado:false,
+    piso_tierra: false,
+    techo_tejas: false,
+    techo_losa: false,
+    techo_planchas:false,
+    techo_fonolita: false,    
+    techo_mat_precario: false,
+    techo_sin_cubierta: false,
+
     espacio_10_afectados: null,
     diversidad_funcional: null,
     areas_comunes_accesibles: null,
@@ -194,6 +243,14 @@ export const initialCenterData: CenterData = {
     existen_puertas_emergencia_rapida: false,
     existen_rampas: false,
     existen_ascensores_emergencia: false,
+    existen_botiquines: false,
+    existen_camilla_emergencia: false,
+    existen_sillas_ruedas: false,
+    existen_muletas : false,
+    existen_desfibriladores: false,
+    existen_senales_advertencia: false,
+    existen_senales_informativas : false,
+    existen_senales_exclusivas:false,
     observaciones_seguridad_comunitaria: '',
     importa_elementos_seguridad: false,
     observaciones_importa_elementos_seguridad: '',
