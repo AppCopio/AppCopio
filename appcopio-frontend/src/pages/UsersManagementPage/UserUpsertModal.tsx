@@ -67,8 +67,9 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
         if (isEdit && user) {
           setRoleId(user.role_id);
 
-          const isComunidad = user.role_name === "Contacto Ciudadano";
-          if (isComunidad) {
+          const isTM = user.role_id === 2;
+          const isCC = user.role_id === 3;
+          if (isTM || isCC) {
             const u = await getUser(user.user_id, controller.signal);
             if (!mounted) return;
             const assigned = (u.assignedCenters || []).map(String);
@@ -94,7 +95,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); 
 
   const selectedRole = roles.find(r => r.role_id === (roleId === "" ? -1 : roleId));
-  const needsCenter = selectedRole?.role_name === "Contacto Ciudadano";
+  const needsCenter = selectedRole?.role_id === 2 || selectedRole?.role_id === 3;
 
   const canSave =
     required(rut) &&
@@ -133,7 +134,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
           const toAdd = centerId && !currentAssigned.includes(centerId) ? [centerId] : [];
           await Promise.all([
             ...toRemove.map((id) => removeCenterFromUser(user.user_id, id)),
-            ...toAdd.map((id) => assignCenterToUser(user.user_id, id, "Contacto Ciudadano")),
+            ...toAdd.map((id) => assignCenterToUser(user.user_id, id, u.role_name)),
           ]);
         } else if (currentAssigned.length > 0) {
           await Promise.all(currentAssigned.map((id) => removeCenterFromUser(user.user_id, id)));
@@ -150,7 +151,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
         });
 
         if (needsCenter && centerId) {
-          await assignCenterToUser(created.user_id, centerId, "Contacto Ciudadano");
+          await assignCenterToUser(created.user_id, centerId,  created.role_name);
         }
       }
 

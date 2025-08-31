@@ -13,7 +13,7 @@ const Navbar: React.FC = () => {
     navigate('/login');
   };
 
-  const isAdminOrSupport = user?.role_name === 'Administrador' || user?.es_apoyo_admin;
+  const isAdminOrSupport = user?.role_id === 1 || user?.es_apoyo_admin;
 
   return (
     <nav className="main-navbar">
@@ -70,7 +70,7 @@ const Navbar: React.FC = () => {
                 </li>
               </>
             )}
-            {user?.role_name === 'Trabajador Municipal' && !user?.es_apoyo_admin && (
+            {(user?.role_id === 2 || user?.role_id === 3) && !user?.es_apoyo_admin  && (
                 <li>
                     <NavLink to="/mis-centros" className={({ isActive }) => (isActive ? 'active-link' : '')}>
                         Mis Centros
