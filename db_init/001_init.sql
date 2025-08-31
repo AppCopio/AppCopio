@@ -81,6 +81,7 @@ CREATE TABLE Products (
     category_id INT REFERENCES Categories(category_id)
 );
 
+-- Tabla de personas individuales: una persona se crea únicamente al ingresarla como parte de un grupo familiar
 CREATE TABLE Persons (
     person_id SERIAL PRIMARY KEY,
     rut VARCHAR(20) UNIQUE NOT NULL,
@@ -122,6 +123,7 @@ CREATE TABLE InventoryLog (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Guarda el historial de asignaciones de cada centro: el registro vàlido actualmente es el que tiene valid_to IS NULL
 CREATE TABLE CenterAssignments (
     assignment_id SERIAL PRIMARY KEY,
     center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
@@ -147,6 +149,7 @@ CREATE TABLE UpdateRequests (
     resolution_comment TEXT
 );
 
+-- Guarda el historial de activaciones de cada centro, el registro valido actualmente es el que tiene ended_at IS NULL
 CREATE TABLE CentersActivations (
     activation_id SERIAL PRIMARY KEY,
     center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
@@ -157,6 +160,7 @@ CREATE TABLE CentersActivations (
     notes TEXT
 );
 
+-- Registro de grupos familiares ingresados en X centro activado
 CREATE TABLE FamilyGroups (
     family_id SERIAL PRIMARY KEY,
     activation_id INT NOT NULL REFERENCES CentersActivations(activation_id) ON DELETE CASCADE,
@@ -174,6 +178,7 @@ CREATE TABLE FamilyGroups (
     UNIQUE (activation_id, jefe_hogar_person_id)
 );
 
+-- Registro que une a las personas con su grupo familiar y define el parentesco con el jefe de hogar
 CREATE TABLE FamilyGroupMembers (
     member_id SERIAL PRIMARY KEY,
     family_id INT NOT NULL REFERENCES FamilyGroups(family_id) ON DELETE CASCADE,
@@ -182,6 +187,7 @@ CREATE TABLE FamilyGroupMembers (
     UNIQUE(family_id, person_id)
 );
 
+-- Guarda el historial de las descripciones detalladas de cada centro)
 CREATE TABLE CentersDescription (
     center_id VARCHAR(10) PRIMARY KEY REFERENCES Centers(center_id) ON DELETE CASCADE,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -345,13 +351,11 @@ VALUES
 ('juan.perez', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'juan.perez@municipalidad.cl', 2, 'Juan Pérez', '22.222.222-2', TRUE, FALSE),
 ('carla.rojas', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'carla.rojas@comunidad.cl', 3, 'Carla Rojas', '33.333.333-3', TRUE, FALSE);
 
--- Centros de prueba
-INSERT INTO Centers (name, address, type, capacity, is_active, latitude, longitude, municipal_manager_id) VALUES
-( 'Gimnasio Municipal de Valparaíso', 'Av. Argentina 123', 'albergue', 150, true, -33.0458, -71.6197, 1),
-('Liceo Bicentenario', 'Independencia 456', 'albergue comunitario', 80, true, -33.0465, -71.6212, 2),
-('Sede Vecinal Cerro Alegre', 'Lautaro Rosas 789', 'albergue comunitario', 50, false, -33.0401, -71.6285, 2),
-( 'Escuela República de Uruguay', 'Av. Uruguay 321', 'albergue', 120, false, -33.0475, -71.6143, 1);
-
+INSERT INTO Centers (name, address, type, capacity, latitude, longitude) VALUES
+('Gimnasio Municipal de Valparaíso', 'Av. Argentina 123', 'albergue', 150, -33.0458, -71.6197),
+('Liceo Bicentenario', 'Independencia 456', 'albergue comunitario', 80, -33.0465, -71.6212),
+('Sede Vecinal Cerro Alegre', 'Lautaro Rosas 789', 'albergue comunitario', 50, -33.0401, -71.6285),
+('Escuela República de Uruguay', 'Av. Uruguay 321', 'albergue', 120, -33.0475, -71.6143);
 -- Centers Descriptions
 INSERT INTO CentersDescription (
     center_id,
@@ -592,8 +596,22 @@ INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, reason, cre
 ('C002', 4, 'ADD', 50, 'Stock Inicial', 2);
 
 -- Asignaciones de prueba
-INSERT INTO CenterAssignments (user_id, center_id, role, changed_by) VALUES
-(2, 'C001', 'trabajador municipal', 1), (2, 'C003', 'trabajador municipal', 1);
+INSERT INTO CenterAssignments (user_id, center_id, role, changed_by) 
+VALUES (2, 'C001', 'trabajador municipal', 1), (3, 'C001', 'contacto ciudadano', 1), (2, 'C003', 'trabajador municipal', 1);
+
+UPDATE Centers c
+SET municipal_manager_id = ca.user_id
+FROM CenterAssignments ca
+WHERE ca.center_id = c.center_id
+  AND ca.role = 'trabajador municipal'
+  AND ca.valid_to IS NULL;
+
+UPDATE Centers c
+SET comunity_charge_id = ca.user_id
+FROM CenterAssignments ca
+WHERE ca.center_id = c.center_id
+  AND ca.role = 'contacto ciudadano'
+  AND ca.valid_to IS NULL;
 
 -- Solicitudes de prueba
 INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUES
@@ -601,9 +619,16 @@ INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUE
 
 -- Activación de un centro
 INSERT INTO CentersActivations (center_id, activated_by, notes)
-OVERRIDING SYSTEM VALUE
 VALUES
-('C001', 1, 'Activación por emergencia de incendio forestal en la zona alta de Valparaíso.');
+('C001', 1, 'Activación por emergencia de incendio forestal en la zona alta de Valparaíso.'),
+('C002', 1, 'Apertura para contingencia en sector centro.');
+
+-- Sincroniza bandera redundante is_active según activaciones vigentes
+UPDATE Centers c
+SET is_active = EXISTS (
+  SELECT 1 FROM CentersActivations ca
+  WHERE ca.center_id = c.center_id AND ca.ended_at IS NULL
+);
 
 -- Personas y grupos familiares de prueba
 INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
@@ -612,13 +637,39 @@ VALUES
 ('15.111.111-1', 'María', 'González', 34, 'F'),
 ('21.222.222-2', 'Pedro', 'Soto', 8, 'M');
 
+WITH act AS (
+  SELECT activation_id
+  FROM CentersActivations
+  WHERE center_id = 'C001' AND ended_at IS NULL
+  ORDER BY started_at DESC
+  LIMIT 1
+)
 INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones)
-OVERRIDING SYSTEM VALUE
-VALUES
-(1, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.');
+SELECT act.activation_id, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.'
+FROM act;
 
 INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
 (1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
 
+-- Confirmaciones finales de integridad de datos
+
+-- Centros activos y sus activaciones vigentes
+SELECT c.center_id, c.name, c.is_active, ca.activation_id
+FROM Centers c
+LEFT JOIN CentersActivations ca
+  ON ca.center_id = c.center_id AND ca.ended_at IS NULL
+ORDER BY c.center_id;
+
+-- Punteros redundantes resueltos desde asignaciones vigentes
+SELECT c.center_id, c.municipal_manager_id, c.comunity_charge_id
+FROM Centers c
+ORDER BY c.center_id;
+
+-- Verifica que el FamilyGroup quedó colgando de una activación vigente
+SELECT fg.family_id, fg.activation_id, ca.center_id, ca.ended_at
+FROM FamilyGroups fg
+JOIN CentersActivations ca ON ca.activation_id = fg.activation_id;
+
 -- Confirmación final
 SELECT 'Script definitivo ejecutado. Todas las tablas y datos de prueba han sido creados.';
+

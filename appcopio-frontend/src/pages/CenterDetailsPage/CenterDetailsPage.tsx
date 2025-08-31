@@ -4,6 +4,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import OperationalStatusControl from '../../components/center/OperationalStatusControl';
 import './CenterDetailsPage.css';
 
+import { getUser } from "../../services/usersApi";
+
+import ResponsibleSection from './ResponsibleSection';
+
 interface CenterDetails {
   center_id: string;
   name: string;
@@ -18,6 +22,9 @@ interface CenterDetails {
   created_at?: string;
   updated_at?: string;
   fullnessPercentage?: number;
+
+  municipal_manager_id?: number | null;
+  comunity_charge_id?: number | null;
 }
 
 interface Resource {
@@ -26,6 +33,15 @@ interface Resource {
   category: string;
   quantity: number;
 }
+
+type UserLite = {
+  user_id: number;
+  nombre?: string | null;
+  username: string;
+  email?: string | null;
+  celular?: string | null;
+  role_name?: string | null;
+};
 
 const CenterDetailsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
@@ -37,6 +53,11 @@ const CenterDetailsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState<boolean>(false);
+
+
+  const [municipalManager, setMunicipalManager] = useState<UserLite | null>(null);
+const [communityContact, setCommunityContact] = useState<UserLite | null>(null);
+const [loadingResponsables, setLoadingResponsables] = useState(false);
 
 useEffect(() => {
   const fetchCenterDetails = async () => {
@@ -63,6 +84,30 @@ useEffect(() => {
         console.warn('No se pudo cargar el inventario del centro.');
         setResources([]);
       }
+
+      // 3. Obtener responsables
+      setLoadingResponsables(true);
+      const ctrl = new AbortController();
+
+      try {
+        const [mun, comm] = await Promise.all([
+          centerData.municipal_manager_id
+            ? getUser(centerData.municipal_manager_id, ctrl.signal).catch(() => null)
+            : Promise.resolve(null),
+          centerData.comunity_charge_id
+            ? getUser(centerData.comunity_charge_id, ctrl.signal).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+
+        setMunicipalManager(mun);
+        setCommunityContact(comm);
+      } finally {
+        setLoadingResponsables(false);
+      }
+
+      // al final del efecto:
+      return () => ctrl.abort();
+
     } catch (err) {
       console.error('Error al cargar los detalles del centro:', err);
 
@@ -352,7 +397,10 @@ useEffect(() => {
         <div className="responsible-section">
           <h3>Responsable</h3>
           <div className="responsible-info">
-            <p>Por definir en futuras versiones</p>
+            <ResponsibleSection
+              municipalId={center.municipal_manager_id}
+              comunityId={center.comunity_charge_id}
+            />
           </div>
         </div>
       </div>

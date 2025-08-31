@@ -233,7 +233,6 @@ const CenterManagementPage: React.FC = () => {
   }
 
   return (
-    // ... Tu JSX sin cambios ...
     <div className="center-management-container">
         <h1>Gestión de Centros y Albergues</h1>
         <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
