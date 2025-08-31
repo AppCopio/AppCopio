@@ -51,6 +51,22 @@ CREATE TABLE Users (
     is_active BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+-- 002_auth_refreshtokens.sql
+CREATE TABLE IF NOT EXISTS RefreshTokens (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,
+  user_agent TEXT,
+  ip TEXT,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_refreshtokens_userid ON RefreshTokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refreshtokens_tokenhash ON RefreshTokens(token_hash);
+
+
 CREATE SEQUENCE centers_seq START 1;
 
 CREATE TABLE Centers (

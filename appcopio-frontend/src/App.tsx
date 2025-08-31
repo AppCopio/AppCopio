@@ -1,12 +1,10 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
-// Layouts y Componentes de Protección
 import PublicLayout from "./components/layout/PublicLayout/PublicLayout";
 import AdminLayout from "./components/layout/AdminLayout/AdminLayout";
 import CenterLayout from "./components/layout/CenterLayout/CenterLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
-// Páginas
 import HomePage from "./pages/HomePage/HomePage";
 import MapPage from "./pages/MapPage/MapPage";
 import LoginPage from "./pages/LoginPage/LoginPage";
@@ -16,18 +14,18 @@ import CenterDetailsPage from "./pages/CenterDetailsPage/CenterDetailsPage";
 import InventoryPage from "./pages/InventoryPage/InventoryPage";
 import NeedsFormPage from "./pages/NeedsFormPage/NeedsFormPage";
 import NeedsStatusPage from "./pages/NeedsStatusPage/NeedsStatusPage";
-
-import UpdatesPage from './pages/UpdatesPage/UpdatesPage'; 
+import UpdatesPage from "./pages/UpdatesPage/UpdatesPage";
 import InventoryHistoryPage from "./pages/InventoryHistoryPage/InventoryHistoryPage";
-import MisCentrosPage from './pages/MisCentrosPage/MisCentrosPage';
+import MisCentrosPage from "./pages/MisCentrosPage/MisCentrosPage";
 import FibePage from "./pages/FibePage/FibePage";
-
-import CreateCenterPage from './pages/CreateCenterPage/CreateCenterPage';
+import CreateCenterPage from "./pages/CreateCenterPage/CreateCenterPage";
 import CenterResidentsPage from "./pages/CenterResidentsPage/CenterResidentsPage";
-import CenterEditPage from './pages/CenterEditPage/CenterEditPage';
+import CenterEditPage from "./pages/CenterEditPage/CenterEditPage";
+import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
 
 import "./App.css";
-import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
+
+
 
 function App() {
   return (
@@ -41,17 +39,19 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
           </Route>
 
-          {/* --- 2. Bloque Único de Rutas Protegidas --- */}
-          <Route element={<ProtectedRoute 
-              allowedRoles={["Administrador", "Trabajador Municipal", "Contacto Ciudadano"]} 
-              checkSupportAdmin={true} 
-            />}>
+          {/* --- 2. Rutas Protegidas por role_id --- */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoleIds={[1, 2, 3]}
+                checkSupportAdmin={true}
+              />
+            }
+          >
             <Route element={<AdminLayout />}>
-              
               <Route path="/admin/centers" element={<CenterManagementPage />} />
               <Route path="/admin/centers/new" element={<MultiStepCenterForm />} />
               <Route path="/admin/users" element={<UsersManagementPage />} />
-
               <Route path="/admin/fibe" element={<FibePage />} />
               <Route path="/admin/updates" element={<UpdatesPage />} />
 
@@ -65,10 +65,9 @@ function App() {
                 <Route path="needs/status" element={<NeedsStatusPage />} />
                 <Route path="residents" element={<CenterResidentsPage />} />
               </Route>
-              
-              {/* Ruta de Edición de centros */}
-              <Route path="admin/centers/:centerId/edit" element={<CenterEditPage />} />
 
+              {/* Edit de centros */}
+              <Route path="/admin/centers/:centerId/edit" element={<CenterEditPage />} />
             </Route>
           </Route>
 
