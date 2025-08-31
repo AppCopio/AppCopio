@@ -7,6 +7,7 @@ import './CenterDetailsPage.css';
 import { getUser } from "../../services/usersApi";
 
 import ResponsibleSection from './ResponsibleSection';
+import AssignResponsibleDialog from './AssingResponsibleDialog';
 
 interface CenterDetails {
   center_id: string;
@@ -43,6 +44,8 @@ type UserLite = {
   role_name?: string | null;
 };
 
+type AssignRole = "trabajador municipal" | "contacto ciudadano";
+
 const CenterDetailsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const navigate = useNavigate();
@@ -53,11 +56,6 @@ const CenterDetailsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState<boolean>(false);
-
-
-  const [municipalManager, setMunicipalManager] = useState<UserLite | null>(null);
-const [communityContact, setCommunityContact] = useState<UserLite | null>(null);
-const [loadingResponsables, setLoadingResponsables] = useState(false);
 
 useEffect(() => {
   const fetchCenterDetails = async () => {
@@ -84,29 +82,7 @@ useEffect(() => {
         console.warn('No se pudo cargar el inventario del centro.');
         setResources([]);
       }
-
-      // 3. Obtener responsables
-      setLoadingResponsables(true);
-      const ctrl = new AbortController();
-
-      try {
-        const [mun, comm] = await Promise.all([
-          centerData.municipal_manager_id
-            ? getUser(centerData.municipal_manager_id, ctrl.signal).catch(() => null)
-            : Promise.resolve(null),
-          centerData.comunity_charge_id
-            ? getUser(centerData.comunity_charge_id, ctrl.signal).catch(() => null)
-            : Promise.resolve(null),
-        ]);
-
-        setMunicipalManager(mun);
-        setCommunityContact(comm);
-      } finally {
-        setLoadingResponsables(false);
-      }
-
-      // al final del efecto:
-      return () => ctrl.abort();
+      // 3. Obtener detalles de los usuarios responsables -> responsabilidad de ResponsibleSection
 
     } catch (err) {
       console.error('Error al cargar los detalles del centro:', err);
@@ -233,6 +209,18 @@ useEffect(() => {
     }
   };
 
+  // Modal de asignación de responsables
+  const [assignRole, setAssignRole] = useState<AssignRole | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+
+  const openAssign = (role: AssignRole) => {
+    setAssignRole(role);
+    setAssignOpen(true);
+  };
+
+  const closeAssign = () => setAssignOpen(false);
+
+  // Agrupa recursos por categoría
   const groupedResources = resources.reduce((acc, resource) => {
     if (!acc[resource.category]) {
       acc[resource.category] = [];
@@ -400,6 +388,23 @@ useEffect(() => {
             <ResponsibleSection
               municipalId={center.municipal_manager_id}
               comunityId={center.comunity_charge_id}
+              onAssignMunicipal={() => openAssign("trabajador municipal")}
+              onAssignCommunity={() => openAssign("contacto ciudadano")}
+            />
+            <AssignResponsibleDialog
+              open={assignOpen}
+              onClose={closeAssign}
+              centerId={centerId!}
+              role={assignRole}
+              onSuccess={async () => {
+                closeAssign();
+                // Refresca el centro para traer los nuevos punteros municipal/community
+                // TO DO: Mejorar esto con llamado a servicios
+                try {
+                  const r = await fetch(`http://localhost:4000/api/centers/${centerId}`);
+                  if (r.ok) setCenter(await r.json());
+                } catch {}
+              }}
             />
           </div>
         </div>

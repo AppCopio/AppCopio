@@ -6,6 +6,7 @@ import {
   Typography,
   Stack,
   Avatar,
+  Button,
   Skeleton,
 } from "@mui/material";
 import { Person as PersonIcon, Groups as GroupsIcon } from "@mui/icons-material";
@@ -77,9 +78,13 @@ function ResponsibleCard({
 export default function ResponsibleSection({
   municipalId,
   comunityId,
+  onAssignMunicipal, 
+  onAssignCommunity,
 }: {
   municipalId?: number | null;
   comunityId?: number | null;
+  onAssignMunicipal?: () => void;
+  onAssignCommunity?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [municipalManager, setMunicipalManager] = useState<UserLite | null>(null);
@@ -122,9 +127,19 @@ export default function ResponsibleSection({
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
         {/* Columna 1: Trabajador municipal */}
         <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-            Trabajador municipal a cargo
-          </Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Trabajador municipal a cargo
+            </Typography>
+            <Button
+              size="small"
+              variant="text"
+              onClick={onAssignMunicipal}
+              disabled={!onAssignMunicipal || !navigator.onLine}  // desactiva si no hay callback o sin conexión
+            >
+              Cambiar
+            </Button>
+          </Stack>
           {loading ? (
             <SkeletonCard />
           ) : (
@@ -134,9 +149,19 @@ export default function ResponsibleSection({
 
         {/* Columna 2: Contacto comunidad */}
         <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-            Contacto comunidad
-          </Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Contacto comunidad
+            </Typography>
+            <Button
+              size="small"
+              variant="text"
+              onClick={onAssignCommunity}
+              disabled={!onAssignCommunity || !navigator.onLine}
+            >
+              Cambiar
+            </Button>
+          </Stack>
           {loading ? (
             <SkeletonCard />
           ) : (

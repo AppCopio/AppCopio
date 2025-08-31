@@ -223,12 +223,51 @@ const deleteUserHandler: RequestHandler<{ id: string }> = async (req, res) => {
   }
 };
 
+
+// GET /api/users/active/role/:roleId
+const listActiveUsersByRoleWithAssignmentCount: RequestHandler = async (req, res) => {
+  const roleId = Number(req.params.roleId);
+  if (!Number.isInteger(roleId)) {
+    res.status(400).json({ error: "roleId inválido" });
+    return;
+  }
+
+  const sql = `
+    SELECT
+      u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
+      u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
+      r.role_name,
+      COALESCE(a.active_assignments, 0)::int AS active_assignments
+    FROM users u
+    JOIN roles r ON r.role_id = u.role_id
+    LEFT JOIN (
+      SELECT user_id, COUNT(*) AS active_assignments
+      FROM centerassignments
+      WHERE valid_to IS NULL
+      GROUP BY user_id
+    ) a ON a.user_id = u.user_id
+    WHERE u.is_active = TRUE
+      AND u.role_id = $1
+    ORDER BY u.nombre ASC;
+  `;
+
+  try {
+    const rs = await pool.query(sql, [roleId]);
+    res.json({ users: rs.rows, total: rs.rowCount });
+  } catch (e) {
+    console.error("GET /users/active/role/:roleId error:", e);
+    res.status(500).json({ error: "Error al listar usuarios por rol" });
+  }
+};
+
 // --- REGISTRO DE TODAS LAS RUTAS ---
+router.get("/active/role/:roleId", listActiveUsersByRoleWithAssignmentCount);
 router.get("/", listUsersHandler);
 router.get("/:id", getUserByIdHandler);
 router.post("/", createUserHandler);
 router.put("/:id", updateUserHandler);
 router.delete("/:id", deleteUserHandler);
 router.post('/login', loginHandler);
+
 
 export default router;
