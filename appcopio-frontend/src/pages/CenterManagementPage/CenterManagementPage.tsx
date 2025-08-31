@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchWithAbort } from '../../services/api';
-import OfflineCentersView from '../../components/offline/OfflineCentersView';
+
+import { useAuth } from '../../contexts/AuthContext';
 import './CenterManagementPage.css';
 
 // La interfaz del Centro ha sido extendida para incluir nuevas propiedades.
@@ -36,6 +37,7 @@ const StatusSwitch: React.FC<{ center: Center; onToggle: (id: string) => void }>
 
 
 const CenterManagementPage: React.FC = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -51,6 +53,10 @@ const CenterManagementPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('todos');
   const [locationFilter, setLocationFilter] = useState<string>('');
 
+  //Estados para la lógica de eliminación
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [centerToDelete, setCenterToDelete] = useState<string | null>(null);
+
   // Efecto para detectar el estado de la conexión (online/offline).
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -65,47 +71,32 @@ const CenterManagementPage: React.FC = () => {
     };
   }, []);
 
-  // Efecto para la carga inicial de datos. Ya incluye el AbortController.
-  useEffect(() => {
+    const fetchCenters = async () => {
     const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
 
-    const loadCenters = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
+    try {
         const data = await fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal);
         setCenters(data);
-        // Guardar en localStorage para uso offline.
-        localStorage.setItem('centers_list', JSON.stringify({ data, lastUpdated: new Date().toISOString() }));
-      } catch (err) {
+    } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
-          setError(err.message);
-          console.error("Error al obtener los centros:", err);
-          // Si falla la red, intenta cargar desde el caché local.
-          try {
-            const offlineData = localStorage.getItem('centers_list');
-            if (offlineData) {
-              const parsedData = JSON.parse(offlineData);
-              setCenters(parsedData.data || []);
-              setError(null); // Borra el error de red si se cargan datos de caché
-            }
-          } catch (offlineError) {
-            console.error('Error al cargar datos offline:', offlineError);
-          }
+            // Ahora, solo mostramos un error. El Service Worker se encargará de
+            // mostrar los datos cacheados si están disponibles.
+            setError('No se pudieron cargar los centros. Puede que estés viendo datos desactualizados.');
+            console.error("Error al obtener los centros:", err);
         }
-      } finally {
+    } finally {
         if (!controller.signal.aborted) {
             setIsLoading(false);
         }
-      }
-    };
+    }
+};
 
-    loadCenters();
-
-    return () => {
-      controller.abort();
-    };
-  }, [apiUrl]);
+    // Efecto para la carga inicial de datos.
+    useEffect(() => {
+        fetchCenters();
+    }, [apiUrl]);
 
   // Efecto que aplica los filtros cada vez que cambian los datos maestros o los filtros.
   useEffect(() => {
@@ -168,6 +159,56 @@ const CenterManagementPage: React.FC = () => {
         alert('No se pudo actualizar el centro. Por favor, inténtelo de nuevo.');
       }
     }
+  };  
+  //LÓGICA DE ELIMINACIÓN 
+  const handleDeleteClick = (centerId: string) => {
+        setCenterToDelete(centerId);
+        setIsModalOpen(true);
+    };
+
+  const handleConfirmDelete = async () => {
+      if (!centerToDelete) return;
+      
+      try {
+          const response = await fetch(`${apiUrl}/centers/${centerToDelete}`, {
+              method: 'DELETE',
+              // Se asume que el token de autenticación se manejará aquí
+          });
+
+          if (response.status === 204) {
+              console.log(`Centro ${centerToDelete} eliminado exitosamente.`);
+              fetchCenters(); // Recarga la lista de centros
+          } else if (response.status === 404) {
+              console.error('Centro no encontrado.');
+          } else {
+              console.error('Error al eliminar el centro.');
+          }
+      } catch (error) {
+          console.error('Error de red al eliminar el centro:', error);
+          // Lógica para manejar la eliminación offline
+          if (!navigator.onLine) {
+              const pendingActions = JSON.parse(localStorage.getItem('pending_actions') || '[]');
+              pendingActions.push({
+                  type: 'delete_center',
+                  url: `${apiUrl}/centers/${centerToDelete}`,
+                  method: 'DELETE',
+                  body: {},
+                  timestamp: new Date().toISOString()
+              });
+              localStorage.setItem('pending_actions', JSON.stringify(pendingActions));
+              alert('Sin conexión. La eliminación se procesará cuando la recuperes.');
+          } else {
+              alert('No se pudo eliminar el centro. Por favor, inténtelo de nuevo.');
+          }
+      } finally {
+          setIsModalOpen(false);
+          setCenterToDelete(null);
+      }
+  };
+
+  const handleCancelDelete = () => {
+      setIsModalOpen(false);
+      setCenterToDelete(null);
   };
 
   const handleShowInfo = (id: string) => {
@@ -186,9 +227,6 @@ const CenterManagementPage: React.FC = () => {
     return <div className="center-management-container">Cargando centros...</div>;
   }
   
-  if (isOffline && centers.length === 0 && !error) {
-    return <OfflineCentersView title="Gestión de Centros (Sin Conexión)" showFilters={false} />;
-  }
 
   if (error && centers.length === 0) {
     return <div className="center-management-container error-message">Error: {error}</div>;
@@ -199,6 +237,11 @@ const CenterManagementPage: React.FC = () => {
     <div className="center-management-container">
         <h1>Gestión de Centros y Albergues</h1>
         <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
+        {user?.es_apoyo_admin === true && (
+                <Link to="/admin/centers/new" className="add-center-btn">
+                    + Registrar Nuevo Centro
+                </Link>
+            )}
 
         <div className="filters-section">
             <h3>Filtros</h3>
@@ -250,11 +293,29 @@ const CenterManagementPage: React.FC = () => {
                             <Link to={`/center/${center.center_id}/inventory`} className="inventory-btn">Gestionar</Link>
                             <button className="info-button" onClick={() => handleShowInfo(center.center_id)}>Ver Detalles</button>
                             <StatusSwitch center={center} onToggle={handleToggleActive} />
+                            <Link to={`/admin/centers/${center.center_id}/edit`} className="edit-btn">Editar</Link> {/* <-- Botón de edición */}
+                            {user?.es_apoyo_admin === true && (
+                                <button onClick={() => handleDeleteClick(center.center_id)} className="delete-btn">
+                                    Eliminar
+                                </button>
+                            )}
                         </div>
                     </li>
                 ))
             )}
         </ul>
+        {isModalOpen && (
+          <div className="modal-backdrop">
+              <div className="modal-content">
+                  <h2>Confirmar Eliminación</h2>
+                  <p>¿Estás seguro de que deseas eliminar el centro con ID: **{centerToDelete}**? Esta acción es irreversible y eliminará todos los datos relacionados.</p>
+                  <div className="modal-actions">
+                      <button onClick={handleConfirmDelete} className="confirm-btn">Sí, eliminar</button>
+                      <button onClick={handleCancelDelete} className="cancel-btn">Cancelar</button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

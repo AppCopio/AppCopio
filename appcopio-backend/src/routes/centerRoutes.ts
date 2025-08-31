@@ -107,7 +107,12 @@ const getAllCentersHandler: RequestHandler = async (req, res) => {
 const getCenterByIdHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await pool.query('SELECT * FROM Centers WHERE center_id = $1', [id]);
+        const result = await pool.query(
+            `SELECT c.*, d.*
+             FROM Centers c
+             LEFT JOIN CentersDescription d ON c.center_id = d.center_id
+             WHERE c.center_id = $1`, [id]
+        );
         if (result.rows.length === 0) {
             res.status(404).json({ message: 'Centro no encontrado.' });
         } else {
@@ -122,58 +127,171 @@ const getCenterByIdHandler: RequestHandler = async (req, res) => {
 const createCenterHandler: RequestHandler = async (req, res) => {
     const client = await pool.connect();
     try {
-        await client.query('BEGIN'); // Iniciar la transacción
+        await client.query('BEGIN');
 
         const {
-            center_id, name, address, type, capacity, latitude, longitude, should_be_active,
+            name, address, type, capacity, latitude, longitude, should_be_active,
             comunity_charge_id, municipal_manager_id,
-            // Campos del catastro que se irán a CentersDescription
+            // Extraemos los datos del catastro
             ...catastroData
         } = req.body;
 
-        if (!center_id || !name || typeof latitude !== 'number' || typeof longitude !== 'number') {
+        if (!name || typeof latitude !== 'number' || typeof longitude !== 'number') {
             await client.query('ROLLBACK');
-            res.status(400).json({ message: 'Campos principales requeridos: center_id, name, type, latitude, longitude.' });
+            res.status(400).json({ message: 'Campos principales requeridos: name, type, latitude, longitude.' });
             return;
         }
 
-        // 1. Insertar en la tabla Centers con el ID proporcionado
+        // 1. Insertar en Centers, dejando que el ID se genere automáticamente
         const insertCenterQuery = `
-            INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude, should_be_active, comunity_charge_id, municipal_manager_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            RETURNING *`;
-        
+            INSERT INTO Centers (name, address, type, capacity, is_active, latitude, longitude, should_be_active, comunity_charge_id, municipal_manager_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING center_id`;
+
         const centerValues = [
-            center_id, name, address || null, type, capacity || 0, false, latitude, longitude, should_be_active || false,
+            name, address || null, type, capacity || 0, false, latitude, longitude, should_be_active || false,
             comunity_charge_id || null, municipal_manager_id || null
         ];
-        
-        await client.query(insertCenterQuery, centerValues);
 
-        // 2. Insertar en la tabla CentersDescription solo si hay datos en catastroData
-        const catastroColumns = Object.keys(catastroData);
-        if (catastroColumns.length > 0) {
-            const catastroValues = Object.values(catastroData);
-            const catastroPlaceholders = catastroValues.map((_, i) => `$${i + 2}`).join(', ');
+        const result = await client.query(insertCenterQuery, centerValues);
+        const newCenterId = result.rows[0].center_id;
+
+        const mappedCatastroData: { [key: string]: any } = {
+            center_id: newCenterId,
+            nombre_organizacion: catastroData.organizationName || null,
+            nombre_dirigente: catastroData.directorName || null,
+            cargo_dirigente: catastroData.directorRole || null,
+            telefono_contacto: catastroData.contactPhones || null,
+            tipo_inmueble: catastroData.tipo_inmueble || null,
+            numero_habitaciones: catastroData.numero_habitaciones || null,
+            estado_conservacion: catastroData.estado_conservacion || null,
+            muro_hormigon: catastroData.muro_hormigon,
+            muro_albaneria: catastroData.muro_albaneria,
+            muro_tabique: catastroData.muro_tabique,
+            muro_adobe: catastroData.muro_adobe,
+            muro_mat_precario: catastroData.muro_mat_precario,
+            piso_parquet: catastroData.piso_parquet,
+            piso_ceramico: catastroData.piso_ceramico,
+            piso_alfombra: catastroData.piso_alfombra,
+            piso_baldosa: catastroData.piso_baldosa,
+            piso_radier: catastroData.piso_radier,
+            piso_enchapado: catastroData.piso_enchapado,
+            piso_tierra: catastroData.piso_tierra,
+            techo_tejas: catastroData.techo_tejas,
+            techo_losa: catastroData.techo_losa,
+            techo_planchas: catastroData.techo_planchas,
+            techo_fonolita: catastroData.techo_fonolita,
+            techo_mat_precario: catastroData.techo_mat_precario,
+            techo_sin_cubierta: catastroData.techo_sin_cubierta,
+            espacio_10_afectados: catastroData.espacio_10_afectados || null,
+            diversidad_funcional: catastroData.diversidad_funcional || null,
+            areas_comunes_accesibles: catastroData.areas_comunes_accesibles || null,
+            espacio_recreacion: catastroData.espacio_recreacion || null,
+            observaciones_espacios_comunes: catastroData.observaciones_espacios_comunes || null,
+            agua_potable: catastroData.agua_potable || null,
+            agua_estanques: catastroData.agua_estanques || null,
+            electricidad: catastroData.electricidad || null,
+            calefaccion: catastroData.calefaccion || null,
+            alcantarillado: catastroData.alcantarillado || null,
+            observaciones_servicios_basicos: catastroData.observaciones_servicios_basicos || null,
+            estado_banos: catastroData.estado_banos || null,
+            wc_proporcion_personas: catastroData.wc_proporcion_personas || null,
+            banos_genero: catastroData.banos_genero || null,
+            banos_grupos_prioritarios: catastroData.banos_grupos_prioritarios || null,
+            cierre_banos_emergencia: catastroData.cierre_banos_emergencia || null,
+            lavamanos_proporcion_personas: catastroData.lavamanos_proporcion_personas || null,
+            dispensadores_jabon: catastroData.dispensadores_jabon,
+            dispensadores_alcohol_gel: catastroData.dispensadores_alcohol_gel,
+            papeleros_banos: catastroData.papeleros_banos,
+            papeleros_cocina: catastroData.papeleros_cocina,
+            duchas_proporcion_personas: catastroData.duchas_proporcion_personas || null,
+            lavadoras_proporcion_personas: catastroData.lavadoras_proporcion_personas || null,
+            observaciones_banos_y_servicios_higienicos: catastroData.observaciones_banos_y_servicios_higienicos || null,
+            posee_habitaciones: catastroData.posee_habitaciones || null,
+            separacion_familias: catastroData.separacion_familias || null,
+            sala_lactancia: catastroData.sala_lactancia || null,
+            observaciones_distribucion_habitaciones: catastroData.observaciones_distribucion_habitaciones || null,
+            cuenta_con_mesas_sillas: catastroData.cuenta_con_mesas_sillas || null,
+            cocina_comedor_adecuados: catastroData.cocina_comedor_adecuados || null,
+            cuenta_equipamiento_basico_cocina: catastroData.cuenta_equipamiento_basico_cocina || null,
+            cuenta_con_refrigerador: catastroData.cuenta_con_refrigerador || null,
+            cuenta_set_extraccion: catastroData.cuenta_set_extraccion || null,
+            observaciones_herramientas_mobiliario: catastroData.observaciones_herramientas_mobiliario || null,
+            sistema_evacuacion_definido: catastroData.sistema_evacuacion_definido || null,
+            cuenta_con_senaleticas_adecuadas: catastroData.cuenta_con_senaleticas_adecuadas || null,
+            observaciones_condiciones_seguridad_proteccion_generales: catastroData.observaciones_condiciones_seguridad_proteccion_generales || null,
+            existe_lugar_animales_dentro: catastroData.existe_lugar_animales_dentro || null,
+            existe_lugar_animales_fuera: catastroData.existe_lugar_animales_fuera || null,
+            existe_jaula_mascota: catastroData.existe_jaula_mascota,
+            existe_recipientes_mascota: catastroData.existe_recipientes_mascota,
+            existe_correa_bozal: catastroData.existe_correa_bozal,
+            reconoce_personas_dentro_de_su_comunidad: catastroData.reconoce_personas_dentro_de_su_comunidad,
+            no_reconoce_personas_dentro_de_su_comunidad: catastroData.no_reconoce_personas_dentro_de_su_comunidad,
+            observaciones_dimension_animal: catastroData.observaciones_dimension_animal || null,
+            existen_cascos: catastroData.existen_cascos,
+            existen_gorros_cabello: catastroData.existen_gorros_cabello,
+            existen_gafas: catastroData.existen_gafas,
+            existen_caretas: catastroData.existen_caretas,
+            existen_mascarillas: catastroData.existen_mascarillas,
+            existen_respiradores: catastroData.existen_respiradores,
+            existen_mascaras_gas: catastroData.existen_mascaras_gas,
+            existen_guantes_latex: catastroData.existen_guantes_latex,
+            existen_mangas_protectoras: catastroData.existen_mangas_protectoras,
+            existen_calzados_seguridad: catastroData.existen_calzados_seguridad,
+            existen_botas_impermeables: catastroData.existen_botas_impermeables,
+            existen_chalecos_reflectantes: catastroData.existen_chalecos_reflectantes,
+            existen_overoles_trajes: catastroData.existen_overoles_trajes,
+            existen_camillas_catre: catastroData.existen_camillas_catre,
+            existen_alarmas_incendios: catastroData.existen_alarmas_incendios,
+            existen_hidrantes_mangueras: catastroData.existen_hidrantes_mangueras,
+            existen_senaleticas: catastroData.existen_senaleticas,
+            existen_luces_emergencias: catastroData.existen_luces_emergencias,
+            existen_extintores: catastroData.existen_extintores,
+            existen_generadores: catastroData.existen_generadores,
+            existen_baterias_externas: catastroData.existen_baterias_externas,
+            existen_altavoces: catastroData.existen_altavoces,
+            existen_botones_alarmas: catastroData.existen_botones_alarmas,
+            existen_sistemas_monitoreo: catastroData.existen_sistemas_monitoreo,
+            existen_radio_recargable: catastroData.existen_radio_recargable,
+            existen_barandillas_escaleras: catastroData.existen_barandillas_escaleras,
+            existen_puertas_emergencia_rapida: catastroData.existen_puertas_emergencia_rapida,
+            existen_rampas: catastroData.existen_rampas,
+            existen_ascensores_emergencia: catastroData.existen_ascensores_emergencia,
+            existen_botiquines: catastroData.existen_botiquines,
+            existen_camilla_emergencia: catastroData.existen_camilla_emergencia,
+            existen_sillas_ruedas: catastroData.existen_sillas_ruedas,
+            existen_muletas: catastroData.existen_muletas,
+            existen_desfibriladores: catastroData.existen_desfibriladores,
+            existen_senales_advertencia: catastroData.existen_senales_advertencia,
+            existen_senales_informativas: catastroData.existen_senales_informativas,
+            existen_senales_exclusivas: catastroData.existen_senales_exclusivas,
+            observaciones_seguridad_comunitaria: catastroData.observaciones_seguridad_comunitaria || null,
+            importa_elementos_seguridad: catastroData.importa_elementos_seguridad,
+            observaciones_importa_elementos_seguridad: catastroData.observaciones_importa_elementos_seguridad || null,
+            importa_conocimientos_capacitaciones: catastroData.importa_conocimientos_capacitaciones,
+            observaciones_importa_conocimientos_capacitaciones: catastroData.observaciones_importa_conocimientos_capacitaciones || null,
+        };
+
+        // 2. Insertar en CentersDescription, usando el nuevo ID
+        const catastroColumns = Object.keys(mappedCatastroData);
+        if (catastroColumns.length > 1) { // El campo center_id siempre estará presente
+            const catastroValues = Object.values(mappedCatastroData);
+            const catastroPlaceholders = catastroValues.map((_, i) => `$${i + 1}`).join(', ');
 
             const insertCatastroQuery = `
                 INSERT INTO CentersDescription (
-                    center_id,
                     ${catastroColumns.join(', ')}
                 ) VALUES (
-                    $1,
                     ${catastroPlaceholders}
                 ) RETURNING *`;
             
-            const allCatastroValues = [center_id, ...catastroValues];
-
-            await client.query(insertCatastroQuery, allCatastroValues);
+            await client.query(insertCatastroQuery, catastroValues);
         }
 
-        await client.query('COMMIT'); // Confirmar la transacción
-        res.status(201).json({ message: 'Centro y descripción de catastro creados exitosamente.', center_id: center_id });
+        await client.query('COMMIT');
+        res.status(201).json({ message: 'Centro y descripción de catastro creados exitosamente.', center_id: newCenterId });
     } catch (error: any) {
-        await client.query('ROLLBACK'); // Revertir la transacción si algo falla
+        await client.query('ROLLBACK');
         console.error('Error al crear el centro:', error);
         res.status(500).json({ message: 'Error interno del servidor.' });
     } finally {
@@ -183,42 +301,123 @@ const createCenterHandler: RequestHandler = async (req, res) => {
 // PUT /api/centers/:id - Actualizar un centro existente
 const updateCenterHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
-    const { name, address, type, capacity, is_active, latitude, longitude } = req.body;
-    if (!name || !type) {
-        res.status(400).json({ message: 'name y type son campos requeridos.' });
-        return;
-    }
+    const client = await pool.connect();
+    
+    // Lista de columnas válidas para la tabla CentersDescription
+    const validDescriptionColumns = [
+        "nombre_organizacion", "nombre_dirigente", "cargo_dirigente", "telefono_contacto",
+        "tipo_inmueble", "numero_habitaciones", "estado_conservacion", "muro_hormigon",
+        "muro_albaneria", "muro_tabique", "muro_adobe", "muro_mat_precario", "piso_parquet",
+        "piso_ceramico", "piso_alfombra", "piso_baldosa", "piso_radier", "piso_enchapado",
+        "piso_tierra", "techo_tejas", "techo_losa", "techo_planchas", "techo_fonolita",
+        "techo_mat_precario", "techo_sin_cubierta", "espacio_10_afectados", "diversidad_funcional",
+        "areas_comunes_accesibles", "espacio_recreacion", "observaciones_espacios_comunes",
+        "agua_potable", "agua_estanques", "electricidad", "calefaccion", "alcantarillado",
+        "observaciones_servicios_basicos", "estado_banos", "wc_proporcion_personas",
+        "banos_genero", "banos_grupos_prioritarios", "cierre_banos_emergencia",
+        "lavamanos_proporcion_personas", "dispensadores_jabon", "dispensadores_alcohol_gel",
+        "papeleros_banos", "papeleros_cocina", "duchas_proporcion_personas",
+        "lavadoras_proporcion_personas", "observaciones_banos_y_servicios_higienicos",
+        "posee_habitaciones", "separacion_familias", "sala_lactancia",
+        "observaciones_distribucion_habitaciones", "cuenta_con_mesas_sillas",
+        "cocina_comedor_adecuados", "cuenta_equipamiento_basico_cocina", "cuenta_con_refrigerador",
+        "cuenta_set_extraccion", "observaciones_herramientas_mobiliario",
+        "sistema_evacuacion_definido", "cuenta_con_senaleticas_adecuadas",
+        "observaciones_condiciones_seguridad_proteccion_generales", "existe_lugar_animales_dentro",
+        "existe_lugar_animales_fuera", "existe_jaula_mascota", "existe_recipientes_mascota",
+        "existe_correa_bozal", "reconoce_personas_dentro_de_su_comunidad",
+        "no_reconoce_personas_dentro_de_su_comunidad", "observaciones_dimension_animal",
+        "existen_cascos", "existen_gorros_cabello", "existen_gafas", "existen_caretas",
+        "existen_mascarillas", "existen_respiradores", "existen_mascaras_gas",
+        "existen_guantes_latex", "existen_mangas_protectoras", "existen_calzados_seguridad",
+        "existen_botas_impermeables", "existen_chalecos_reflectantes", "existen_overoles_trajes",
+        "existen_camillas_catre", "existen_alarmas_incendios", "existen_hidrantes_mangueras",
+        "existen_senaleticas", "existen_luces_emergencias", "existen_extintores", "existen_generadores",
+        "existen_baterias_externas", "existen_altavoces", "existen_botones_alarmas",
+        "existen_sistemas_monitoreo", "existen_radio_recargable", "existen_barandillas_escaleras",
+        "existen_puertas_emergencia_rapida", "existen_rampas", "existen_ascensores_emergencia",
+        "existen_botiquines", "existen_camilla_emergencia", "existen_sillas_ruedas", "existen_muletas",
+        "existen_desfibriladores", "existen_senales_advertencia", "existen_senales_informativas",
+        "existen_senales_exclusivas", "observaciones_seguridad_comunitaria", "importa_elementos_seguridad",
+        "observaciones_importa_elementos_seguridad", "importa_conocimientos_capacitaciones",
+        "observaciones_importa_conocimientos_capacitaciones"
+    ];
+
     try {
-        const updatedCenter = await pool.query(
-            `UPDATE Centers
-             SET name = $1, address = $2, type = $3, capacity = $4, is_active = $5, latitude = $6, longitude = $7, updated_at = CURRENT_TIMESTAMP
-             WHERE center_id = $8 RETURNING *`,
-            [name, address, type, capacity, is_active, latitude, longitude, id]
-        );
-        if (updatedCenter.rows.length === 0) {
-            res.status(404).json({ message: 'Centro no encontrado para actualizar.' });
-        } else {
-            res.status(200).json(updatedCenter.rows[0]);
+        await client.query('BEGIN');
+        
+        const {
+            // Se separan explícitamente los campos de Centers del body, el resto va a catastroData
+            center_id, name, address, type, capacity, is_active, latitude, longitude, should_be_active,
+            comunity_charge_id, municipal_manager_id,
+            ...otherData
+        } = req.body;
+
+        const catastroData = Object.entries(otherData)
+            .filter(([key, _]) => validDescriptionColumns.includes(key))
+            .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
+
+        const catastroColumns = Object.keys(catastroData);
+        const catastroValues = Object.values(catastroData);
+        
+        // La actualización de Centers se maneja aquí si es necesario
+        // En este caso, no se modifica nada en Centers
+        
+        if (catastroColumns.length > 0) {
+            const updateParts = catastroColumns.map((col, i) => `${col} = $${i + 2}`).join(', ');
+            
+            const updateCatastroQuery = `
+                INSERT INTO CentersDescription (center_id, ${catastroColumns.join(', ')})
+                VALUES ($1, ${catastroValues.map((_, i) => `$${i + 2}`).join(', ')})
+                ON CONFLICT (center_id) DO UPDATE SET ${updateParts}, updated_at = CURRENT_TIMESTAMP
+                RETURNING *`;
+            
+            const allCatastroValues = [id, ...catastroValues];
+
+            await client.query(updateCatastroQuery, allCatastroValues);
         }
+
+        await client.query('COMMIT');
+        
+        const finalResult = await pool.query(
+            `SELECT c.*, d.*
+             FROM Centers c
+             LEFT JOIN CentersDescription d ON c.center_id = d.center_id
+             WHERE c.center_id = $1`, [id]
+        );
+        res.status(200).json(finalResult.rows[0]);
+
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error(`Error al actualizar el centro ${id}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
+    } finally {
+        client.release();
     }
 };
 
 // DELETE /api/centers/:id - Eliminar un centro
 const deleteCenterHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
+    const client = await pool.connect();
     try {
-        const deleteOp = await pool.query('DELETE FROM Centers WHERE center_id = $1', [id]);
+        await client.query('BEGIN'); // Iniciar la transacción
+        // La eliminación en cascada se encargará de las tablas dependientes.
+        const deleteOp = await client.query('DELETE FROM Centers WHERE center_id = $1', [id]);
+
         if (deleteOp.rowCount === 0) {
+            await client.query('ROLLBACK');
             res.status(404).json({ message: 'Centro no encontrado para eliminar.' });
-        } else {
-            res.status(204).send();
+            return;
         }
+        await client.query('COMMIT'); // Confirmar la transacción
+        res.status(204).send();
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error(`Error al eliminar el centro ${id}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
+    } finally {
+        client.release();
     }
 };
 

@@ -2,6 +2,10 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+import authRoutes from './routes/authRoutes';
+import { requireAuth } from './auth/middleware';
 
 
 import pool from './config/db'; 
@@ -29,8 +33,13 @@ const app = express(); // Esta es tu instancia de 'Application'
 const port = process.env.PORT || 4000;
 
 // Middlewares
-app.use(cors());
 app.use(express.json()); 
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cookieParser());
+app.set('trust proxy', 1);
+
+
+app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRoutes);
 
 // Ruta de prueba simple
 app.get('/api', (req: Request, res: Response) => {
@@ -40,6 +49,7 @@ app.get('/api', (req: Request, res: Response) => {
 // Rutas de la API para Centros
 // app.use() espera middleware o un router. 'centerRoutes' DEBE ser un router.
 app.use('/api/centers', centerRoutes); 
+//app.get('/api/centers/secure', requireAuth, (req, res) => res.json({ ok: true }));
 app.use('/api/products', productRoutes);
 app.use('/api/updates', updateRoutes);
 app.use('/api/users', userRouter);

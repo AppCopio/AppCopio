@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS FamilyGroupMembers CASCADE;
 DROP TABLE IF EXISTS FamilyGroups CASCADE;
 DROP TABLE IF EXISTS Persons CASCADE;
 DROP TABLE IF EXISTS CenterInventoryItems CASCADE;
-DROP TABLE IF EXISTS CenterChangesHistory CASCADE;
+--DROP TABLE IF EXISTS CenterChangesHistory CASCADE;
 DROP TABLE IF EXISTS CentersActivations CASCADE;
 DROP TABLE IF EXISTS UpdateRequests CASCADE;
 DROP TABLE IF EXISTS CenterAssignments CASCADE;
@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS Categories CASCADE;
 DROP TABLE IF EXISTS Centers CASCADE;
 DROP TABLE IF EXISTS Users CASCADE;
 DROP TABLE IF EXISTS Roles CASCADE;
-
+DROP SEQUENCE IF EXISTS centers_seq CASCADE;
 
 -- ==========================================================
 -- PASO 2: CREACIÓN DE TABLAS EN ORDEN LÓGICO DE DEPENDENCIAS
@@ -51,11 +51,30 @@ CREATE TABLE Users (
     is_active BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+-- 002_auth_refreshtokens.sql
+CREATE TABLE IF NOT EXISTS RefreshTokens (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,
+  user_agent TEXT,
+  ip TEXT,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_refreshtokens_userid ON RefreshTokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refreshtokens_tokenhash ON RefreshTokens(token_hash);
+
+
+CREATE SEQUENCE centers_seq START 1;
+
 CREATE TABLE Centers (
-    center_id VARCHAR(10) PRIMARY KEY,
+    center_id VARCHAR(10) PRIMARY KEY DEFAULT ('C' || LPAD(nextval('centers_seq')::text, 3, '0')),
     name TEXT NOT NULL,
     address TEXT,
     type TEXT NOT NULL, 
+    folio TEXT,
     latitude DECIMAL(9, 6),
     longitude DECIMAL(9, 6),
     capacity INT DEFAULT 0,
@@ -180,17 +199,38 @@ CREATE TABLE FamilyGroupMembers (
 );
 
 CREATE TABLE CentersDescription (
-    center_id VARCHAR(10) PRIMARY KEY,
+    center_id VARCHAR(10) PRIMARY KEY REFERENCES Centers(center_id) ON DELETE CASCADE,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    nombre_organizacion TEXT,
+    nombre_dirigente TEXT,
+    cargo_dirigente TEXT,
+    telefono_contacto VARCHAR(12),
 
     -- Sección: Acceso y Espacios Comunes
     tipo_inmueble TEXT,
     numero_habitaciones INT,
     estado_conservacion INT,
-    material_muros INT,
-    material_pisos INT,
-    material_techo INT,
-    observaciones_acceso_y_espacios_comunes TEXT,
+    --Material muros
+    muro_hormigon BOOLEAN,
+    muro_albaneria BOOLEAN,
+    muro_tabique BOOLEAN,
+    muro_adobe BOOLEAN,
+    muro_mat_precario BOOLEAN,
+    --material pisos
+    piso_parquet BOOLEAN,
+    piso_ceramico BOOLEAN,
+    piso_alfombra BOOLEAN,
+    piso_baldosa BOOLEAN,
+    piso_radier BOOLEAN,
+    piso_enchapado BOOLEAN,
+    piso_tierra BOOLEAN,
+    --Material techo
+    techo_tejas BOOLEAN,
+    techo_losa BOOLEAN,
+    techo_planchas BOOLEAN,
+    techo_fonolita BOOLEAN,
+    techo_mat_precario BOOLEAN,
+    techo_sin_cubierta BOOLEAN,
 
     -- Sección: Espacios Comunes
     espacio_10_afectados INT,
@@ -283,6 +323,14 @@ CREATE TABLE CentersDescription (
     existen_puertas_emergencia_rapida BOOLEAN,
     existen_rampas BOOLEAN,
     existen_ascensores_emergencia BOOLEAN,
+    existen_botiquines BOOLEAN,
+    existen_camilla_emergencia BOOLEAN,
+    existen_sillas_ruedas BOOLEAN,
+    existen_muletas BOOLEAN,
+    existen_desfibriladores BOOLEAN,
+    existen_senales_advertencia BOOLEAN,
+    existen_senales_informativas BOOLEAN,
+    existen_senales_exclusivas BOOLEAN,
     observaciones_seguridad_comunitaria TEXT,
     
     -- Sección: Necesidades Adicionales
@@ -314,11 +362,225 @@ VALUES
 ('carla.rojas', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'carla.rojas@comunidad.cl', 3, 'Carla Rojas', '33.333.333-3', TRUE, FALSE);
 
 -- Centros de prueba
-INSERT INTO Centers (center_id, name, address, type, capacity, is_active, latitude, longitude, municipal_manager_id) VALUES
-('C001', 'Gimnasio Municipal de Valparaíso', 'Av. Argentina 123', 'albergue', 150, true, -33.0458, -71.6197, 1),
-('C002', 'Liceo Bicentenario', 'Independencia 456', 'albergue comunitario', 80, true, -33.0465, -71.6212, 2),
-('C003', 'Sede Vecinal Cerro Alegre', 'Lautaro Rosas 789', 'albergue comunitario', 50, false, -33.0401, -71.6285, 2),
-('C004', 'Escuela República de Uruguay', 'Av. Uruguay 321', 'albergue', 120, false, -33.0475, -71.6143, 1);
+INSERT INTO Centers (name, address, type, capacity, is_active, latitude, longitude, municipal_manager_id) VALUES
+( 'Gimnasio Municipal de Valparaíso', 'Av. Argentina 123', 'albergue', 150, true, -33.0458, -71.6197, 1),
+('Liceo Bicentenario', 'Independencia 456', 'albergue comunitario', 80, true, -33.0465, -71.6212, 2),
+('Sede Vecinal Cerro Alegre', 'Lautaro Rosas 789', 'albergue comunitario', 50, false, -33.0401, -71.6285, 2),
+( 'Escuela República de Uruguay', 'Av. Uruguay 321', 'albergue', 120, false, -33.0475, -71.6143, 1);
+
+-- Centers Descriptions
+INSERT INTO CentersDescription (
+    center_id,
+    nombre_organizacion,
+    nombre_dirigente,
+    cargo_dirigente,
+    telefono_contacto,
+    tipo_inmueble,
+    numero_habitaciones,
+    estado_conservacion,
+    muro_hormigon,
+    piso_radier,
+    techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable,
+    electricidad,
+    alcantarillado,
+    estado_banos,
+    wc_proporcion_personas,
+    duchas_proporcion_personas,
+    observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones,
+    separacion_familias,
+    observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas,
+    cocina_comedor_adecuados,
+    cuenta_con_refrigerador,
+    sistema_evacuacion_definido,
+    observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro,
+    existe_lugar_animales_fuera,
+    observaciones_dimension_animal,
+    existen_extintores,
+    existen_generadores,
+    existen_luces_emergencias
+) VALUES (
+    'C001',
+    'Municipalidad de Valparaíso',
+    'Juan Herrera',
+    'Encargado de Operaciones',
+    '987654321',
+    'Edificio público',
+    10,
+    5, -- Excelente
+    TRUE,
+    TRUE,
+    TRUE,
+    'Amplios espacios para albergue, buena iluminación y ventilación.',
+    5, -- Excelente
+    5, -- Excelente
+    5, -- Excelente
+    5, -- Excelente
+    4, -- Buena proporción
+    4, -- Buena proporción
+    'Baños en buen estado, limpios y con acceso para personas con movilidad reducida.',
+    3, -- Con habitaciones
+    3, -- Separa a las familias
+    'Las habitaciones están separadas por mamparas para dar privacidad a las familias.',
+    5, -- Excelente
+    4, -- Adecuado
+    5, -- Sí, hay varios
+    5, -- Sí, definido
+    'El plan de evacuación está claramente señalizado y se realizan simulacros regularmente.',
+    1, -- Sí, dentro
+    4, -- Sí, fuera con espacio separado
+    'Se habilitó un área exterior para mascotas con jaulas y recipientes de agua.',
+    TRUE,
+    TRUE,
+    TRUE
+);
+
+-- Datos de descripción para el Liceo Bicentenario (C002)
+INSERT INTO CentersDescription (
+    center_id,
+    nombre_organizacion,
+    telefono_contacto,
+    tipo_inmueble,
+    numero_habitaciones,
+    estado_conservacion,
+    muro_albaneria,
+    piso_baldosa,
+    techo_losa,
+    espacio_10_afectados,
+    diversidad_funcional,
+    observaciones_servicios_basicos,
+    agua_potable,
+    electricidad,
+    alcantarillado,
+    observaciones_herramientas_mobiliario,
+    cuenta_equipamiento_basico_cocina,
+    observaciones_condiciones_seguridad_proteccion_generales,
+    sistema_evacuacion_definido,
+    existen_luces_emergencias
+) VALUES (
+    'C002',
+    'Liceo Bicentenario Valparaíso',
+    '912345678',
+    'Edificio público',
+    20,
+    4, -- Bueno
+    TRUE,
+    TRUE,
+    TRUE,
+    4, -- Sí, mucho
+    4, -- Con acceso universal
+    'Cuenta con todos los servicios básicos en buen estado.',
+    4, -- Bueno
+    4, -- Bueno
+    4, -- Bueno
+    'El mobiliario es limitado, se recomienda traer mesas y sillas adicionales.',
+    3, -- Sí, equipamiento básico
+    'Plan de emergencia en desarrollo, se necesitan más señaléticas.',
+    3, -- En desarrollo
+    TRUE
+);
+
+-- Datos de descripción para la Sede Vecinal (C003)
+INSERT INTO CentersDescription (
+    center_id,
+    nombre_organizacion,
+    nombre_dirigente,
+    tipo_inmueble,
+    estado_conservacion,
+    muro_tabique,
+    piso_tierra,
+    techo_planchas,
+    observaciones_espacios_comunes,
+    agua_estanques,
+    electricidad,
+    observaciones_servicios_basicos,
+    estado_banos,
+    observaciones_banos_y_servicios_higienicos,
+    cocina_comedor_adecuados,
+    cuenta_con_refrigerador,
+    observaciones_herramientas_mobiliario,
+    sistema_evacuacion_definido,
+    observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_fuera,
+    observaciones_dimension_animal
+) VALUES (
+    'C003',
+    'Junta de Vecinos Cerro Alegre',
+    'Ana Beltrán',
+    'Sede social',
+    2, -- Regular
+    TRUE,
+    TRUE,
+    TRUE,
+    'Espacio pequeño, ideal para grupos familiares reducidos. Sin áreas recreativas.',
+    3, -- Se llena de la red
+    3, -- Con cortes
+    'El suministro de agua no es constante, depende del llenado de estanques.',
+    2, -- Deteriorado
+    'Los baños están en malas condiciones y no hay duchas disponibles.',
+    2, -- Poco adecuado
+    1, -- No
+    'Solo cuenta con un par de mesas y sillas. La cocina no tiene equipamiento.',
+    1, -- No, no definido
+    'No hay señaléticas ni plan de evacuación.',
+    3, -- Sí, fuera con amarras
+    'No hay un área cercada para los animales.'
+);
+
+-- Datos de descripción para la Escuela República de Uruguay (C004)
+INSERT INTO CentersDescription (
+    center_id,
+    nombre_organizacion,
+    telefono_contacto,
+    tipo_inmueble,
+    numero_habitaciones,
+    estado_conservacion,
+    muro_albaneria,
+    piso_ceramico,
+    techo_planchas,
+    espacio_recreacion,
+    observaciones_servicios_basicos,
+    agua_potable,
+    electricidad,
+    alcantarillado,
+    estado_banos,
+    observaciones_banos_y_servicios_higienicos,
+    cuenta_con_mesas_sillas,
+    cocina_comedor_adecuados,
+    sistema_evacuacion_definido,
+    observaciones_condiciones_seguridad_proteccion_generales,
+    existen_extintores,
+    existen_rampas,
+    existen_luces_emergencias
+) VALUES (
+    'C004',
+    'Escuela República de Uruguay',
+    '998765432',
+    'Escuela',
+    15,
+    4, -- Bueno
+    TRUE,
+    TRUE,
+    TRUE,
+    4, -- Sí, con juegos
+    'Todos los servicios básicos en buen estado y funcionamiento.',
+    4, -- Bueno
+    4, -- Bueno
+    4, -- Bueno
+    4, -- Bueno
+    'Baños limpios y funcionales, adaptados para uso masivo.',
+    5, -- Excelente
+    4, -- Adecuado
+    5, -- Sí, definido
+    'Plan de evacuación establecido, salidas de emergencia señalizadas y extintores en cada pasillo.',
+    TRUE,
+    TRUE,
+    TRUE
+);
 
 -- Categorías de productos
 INSERT INTO Categories (name) VALUES 

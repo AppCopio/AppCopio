@@ -24,7 +24,7 @@ function normalizeRole(input: string | null | undefined): AssignmentRole {
     s.includes('contacto') && (s.includes('ciudadan') || s.includes('comunidad'))
     || s.includes('comunity') || s.includes('community')
     || s === 'contacto'
-  ) return 'contacto comunidad';
+  ) return 'contacto ciudadano';
 
   // Si no podemos mapear, forzamos error explícito:
   throw new Error('VALIDATION_ROLE');
@@ -46,7 +46,7 @@ const addAssignmentHandler: RequestHandler = async (req, res) => {
   try {
     normRole = normalizeRole(role);
   } catch {
-    res.status(400).json({ error: "Rol inválido. Use 'Trabajador Municipal' o 'Contacto Comunidad'." });
+    res.status(400).json({ error: "Rol inválido. Use 'Trabajador Municipal' o 'Contacto Ciudadano'." });
     return;
   }
 
