@@ -67,7 +67,7 @@ function App() {
                 <Route path="details" element={<CenterDetailsPage />} />
                 <Route path="inventory" element={<InventoryPage />} />
                 <Route path="inventory/history" element={<InventoryHistoryPage />} />
-                <Route path="needs/new" element={<NeedsFormPage />} />
+                <Route path="/center/:centerId/needs/new" element={<NeedsFormPage />} />
                 <Route path="needs/status" element={<NeedsStatusPage />} />
                 <Route path="residents" element={<CenterResidentsPage />} />
 

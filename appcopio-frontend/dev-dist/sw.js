@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-6244ca5c'], (function (workbox) { 'use strict';
+define(['./workbox-56da8dea'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -82,7 +82,7 @@ define(['./workbox-6244ca5c'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.00kbm42vfl8"
+    "revision": "0.8q5cge11g6"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -97,6 +97,15 @@ define(['./workbox-6244ca5c'], (function (workbox) { 'use strict';
       maxAgeSeconds: 604800
     }), new workbox.CacheableResponsePlugin({
       statuses: [200]
+    })]
+  }), 'GET');
+  workbox.registerRoute(/^https:\/\/maps\.googleapis\.com\/.*/, new workbox.CacheFirst({
+    "cacheName": "google-maps-cache",
+    plugins: [new workbox.ExpirationPlugin({
+      maxEntries: 500,
+      maxAgeSeconds: 86400
+    }), new workbox.CacheableResponsePlugin({
+      statuses: [0, 200]
     })]
   }), 'GET');
 

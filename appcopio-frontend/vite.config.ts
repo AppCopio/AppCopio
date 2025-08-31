@@ -9,22 +9,18 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      
-      // Ya no usamos 'injectManifest'. Vite ahora generará el SW por nosotros.
-      
       devOptions: {
         enabled: true, // Mantenemos el SW activo en desarrollo
       },
-
-      // --- INICIO DE LA NUEVA CONFIGURACIÓN ---
       workbox: {
-        // 1. Esto le ordena a Workbox encontrar TODOS los archivos importantes
-        //    y añadirlos a la lista de precaché. Esto arregla el manifiesto vacío.
+        // Esto le ordena a Workbox encontrar TODOS los archivos importantes
+        // y añadirlos a la lista de precaché.
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
 
-        // 2. Esto recrea nuestra regla para cachear las respuestas de la API.
+        // Definimos las reglas para el caché de peticiones en tiempo real.
         runtimeCaching: [
           {
+            // Regla para nuestra propia API
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'StaleWhileRevalidate',
             options: {
@@ -38,12 +34,28 @@ export default defineConfig({
               },
             },
           },
+          // --- INICIO DE LA NUEVA REGLA PARA EL MAPA ---
+          {
+            // Esta regla se aplica a cualquier petición a los dominios de Google Maps.
+            urlPattern: /^https:\/\/maps\.googleapis\.com\/.*/,
+            // Usamos 'CacheFirst': si el recurso está en el caché, lo sirve de inmediato.
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-maps-cache',
+              // Limitamos el número de imágenes de mapa para no llenar el almacenamiento.
+              expiration: {
+                maxEntries: 500,
+                maxAgeSeconds: 60 * 60 * 24, // 1 Día
+              },
+              cacheableResponse: {
+                statuses: [0, 200], // Cachea respuestas correctas y opacas
+              },
+            },
+          },
+          // --- FIN DE LA NUEVA REGLA PARA EL MAPA ---
         ],
       },
-      // --- FIN DE LA NUEVA CONFIGURACIÓN ---
-
       manifest: {
-        // ... tu manifest.json aquí ...
         name: 'AppCopio',
         short_name: 'AppCopio',
         description: 'Gestión de centros de acopio y albergues.',
