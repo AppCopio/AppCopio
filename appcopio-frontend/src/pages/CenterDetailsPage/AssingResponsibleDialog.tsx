@@ -88,11 +88,11 @@ export default function AssignResponsibleDialog({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Asignar {role ?? ""}</DialogTitle>
+      <DialogTitle className="bodyStrong">Asignar {role ?? ""}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            Selecciona el usuario que quedará vigente para este rol. (La asignación anterior se cerrará automáticamente).
+          <Typography variant="bodySmall" color="text.secondary">
+            Selecciona el usuario que quedará vigente para este rol (la asignación anterior se cerrará automáticamente).
           </Typography>
           <Autocomplete
             value={user}

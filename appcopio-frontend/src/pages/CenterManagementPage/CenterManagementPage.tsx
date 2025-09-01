@@ -234,7 +234,7 @@ const CenterManagementPage: React.FC = () => {
 
   return (
     <div className="center-management-container">
-        <h1>Gestión de Centros y Albergues</h1>
+        <div className="ds-titlePage">Gestión de Centros y Albergues</div>
         <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
         {user?.es_apoyo_admin === true && (
                 <Link to="/admin/centers/new" className="add-center-btn">

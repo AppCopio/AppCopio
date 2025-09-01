@@ -49,22 +49,22 @@ function ResponsibleCard({
           <Box sx={{ minWidth: 0 }}>
             {user ? (
               <>
-                <Typography variant="body1" noWrap>
+                <Typography variant="bodyBase" noWrap>
                   {(user.nombre || user.username) ?? "—"}
                 </Typography>
                 {(user.celular || user.phone) && (
-                  <Typography variant="body2" color="text.secondary" noWrap>
+                  <Typography variant="bodyEmphasis" color="text.secondary" noWrap>
                     📞 {user.celular || user.phone}
                   </Typography>
                 )}
                 {user.email && (
-                  <Typography variant="body2" color="text.secondary" noWrap>
+                  <Typography variant="bodyEmphasis" color="text.secondary" noWrap>
                     ✉️ {user.email}
                   </Typography>
                 )}
               </>
             ) : (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="bodyEmphasis" color="text.secondary">
                 No asignado
               </Typography>
             )}
@@ -128,7 +128,7 @@ export default function ResponsibleSection({
         {/* Columna 1: Trabajador municipal */}
         <Box sx={{ flex: 1 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            <Typography variant="bodyStrong">
               Trabajador municipal a cargo
             </Typography>
             <Button
@@ -151,7 +151,7 @@ export default function ResponsibleSection({
         {/* Columna 2: Contacto comunidad */}
         <Box sx={{ flex: 1 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            <Typography variant="bodyStrong">
               Contacto comunidad
             </Typography>
             <Button

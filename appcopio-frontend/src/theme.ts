@@ -49,7 +49,6 @@ declare module "@mui/material/Typography" {
     bodyCode: true;
   }
 }
-
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
     brand: true; softGray: true; outlineGray: true; textBare: true;
@@ -58,11 +57,10 @@ declare module "@mui/material/Button" {
 
 const toRem = (px: number) => `${px / 16}rem`;
 
-// Tema base
+// Tema global
 export const theme = createTheme({
   // Craeción de tipografías personalizadas
-typography: {
-    // Base para el cuerpo
+  typography: {
     fontFamily:
       '"Inter Variable","Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif',
 
@@ -70,14 +68,14 @@ typography: {
     titleHero: {
       fontFamily: '"Montserrat Variable","Montserrat",sans-serif',
       fontWeight: 700,
-      fontSize: toRem(55),
+      fontSize: toRem(48),
       lineHeight: 1.2,
       letterSpacing: "-0.01em",
     },
     titlePage: {
       fontFamily: '"Montserrat Variable","Montserrat",sans-serif',
       fontWeight: 700,
-      fontSize: toRem(48),
+      fontSize: toRem(40),
       lineHeight: 1.2,
       letterSpacing: "-0.01em",
     },
@@ -139,23 +137,61 @@ typography: {
       lineHeight: 1.0,
       fontFamily:
         'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-      // opcional: padding de fondo para bloques inline
     },
 
     // Mantener también las variantes MUI clásicas (borrar después de la estandarización)
-    h1: { fontFamily: '"Montserrat Variable","Montserrat",sans-serif', fontWeight: 700 },
+    /* h1: { fontFamily: '"Montserrat Variable","Montserrat",sans-serif', fontWeight: 700 },
     h2: { fontFamily: '"Montserrat Variable","Montserrat",sans-serif', fontWeight: 700 },
     button: {
       fontFamily: '"Montserrat Variable","Montserrat",sans-serif',
       fontWeight: 600,
       fontSize: "1rem",      // 16px
       textTransform: "none",
-    },
+    }, */
   },
 
   
-  // Estilos personalizados base para componentes MUI 
+  // ======== Estilos personalizados base para componentes MUI ========
   components: {
+
+    MuiCssBaseline: {
+      styleOverrides: (theme) => ({
+        /* Utilidad opcional para quitar márgenes cuando uses <div>/<span> */
+        ".ds-reset": { margin: 0 },
+
+        /* Títulos (Montserrat) */
+        ".ds-titleHero":       { ...theme.typography.titleHero,       margin: 0 },
+        ".ds-titlePage":       { ...theme.typography.titlePage,       margin: 0 },
+        ".ds-subtitle":        { ...theme.typography.subtitle,        margin: 0 },
+        ".ds-heading":         { ...theme.typography.heading,         margin: 0 },
+        ".ds-subheading":      { ...theme.typography.subheading,      margin: 0 },
+
+        /* Cuerpo (Inter) */
+        ".ds-bodyBase":        { ...theme.typography.bodyBase,        margin: 0 },
+        ".ds-bodyStrong":      { ...theme.typography.bodyStrong,      margin: 0 },
+        ".ds-bodyEmphasis":    { ...theme.typography.bodyEmphasis,    margin: 0 },
+        ".ds-bodySmall":       { ...theme.typography.bodySmall,       margin: 0 },
+        ".ds-bodySmallStrong": { ...theme.typography.bodySmallStrong, margin: 0 },
+
+        /* Enlaces y código */
+        ".ds-bodyLink":        { ...theme.typography.bodyLink, color: "inherit" },
+        ".ds-bodyCode":        { ...theme.typography.bodyCode },
+
+        /* Azúcar para bloques de código */
+        "code.ds-bodyCode": {
+          padding: "0.125rem 0.25rem",
+          borderRadius: 4,
+          backgroundColor: "rgba(0,0,0,0.04)",
+        },
+        "pre.ds-bodyCode": {
+          padding: "8px 12px",
+          borderRadius: 6,
+          backgroundColor: "rgba(0,0,0,0.04)",
+          overflow: "auto",
+        },
+      }),
+    },
+
     MuiTypography:{
       defaultProps: {
         variantMapping: {
@@ -175,92 +211,94 @@ typography: {
       },
     },
 
-MuiButton: {
-  defaultProps: { variant: "brand", disableElevation: true},
-  styleOverrides: {
-    // ===== BASE (aplica a size=") =====
-    root: ({ theme }) => ({
-      ...theme.typography.button,
-      color: "var(--btn-text, #ffffff)",
-      backgroundColor: "var(--btn-bg, #262626)",
-      border: "1px solid var(--btn-border, #262626)",
+    MuiButton: {
+      defaultProps: { variant: "brand", disableElevation: true},
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // Estilo default
+          ...theme.typography.button,
+          color: "var(--btn-text, #ffffff)",
+          backgroundColor: "var(--btn-bg, #262626)",
+          border: "0.5px solid var(--btn-border, transparent)",
+          
 
-      borderRadius: 10,
-      boxShadow: "none",
-      gap: theme.spacing(1),
-      transition: "background-color .15s, border-color .15s, box-shadow .15s",
-      "& .MuiButton-startIcon, & .MuiButton-endIcon": {
-        margin: 0,
-        "& > *:nth-of-type(1)": { fontSize: 18 },
-        color: "inherit",
+          borderRadius: 10,
+          boxShadow: "none",
+          gap: theme.spacing(1),
+          transition: "background-color .15s, border-color .15s, box-shadow .15s",
+          textTransform: "none",
+          
+          "& .MuiButton-startIcon, & .MuiButton-endIcon": {
+            margin: 0,
+            "& > *:nth-of-type(1)": { fontSize: 18 },
+            color: "inherit",
+          },
+          "&:hover": {
+            backgroundColor: "var(--btn-bg-hover, #1f1f1f)",
+            borderColor: "var(--btn-border-hover, transparent)",
+            color: "var(--btn-text-hover, var(--btn-text, #ffffff))",
+          },
+          "&.Mui-focusVisible": { boxShadow: "0 0 0 3px rgba(0,0,0,0.10)" },
+          "&:active": { backgroundColor: "#171717" },
+          "&.Mui-disabled": {
+            color: "#9CA3AF", borderColor: "#E5E7EB", backgroundColor: "#F3F4F6",
+          },
+        }),
+
+        // Sizes definidos
+        sizeSmall: {
+          fontSize: "0.875rem", // 14
+          lineHeight: 1.25,
+          paddingInline: 14,
+          paddingBlock: 6,
+          minHeight: 32,
+          height: 32,
+          borderRadius: 9,
+        },
+        sizeMedium: {
+          fontSize: "1rem",
+          lineHeight: 1.25,
+          paddingInline: 18,
+          paddingBlock: 8,
+          minHeight: 36,
+          height: 36,
+          borderRadius: 10,
+        },
+        sizeLarge: {
+          fontSize: "1.125rem", // 18
+          lineHeight: 1.25,
+          paddingInline: 22,
+          paddingBlock: 10,
+          minHeight: 40,
+          height: 40,
+          borderRadius: 12,
+        },
       },
-      "&:hover": {
-        backgroundColor: "var(--btn-hover, #1f1f1f)",
-        borderColor: "var(--btn-border, #262626)",
-      },
-      "&.Mui-focusVisible": { boxShadow: "0 0 0 3px rgba(0,0,0,0.10)" },
-      "&:active": { backgroundColor: "#171717" },
-      "&.Mui-disabled": {
-        color: "#9CA3AF", borderColor: "#E5E7EB", backgroundColor: "#F3F4F6",
-      },
-    }),
 
-    // ===== SIZES NATIVOS =====
-    // small -> 32px alto
-    sizeSmall: {
-      fontSize: "0.875rem", // 14
-      lineHeight: 1.25,
-      paddingInline: 14,
-      paddingBlock: 6,
-      minHeight: 32,
-      // si tu devtools sigue mostrando 36, fuerza altura:
-      height: 32,
-      borderRadius: 9,
+      // Variantes visuales
+      variants: [
+        { props: { variant: "brand" }, style: {
+          "--btn-bg": "#262626",  "--btn-bg-hover": "#666666ff",
+          "--btn-border": "#262626", "--btn-border-hover": "#262626",
+          "--btn-text": "#ffffff", "--btn-text-hover": "#ffffff",
+        }},
+        { props: { variant: "softGray" }, style: {
+          "--btn-bg": "#E5E7EB", "--btn-bg-hover": "#DADDE3",
+          "--btn-border": "#D1D5DB", "--btn-border-hover": "#CBD5E1",
+          "--btn-text": "#111111", "--btn-text-hover": "#111111",
+        }},
+        { props: { variant: "outlineGray" }, style: {
+          "--btn-bg": "transparent", "--btn-bg-hover": "#d4d4d4ff",
+          "--btn-border": "#D1D5DB", "--btn-border-hover": "#94A3B8", 
+          "--btn-text": "#111111", "--btn-text-hover": "#111111",
+        }},
+        { props: { variant: "textBare" }, style: {
+          "--btn-bg": "transparent", "--btn-bg-hover": "#d4d4d4ff",
+          "--btn-border": "transparent", "--btn-border-hover": "transparent",
+          "--btn-text": "#004ca3ff", "--btn-text-hover": "#001a38ff",
+        }},
+      ],
     },
-    // medium (por si quieres fijarlo explícitamente)
-    sizeMedium: {
-      fontSize: "1rem",
-      lineHeight: 1.25,
-      paddingInline: 18,
-      paddingBlock: 8,
-      minHeight: 36,
-      height: 36,
-      borderRadius: 10,
-    },
-    // large -> 40px alto
-    sizeLarge: {
-      fontSize: "1.125rem", // 18
-      lineHeight: 1.25,
-      paddingInline: 22,
-      paddingBlock: 10,
-      minHeight: 40,
-      height: 40,
-      borderRadius: 12,
-    },
-
-  },
-
-  // Variantes visuales
-  variants: [
-    { props: { variant: "brand" }, style: {
-      "--btn-bg": "#262626", "--btn-text": "#ffffff",
-      "--btn-border": "#262626", "--btn-hover": "#1f1f1f",
-    }},
-    { props: { variant: "softGray" }, style: {
-      "--btn-bg": "#E5E7EB", "--btn-text": "#111111",
-      "--btn-border": "#D1D5DB", "--btn-hover": "#DADDE3",
-    }},
-    { props: { variant: "outlineGray" }, style: {
-      "--btn-bg": "transparent", "--btn-text": "#111111",
-      "--btn-border": "#D1D5DB", "--btn-hover": "#F3F4F6",
-    }},
-    { props: { variant: "textBare" }, style: {
-      "--btn-bg": "transparent", "--btn-text": "#111111",
-      "--btn-border": "transparent", "--btn-hover": "#F3F4F6",
-    }},
-  ],
-},
-
   },
 });
 

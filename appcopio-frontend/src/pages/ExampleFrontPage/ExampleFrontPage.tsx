@@ -89,17 +89,6 @@ export default function ExampleFrontPage() {
                     <Grid item xs={12} md={3}>
                       <Stack spacing={0.5}>
                         <Typography variant="bodySmallStrong">{label}</Typography>
-                        <Typography variant="bodySmall" sx={{ color: "text.secondary" }}>
-                          {[
-                            spec.fontFamily ? `font: ${spec.fontFamily}` : null,
-                            spec.fontSize ? `size: ${spec.fontSize}` : null,
-                            spec.lineHeight ? `lh: ${spec.lineHeight}` : null,
-                            spec.fontWeight ? `w: ${spec.fontWeight}` : null,
-                            spec.letterSpacing ? `ls: ${spec.letterSpacing}` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </Typography>
                       </Stack>
                     </Grid>
                     <Grid item xs={12} md={9}>
@@ -125,6 +114,48 @@ export default function ExampleFrontPage() {
               );
             })}
           </Stack>
+        </Paper>
+
+        {/* HTML con clases globales (.ds-*) */}
+        <Paper variant="outlined" sx={{ p: 3 }}>
+          <Typography variant="subheading">Clases globales (.ds-*)</Typography>
+          <Divider sx={{ my: 2 }} />
+
+          <Grid container spacing={3}>
+            {/* Titulares (Montserrat) */}
+            <Grid item xs={12} md={6}>
+              <div className="ds-titleHero">Title Hero — .ds-titleHero</div>
+              <div className="ds-titlePage" style={{ marginTop: 8 }}>Title Page — .ds-titlePage</div>
+              <div className="ds-subtitle" style={{ marginTop: 8 }}>Subtitle — .ds-subtitle</div>
+              <div className="ds-heading" style={{ marginTop: 8 }}>Heading — .ds-heading</div>
+              <div className="ds-subheading" style={{ marginTop: 8 }}>Subheading — .ds-subheading</div>
+            </Grid>
+
+            {/* Cuerpo, enlaces y código (Inter) */}
+            <Grid item xs={12} md={6}>
+              <p className="ds-bodyBase">Body Base — .ds-bodyBase</p>
+              <p className="ds-bodyStrong" style={{ marginTop: 8 }}>Body Strong — .ds-bodyStrong</p>
+              <p className="ds-bodyEmphasis" style={{ marginTop: 8 }}>Body Emphasis — .ds-bodyEmphasis</p>
+              <p className="ds-bodySmall" style={{ marginTop: 8 }}>Body Small — .ds-bodySmall</p>
+              <p className="ds-bodySmallStrong" style={{ marginTop: 8 }}>Body Small Strong — .ds-bodySmallStrong</p>
+
+              <p className="ds-bodyBase" style={{ marginTop: 8 }}>
+                Enlace:{" "}
+                <a href="#" className="ds-bodyLink">.ds-bodyLink</a>
+              </p>
+
+              <code className="ds-bodyCode">GET /api/centers</code>
+              <pre className="ds-bodyCode" style={{ marginTop: 8 }}>{`curl -X POST https://api.example.com/centers \\
+          -H "Content-Type: application/json" \\
+          -d '{ "name": "Centro Las Condes", "is_active": true }'`}</pre>
+            </Grid>
+          </Grid>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="bodySmall" sx={{ color: "text.secondary" }}>
+              Estas clases vienen de <code>MuiCssBaseline.styleOverrides</code>. Puedes usarlas en cualquier etiqueta nativa.
+            </Typography>
+          </Box>
         </Paper>
 
         {/* Botones + otros componentes */}
@@ -163,44 +194,44 @@ export default function ExampleFrontPage() {
               </Card>
             </Grid>
 
-{/* C) Nuestras variantes */}
-<Grid item xs={12} md={8}>
-  <Card variant="outlined">
-    <CardContent>
-      <Typography variant="subheading">Diseño (custom variants)</Typography>
+            {/* C) Nuestras variantes */}
+            <Grid item xs={12} md={8}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="subheading">Diseño (custom variants)</Typography>
 
-      {/* 1) Looks básicos (tamaño normal) */}
-      <Typography variant="bodySmallStrong" sx={{ mt: 2 }}>Looks (tamaño normal)</Typography>
-      <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
-        <Button>brand (default)</Button>
-        <Button variant="softGray">softGray</Button>
-        <Button variant="outlineGray">outlineGray</Button>
-        <Button variant="textBare">textBare</Button>
-      </Stack>
+                  {/* 1) Looks básicos (tamaño normal) */}
+                  <Typography variant="bodySmallStrong" sx={{ mt: 2 }}>Looks (tamaño normal)</Typography>
+                  <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
+                    <Button>brand (default)</Button>
+                    <Button variant="softGray">softGray</Button>
+                    <Button variant="outlineGray">outlineGray</Button>
+                    <Button variant="textBare">textBare</Button>
+                  </Stack>
 
-      <Divider sx={{ my: 2 }} />
+                  <Divider sx={{ my: 2 }} />
 
-      {/* 2) brand con tamaños */}
-      <Typography variant="bodySmallStrong">brand con tamaños</Typography>
-      <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
-        <Button size="small">brand small</Button>
-        <Button>brand normal</Button>
-        <Button size="large">brand large</Button>
-      </Stack>
+                  {/* 2) brand con tamaños */}
+                  <Typography variant="bodySmallStrong">brand con tamaños</Typography>
+                  <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
+                    <Button size="small">brand small</Button>
+                    <Button>brand normal</Button>
+                    <Button size="large">brand large</Button>
+                  </Stack>
 
-      <Divider sx={{ my: 2 }} />
+                  <Divider sx={{ my: 2 }} />
 
-      {/* 3) textBare con tamaños */}
-      <Typography variant="bodySmallStrong">textBare con tamaños</Typography>
-      <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
-        <Button variant="textBare" size="tiny">textBare tiny</Button>
-        <Button variant="textBare" size="small">textBare small</Button>
-        <Button variant="textBare">textBare normal</Button>
-        <Button variant="textBare" size="large">textBare large</Button>
-      </Stack>
-    </CardContent>
-  </Card>
-</Grid>
+                  {/* 3) textBare con tamaños */}
+                  <Typography variant="bodySmallStrong">textBare con tamaños</Typography>
+                  <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
+                    <Button variant="textBare" size="tiny">textBare tiny</Button>
+                    <Button variant="textBare" size="small">textBare small</Button>
+                    <Button variant="textBare">textBare normal</Button>
+                    <Button variant="textBare" size="large">textBare large</Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
 
 
             {/* D) Links & Chips */}

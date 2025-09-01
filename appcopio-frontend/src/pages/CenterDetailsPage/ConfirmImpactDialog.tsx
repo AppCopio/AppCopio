@@ -24,14 +24,14 @@ export default function ConfirmImpactDialog({
 }) {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle className="BodyStrong">{title}</DialogTitle>
       <DialogContent>
         <Stack spacing={1} sx={{ mt: 0.5 }}>
-          <Typography variant="body2">{message}</Typography>
+          <Typography variant="bodyBase">{message}</Typography>
           {details.length > 0 && (
             <Stack component="ul" sx={{ pl: 3, m: 0 }} spacing={0.5}>
               {details.map((d, i) => (
-                <li key={i}><Typography variant="body2">• {d}</Typography></li>
+                <Typography variant="bodyBase">• {d}</Typography>
               ))}
             </Stack>
           )}
@@ -39,7 +39,7 @@ export default function ConfirmImpactDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel} disabled={loading}>{cancelLabel}</Button>
-        <Button onClick={onConfirm} disabled={loading} variant="contained">
+        <Button onClick={onConfirm} disabled={loading} variant="outlineGray">
           {confirmLabel}
         </Button>
       </DialogActions>
