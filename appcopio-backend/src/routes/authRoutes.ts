@@ -16,13 +16,14 @@ const LoginSchema = z.object({
 
 /** Helpers */
 function cookieOpts() {
-    const prod = process.env.NODE_ENV === "production";
-    return {
-        httpOnly: true,
-        secure: prod,
-        sameSite: "lax" as const,
-        path: "/api/auth",
-    };
+  const prod = process.env.NODE_ENV === "production";
+  const crossSite = process.env.CROSS_SITE_COOKIES === "1";
+  return {
+    httpOnly: true,
+    secure: prod,
+    sameSite: crossSite ? "none" as const : "lax" as const,
+    path: "/api/auth",
+  };
 }
 
 const getClientIp = (req: Parameters<RequestHandler>[0]) =>
@@ -51,7 +52,6 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
     `;
     const { rows } = await pool.query(qUser, [username]);
     const user = rows[0];
-    console.log(user);
 
 
     if (!user || !user.is_active) {

@@ -48,7 +48,7 @@ CREATE TABLE Users (
     genero VARCHAR(20),
     celular VARCHAR(20),
     es_apoyo_admin BOOLEAN NOT NULL DEFAULT FALSE,
-    is_active BOOLEAN NOT NULL DEFAULT FALSE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- 002_auth_refreshtokens.sql

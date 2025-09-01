@@ -1,40 +1,54 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? ""; // Se usa VITE_API_URL por consistencia
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
+/** Querystring helper con soporte para arrays */
 function qs(params: Record<string, any>) {
   const s = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
     if (v === undefined || v === null || v === "") return;
-    s.set(k, String(v));
+    if (Array.isArray(v)) {
+      v.forEach((item) => s.append(k, String(item)));
+    } else {
+      s.append(k, String(v));
+    }
   });
   const str = s.toString();
   return str ? `?${str}` : "";
 }
 
-async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
+/** Fetch helper con cookies, signal y mejor parsing de error/204 */
+async function fetchJSON<T>(url: string, init?: RequestInit & { signal?: AbortSignal }): Promise<T> {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
+    credentials: "include",         
     ...init,
   });
+
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try {
-      const j = await res.json();
-      if (j?.error) msg = j.error;
-    } catch {}
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("application/json")) {
+        const j = await res.json();
+        if (j?.error) msg = j.error;
+        else if (j?.message) msg = j.message;
+      } else {
+        const t = await res.text();
+        if (t) msg = t;
+      }
+    } catch {
+    }
     throw new Error(msg);
   }
-  // Para respuestas 204 No Content, no hay JSON que parsear
-  if (res.status === 204) {
-    return {} as T;
-  }
+
+  if (res.status === 204) return {} as T;
   return res.json();
 }
 
-// MODIFICADO: Se elimina center_id de los parámetros de filtro
+/** LIST */
 export async function listUsers(params: {
   search?: string;
   role_id?: number;
-  active?: 0 | 1;
+  active?: 0 | 1;      
   page?: number;
   pageSize?: number;
 }) {
@@ -42,22 +56,23 @@ export async function listUsers(params: {
   return fetchJSON<{ users: any[]; total: number }>(url);
 }
 
-
+/** GET ONE */
 export async function getUser(userId: number | string, signal?: AbortSignal) {
-  const r = await fetch(`${API_BASE}/users/${userId}`, { signal });
-  if (!r.ok) throw new Error('getUser failed');
-  return r.json();
+  return fetchJSON<any>(`${API_BASE}/users/${userId}`, { signal });
 }
 
-// MODIFICADO: Se elimina center_id del payload de creación
+/** CREATE  */
 export async function createUser(payload: {
   rut: string;
   username: string;
-  password: string;
+  password: string;     
   email: string;
   role_id: number;
   nombre?: string | null;
-  // ... otros campos opcionales ...
+  genero?: string | null;
+  celular?: string | null;
+  es_apoyo_admin?: boolean;   
+  is_active?: boolean;      
 }) {
   return fetchJSON<any>(`${API_BASE}/users`, {
     method: "POST",
@@ -65,15 +80,16 @@ export async function createUser(payload: {
   });
 }
 
-// MODIFICADO: Se elimina center_id y se añade es_apoyo_admin
+/** UPDATE */
 export async function updateUser(id: number, payload: Partial<{
   email: string;
   username: string;
   role_id: number;
   nombre: string | null;
-  es_apoyo_admin: boolean; 
-  is_active: boolean
-  // ... otros campos ...
+  genero: string | null;
+  celular: string | null;
+  es_apoyo_admin: boolean;
+  is_active: boolean;
 }>) {
   return fetchJSON<any>(`${API_BASE}/users/${id}`, {
     method: "PUT",
@@ -81,30 +97,23 @@ export async function updateUser(id: number, payload: Partial<{
   });
 }
 
+/** DELETE (204 OK) */
 export async function deleteUser(id: number) {
-    // Se usa fetchJSON pero se maneja el caso de no respuesta (204)
-    return fetchJSON<void>(`${API_BASE}/users/${id}`, { method: "DELETE" });
+  return fetchJSON<void>(`${API_BASE}/users/${id}`, { method: "DELETE" });
 }
 
-// --- NUEVAS FUNCIONES PARA ASIGNACIONES ---
-
-/**
- * Asigna un centro a un usuario.
- * @param user_id - ID del usuario
- * @param center_id - ID del centro a asignar
- */
-export async function assignCenterToUser(user_id: number, center_id: string, role: string) {
+/** ASSIGN / UNASSIGN — usa role_name si tu backend lo espera así */
+export async function assignCenterToUser(
+  user_id: number,
+  center_id: string | number,
+  role: string
+) {
   return fetchJSON<any>(`${API_BASE}/assignments`, {
     method: "POST",
     body: JSON.stringify({ user_id, center_id, role }),
   });
 }
 
-/**
- * Desasigna un centro de un usuario.
- * @param user_id - ID del usuario
- * @param center_id - ID del centro a desasignar
- */
 export async function removeCenterFromUser(user_id: number, center_id: string) {
   return fetchJSON<void>(`${API_BASE}/assignments`, {
     method: "DELETE",
@@ -112,11 +121,8 @@ export async function removeCenterFromUser(user_id: number, center_id: string) {
   });
 }
 
-
-// --- FUNCIONES EXISTENTES (pueden necesitar revisión de nombres de columna) ---
-
+/** Toggles / acciones */
 export async function setActive(id: number, is_active: boolean) {
-  // Nota: La columna en la BD es 'is_active'. El backend debe manejar esta traducción.
   return fetchJSON<{ user_id: number; is_active: boolean }>(
     `${API_BASE}/users/${id}/activate`,
     { method: "PATCH", body: JSON.stringify({ is_active }) }
@@ -130,8 +136,7 @@ export async function setPassword(id: number, password: string) {
   });
 }
 
+/** Roles */
 export async function getRoles(signal?: AbortSignal) {
-  const res = await fetch(`${API_BASE}/roles`, { signal });
-  if (!res.ok) throw new Error("No se pudieron cargar los roles");
-  return res.json() as Promise<{ roles: { role_id: number; role_name: string }[] }>;
+  return fetchJSON<{ roles: { role_id: number; role_name: string }[] }>(`${API_BASE}/roles`, { signal });
 }

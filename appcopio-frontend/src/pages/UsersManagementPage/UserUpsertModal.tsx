@@ -3,7 +3,7 @@ import * as React from "react";
 import {
   Alert, Box, Button, CircularProgress, DialogContentText,
   FormControl, FormHelperText, InputLabel, MenuItem, Select,
-  Stack, TextField
+  Stack, TextField, Switch, FormControlLabel, Divider, Typography
 } from "@mui/material";
 import type { User } from "../../types/user";
 import {
@@ -26,29 +26,39 @@ type Props = {
   onSaved: () => void;
 };
 
+const GENEROS = [
+  { value: "", label: "—" },
+  { value: "Masculino", label: "Masculino" },
+  { value: "Femenino", label: "Femenino" },
+  { value: "Otro", label: "Otro" },
+  { value: "Prefiero no decir", label: "Prefiero no decir" },
+];
+
 export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props) {
   const isEdit = mode === "edit";
 
-  // form
   const [rut, setRut] = React.useState(isEdit ? (user?.rut ?? "") : "");
-  const [nombre, setNombre] = React.useState(isEdit ? (user?.nombre ?? "") : "");          
+  const [nombre, setNombre] = React.useState(isEdit ? (user?.nombre ?? "") : "");
   const [username, setUsername] = React.useState(isEdit ? (user?.username ?? "") : "");
   const [password, setPassword] = React.useState(""); 
-  const [email, setEmail] = React.useState(isEdit ? (user?.email ?? "") : "");            
+  const [email, setEmail] = React.useState(isEdit ? (user?.email ?? "") : "");
   const [roleId, setRoleId] = React.useState<number | "">("");
   const [centerId, setCenterId] = React.useState<string>("");
 
-  // catálogos
+  const [genero, setGenero] = React.useState<string>(isEdit ? (user?.genero ?? "") : "");
+  const [celular, setCelular] = React.useState<string>(isEdit ? (user?.celular ?? "") : "");
+  const [esApoyoAdmin, setEsApoyoAdmin] = React.useState<boolean>(isEdit ? !!user?.es_apoyo_admin : false);
+  const [isActive, setIsActive] = React.useState<boolean>(isEdit ? !!user?.is_active : true);
+  const createdAt = isEdit ? user?.created_at : undefined;
+
   const [roles, setRoles] = React.useState<{ role_id: number; role_name: string }[]>([]);
   const [centers, setCenters] = React.useState<Center[]>([]);
   const [loadingCatalogs, setLoadingCatalogs] = React.useState(true);
 
-  // estado UI
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [touched, setTouched] = React.useState<Record<string, boolean>>({});
 
-  // carga catálogos + estado inicial en edit
   React.useEffect(() => {
     const controller = new AbortController();
     let mounted = true;
@@ -90,25 +100,34 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
     };
   }, [isEdit, user]);
 
-  // validaciones
   const required = (v: string) => v.trim().length > 0;
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); 
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const selectedRole = roles.find(r => r.role_id === (roleId === "" ? -1 : roleId));
   const needsCenter = selectedRole?.role_id === 2 || selectedRole?.role_id === 3;
 
   const canSave =
     required(rut) &&
-    required(nombre) &&                
+    required(nombre) &&
     required(username) &&
     (isEdit || required(password)) &&
     !!roleId &&
-    required(email) && emailValid    
+    required(email) &&
+    emailValid &&
+    (!needsCenter || !!centerId);
 
   const handleSave = async () => {
     if (!canSave) {
       setTouched({
-        rut: true, nombre: true, username: true, password: true, email: true, role: true, center: true,
+        rut: true,
+        nombre: true,
+        username: true,
+        password: true,
+        email: true,
+        role: true,
+        center: true,
+        genero: true,
+        celular: true,
       } as any);
       return;
     }
@@ -117,15 +136,17 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
     setError(null);
     try {
       if (isEdit && user) {
-        // 1) actualizar datos base
         await updateUser(user.user_id, {
-          nombre,                           
+          nombre,
           username,
-          email,                            
+          email,
           role_id: Number(roleId),
+          genero: genero || null,
+          celular: celular || null,
+          es_apoyo_admin: !!esApoyoAdmin,
+          is_active: !!isActive,
         });
 
-        // 2) sincronizar centro según rol
         const u = await getUser(user.user_id);
         const currentAssigned: string[] = (u.assignedCenters || []).map(String);
 
@@ -140,18 +161,22 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
           await Promise.all(currentAssigned.map((id) => removeCenterFromUser(user.user_id, id)));
         }
       } else {
-        // CREATE
         const created = await createUser({
           rut,
           username,
           password,
-          email,                             
+          email,
           role_id: Number(roleId),
-          nombre,                           
+          nombre,
+          genero: genero || null,
+          celular: celular || null,
+          es_apoyo_admin: !!esApoyoAdmin,
+          is_active: !!isActive,
         });
 
         if (needsCenter && centerId) {
-          await assignCenterToUser(created.user_id, centerId,  created.role_name);
+          const roleName = selectedRole?.role_name ?? "";
+          await assignCenterToUser(created.user_id, centerId, roleName);
         }
       }
 
@@ -164,8 +189,22 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
     }
   };
 
+  React.useEffect(() => {
+    if (!needsCenter) setCenterId("");
+  }, [needsCenter]);
+
+  const formatDate = (iso?: string) => {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString();
+    } catch {
+      return iso;
+    }
+  };
+
   return (
-    <Stack spacing={2} sx={{ minWidth: { xs: 0, sm: 520 } }}>
+    <Stack spacing={2} sx={{ minWidth: { xs: 0, sm: 560 } }}>
       <DialogContentText component="div">
         {isEdit ? "Edita" : "Crea"} un usuario. Si el rol es <b>Contacto Comunidad</b>, selecciona un centro.
       </DialogContentText>
@@ -273,15 +312,76 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
               </MenuItem>
             ))}
           </Select>
-          {!!touched.center && !centerId && <FormHelperText>Selecciona un centro</FormHelperText>}
+          {!!touched.center && !centerId && (
+            <FormHelperText>Selecciona un centro</FormHelperText>
+          )}
         </FormControl>
       )}
+
+      <FormControl fullWidth>
+        <InputLabel id="genero-select-label">Género</InputLabel>
+        <Select
+          labelId="genero-select-label"
+          label="Género"
+          value={genero}
+          onChange={(e) => setGenero(String(e.target.value))}
+          onBlur={() => setTouched((t) => ({ ...t, genero: true }))}
+        >
+          {GENEROS.map((g) => (
+            <MenuItem key={g.value || "empty"} value={g.value}>
+              {g.label}
+            </MenuItem>
+          ))}
+        </Select>
+        <FormHelperText>Opcional</FormHelperText>
+      </FormControl>
+
+      <TextField
+        label="Celular"
+        value={celular}
+        onChange={(e) => setCelular(e.target.value)}
+        onBlur={() => setTouched((t) => ({ ...t, celular: true }))}
+        helperText="Opcional"
+        fullWidth
+      />
+
+      <Stack direction="row" spacing={2}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={esApoyoAdmin}
+              onChange={(e) => setEsApoyoAdmin(e.target.checked)}
+            />
+          }
+          label="Es apoyo admin"
+        />
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+            />
+          }
+          label="Activo"
+        />
+      </Stack>
+
+      
 
       {loadingCatalogs && (
         <Box display="flex" gap={1} alignItems="center">
           <CircularProgress size={20} />
           Cargando catálogos…
         </Box>
+      )}
+
+      {isEdit && (
+        <>
+          <Divider />
+          <Typography variant="body2" color="text.secondary">
+            Creado el: {formatDate(createdAt)}
+          </Typography>
+        </>
       )}
 
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, pt: 1 }}>
