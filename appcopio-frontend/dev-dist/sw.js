@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-6244ca5c'], (function (workbox) { 'use strict';
+define(['./workbox-995bff61'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -82,7 +82,7 @@ define(['./workbox-6244ca5c'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.n6ecjubbmr"
+    "revision": "0.7d07kr0h5no"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -90,14 +90,34 @@ define(['./workbox-6244ca5c'], (function (workbox) { 'use strict';
   }));
   workbox.registerRoute(({
     url
+  }) => url.pathname.startsWith("/api/auth"), new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(({
+    url
   }) => url.pathname.startsWith("/api/"), new workbox.StaleWhileRevalidate({
     "cacheName": "api-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 100,
-      maxAgeSeconds: 604800
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [200]
-    })]
+    plugins: []
   }), 'GET');
+  workbox.registerRoute(({
+    url
+  }) => url.pathname.startsWith("/api/"), new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("appcopio-mutation-queue", {
+      maxRetentionTime: 1440
+    })]
+  }), 'POST');
+  workbox.registerRoute(({
+    url
+  }) => url.pathname.startsWith("/api/"), new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("appcopio-mutation-queue")]
+  }), 'PUT');
+  workbox.registerRoute(({
+    url
+  }) => url.pathname.startsWith("/api/"), new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("appcopio-mutation-queue")]
+  }), 'PATCH');
+  workbox.registerRoute(({
+    url
+  }) => url.pathname.startsWith("/api/"), new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("appcopio-mutation-queue")]
+  }), 'DELETE');
 
 }));

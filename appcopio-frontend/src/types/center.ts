@@ -4,7 +4,7 @@ export interface CenterData {
     center_id: string;
     name: string;
     address: string;
-    type: 'Albergue' | 'Acopio' | 'albergue' | 'acopio' | '';
+    type: 'Albergue' | 'Acopio' | 'Albergue Comunitario' | 'acopio' | '';
     folio: string;
     capacity: number;
     latitude: number;

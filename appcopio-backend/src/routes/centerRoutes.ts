@@ -672,6 +672,7 @@ const getCurrentResidentsHandler: RequestHandler = async (req, res) => {
 
   const query = `
     SELECT 
+      fg.family_id,
       p.rut,
       CONCAT(p.nombre, ' ', p.primer_apellido) AS nombre_completo,
       COUNT(fgm.person_id) AS integrantes_grupo
@@ -679,8 +680,10 @@ const getCurrentResidentsHandler: RequestHandler = async (req, res) => {
     JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id
     JOIN FamilyGroupMembers fgm ON fgm.family_id = fg.family_id
     JOIN Persons p ON p.person_id = fg.jefe_hogar_person_id
-    WHERE ca.center_id = $1 AND ca.ended_at IS NULL
-    GROUP BY p.rut, p.nombre, p.primer_apellido
+    WHERE ca.center_id = $1 
+      AND ca.ended_at IS NULL
+      AND fg.status = 'activo'  -- Filtra por familias activas
+    GROUP BY fg.family_id, p.rut, p.nombre, p.primer_apellido
     ORDER BY nombre_completo
   `;
 
@@ -692,6 +695,77 @@ const getCurrentResidentsHandler: RequestHandler = async (req, res) => {
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 };
+
+
+
+
+const getCenterCapacityHandler: RequestHandler = async (req, res) => {
+  const { centerId } = req.params;
+
+  try {
+    // Consultar la capacidad total del centro
+    const centerResult = await pool.query(
+      'SELECT capacity FROM Centers WHERE center_id = $1',
+      [centerId]
+    );
+
+    // Si no se encuentra el centro
+    if (centerResult.rows.length === 0) {
+        res.status(404).json({ message: 'Centro no encontrado' });
+        return;
+    }
+
+    const capacity = centerResult.rows[0].capacity;
+
+    // Consultar la cantidad de familias activas en el centro
+    const currentCapacityResult = await pool.query(
+      `SELECT COALESCE(SUM(fgm.integrantes), 0) AS current_capacity
+        FROM Centers c
+        LEFT JOIN CentersActivations ca ON ca.center_id = c.center_id AND ca.ended_at IS NULL
+        LEFT JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id AND fg.status = 'activo'
+        LEFT JOIN (
+            SELECT family_id, COUNT(*) AS integrantes
+            FROM FamilyGroupMembers
+            GROUP BY family_id
+        ) fgm ON fgm.family_id = fg.family_id
+        WHERE c.center_id = $1`,
+      [centerId]
+    );
+
+    // Calculando la capacidad ocupada y disponible
+    const currentCapacity = currentCapacityResult.rows[0].current_capacity || 0;
+    const availableCapacity = capacity - currentCapacity;
+
+    // Enviar la respuesta con la capacidad total, ocupada y disponible
+    res.json({
+      capacity, // Capacidad total
+      current_capacity: currentCapacity, // Capacidad ocupada
+      available_capacity: availableCapacity // Capacidad disponible
+    });
+
+  } catch (error) {
+    console.error('Error al obtener la capacidad del centro:', error);
+    res.status(500).json({ message: 'Error interno del servidor al obtener la capacidad del centro' });
+  }
+};
+
+// GET /api/active-centers - Listar centros activos
+const getActiveCenters: RequestHandler = async (req, res) => {
+    try {
+    const result = await pool.query(`
+      SELECT ca.activation_id, ca.center_id, c.name AS center_name
+      FROM CentersActivations ca
+      JOIN Centers c ON ca.center_id = c.center_id
+      WHERE ca.ended_at IS NULL
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener centros activos:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+
+}
+
 
 
 // --- REGISTRO DE TODAS LAS RUTAS ---
@@ -709,7 +783,10 @@ router.post('/:centerId/inventory', addInventoryItemHandler);
 router.put('/:centerId/inventory/:itemId', updateInventoryItemHandler);
 router.delete('/:centerId/inventory/:itemId', deleteInventoryItemHandler);
 
-//Para obtener los residentes del centro
+//Para obtener los residentes / capacidades / activos del centro
 router.get('/:centerId/residents', getCurrentResidentsHandler);
+router.get('/:centerId/capacity', getCenterCapacityHandler);
+router.get('/:centerId/active-centers', getActiveCenters);
+
 
 export default router;

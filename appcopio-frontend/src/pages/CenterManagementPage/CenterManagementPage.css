@@ -360,3 +360,8 @@ input:checked + .slider:before {
 .modal-actions .cancel-btn:hover {
     background-color: #a0aec0;
 }
+
+.disabled-link {
+  pointer-events: none;
+  opacity: 0.5;
+}

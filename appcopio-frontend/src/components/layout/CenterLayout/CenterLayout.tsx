@@ -19,7 +19,7 @@ const CenterLayout: React.FC = () => {
           <Link to={`/center/${centerId}/inventory`}>Inventario</Link>
           <Link to={`/center/${centerId}/details`}>Ver Detalles</Link>
           <Link to={`/center/${centerId}/needs/new`}>Crear Solicitud</Link>
-          <Link to={`/center/${centerId}/needs/status`}>Estado de Solicitudes</Link>
+          <Link to={`/center/${centerId}/needs/status`}>Estado de Actualizaciones</Link>
           <Link to={`/center/${centerId}/residents`}>Listado de Personas</Link>
 
         </nav>

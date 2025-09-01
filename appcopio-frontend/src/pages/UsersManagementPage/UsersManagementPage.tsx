@@ -148,7 +148,8 @@ export default function UsersManagementPage() {
               </TableHead>
               <TableBody>
                 {rows.map((user) => {
-                  const isTM = user.role_name === "Trabajador Municipal";
+                  const isTM = user.role_id === 2;
+                  const isCC = user.role_id === 3;
                   return (
                     <TableRow key={user.user_id} hover>
                       <TableCell>{user.nombre}</TableCell>
@@ -179,7 +180,7 @@ export default function UsersManagementPage() {
                           />
                         ) : (
                           <Typography variant="body2" color="text.secondary">
-                            N/A
+                            
                           </Typography>
                         )}
                       </TableCell>
@@ -190,7 +191,7 @@ export default function UsersManagementPage() {
                           justifyContent="flex-end"
                           alignItems="center"
                         >
-                          {isTM && (
+                          {(isTM || isCC) && (
                             <Tooltip title="Asignar Centros">
                               <IconButton
                                 size="small"

@@ -51,6 +51,22 @@ CREATE TABLE Users (
     is_active BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+-- 002_auth_refreshtokens.sql
+CREATE TABLE IF NOT EXISTS RefreshTokens (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,
+  user_agent TEXT,
+  ip TEXT,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_refreshtokens_userid ON RefreshTokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refreshtokens_tokenhash ON RefreshTokens(token_hash);
+
+
 CREATE SEQUENCE centers_seq START 1;
 
 CREATE TABLE Centers (
@@ -641,7 +657,9 @@ INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
 OVERRIDING SYSTEM VALUE
 VALUES
 ('15.111.111-1', 'María', 'González', 34, 'F'),
-('21.222.222-2', 'Pedro', 'Soto', 8, 'M');
+('21.222.222-2', 'Pedro', 'Soto', 8, 'M'),
+('14.411.111-1', 'Fernando', 'Gatica', 25, 'M'),
+('20.422.222-2', 'Rocio', 'Garcia', 8, 'F');
 
 WITH act AS (
   SELECT activation_id
@@ -654,10 +672,16 @@ INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones)
 SELECT act.activation_id, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.'
 FROM act;
 
-INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
-(1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
+OVERRIDING SYSTEM VALUE
+VALUES
+(1, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.'),
+(2, 2, 'Familia monoparental, requieren apoyo especial para menor de edad.');
 
--- Confirmaciones finales de integridad de datos
+INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
+(1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a'),
+(2, 3, 'Jefe de Hogar'), (2, 4, 'Hijo/a');
+
+-- Confirmaciones finales de integridad de datos --
 
 -- Centros activos y sus activaciones vigentes
 SELECT c.center_id, c.name, c.is_active, ca.activation_id
