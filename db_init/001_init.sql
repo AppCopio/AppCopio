@@ -66,7 +66,6 @@ CREATE TABLE IF NOT EXISTS RefreshTokens (
 CREATE INDEX IF NOT EXISTS idx_refreshtokens_userid ON RefreshTokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_refreshtokens_tokenhash ON RefreshTokens(token_hash);
 
-
 CREATE SEQUENCE centers_seq START 1;
 
 CREATE TABLE Centers (
@@ -361,7 +360,6 @@ INSERT INTO Roles (role_name) VALUES ('Administrador'), ('Trabajador Municipal')
 
 -- Usuarios de prueba (contraseña para todos: '12345')
 INSERT INTO Users (username, password_hash, email, role_id, nombre, rut, is_active, es_apoyo_admin)
-OVERRIDING SYSTEM VALUE
 VALUES
 ('admin', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'admin@appcopio.cl', 1, 'Admin AppCopio', '11.111.111-1', TRUE, TRUE),
 ('juan.perez', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'juan.perez@municipalidad.cl', 2, 'Juan Pérez', '22.222.222-2', TRUE, FALSE),
@@ -599,7 +597,6 @@ INSERT INTO Categories (name) VALUES
 
 -- Productos de prueba
 INSERT INTO Products (name, unit, category_id)
-OVERRIDING SYSTEM VALUE
 VALUES
 ('Agua Embotellada 1.5L', 'un', 1), ('Frazadas (1.5 plazas)', 'un', 2),
 ('Kit de Higiene Personal (Adulto)', 'un', 3), ('Pañales para Niños (Talla G)', 'paquete', 3),
@@ -654,7 +651,6 @@ SET is_active = EXISTS (
 
 -- Personas y grupos familiares de prueba
 INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
-OVERRIDING SYSTEM VALUE
 VALUES
 ('15.111.111-1', 'María', 'González', 34, 'F'),
 ('21.222.222-2', 'Pedro', 'Soto', 8, 'M'),
@@ -672,16 +668,10 @@ INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones)
 SELECT act.activation_id, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.'
 FROM act;
 
-OVERRIDING SYSTEM VALUE
-VALUES
-(1, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.'),
-(2, 2, 'Familia monoparental, requieren apoyo especial para menor de edad.');
-
 INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
-(1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a'),
-(2, 3, 'Jefe de Hogar'), (2, 4, 'Hijo/a');
+(1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
 
--- Confirmaciones finales de integridad de datos --
+-- Confirmaciones finales de integridad de datos
 
 -- Centros activos y sus activaciones vigentes
 SELECT c.center_id, c.name, c.is_active, ca.activation_id
@@ -702,4 +692,3 @@ JOIN CentersActivations ca ON ca.activation_id = fg.activation_id;
 
 -- Confirmación final
 SELECT 'Script definitivo ejecutado. Todas las tablas y datos de prueba han sido creados.';
-
