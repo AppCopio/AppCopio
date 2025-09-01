@@ -27,6 +27,9 @@ import "./App.css";
 
 
 
+import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
+
+
 function App() {
   return (
     <div className="App">
@@ -37,6 +40,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/typo" element={<ExampleFrontend />} />
           </Route>
 
           {/* --- 2. Rutas Protegidas por role_id --- */}

@@ -140,3 +140,37 @@ export async function setPassword(id: number, password: string) {
 export async function getRoles(signal?: AbortSignal) {
   return fetchJSON<{ roles: { role_id: number; role_name: string }[] }>(`${API_BASE}/roles`, { signal });
 }
+
+export type AppUser = {
+  user_id: number;
+  username: string;
+  email: string | null;
+  nombre: string | null;
+  role_id: number;
+  role_name?: string;
+  is_active: boolean;
+  active_assignments?: number; // viene de la ruta nueva
+};
+
+// Nueva función específica del backend nuevo
+export async function listActiveUsersByRole(roleId: number) {
+  const url = `${API_BASE}/users/active/role/${roleId}`;
+  // El backend responde { users: AppUser[], total: number }
+  const { users } = await fetchJSON<{ users: AppUser[]; total: number }>(url);
+  return users; // devolvemos el array directo para que el componente lo use como options
+}
+
+export async function getActiveAssignmentsByUserRole(
+  user_id: number,
+  role: "trabajador municipal" | "contacto ciudadano",
+  opts?: { exclude_center_id?: string }
+) {
+  const params = new URLSearchParams({
+    user_id: String(user_id),
+    role,
+  });
+  if (opts?.exclude_center_id) params.set("exclude_center_id", opts.exclude_center_id);
+
+  const url = `${API_BASE}/assignments/active/by-user-role?${params.toString()}`;
+  return fetchJSON<{ assignments: { center_id: string; center_name: string }[]; count: number }>(url);
+}
