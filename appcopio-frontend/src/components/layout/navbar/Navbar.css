@@ -3,6 +3,14 @@
 
 
 .main-navbar {
+    position: fixed;   /* o fixed si quieres */
+  top: 0;
+  z-index: 1100;
+
+  /* Fondo a todo el ancho del viewport */
+  width: 100vw;
+
+
   display: flex;
   justify-content: space-between;
   align-items: center;

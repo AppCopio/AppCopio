@@ -180,7 +180,7 @@ const CenterManagementPage: React.FC = () => {
  
   return (
     <div className="center-management-container">
-        <h1>Gestión de Centros y Albergues</h1>
+        <div className="ds-titlePage">Gestión de Centros y Albergues</div>
         <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
         
         {/* Para los Links, no podemos usar 'disabled'. En su lugar, podemos usar CSS para que no se pueda hacer clic. */}
