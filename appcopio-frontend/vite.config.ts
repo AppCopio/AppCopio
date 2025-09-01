@@ -1,8 +1,7 @@
 // appcopio-frontend/vite.config.ts
-
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
@@ -10,49 +9,34 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       devOptions: {
-        enabled: true, // Mantenemos el SW activo en desarrollo
+        enabled: true,
       },
       workbox: {
-        // Esto le ordena a Workbox encontrar TODOS los archivos importantes
-        // y añadirlos a la lista de precaché.
+        // Precaché de la aplicación (esto ya funcionaba)
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
 
-        // Definimos las reglas para el caché de peticiones en tiempo real.
+        // Reglas de caché en tiempo real
         runtimeCaching: [
           {
-            // Regla para nuestra propia API
+            // Regla para que la autenticación NUNCA se cachee
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/auth'),
+            handler: 'NetworkOnly',
+          },
+          {
+            // Regla para el resto de las peticiones GET a nuestra API
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 días
-              },
-              cacheableResponse: {
-                statuses: [200], // Solo cachear respuestas exitosas
-              },
+              expiration: { maxAgeSeconds: 60 * 60 * 24 * 7 },
             },
           },
-          // --- INICIO DE LA NUEVA REGLA PARA EL MAPA ---
           {
-            // Esta regla se aplica a cualquier petición a los dominios de Google Maps.
-            urlPattern: /^https:\/\/maps\.googleapis\.com\/.*/,
-            // Usamos 'CacheFirst': si el recurso está en el caché, lo sirve de inmediato.
+            // Regla para el mapa de Google
+            urlPattern: ({ url }) => url.hostname.includes('googleapis.com'),
             handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-maps-cache',
-              // Limitamos el número de imágenes de mapa para no llenar el almacenamiento.
-              expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24, // 1 Día
-              },
-              cacheableResponse: {
-                statuses: [0, 200], // Cachea respuestas correctas y opacas
-              },
-            },
+            options: { cacheName: 'google-maps-cache' },
           },
-          // --- FIN DE LA NUEVA REGLA PARA EL MAPA ---
         ],
       },
       manifest: {

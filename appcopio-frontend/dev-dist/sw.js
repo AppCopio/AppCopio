@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-56da8dea'], (function (workbox) { 'use strict';
+define(['./workbox-385b6b07'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -82,7 +82,7 @@ define(['./workbox-56da8dea'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.tsuc0pmg13"
+    "revision": "0.8k73dv9g7ao"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -90,23 +90,20 @@ define(['./workbox-56da8dea'], (function (workbox) { 'use strict';
   }));
   workbox.registerRoute(({
     url
+  }) => url.pathname.startsWith("/api/auth"), new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(({
+    url
   }) => url.pathname.startsWith("/api/"), new workbox.StaleWhileRevalidate({
     "cacheName": "api-cache",
     plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 100,
       maxAgeSeconds: 604800
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [200]
     })]
   }), 'GET');
-  workbox.registerRoute(/^https:\/\/maps\.googleapis\.com\/.*/, new workbox.CacheFirst({
+  workbox.registerRoute(({
+    url
+  }) => url.hostname.includes("googleapis.com"), new workbox.CacheFirst({
     "cacheName": "google-maps-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 500,
-      maxAgeSeconds: 86400
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
-    })]
+    plugins: []
   }), 'GET');
 
 }));
