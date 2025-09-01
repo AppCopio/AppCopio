@@ -4,6 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import OperationalStatusControl from '../../components/center/OperationalStatusControl';
 import './CenterDetailsPage.css';
 
+import { getUser } from "../../services/usersApi";
+
+import ResponsibleSection from './ResponsibleSection';
+import AssignResponsibleDialog from './AssingResponsibleDialog';
+
 interface CenterDetails {
   center_id: string;
   name: string;
@@ -18,6 +23,9 @@ interface CenterDetails {
   created_at?: string;
   updated_at?: string;
   fullnessPercentage?: number;
+
+  municipal_manager_id?: number | null;
+  comunity_charge_id?: number | null;
 }
 
 interface Resource {
@@ -26,6 +34,17 @@ interface Resource {
   category: string;
   quantity: number;
 }
+
+type UserLite = {
+  user_id: number;
+  nombre?: string | null;
+  username: string;
+  email?: string | null;
+  celular?: string | null;
+  role_name?: string | null;
+};
+
+type AssignRole = "trabajador municipal" | "contacto ciudadano";
 
 const CenterDetailsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
@@ -63,6 +82,8 @@ useEffect(() => {
         console.warn('No se pudo cargar el inventario del centro.');
         setResources([]);
       }
+      // 3. Obtener detalles de los usuarios responsables -> responsabilidad de ResponsibleSection
+
     } catch (err) {
       console.error('Error al cargar los detalles del centro:', err);
 
@@ -188,6 +209,18 @@ useEffect(() => {
     }
   };
 
+  // Modal de asignación de responsables
+  const [assignRole, setAssignRole] = useState<AssignRole | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+
+  const openAssign = (role: AssignRole) => {
+    setAssignRole(role);
+    setAssignOpen(true);
+  };
+
+  const closeAssign = () => setAssignOpen(false);
+
+  // Agrupa recursos por categoría
   const groupedResources = resources.reduce((acc, resource) => {
     if (!acc[resource.category]) {
       acc[resource.category] = [];
@@ -352,7 +385,27 @@ useEffect(() => {
         <div className="responsible-section">
           <h3>Responsable</h3>
           <div className="responsible-info">
-            <p>Por definir en futuras versiones</p>
+            <ResponsibleSection
+              municipalId={center.municipal_manager_id}
+              comunityId={center.comunity_charge_id}
+              onAssignMunicipal={() => openAssign("trabajador municipal")}
+              onAssignCommunity={() => openAssign("contacto ciudadano")}
+            />
+            <AssignResponsibleDialog
+              open={assignOpen}
+              onClose={closeAssign}
+              centerId={centerId!}
+              role={assignRole}
+              onSuccess={async () => {
+                closeAssign();
+                // Refresca el centro para traer los nuevos punteros municipal/community
+                // TO DO: Mejorar esto con llamado a servicios
+                try {
+                  const r = await fetch(`http://localhost:4000/api/centers/${centerId}`);
+                  if (r.ok) setCenter(await r.json());
+                } catch {}
+              }}
+            />
           </div>
         </div>
       </div>
