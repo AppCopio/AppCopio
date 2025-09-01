@@ -1,9 +1,8 @@
 // src/pages/CenterManagementPage/CenterManagementPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchWithAbort } from '../../services/api';
-
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../lib/api'; // 1. Usamos nuestro cliente API centralizado para TODO
 import './CenterManagementPage.css';
 
 // La interfaz del Centro ha sido extendida para incluir nuevas propiedades.
@@ -22,24 +21,24 @@ export interface Center {
 }
 
 // Componente para el interruptor de estado.
-const StatusSwitch: React.FC<{ center: Center; onToggle: (id: string) => void }> = ({ center, onToggle }) => {
+const StatusSwitch: React.FC<{ center: Center; onToggle: (id: string) => void; disabled: boolean }> = ({ center, onToggle, disabled }) => {
   return (
     <label className="switch">
       <input 
         type="checkbox" 
         checked={center.is_active} 
         onChange={() => onToggle(center.center_id)} 
+        disabled={disabled} // 2. Usamos la propiedad 'disabled' aquí.
       />
       <span className="slider round"></span>
     </label>
   );
 };
 
-
 const CenterManagementPage: React.FC = () => {
-  const { user } = useAuth();
+  // 2. Obtenemos 'isAuthLoading' para proteger la UI contra race conditions
+  const { user, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
-  const apiUrl = import.meta.env.VITE_API_URL;
 
   // Estados del componente
   const [centers, setCenters] = useState<Center[]>([]); // Lista maestra de centros
@@ -71,32 +70,24 @@ const CenterManagementPage: React.FC = () => {
     };
   }, []);
 
-    const fetchCenters = async () => {
-    const controller = new AbortController();
-    setIsLoading(true);
+  const fetchCenters = useCallback(async (showLoadingSpinner = true) => {
+    if (showLoadingSpinner) setIsLoading(true);
     setError(null);
-
     try {
-        const data = await fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal);
-        setCenters(data);
+      // 3. Estandarizamos la carga de datos con nuestro apiClient
+      const response = await api.get<Center[]>('/centers');
+      setCenters(response.data);
     } catch (err) {
-        if (err instanceof Error && err.name !== 'AbortError') {
-            // Ahora, solo mostramos un error. El Service Worker se encargará de
-            // mostrar los datos cacheados si están disponibles.
-            setError('No se pudieron cargar los centros. Puede que estés viendo datos desactualizados.');
-            console.error("Error al obtener los centros:", err);
-        }
+      setError('No se pudieron cargar los centros. Puede que estés viendo datos desactualizados.');
     } finally {
-        if (!controller.signal.aborted) {
-            setIsLoading(false);
-        }
+      if (showLoadingSpinner) setIsLoading(false);
     }
-};
+  }, []);
 
     // Efecto para la carga inicial de datos.
     useEffect(() => {
         fetchCenters();
-    }, [apiUrl]);
+    }, [fetchCenters]);
 
   // Efecto que aplica los filtros cada vez que cambian los datos maestros o los filtros.
   useEffect(() => {
@@ -119,92 +110,52 @@ const CenterManagementPage: React.FC = () => {
   }, [centers, statusFilter, typeFilter, locationFilter]);
 
   // Función para cambiar el estado de un centro, con manejo offline.
-  const handleToggleActive = async (id: string) => {
-    const centerToToggle = centers.find(center => center.center_id === id);
+  const handleToggleActive = useCallback(async (id: string) => {
+    const originalCenters = [...centers];
+    const centerToToggle = centers.find(c => c.center_id === id);
     if (!centerToToggle) return;
     const newStatus = !centerToToggle.is_active;
 
     // Actualización optimista de la UI
-    const updatedCenters = centers.map(center =>
-        center.center_id === id ? { ...center, is_active: newStatus } : center
-    );
-    setCenters(updatedCenters);
+    setCenters(prev => prev.map(c => c.center_id === id ? { ...c, is_active: newStatus } : c));
 
     try {
-      const response = await fetch(`${apiUrl}/centers/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: newStatus }),
-      });
-      if (!response.ok) throw new Error('Falló la actualización en el servidor.');
-      // Si la petición es exitosa, se actualiza el caché.
-      localStorage.setItem('centers_list', JSON.stringify({ data: updatedCenters, lastUpdated: new Date().toISOString() }));
+      // Llamada simple y limpia. Si estamos offline, el plugin de Workbox
+      // interceptará el error y encolará la petición automáticamente.
+      await api.patch(`/centers/${id}/status`, { isActive: newStatus });
     } catch (err) {
-      console.error('Error al actualizar el estado del centro:', err);
-      // Si el error es por estar offline, se encola la acción.
-      if (!navigator.onLine) {
-        const pendingActions = JSON.parse(localStorage.getItem('pending_actions') || '[]');
-        pendingActions.push({
-          type: 'update_center_status',
-          url: `${apiUrl}/centers/${id}/status`,
-          method: 'PATCH',
-          body: { isActive: newStatus },
-          timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('pending_actions', JSON.stringify(pendingActions));
-        alert('Sin conexión. El cambio se aplicará cuando la recuperes.');
-      } else {
-        // Si hay otro error, se revierte el cambio y se notifica.
-        setCenters(centers); // Revertir la actualización optimista
-        alert('No se pudo actualizar el centro. Por favor, inténtelo de nuevo.');
-      }
+      // Este catch se activará si la red falla.
+      console.log("Acción registrada para ejecución offline por el plugin de Workbox.");
+      alert('Estás sin conexión. El cambio se aplicará automáticamente cuando recuperes la conexión.');
+      // No necesitamos revertir la UI aquí, confiamos en la sincronización.
     }
-  };  
+  }, [centers]);
+
+
   //LÓGICA DE ELIMINACIÓN 
   const handleDeleteClick = (centerId: string) => {
         setCenterToDelete(centerId);
         setIsModalOpen(true);
-    };
-
-  const handleConfirmDelete = async () => {
-      if (!centerToDelete) return;
-      
-      try {
-          const response = await fetch(`${apiUrl}/centers/${centerToDelete}`, {
-              method: 'DELETE',
-              // Se asume que el token de autenticación se manejará aquí
-          });
-
-          if (response.status === 204) {
-              console.log(`Centro ${centerToDelete} eliminado exitosamente.`);
-              fetchCenters(); // Recarga la lista de centros
-          } else if (response.status === 404) {
-              console.error('Centro no encontrado.');
-          } else {
-              console.error('Error al eliminar el centro.');
-          }
-      } catch (error) {
-          console.error('Error de red al eliminar el centro:', error);
-          // Lógica para manejar la eliminación offline
-          if (!navigator.onLine) {
-              const pendingActions = JSON.parse(localStorage.getItem('pending_actions') || '[]');
-              pendingActions.push({
-                  type: 'delete_center',
-                  url: `${apiUrl}/centers/${centerToDelete}`,
-                  method: 'DELETE',
-                  body: {},
-                  timestamp: new Date().toISOString()
-              });
-              localStorage.setItem('pending_actions', JSON.stringify(pendingActions));
-              alert('Sin conexión. La eliminación se procesará cuando la recuperes.');
-          } else {
-              alert('No se pudo eliminar el centro. Por favor, inténtelo de nuevo.');
-          }
-      } finally {
-          setIsModalOpen(false);
-          setCenterToDelete(null);
-      }
   };
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!centerToDelete) return;
+    
+    const originalCenters = [...centers];
+    const centerIdToDelete = centerToDelete;
+
+    // Actualización optimista
+    setCenters(prev => prev.filter(center => center.center_id !== centerIdToDelete));
+    setIsModalOpen(false);
+    setCenterToDelete(null);
+
+    try {
+      await api.delete(`/centers/${centerIdToDelete}`);
+    } catch (err) {
+      console.log("Acción de eliminación registrada para ejecución offline.");
+      alert('Estás sin conexión. El centro se eliminará automáticamente cuando recuperes la conexión.');
+    }
+  }, [centerToDelete, centers]);  
 
   const handleCancelDelete = () => {
       setIsModalOpen(false);
@@ -223,25 +174,25 @@ const CenterManagementPage: React.FC = () => {
 
   // --- Renderizado del Componente ---
 
-  if (isLoading) {
-    return <div className="center-management-container">Cargando centros...</div>;
+  if (isLoading || isAuthLoading) {
+    return <div className="center-management-container">Cargando...</div>;
   }
-  
-
-  if (error && centers.length === 0) {
-    return <div className="center-management-container error-message">Error: {error}</div>;
-  }
-
+ 
   return (
-    // ... Tu JSX sin cambios ...
     <div className="center-management-container">
         <h1>Gestión de Centros y Albergues</h1>
         <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
+        
+        {/* Para los Links, no podemos usar 'disabled'. En su lugar, podemos usar CSS para que no se pueda hacer clic. */}
+        {/* Añadimos una clase 'disabled' si la autenticación está cargando. */}
         {user?.es_apoyo_admin === true && (
-                <Link to="/admin/centers/new" className="add-center-btn">
-                    + Registrar Nuevo Centro
-                </Link>
-            )}
+            <Link 
+                to={!isAuthLoading ? "/admin/centers/new" : "#"} 
+                className={`add-center-btn ${isAuthLoading ? 'disabled-link' : ''}`}
+            >
+                + Registrar Nuevo Centro
+            </Link>
+        )}
 
         <div className="filters-section">
             <h3>Filtros</h3>
@@ -273,7 +224,9 @@ const CenterManagementPage: React.FC = () => {
         </div>
 
         <div className="results-info">
-            <p>Mostrando {filteredCenters.length} de {centers.length} centros{isOffline && <span className="offline-indicator"> (Modo sin conexión)</span>}</p>
+          <p>Mostrando {filteredCenters.length} de {centers.length} centros
+            {!navigator.onLine && <span className="offline-indicator"> (Modo sin conexión)</span>}
+          </p> 
         </div>
 
         <ul className="center-list">
@@ -290,12 +243,16 @@ const CenterManagementPage: React.FC = () => {
                             )}
                         </div>
                         <div className="center-actions">
-                            <Link to={`/center/${center.center_id}/inventory`} className="inventory-btn">Gestionar</Link>
-                            <button className="info-button" onClick={() => handleShowInfo(center.center_id)}>Ver Detalles</button>
-                            <StatusSwitch center={center} onToggle={handleToggleActive} />
-                            <Link to={`/admin/centers/${center.center_id}/edit`} className="edit-btn">Editar</Link> {/* <-- Botón de edición */}
+                            <Link to={`/center/${center.center_id}/inventory`} className={`inventory-btn ${isAuthLoading ? 'disabled-link' : ''}`}>Gestionar</Link>
+                            <button className="info-button" onClick={() => handleShowInfo(center.center_id)} disabled={isAuthLoading}>Ver Detalles</button>
+                            
+                            {/* Pasamos 'isAuthLoading' para deshabilitar el switch mientras carga la sesión */}
+                            <StatusSwitch center={center} onToggle={handleToggleActive} disabled={isAuthLoading} />
+                            
+                            <Link to={`/admin/centers/${center.center_id}/edit`} className={`edit-btn ${isAuthLoading ? 'disabled-link' : ''}`}>Editar</Link>
+                            
                             {user?.es_apoyo_admin === true && (
-                                <button onClick={() => handleDeleteClick(center.center_id)} className="delete-btn">
+                                <button onClick={() => handleDeleteClick(center.center_id)} className="delete-btn" disabled={isAuthLoading}>
                                     Eliminar
                                 </button>
                             )}
@@ -310,12 +267,13 @@ const CenterManagementPage: React.FC = () => {
                   <h2>Confirmar Eliminación</h2>
                   <p>¿Estás seguro de que deseas eliminar el centro con ID: **{centerToDelete}**? Esta acción es irreversible y eliminará todos los datos relacionados.</p>
                   <div className="modal-actions">
-                      <button onClick={handleConfirmDelete} className="confirm-btn">Sí, eliminar</button>
-                      <button onClick={handleCancelDelete} className="cancel-btn">Cancelar</button>
+                      {/* El botón de confirmación también se deshabilita */}
+                      <button onClick={handleConfirmDelete} className="confirm-btn" disabled={isAuthLoading}>Sí, eliminar</button>
+                      <button onClick={handleCancelDelete} className="cancel-btn" disabled={isAuthLoading}>Cancelar</button>
                   </div>
               </div>
           </div>
-      )}
+        )}
     </div>
   );
 };

@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-385b6b07'], (function (workbox) { 'use strict';
+define(['./workbox-995bff61'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -82,7 +82,7 @@ define(['./workbox-385b6b07'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.8k73dv9g7ao"
+    "revision": "0.7d07kr0h5no"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -95,15 +95,29 @@ define(['./workbox-385b6b07'], (function (workbox) { 'use strict';
     url
   }) => url.pathname.startsWith("/api/"), new workbox.StaleWhileRevalidate({
     "cacheName": "api-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxAgeSeconds: 604800
-    })]
+    plugins: []
   }), 'GET');
   workbox.registerRoute(({
     url
-  }) => url.hostname.includes("googleapis.com"), new workbox.CacheFirst({
-    "cacheName": "google-maps-cache",
-    plugins: []
-  }), 'GET');
+  }) => url.pathname.startsWith("/api/"), new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("appcopio-mutation-queue", {
+      maxRetentionTime: 1440
+    })]
+  }), 'POST');
+  workbox.registerRoute(({
+    url
+  }) => url.pathname.startsWith("/api/"), new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("appcopio-mutation-queue")]
+  }), 'PUT');
+  workbox.registerRoute(({
+    url
+  }) => url.pathname.startsWith("/api/"), new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("appcopio-mutation-queue")]
+  }), 'PATCH');
+  workbox.registerRoute(({
+    url
+  }) => url.pathname.startsWith("/api/"), new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("appcopio-mutation-queue")]
+  }), 'DELETE');
 
 }));

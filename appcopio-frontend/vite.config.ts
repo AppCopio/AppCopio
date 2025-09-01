@@ -12,10 +12,7 @@ export default defineConfig({
         enabled: true,
       },
       workbox: {
-        // Precaché de la aplicación (esto ya funcionaba)
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-
-        // Reglas de caché en tiempo real
         runtimeCaching: [
           {
             // Regla para que la autenticación NUNCA se cachee
@@ -23,20 +20,47 @@ export default defineConfig({
             handler: 'NetworkOnly',
           },
           {
-            // Regla para el resto de las peticiones GET a nuestra API
+            // Regla para las peticiones GET a nuestra API (sin cambios)
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'api-cache' },
+          },
+          // --- INICIO DE LA NUEVA REGLA OFFLINE ---
+          {
+            // Se aplica a cualquier petición a nuestra API que NO sea GET.
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly', // Siempre intenta ir a la red primero.
+            method: 'POST', // Aplica a POST
             options: {
-              cacheName: 'api-cache',
-              expiration: { maxAgeSeconds: 60 * 60 * 24 * 7 },
+              // Este es el plugin mágico.
+              backgroundSync: {
+                name: 'appcopio-mutation-queue', // Nombre de la cola
+                options: {
+                  maxRetentionTime: 24 * 60, // Reintentar por hasta 24 horas
+                },
+              },
             },
           },
+          // Repetimos la regla para otros métodos
           {
-            // Regla para el mapa de Google
-            urlPattern: ({ url }) => url.hostname.includes('googleapis.com'),
-            handler: 'CacheFirst',
-            options: { cacheName: 'google-maps-cache' },
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+            method: 'PUT',
+            options: { backgroundSync: { name: 'appcopio-mutation-queue' } },
           },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+            method: 'PATCH',
+            options: { backgroundSync: { name: 'appcopio-mutation-queue' } },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+            method: 'DELETE',
+            options: { backgroundSync: { name: 'appcopio-mutation-queue' } },
+          },
+          // --- FIN DE LA NUEVA REGLA OFFLINE ---
         ],
       },
       manifest: {
