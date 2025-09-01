@@ -133,7 +133,8 @@ export default function ResponsibleSection({
             </Typography>
             <Button
               size="small"
-              variant="text"
+              variant="textBare"
+              sx={(t) => t.typography.bodySmall}
               onClick={onAssignMunicipal}
               disabled={!onAssignMunicipal || !navigator.onLine}  // desactiva si no hay callback o sin conexión
             >
@@ -154,8 +155,9 @@ export default function ResponsibleSection({
               Contacto comunidad
             </Typography>
             <Button
+              variant="textBare"
+              sx={(t) => t.typography.bodySmall}
               size="small"
-              variant="text"
               onClick={onAssignCommunity}
               disabled={!onAssignCommunity || !navigator.onLine}
             >

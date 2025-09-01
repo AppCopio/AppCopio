@@ -29,6 +29,9 @@ import CenterEditPage from './pages/CenterEditPage/CenterEditPage';
 import "./App.css";
 import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
 
+import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
+
+
 function App() {
   return (
     <div className="App">
@@ -39,6 +42,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/typo" element={<ExampleFrontend />} />
           </Route>
 
           {/* --- 2. Bloque Único de Rutas Protegidas --- */}

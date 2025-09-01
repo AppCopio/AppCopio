@@ -1,8 +1,5 @@
 import * as React from "react";
-import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, TextField, Autocomplete, CircularProgress, Stack, Typography
-} from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Autocomplete, CircularProgress, Stack, Typography } from "@mui/material";
 import { listActiveUsersByRole, assignCenterToUser, getActiveAssignmentsByUserRole } from "../../services/usersApi";
 import ConfirmImpactDialog from "./ConfirmImpactDialog";
 
@@ -135,8 +132,8 @@ export default function AssignResponsibleDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>Cancelar</Button>
-        <Button onClick={handleSave} variant="contained" disabled={!user || saving}>
+        <Button variant="outlineGray" onClick={onClose} disabled={saving}>Cancelar</Button>
+        <Button onClick={handleSave} disabled={!user || saving}>
           {saving ? "Guardando..." : "Guardar"}
         </Button>
       </DialogActions>
