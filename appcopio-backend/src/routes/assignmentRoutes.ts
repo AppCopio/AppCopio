@@ -30,6 +30,42 @@ function normalizeRole(input: string | null | undefined): AssignmentRole {
   throw new Error('VALIDATION_ROLE');
 }
 
+
+
+// GET /api/assignments/active/by-user-role?user_id=123&role=contacto%20ciudadano[&exclude_center_id=C002]
+const getActiveAssignmentsByUserRole: RequestHandler = async (req, res) => {
+  const userId = Number(req.query.user_id);
+  const role = String(req.query.role ?? "").trim().toLowerCase();
+  const excludeCenterId = (req.query.exclude_center_id ? String(req.query.exclude_center_id) : "").trim() || null;
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    res.status(400).json({ error: "user_id inválido" });
+    return;
+  }
+  if (!role) {
+    res.status(400).json({ error: "role requerido" });
+    return;
+  }
+
+  try {
+    const sql = `
+      SELECT ca.center_id, c.name AS center_name
+      FROM centerassignments ca
+      JOIN centers c ON c.center_id = ca.center_id
+      WHERE ca.valid_to IS NULL
+        AND ca.user_id = $1
+        AND lower(ca.role) = $2
+        AND ($3::text IS NULL OR ca.center_id <> $3)
+      ORDER BY c.name ASC NULLS LAST, ca.center_id ASC;
+    `;
+    const { rows } = await pool.query(sql, [userId, role, excludeCenterId]);
+    res.json({ assignments: rows, count: rows.length });
+  } catch (e) {
+    console.error("GET /assignments/active/by-user-role error:", e);
+    res.status(500).json({ error: "No se pudieron cargar las asignaciones activas" });
+  }
+};
+
 /**
  * @route   POST /api/assignments
  * @desc    Asigna un centro a un usuario (crea nuevo tramo y cierra el anterior de ese centro+rol).
@@ -96,6 +132,29 @@ const addAssignmentHandler: RequestHandler = async (req, res) => {
         WHERE center_id = $1`,
       [center_id, user_id]
     );
+
+    if (normRole === 'contacto ciudadano') {
+      // 1) Cierra tramos activos de este usuario en OTROS centros para ese rol
+      await client.query(
+        `UPDATE centerassignments
+            SET valid_to = NOW(), changed_at = NOW(), changed_by = $3
+          WHERE user_id = $1
+            AND role = $2
+            AND valid_to IS NULL
+            AND center_id <> $4`,
+        [user_id, normRole, changed_by ?? null, center_id]
+      );
+
+      // 2) Limpia punteros en Centers donde ese usuario esté como contacto comunidad
+      const col = centersPointerColumn(normRole); // 'comunity_charge_id'
+      await client.query(
+        `UPDATE centers
+            SET ${col} = NULL, updated_at = NOW()
+          WHERE ${col} = $1
+            AND center_id <> $2`,
+        [user_id, center_id]
+      );
+    }
 
     await client.query('COMMIT');
     res.status(201).json(insertRs.rows[0]);
@@ -195,6 +254,7 @@ const removeAssignmentHandler: RequestHandler = async (req, res) => {
 // Registro de rutas
 router.post("/", addAssignmentHandler);
 router.delete("/", removeAssignmentHandler);
+router.get("/active/by-user-role", getActiveAssignmentsByUserRole);
 
 export default router;
 

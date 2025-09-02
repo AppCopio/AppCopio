@@ -170,43 +170,6 @@ const updateUserHandler: RequestHandler<{ id: string }> = async (req, res) => {
   }
 };
 
-// POST /api/users/login - Manejador de inicio de sesión
-const loginHandler: RequestHandler = async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        res.status(400).json({ message: 'Se requieren usuario y contraseña.' });
-        return;
-    }
-    try {
-        const userResult = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-        const user = userResult.rows[0];
-        if (!user) {
-            res.status(401).json({ message: 'Credenciales inválidas.' });
-            return;
-        }
-        const isMatch = await bcrypt.compare(password, user.password_hash);
-        if (!isMatch) {
-            res.status(401).json({ message: 'Credenciales inválidas.' });
-            return;
-        }
-        const roleResult = await pool.query('SELECT role_name FROM roles WHERE role_id = $1', [user.role_id]);
-        const assignmentsResult = await pool.query('SELECT center_id FROM centerassignments WHERE user_id = $1 AND valid_to IS NULL', [user.user_id]);
-        const assignedCenters = assignmentsResult.rows.map(r => r.center_id);
-        const role_name = roleResult.rows[0]?.role_name;
-        const sessionUser = {
-            user_id: user.user_id,
-            username: user.username,
-            role_name: role_name,
-            es_apoyo_admin: user.es_apoyo_admin,
-            assignedCenters: assignedCenters,
-        };
-        res.json({ token: 'un-token-jwt-simulado', user: sessionUser });
-    } catch (error) {
-        console.error('Error en el login:', error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
-    }
-};
-
 // DELETE /api/users/:id - Eliminar un usuario
 const deleteUserHandler: RequestHandler<{ id: string }> = async (req, res) => {
   const id = Number(req.params.id);
@@ -223,12 +186,50 @@ const deleteUserHandler: RequestHandler<{ id: string }> = async (req, res) => {
   }
 };
 
+
+// GET /api/users/active/role/:roleId
+const listActiveUsersByRoleWithAssignmentCount: RequestHandler = async (req, res) => {
+  const roleId = Number(req.params.roleId);
+  if (!Number.isInteger(roleId)) {
+    res.status(400).json({ error: "roleId inválido" });
+    return;
+  }
+
+  const sql = `
+    SELECT
+      u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
+      u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
+      r.role_name,
+      COALESCE(a.active_assignments, 0)::int AS active_assignments
+    FROM users u
+    JOIN roles r ON r.role_id = u.role_id
+    LEFT JOIN (
+      SELECT user_id, COUNT(*) AS active_assignments
+      FROM centerassignments
+      WHERE valid_to IS NULL
+      GROUP BY user_id
+    ) a ON a.user_id = u.user_id
+    WHERE u.is_active = TRUE
+      AND u.role_id = $1
+    ORDER BY u.nombre ASC;
+  `;
+
+  try {
+    const rs = await pool.query(sql, [roleId]);
+    res.json({ users: rs.rows, total: rs.rowCount });
+  } catch (e) {
+    console.error("GET /users/active/role/:roleId error:", e);
+    res.status(500).json({ error: "Error al listar usuarios por rol" });
+  }
+};
+
 // --- REGISTRO DE TODAS LAS RUTAS ---
+router.get("/active/role/:roleId", listActiveUsersByRoleWithAssignmentCount);
 router.get("/", listUsersHandler);
 router.get("/:id", getUserByIdHandler);
 router.post("/", createUserHandler);
 router.put("/:id", updateUserHandler);
 router.delete("/:id", deleteUserHandler);
-router.post('/login', loginHandler);
+
 
 export default router;

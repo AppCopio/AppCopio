@@ -8,6 +8,7 @@
 .center-details-header {
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Alinear elementos a los extremos */
   margin-bottom: 30px;
   padding-bottom: 15px;
   border-bottom: 2px solid #eee;
@@ -32,6 +33,23 @@
 .center-details-header h1 {
   margin: 0;
   color: #333;
+}
+
+/* Nuevo estilo para el botón de edición */
+.edit-button {
+  background-color: #007bff; /* Azul */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.edit-button:hover {
+  background-color: #0056b3;
 }
 
 .center-details-content {
@@ -329,6 +347,11 @@
   
   .back-button {
     margin-right: 0;
+  }
+  
+  /* Ajuste para el botón de edición en móvil */
+  .edit-button {
+    margin-top: 10px;
   }
 }
 

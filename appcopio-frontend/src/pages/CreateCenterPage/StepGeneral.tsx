@@ -8,43 +8,166 @@ interface StepGeneralProps {
 }
 
 const StepGeneral = React.forwardRef<any, StepGeneralProps>(({ value, onChange }, ref) => {
-    const validate = () => {
-        const requiredFields: (keyof CenterData)[] = ['name', 'address', 'type', 'capacity', 'latitude', 'longitude'];
-        const errors = requiredFields.some(field => value[field] === '' || value[field] === null || (typeof value[field] === 'number' && isNaN(value[field] as number)));
-        if (errors) {
-            alert('Por favor, complete todos los campos obligatorios del Paso 1.');
+    const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
+        const { name, value: newValue } = event.target;
+        onChange(name as keyof CenterData, newValue);
+        if (fieldErrors[name as string]) {
+            setFieldErrors(prev => ({ ...prev, [name as string]: '' }));
         }
-        return !errors;
+    };
+
+    const validate = () => {
+        const errors: Record<string, string> = {};
+        let isValid = true;
+
+        if (!value.name || value.name.trim() === '') {
+            errors.name = 'El nombre del centro es obligatorio.';
+            isValid = false;
+        }
+
+        if (!value.address || value.address.trim() === '') {
+            errors.address = 'La dirección es obligatoria.';
+            isValid = false;
+        }
+        
+        if (!value.nombre_dirigente || value.nombre_dirigente.trim() === '') {
+            errors.nombre_dirigente = 'El nombre del dirigente es obligatorio.';
+            isValid = false;
+        }
+
+        if (!value.cargo_dirigente || value.cargo_dirigente.trim() === '') {
+            errors.cargo_dirigente = 'El cargo del dirigente es obligatorio.';
+            isValid = false;
+        }
+
+        if (!value.telefono_contacto || value.telefono_contacto.trim() === '') {
+            errors.telefono_contacto = 'El teléfono de contacto es obligatorio.';
+            isValid = false;
+        }
+
+        if (!value.type) {
+            errors.type = 'El tipo de centro es obligatorio.';
+            isValid = false;
+        }
+
+        if (value.capacity === null || isNaN(value.capacity) || value.capacity < 0) {
+            errors.capacity = 'La capacidad debe ser un número positivo.';
+            isValid = false;
+        }
+        
+        if (value.latitude === null || isNaN(value.latitude)) {
+            errors.latitude = 'La latitud es obligatoria.';
+            isValid = false;
+        }
+        
+        if (value.longitude === null || isNaN(value.longitude)) {
+            errors.longitude = 'La longitud es obligatoria.';
+            isValid = false;
+        }
+
+        setFieldErrors(errors);
+        return isValid;
     };
 
     React.useImperativeHandle(ref, () => ({ validate }));
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             <Typography variant="h6">Información General del Centro</Typography>
-            <TextField fullWidth label="Nombre de la organización" name="name" value={value.name} onChange={(e) => onChange('name', e.target.value)} required />
-            <TextField fullWidth label="Dirección" name="address" value={value.address} onChange={(e) => onChange('address', e.target.value)} required />
-            <TextField fullWidth label="Nombre Directiva o Dirigenta" name="nombre_dirigente" value={value.nombre_dirigente} onChange={(e) => onChange('nombre_dirigente', e.target.value)} required />
-            <TextField fullWidth label="Cargo Directiva o Dirigente" name="cargo_dirigente" value={value.cargo_dirigente} onChange={(e) => onChange('cargo_dirigente', e.target.value)} required />
-            <TextField fullWidth label="Teléfono de contacto" name="telefono_contacto" value={value.telefono_contacto} onChange={(e) => onChange('telefono_contacto', e.target.value)} required />
-        
-            
-            <FormControl fullWidth required>
-                <InputLabel>Tipo de Centro</InputLabel>
-                <Select name="type" value={value.type} label="Tipo de Centro" onChange={(e) => onChange('type', e.target.value)}>
-                    <MenuItem value="albergue">Albergue</MenuItem>
-                    <MenuItem value="acopio">Albergue comunitario</MenuItem>
-                </Select>
-            </FormControl>
-            <TextField fullWidth label="Capacidad" name="capacity" type="number" inputProps={{ min: 0 }}  value={value.capacity} onChange={(e) => onChange('capacity', Number(e.target.value))} required />
-            <TextField fullWidth label="Latitud" name="latitude" type="number" inputProps={{ step: "any" }} inputMode="decimal"  value={value.latitude ?? ""} onChange={(e) => onChange('latitude', e.target.value === "" ? null : Number(e.target.value))}required />
-            <TextField fullWidth label="Longitud" name="longitude" type="number" inputProps={{ step: "any" }} inputMode="decimal"  value={value.longitude ?? ""} onChange={(e) => onChange('longitude', e.target.value === "" ? null : Number(e.target.value))} required />
-            <TextField fullWidth label="Folio" name="folio" type="text" value={value.folio} onChange={(e) => onChange('folio', Number(e.target.value))}  />
-
-            <FormControlLabel
-                control={<Checkbox checked={value.should_be_active} onChange={(e) => onChange('should_be_active', e.target.checked)} name="should_be_active" />}
-                label="Debería estar activo"
+            <TextField
+                fullWidth
+                label="Nombre de la organización"
+                name="name"
+                value={value.name}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.name}
+                helperText={fieldErrors.name}
             />
+            <TextField
+                fullWidth
+                label="Dirección"
+                name="address"
+                value={value.address}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.address}
+                helperText={fieldErrors.address}
+            />
+            <TextField
+                fullWidth
+                label="Nombre Directiva o Dirigenta"
+                name="nombre_dirigente"
+                value={value.nombre_dirigente}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.nombre_dirigente}
+                helperText={fieldErrors.nombre_dirigente}
+            />
+            <TextField
+                fullWidth
+                label="Cargo Directiva o Dirigente"
+                name="cargo_dirigente"
+                value={value.cargo_dirigente}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.cargo_dirigente}
+                helperText={fieldErrors.cargo_dirigente}
+            />
+            <TextField
+                fullWidth
+                label="Teléfono de contacto"
+                name="telefono_contacto"
+                value={value.telefono_contacto}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.telefono_contacto}
+                helperText={fieldErrors.telefono_contacto}
+            />
+            
+            <FormControl fullWidth required error={!!fieldErrors.type}>
+                <InputLabel>Tipo de Centro</InputLabel>
+                <Select
+                    name="type"
+                    value={value.type}
+                    label="Tipo de Centro"
+                    onChange={handleChange as any}
+                >
+                    <MenuItem value="albergue">Albergue</MenuItem>
+                    <MenuItem value="acopio">Acopio</MenuItem>
+                </Select>
+                {!!fieldErrors.type && <p style={{color: 'red', fontSize: '0.75rem', marginLeft: '14px', marginTop: '3px'}}>{fieldErrors.type}</p>}
+            </FormControl>
+        
+            <TextField
+                fullWidth
+                label="Latitud"
+                name="latitude"
+                type="number"
+                inputProps={{ step: "any" }}
+                inputMode="decimal"
+                value={value.latitude ?? ""}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.latitude}
+                helperText={fieldErrors.latitude}
+            />
+            <TextField
+                fullWidth
+                label="Longitud"
+                name="longitude"
+                type="number"
+                inputProps={{ step: "any" }}
+                inputMode="decimal"
+                value={value.longitude ?? ""}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.longitude}
+                helperText={fieldErrors.longitude}
+            />
+            {/*falta folio*/}
         </Box>
     );
 });

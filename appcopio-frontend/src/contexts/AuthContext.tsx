@@ -51,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setAccessToken(data.access_token);
       setUser(data.user);
     } catch (e: any) {
-        console.log(e);
       const msg = e?.response?.data?.message || "Credenciales inválidas.";
       throw new Error(msg);
     } finally {
