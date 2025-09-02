@@ -191,7 +191,7 @@ export default function UsersManagementPage() {
                           justifyContent="flex-end"
                           alignItems="center"
                         >
-                          {(isTM || isCC) && (
+                          {(isTM ) && (
                             <Tooltip title="Asignar Centros">
                               <IconButton
                                 size="small"
