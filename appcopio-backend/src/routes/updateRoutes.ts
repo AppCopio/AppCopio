@@ -103,10 +103,10 @@ const updateRequestHandler: RequestHandler = async (req: AuthenticatedRequest, r
     const { status, assigned_to, resolution_comment } = req.body;
     const resolved_by = req.user?.id;
 
-    if (!resolved_by) {
+    /* if (!resolved_by) {
         res.status(401).json({ message: 'No autorizado. Se requiere iniciar sesión.' });
         return;
-    }
+    } */
 
     // Construcción dinámica de la consulta para evitar actualizar campos no deseados
     const fields: any[] = [];
