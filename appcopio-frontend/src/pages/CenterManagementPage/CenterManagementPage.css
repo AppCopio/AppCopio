@@ -3,6 +3,28 @@
   padding: 20px;
 }
 
+.centers-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.add-center-btn {
+    padding: 10px 15px;
+    background-color: #28a745;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.add-center-btn:hover {
+    background-color: #218838;
+}
+
 .filters-section {
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;

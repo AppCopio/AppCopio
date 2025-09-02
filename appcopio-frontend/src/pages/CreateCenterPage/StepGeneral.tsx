@@ -36,15 +36,15 @@ const StepGeneral = React.forwardRef<any, StepGeneralProps>(({ value, onChange }
                     <MenuItem value="acopio">Albergue comunitario</MenuItem>
                 </Select>
             </FormControl>
-            <TextField fullWidth label="Capacidad" name="capacity" type="number" inputProps={{ min: 0 }}  value={value.capacity} onChange={(e) => onChange('capacity', Number(e.target.value))} required />
+            {/*<TextField fullWidth label="Capacidad" name="capacity" type="number" inputProps={{ min: 0 }}  value={value.capacity} onChange={(e) => onChange('capacity', Number(e.target.value))} required />*/}
             <TextField fullWidth label="Latitud" name="latitude" type="number" inputProps={{ step: "any" }} inputMode="decimal"  value={value.latitude ?? ""} onChange={(e) => onChange('latitude', e.target.value === "" ? null : Number(e.target.value))}required />
             <TextField fullWidth label="Longitud" name="longitude" type="number" inputProps={{ step: "any" }} inputMode="decimal"  value={value.longitude ?? ""} onChange={(e) => onChange('longitude', e.target.value === "" ? null : Number(e.target.value))} required />
             <TextField fullWidth label="Folio" name="folio" type="text" value={value.folio} onChange={(e) => onChange('folio', Number(e.target.value))}  />
 
-            <FormControlLabel
+            {/*<FormControlLabel
                 control={<Checkbox checked={value.should_be_active} onChange={(e) => onChange('should_be_active', e.target.checked)} name="should_be_active" />}
                 label="Debería estar activo"
-            />
+            />*/}
         </Box>
     );
 });

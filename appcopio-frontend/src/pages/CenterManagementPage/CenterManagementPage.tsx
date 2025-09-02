@@ -179,20 +179,22 @@ const CenterManagementPage: React.FC = () => {
   }
  
   return (
-    <div className="center-management-container">
-        <div className="ds-titlePage">Gestión de Centros y Albergues</div>
+     <div className="center-management-container">
+        {/* Nuevo contenedor para el encabezado */}
+        <div className="centers-header">
+            <h1 className="ds-titlePage">Gestión de Centros y Albergues</h1>
+            {/* El botón ahora está dentro del nuevo contenedor */}
+            {(user?.es_apoyo_admin || user?.role_id === 1) === true && (
+                <Link 
+                    to={!isAuthLoading ? "/admin/centers/new" : "#"} 
+                    className={`add-center-btn ${isAuthLoading ? 'disabled-link' : ''}`}
+                >
+                    + Registrar Nuevo Centro
+                </Link>
+            )}
+        </div>
         <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
-        
-        {/* Para los Links, no podemos usar 'disabled'. En su lugar, podemos usar CSS para que no se pueda hacer clic. */}
-        {/* Añadimos una clase 'disabled' si la autenticación está cargando. */}
-        {user?.es_apoyo_admin === true && (
-            <Link 
-                to={!isAuthLoading ? "/admin/centers/new" : "#"} 
-                className={`add-center-btn ${isAuthLoading ? 'disabled-link' : ''}`}
-            >
-                + Registrar Nuevo Centro
-            </Link>
-        )}
+
 
         <div className="filters-section">
             <h3>Filtros</h3>
