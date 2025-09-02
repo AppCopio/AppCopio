@@ -41,6 +41,8 @@ const MultiStepCenterForm: React.FC = () => {
         
         if (currentStepIsValid) {
             setActiveStep((prevActiveStep) => prevActiveStep + 1);
+        }else {
+            setError("Por favor, corrige los errores antes de continuar.");
         }
     };
 
@@ -64,7 +66,7 @@ const MultiStepCenterForm: React.FC = () => {
         setIsSaving(false);
     };
 
-    const handleFormSubmit = async () => {
+   const handleFormSubmit = async () => {
       setIsSaving(true);
       if (navigator.onLine) {
           try {
@@ -89,7 +91,7 @@ const MultiStepCenterForm: React.FC = () => {
       }
   };
 
-    return (
+     return (
         <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', p: 3 }}>
             <Typography variant="h4" component="h1" align="center" gutterBottom>
                 Registro de Nuevo Centro
