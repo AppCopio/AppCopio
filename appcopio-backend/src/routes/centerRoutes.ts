@@ -760,8 +760,38 @@ const getActiveCenters: RequestHandler = async (req, res) => {
   }
 
 }
+const getCurrentResidentsPersonsHandler: RequestHandler = async (req, res) => {
+  const { centerId } = req.params;
 
+  if (!centerId) {
+    res.status(400).json({ error: 'El ID del centro es requerido' });
+    return;
+  }
 
+  try {
+    const result = await pool.query(
+      `SELECT p.person_id, p.rut, p.nombre, p.primer_apellido, p.segundo_apellido, p.nacionalidad, 
+              p.genero, p.edad, p.created_at, p.updated_at
+       FROM Persons p
+       JOIN FamilyGroupMembers fgm ON fgm.person_id = p.person_id
+       JOIN FamilyGroups fg ON fg.family_id = fgm.family_id
+       JOIN CentersActivations ca ON ca.activation_id = fg.activation_id
+       WHERE ca.center_id = $1`,
+      [centerId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'No se encontraron personas albergadas en este centro' });
+      return;
+    }
+
+    const persons = result.rows;
+    res.json(persons);
+  } catch (err) {
+    console.error('Error al obtener las personas albergadas:', err);
+    res.status(500).json({ error: 'Error interno del servidor al obtener las personas albergadas' });
+  }
+};
 
 // --- REGISTRO DE TODAS LAS RUTAS ---
 router.get('/', getAllCentersHandler);
@@ -782,6 +812,9 @@ router.delete('/:centerId/inventory/:itemId', deleteInventoryItemHandler);
 router.get('/:centerId/residents', getCurrentResidentsHandler);
 router.get('/:centerId/capacity', getCenterCapacityHandler);
 router.get('/:centerId/active-centers', getActiveCenters);
+router.get('/:centerId/people', getCurrentResidentsPersonsHandler);  // Aquí añades el nuevo endpoint
+
+
 
 
 export default router;
