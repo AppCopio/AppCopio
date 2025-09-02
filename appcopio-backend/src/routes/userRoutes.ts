@@ -101,21 +101,19 @@ const getUserByIdHandler: RequestHandler<{ id: string }> = async (req, res) => {
 // POST /api/users - Crear un nuevo usuario (CORREGIDO)
 const createUserHandler: RequestHandler = async (req, res) => {
   try {
-    // Se elimina 'center_id' de los parámetros a recibir.
-    const { rut, username, password, email, role_id, nombre, genero, celular, imagen_perfil, es_apoyo_admin = false } = req.body || {};
+    const { rut, username, password, email, role_id, nombre, genero, celular, imagen_perfil, es_apoyo_admin = false, is_active = true } = req.body || {};
     if (!rut || !username || !password || !email || !role_id) {
       res.status(400).json({ error: "Faltan campos obligatorios" });
       return;
     }
     const hash = await bcrypt.hash(password, 10);
-    // Se elimina 'center_id' de la consulta de inserción.
     const insertSql = `
       INSERT INTO users
-        (rut, username, password_hash, email, role_id, nombre, genero, celular, imagen_perfil, es_apoyo_admin)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        (rut, username, password_hash, email, role_id, nombre, genero, celular, imagen_perfil, is_active, es_apoyo_admin)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING user_id, rut, username, email, role_id, created_at, nombre, is_active, es_apoyo_admin
     `;
-    const rs = await pool.query(insertSql, [rut, username, hash, email, Number(role_id), nombre, genero, celular, imagen_perfil, es_apoyo_admin]);
+    const rs = await pool.query(insertSql, [rut, username, hash, email, Number(role_id), nombre, genero, celular, imagen_perfil, is_active, es_apoyo_admin]);
     res.status(201).json(rs.rows[0]);
   } catch (e: any) {
     if (e?.code === "23505") {

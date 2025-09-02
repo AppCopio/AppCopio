@@ -34,6 +34,33 @@ const GENEROS = [
   { value: "Prefiero no decir", label: "Prefiero no decir" },
 ];
 
+// Aquí se integran las funciones de formateo y validación de RUT
+const cleanRut = (v: string) => v.replace(/[^0-9kK]/g, "").toUpperCase();
+const formatRut = (v: string) => {
+  const s = cleanRut(v);
+  if (s.length <= 1) return s;
+  const body = s.slice(0, -1);
+  const dv = s.slice(-1);
+  const bodyWithDots = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${bodyWithDots}-${dv}`;
+};
+const computeDV = (bodyDigits: string) => {
+  let sum = 0, mul = 2;
+  for (let i = bodyDigits.length - 1; i >= 0; i--) {
+    sum += parseInt(bodyDigits[i], 10) * mul;
+    mul = mul === 7 ? 2 : mul + 1;
+  }
+  const r = 11 - (sum % 11);
+  return r === 11 ? "0" : r === 10 ? "K" : String(r);
+};
+const isValidRut = (rutFormattedOrNot: string) => {
+  const s = cleanRut(rutFormattedOrNot);
+  if (s.length < 2) return false;
+  const body = s.slice(0, -1);
+  const dv = s.slice(-1);
+  return computeDV(body) === dv.toUpperCase();
+};
+
 export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props) {
   const isEdit = mode === "edit";
 
@@ -58,7 +85,6 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [touched, setTouched] = React.useState<Record<string, boolean>>({});
-
   React.useEffect(() => {
     const controller = new AbortController();
     let mounted = true;
@@ -104,17 +130,26 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const selectedRole = roles.find(r => r.role_id === (roleId === "" ? -1 : roleId));
-  const needsCenter = selectedRole?.role_id === 2 || selectedRole?.role_id === 3;
+  const needsCenter = selectedRole?.role_id === 3;
+  const needsApoyo = selectedRole?.role_id === 2;
+
+
+  // Usa useMemo para validar el RUT, para que se recalcule solo cuando cambian las dependencias
+  const rutDVInvalid = React.useMemo(() => {
+    const s = cleanRut(rut);
+    if (!touched.rut || s.length < 2) return false;
+    return !isValidRut(s);
+  }, [touched.rut, rut]);
 
   const canSave =
     required(rut) &&
+    !rutDVInvalid && 
     required(nombre) &&
     required(username) &&
     (isEdit || required(password)) &&
     !!roleId &&
     required(email) &&
-    emailValid &&
-    (!needsCenter || !!centerId);
+    emailValid 
 
   const handleSave = async () => {
     if (!canSave) {
@@ -151,18 +186,27 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
         const currentAssigned: string[] = (u.assignedCenters || []).map(String);
 
         if (needsCenter) {
-          const toRemove = currentAssigned.filter((id) => id !== centerId);
-          const toAdd = centerId && !currentAssigned.includes(centerId) ? [centerId] : [];
-          await Promise.all([
-            ...toRemove.map((id) => removeCenterFromUser(user.user_id, id)),
-            ...toAdd.map((id) => assignCenterToUser(user.user_id, id, u.role_name)),
-          ]);
-        } else if (currentAssigned.length > 0) {
-          await Promise.all(currentAssigned.map((id) => removeCenterFromUser(user.user_id, id)));
+          if (centerId) {
+            const toRemove = currentAssigned.filter((id) => id !== centerId);
+            const toAdd = currentAssigned.includes(centerId) ? [] : [centerId];
+            await Promise.all([
+              ...toRemove.map((id) => removeCenterFromUser(user.user_id, id)),
+              ...toAdd.map((id) => assignCenterToUser(user.user_id, centerId, u.role_name)),
+            ]);
+          } else {
+            if (currentAssigned.length > 0) {
+              await Promise.all(currentAssigned.map((id) => removeCenterFromUser(user.user_id, id)));
+            }
+          }
+        } else {
+          if (currentAssigned.length > 0) {
+            await Promise.all(currentAssigned.map((id) => removeCenterFromUser(user.user_id, id)));
+          }
         }
+
       } else {
         const created = await createUser({
-          rut,
+          rut: cleanRut(rut),
           username,
           password,
           email,
@@ -173,7 +217,6 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
           es_apoyo_admin: !!esApoyoAdmin,
           is_active: !!isActive,
         });
-
         if (needsCenter && centerId) {
           const roleName = selectedRole?.role_name ?? "";
           await assignCenterToUser(created.user_id, centerId, roleName);
@@ -203,8 +246,15 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
     }
   };
 
+  // Manejador de cambio para el campo RUT, aplicando el formato
+  const handleRutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const formattedValue = formatRut(value);
+    setRut(formattedValue);
+  };
+
   return (
-    <Stack spacing={2} sx={{ minWidth: { xs: 0, sm: 560 } }}>
+    <Stack spacing={2} sx={{ minWidth: { xs: 0, sm: 500 } }}>
       <DialogContentText component="div">
         {isEdit ? "Edita" : "Crea"} un usuario. Si el rol es <b>Contacto Comunidad</b>, selecciona un centro.
       </DialogContentText>
@@ -214,10 +264,13 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
       <TextField
         label="RUT"
         value={rut}
-        onChange={(e) => setRut(e.target.value)}
+        onChange={handleRutChange}
         onBlur={() => setTouched((t) => ({ ...t, rut: true }))}
-        error={!!touched.rut && !required(rut)}
-        helperText={!!touched.rut && !required(rut) ? "Requerido" : " "}
+        error={!!touched.rut && (!required(rut) || rutDVInvalid)}
+        helperText={
+          !!touched.rut && !required(rut)
+            ? "Requerido"
+            : (!!touched.rut && rutDVInvalid ? "RUT inválido" : " ") }
         fullWidth
         disabled={isEdit} 
       />
@@ -297,7 +350,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
       </FormControl>
 
       {needsCenter && (
-        <FormControl fullWidth error={!!touched.center && !centerId} disabled={loadingCatalogs}>
+        <FormControl fullWidth  disabled={loadingCatalogs}>
           <InputLabel id="center-select-label">Centro</InputLabel>
           <Select
             labelId="center-select-label"
@@ -306,6 +359,9 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
             onChange={(e) => setCenterId(String(e.target.value))}
             onBlur={() => setTouched((t) => ({ ...t, center: true }))}
           >
+            <MenuItem value="">
+               Sin centro 
+            </MenuItem>
             {centers.map((c) => (
               <MenuItem key={String(c.center_id)} value={String(c.center_id)}>
                 {c.name} (ID {String(c.center_id)})
@@ -349,21 +405,21 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
         <FormControlLabel
           control={
             <Switch
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+            />
+          }
+          label="Usuario activo"
+        />
+        {needsApoyo && (<FormControlLabel
+          control={
+            <Switch
               checked={esApoyoAdmin}
               onChange={(e) => setEsApoyoAdmin(e.target.checked)}
             />
           }
           label="Es apoyo admin"
-        />
-        <FormControlLabel
-          control={
-            <Switch
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-            />
-          }
-          label="Activo"
-        />
+        />)}
       </Stack>
 
       
