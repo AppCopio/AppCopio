@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Stepper, Step, StepLabel, Button, Typography, Alert } from '@mui/material';
-import StepGeneral from '../CreateCenterPage/StepGeneral';
+import StepGeneral from './StepGeneral';
 import StepInmueble from '../CreateCenterPage/StepInmueble';
 import StepEvaluacion from '../CreateCenterPage/StepEvaluacion';
 import { CenterData, initialCenterData } from '../../types/center';
