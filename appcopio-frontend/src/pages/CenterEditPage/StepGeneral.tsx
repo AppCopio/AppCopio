@@ -53,6 +53,9 @@ const StepGeneral = React.forwardRef<any, StepGeneralProps>(({ value, onChange }
                 label="Debería estar activo"
             />
         </Box>
+        
+
+        
     );
 });
 

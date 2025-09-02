@@ -179,8 +179,7 @@ const CenterManagementPage: React.FC = () => {
   }
  
   return (
-     <div className="center-management-container">
-        {/* Nuevo contenedor para el encabezado */}
+    <div className="center-management-container">
         <div className="centers-header">
             <h1 className="ds-titlePage">Gestión de Centros y Albergues</h1>
             {/* El botón ahora está dentro del nuevo contenedor */}
@@ -193,9 +192,7 @@ const CenterManagementPage: React.FC = () => {
                 </Link>
             )}
         </div>
-        <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
-
-
+          <p>Aquí puedes ver y administrar el estado de los centros del catastro municipal.</p>
         <div className="filters-section">
             <h3>Filtros</h3>
             <div className="filters-grid">
