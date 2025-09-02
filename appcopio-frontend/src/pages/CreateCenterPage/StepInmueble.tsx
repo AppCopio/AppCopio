@@ -10,15 +10,37 @@ interface StepInmuebleProps {
 }
 
 const StepInmueble = React.forwardRef<any, StepInmuebleProps>(({ value, onChange }, ref) => {
-    const validate = () => {
-        const requiredFields: (keyof CenterData)[] = [
-            'tipo_inmueble', 'numero_habitaciones', 'estado_conservacion'
-        ];
-        const errors = requiredFields.some(field => value[field] === '' || value[field] === null || (typeof value[field] === 'number' && isNaN(value[field] as number)));
-        if (errors) {
-            alert('Por favor, complete todos los campos obligatorios del Paso 2.');
+    const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
+        const { name, value: newValue } = event.target;
+        onChange(name as keyof CenterData, newValue);
+        if (fieldErrors[name as string]) {
+            setFieldErrors(prev => ({ ...prev, [name as string]: '' }));
         }
-        return !errors;
+    };
+
+    const validate = () => {
+        const errors: Record<string, string> = {};
+        let isValid = true;
+        
+        if (!value.tipo_inmueble || value.tipo_inmueble.trim() === '') {
+            errors.tipo_inmueble = 'El tipo de inmueble es obligatorio.';
+            isValid = false;
+        }
+
+        if (value.numero_habitaciones === null || isNaN(value.numero_habitaciones) || value.numero_habitaciones < 0) {
+            errors.numero_habitaciones = 'El número de habitaciones debe ser un número positivo.';
+            isValid = false;
+        }
+        
+        if (value.estado_conservacion === null || isNaN(value.estado_conservacion)) {
+            errors.estado_conservacion = 'El estado de conservación es obligatorio.';
+            isValid = false;
+        }
+        
+        setFieldErrors(errors);
+        return isValid;
     };
     
     React.useImperativeHandle(ref, () => ({ validate }));
@@ -26,8 +48,27 @@ const StepInmueble = React.forwardRef<any, StepInmuebleProps>(({ value, onChange
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Typography variant="h6">Caracterización del Inmueble</Typography>
-            <TextField fullWidth label="Tipo de Inmueble" name="tipo_inmueble" value={value.tipo_inmueble} onChange={(e) => onChange('tipo_inmueble', e.target.value)} required />
-            <TextField fullWidth label="Número de habitaciones" name="numero_habitaciones" type="number" value={value.numero_habitaciones || ''} onChange={(e) => onChange('numero_habitaciones', Number(e.target.value))} required />
+            <TextField
+                fullWidth
+                label="Tipo de Inmueble"
+                name="tipo_inmueble"
+                value={value.tipo_inmueble}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.tipo_inmueble}
+                helperText={fieldErrors.tipo_inmueble }
+            />
+            <TextField
+                fullWidth
+                label="Número de habitaciones"
+                name="numero_habitaciones"
+                type="number"
+                value={value.numero_habitaciones || ''}
+                onChange={handleChange}
+                required
+                error={!!fieldErrors.numero_habitaciones}
+                helperText={fieldErrors.numero_habitaciones}
+            />
             
             <LikertScaleInput label="Estado de conservación" name="estado_conservacion" value={value.estado_conservacion} onChange={(name, val) => onChange(name, val)} />
             {/* === NUEVO BLOQUE: Materialidad === */}
