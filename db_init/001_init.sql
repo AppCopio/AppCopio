@@ -653,9 +653,7 @@ SET is_active = EXISTS (
 INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
 VALUES
 ('15.111.111-1', 'María', 'González', 34, 'F'),
-('21.222.222-2', 'Pedro', 'Soto', 8, 'M'),
-('14.411.111-1', 'Fernando', 'Gatica', 25, 'M'),
-('20.422.222-2', 'Rocio', 'Garcia', 8, 'F');
+('21.222.222-2', 'Pedro', 'Soto', 8, 'M');
 
 WITH act AS (
   SELECT activation_id
@@ -670,6 +668,7 @@ FROM act;
 
 INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
 (1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
+
 
 -- Confirmaciones finales de integridad de datos
 
