@@ -3,6 +3,8 @@ import api, { setAccessToken } from "../lib/api";
 
 type User = {
   user_id: number;
+  nombre: string;
+  imagen_perfil: string
   username: string;
   role_id: number;
   es_apoyo_admin: boolean;

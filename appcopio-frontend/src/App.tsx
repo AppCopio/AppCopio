@@ -28,6 +28,7 @@ import "./App.css";
 
 
 import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
+import MyUserPage from "./pages/MyUserPage/MyUserPage";
 
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
               <Route path="/admin/users" element={<UsersManagementPage />} />
               <Route path="/admin/fibe" element={<FibePage />} />
               <Route path="/admin/updates" element={<UpdatesPage />} />
+              <Route path="/mi-perfil" element={<MyUserPage />} />
 
               <Route path="/mis-centros" element={<MisCentrosPage />} />
 
