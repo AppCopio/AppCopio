@@ -427,27 +427,59 @@ const deleteCenterHandler: RequestHandler = async (req, res) => {
 
 // TODO: al activar un centro, debe crear el registro en CentersActivations
 const updateStatusHandler: RequestHandler = async (req, res) => {
-    const { id } = req.params;
-    const { isActive } = req.body; 
-    if (typeof isActive !== 'boolean') {
-        res.status(400).json({ message: 'El campo "isActive" es requerido y debe ser un booleano.' });
-        return;
+  const { id } = req.params;
+  const { isActive, userId } = req.body;
+
+  if (typeof isActive !== 'boolean') {
+    res.status(400).json({ message: 'El campo "isActive" es requerido y debe ser un booleano.' });
+  }
+
+  if (!userId) {
+    res.status(400).json({ message: 'El campo "userId" es requerido.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Actualizamos el estado del centro
+    const updatedCenter = await client.query(
+      'UPDATE Centers SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE center_id = $2 RETURNING *',
+      [isActive, id]
+    );
+
+    if (updatedCenter.rows.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ message: 'Centro no encontrado.' });
     }
-    try {
-        const updatedCenter = await pool.query(
-            'UPDATE Centers SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE center_id = $2 RETURNING *',
-            [isActive, id]
-        );
-        if (updatedCenter.rows.length === 0) {
-            res.status(404).json({ message: 'Centro no encontrado.' });
-        } else {
-            res.status(200).json(updatedCenter.rows[0]);
-        }
-    } catch (error) {
-        console.error(`Error al actualizar estado del centro ${id}:`, error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
+
+    // Si el centro se activa, insertamos un nuevo registro de activación
+    if (isActive) {
+      await client.query(
+        'INSERT INTO CentersActivations (center_id, activated_by, notes) VALUES ($1, $2, $3)',
+        [id, userId, 'Activación del centro debido a emergencia.']
+      );
     }
+
+    // Si el centro se desactiva, actualizamos el registro de activación
+    if (!isActive) {
+      await client.query(
+        'UPDATE CentersActivations SET ended_at = CURRENT_TIMESTAMP, deactivated_by = $2 WHERE center_id = $1 AND ended_at IS NULL',
+        [id, userId]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.status(200).json(updatedCenter.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`Error al actualizar estado del centro ${id}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  } finally {
+    client.release();
+  }
 };
+
 
 // PATCH /api/centers/:id/operational-status - Actualizar estado operativo
 const updateOperationalStatusHandler: RequestHandler = async (req, res) => {

@@ -55,6 +55,8 @@ const InventoryPage: React.FC = () => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryToDelete, setCategoryToDelete] = useState('');
+  const [sortOrder, setSortOrder] = useState<string>('descendente'); // 'ascendente' o 'descendente'
+
 
   // --- LÓGICA DE PERMISOS ---
   const isAdminOrSupport = user?.role_name === 'Administrador' || user?.es_apoyo_admin;
@@ -180,6 +182,33 @@ const InventoryPage: React.FC = () => {
   }, [centerId, apiUrl]);
 
   // --- MANEJADORES DE EVENTOS ---
+  // Función para ordenar el inventario por fecha
+  // Función para ordenar el inventario por fecha
+  // Función para ordenar el inventario por fecha
+  const handleSortByDate = (sortOrder: string) => {
+    const sortedInventory = { ...inventory };
+
+    // Ordenamos los ítems dentro de cada categoría
+    for (const category in sortedInventory) {
+      sortedInventory[category] = sortedInventory[category].sort((a, b) => {
+        const dateA = new Date(a.updated_at);
+        const dateB = new Date(b.updated_at);
+
+        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+          console.error(`Fecha inválida: ${a.updated_at} o ${b.updated_at}`);
+          return 0; // No ordenamos si alguna de las fechas es inválida
+        }
+
+        // Orden ascendente (más antiguo primero) o descendente (más reciente primero)
+        return sortOrder === 'ascendente'
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
+      });
+    }
+
+    setInventory(sortedInventory); // Actualizamos el inventario
+  };
+
   const handleAddItemSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!centerId || !newItemCategory) return alert("Por favor, selecciona una categoría.");
@@ -370,7 +399,7 @@ const handleDeleteCategory = async () => {
         setIsSubmitting(false);
     }
   };
-
+  
   const handleDeleteItem = async () => {
     if (!editingItem || !centerId) return;
     if (!window.confirm(`¿Seguro que quieres eliminar "${editingItem.name}"?`)) return;
@@ -422,7 +451,7 @@ const handleDeleteCategory = async () => {
   // --- RENDERIZADO ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
   if (error && Object.keys(inventory).length === 0) return <div className="inventory-container error-message">Error: {error}</div>;
-
+  
   return (
     <div className="inventory-container">
       <div className="inventory-header">
@@ -461,7 +490,25 @@ const handleDeleteCategory = async () => {
           Limpiar Filtro
         </button>
       </div>
-
+      {/* FILTRO POR FECHA DE ACTUALIZACIÓN */}
+      {/* Ordenar por fecha */}
+      <div className="filter-container" style={{ marginBottom: '20px' }}>
+        <label htmlFor="ordenarPorFecha" style={{ marginRight: '10px' }}>
+          <strong>Ordenar por Fecha de Actualización:</strong>
+        </label>
+        <select
+          id="ordenarPorFecha"
+          value={sortOrder}
+          onChange={(e) => {
+            setSortOrder(e.target.value); // Actualizamos el estado de `sortOrder`
+            handleSortByDate(e.target.value); // Luego ordenamos el inventario
+          }} // Aquí debe llamarse handleSortByDate
+        >
+          <option value="descendente">Más Reciente Primero</option>
+          <option value="ascendente">Más Antiguo Primero</option>
+        </select>
+      </div>
+          
       {/* MODAL PARA AÑADIR ITEM (MODIFICADO) */}
       {isAddModalOpen && (
         <div className="modal-overlay">

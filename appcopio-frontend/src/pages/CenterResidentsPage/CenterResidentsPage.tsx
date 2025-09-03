@@ -69,9 +69,16 @@ const CenterResidentsPage: React.FC = () => {
 
   const exportToPDF = () => {
     const doc = new jsPDF();
+    const currentDate = new Date().toLocaleString(); // Fecha de descarga
     const title = showFamilies ? `Listado de Familias - Centro ${centerId}` : `Listado de Personas - Centro ${centerId}`;
-    doc.text(title, 14, 16);
 
+    // Encabezado
+    doc.setFontSize(18);
+    doc.text(title, 14, 16);
+    doc.setFontSize(12);
+    doc.text(`Fecha de descarga: ${currentDate}`, 14, 24);
+
+    // Cabecera de la tabla con estilos
     const head = showFamilies
       ? [['Nombre Jefe/a de Hogar', 'RUT', 'Nº Integrantes']]
       : [['Nombre', 'RUT', 'Fecha Ingreso', 'Fecha Salida', 'Edad', 'Género', 'Primer Apellido', 'Segundo Apellido', 'Nacionalidad', 'Estudia', 'Trabaja', 'Pérdida de Trabajo', 'Rubro', 'Discapacidad', 'Dependencia']];
@@ -97,44 +104,98 @@ const CenterResidentsPage: React.FC = () => {
         ]);
 
     autoTable(doc, {
-      startY: 20,
+      startY: 30,
       head: head,
       body: body,
+      theme: 'grid',
+      styles: {
+        font: 'helvetica',
+        fontSize: 8, // Fuente más pequeña para las celdas
+        halign: 'center',
+        overflow: 'linebreak', // Ajustar texto largo
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+        fillColor: [240, 240, 240],
+      },
+      headStyles: {
+        fillColor: [25, 118, 210],
+        textColor: 255,
+        fontStyle: 'bold',
+        halign: 'center',
+        fontSize: 8, // Reducir tamaño de fuente en los encabezados
+      },
+      columnStyles: {
+        // Ajuste de las columnas para que se vean bien organizadas
+        'Nombre': { cellWidth: 45 },
+        'RUT': { cellWidth: 30 },
+        'Fecha Ingreso': { cellWidth: 30 },
+        'Fecha Salida': { cellWidth: 30 },
+        'Edad': { cellWidth: 15 },
+        'Género': { cellWidth: 15 },
+        'Primer Apellido': { cellWidth: 25 },
+        'Segundo Apellido': { cellWidth: 25 },
+        'Nacionalidad': { cellWidth: 25 },
+        'Estudia': { cellWidth: 15 },
+        'Trabaja': { cellWidth: 15 },
+        'Pérdida de Trabajo': { cellWidth: 20 },
+        'Rubro': { cellWidth: 20 },
+        'Discapacidad': { cellWidth: 20 },
+        'Dependencia': { cellWidth: 20 },
+      },
+      alternateRowStyles: {
+        fillColor: [255, 255, 255], // Alternar color de fila
+      },
+      margin: { top: 20, left: 10, right: 10 },
     });
+
 
     doc.save(`Listado_${showFamilies ? 'Familias' : 'Personas'}_${centerId}.pdf`);
   };
 
-  const exportToCSV = () => {
+ const exportToCSV = () => {
     const csv = showFamilies
-      ? Papa.unparse(groups, {
+      ? Papa.unparse(groups.map(g => ({
+          nombre_completo: g.nombre_completo,
+          rut: g.rut,
+          integrantes_grupo: g.integrantes_grupo,
+        })), {
           header: true,
           columns: ['nombre_completo', 'rut', 'integrantes_grupo'],
         })
-      : Papa.unparse(people, {
+      : Papa.unparse(people.map(p => ({
+          nombre: p.nombre,
+          rut: p.rut,
+          fecha_ingreso: p.fecha_ingreso,
+          fecha_salida: p.fecha_salida,
+          edad: p.edad,
+          genero: p.genero,
+          primer_apellido: p.primer_apellido,
+          segundo_apellido: p.segundo_apellido,
+          nacionalidad: p.nacionalidad,
+          estudia: p.estudia ? 'Sí' : 'No',
+          trabaja: p.trabaja ? 'Sí' : 'No',
+          perdida_trabajo: p.perdida_trabajo ? 'Sí' : 'No',
+          rubro: p.rubro,
+          discapacidad: p.discapacidad ? 'Sí' : 'No',
+          dependencia: p.dependencia ? 'Sí' : 'No',
+        }), {
           header: true,
           columns: [
-            'nombre',
-            'rut',
-            'fecha_ingreso',
-            'fecha_salida',
-            'edad',
-            'genero',
-            'primer_apellido',
-            'segundo_apellido',
-            'nacionalidad',
-            'estudia',
-            'trabaja',
-            'perdida_trabajo',
-            'rubro',
-            'discapacidad',
-            'dependencia',
-          ],
-        });
+            'nombre', 'rut', 'fecha_ingreso', 'fecha_salida', 'edad', 'genero', 
+            'primer_apellido', 'segundo_apellido', 'nacionalidad', 'estudia', 
+            'trabaja', 'perdida_trabajo', 'rubro', 'discapacidad', 'dependencia'
+          ], 
+        }));
 
+    // Aquí nos aseguramos de que csv sea una cadena
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+    // Usamos el archivo CSV generado para descargarlo
     saveAs(blob, `Listado_${showFamilies ? 'Familias' : 'Personas'}_${centerId}.csv`);
   };
+
+
+
 
   const fetchCenterCapacity = async (centerId: string) => {
     const response = await fetch(`http://localhost:4000/api/centers/${centerId}/capacity`);

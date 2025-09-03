@@ -114,22 +114,32 @@ const CenterManagementPage: React.FC = () => {
     const originalCenters = [...centers];
     const centerToToggle = centers.find(c => c.center_id === id);
     if (!centerToToggle) return;
+
     const newStatus = !centerToToggle.is_active;
 
     // Actualización optimista de la UI
     setCenters(prev => prev.map(c => c.center_id === id ? { ...c, is_active: newStatus } : c));
 
     try {
-      // Llamada simple y limpia. Si estamos offline, el plugin de Workbox
-      // interceptará el error y encolará la petición automáticamente.
-      await api.patch(`/centers/${id}/status`, { isActive: newStatus });
+      // Llamamos a la API para actualizar el estado del centro
+      await api.patch(`/centers/${id}/status`, { 
+        isActive: newStatus, 
+        userId: user?.user_id  // Asegúrate de que el userId esté presente
+      });
+
+      // Si el centro se desactiva, se actualiza la activación en la base de datos
+      if (!newStatus) {
+        await api.patch(`/centers/${id}/status`, { 
+          isActive: false,
+          userId: user?.user_id  // Aquí también pasamos el userId
+        });
+      }
     } catch (err) {
-      // Este catch se activará si la red falla.
       console.log("Acción registrada para ejecución offline por el plugin de Workbox.");
       alert('Estás sin conexión. El cambio se aplicará automáticamente cuando recuperes la conexión.');
-      // No necesitamos revertir la UI aquí, confiamos en la sincronización.
+      // No revertimos la UI aquí, confiamos en la sincronización de Workbox.
     }
-  }, [centers]);
+  }, [centers, user]);
 
 
   //LÓGICA DE ELIMINACIÓN 
