@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './NeedsFormPage.css';
+import api from '../../lib/api';
 
 const NeedsFormPage: React.FC = () => {
     // --- 1. OBTENCIÓN DE DATOS ---
@@ -33,44 +34,39 @@ const NeedsFormPage: React.FC = () => {
     // --- 4. MANEJADOR DE ENVÍO ---
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        const token = user?.token;
-        if (!isReady || !token || !user) {
+
+        if (!isReady || !user) {
             setError("Error inesperado: Intento de envío en estado no válido.");
             return;
         }
 
         setIsSubmitting(true);
         setError(null);
+
         try {
-            const response = await fetch(`${apiUrl}/updates`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({
-                    center_id: centerId,
-                    title: title.trim(),
-                    description: description.trim(),
-                    urgency: urgency,
-                    status: 'Pendiente',
-                    created_by: user.user_id
-                }),
+            await api.post("/updates", {
+            center_id: centerId,
+            title: title.trim(),
+            description: description.trim(),
+            urgency,
+            status: "Pendiente",
+            created_by: user.user_id,
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ msg: 'Error desconocido.' }));
-                throw new Error(errorData.msg || `Error HTTP ${response.status}`);
-            }
-
-            alert('¡Solicitud registrada con éxito!');
+            alert("¡Solicitud registrada con éxito!");
             navigate(`/center/${centerId}/updates`);
-
-        } catch (err) {
-            console.error('Error al enviar la solicitud:', err);
-            setError((err as Error).message);
+        } catch (err: any) {
+            console.error("Error al enviar la solicitud:", err);
+            const msg =
+            err?.response?.data?.msg ||
+            err?.response?.data?.message ||
+            err?.message ||
+            "Error desconocido.";
+            setError(msg);
         } finally {
             setIsSubmitting(false);
         }
-    }, [isReady, user, centerId, navigate, title, description, urgency, apiUrl]);
+    }, [isReady, user, centerId, navigate, title, description, urgency]);
 
 
     // --- 5. RENDERIZADO CONDICIONAL ---
@@ -102,7 +98,6 @@ const NeedsFormPage: React.FC = () => {
                 <h3>Panel de Depuración en Vivo (Estado Listo)</h3>
                 <p>isAuthLoading: <strong>{String(isAuthLoading)}</strong></p>
                 <p>user existe?: <strong>{user ? 'Sí' : 'No'}</strong></p>
-                <p>token existe?: <strong>{user?.token ? 'Sí' : 'No'}</strong></p>
                 <p>centerId: <strong>{centerId || 'undefined'}</strong></p>
                 <p>isReady (Guardián): <strong>{String(isReady)}</strong></p>
             </div>

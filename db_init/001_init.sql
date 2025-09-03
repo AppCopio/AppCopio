@@ -202,6 +202,11 @@ CREATE TABLE FamilyGroupMembers (
     UNIQUE(family_id, person_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_fgm_person ON FamilyGroupMembers(person_id);
+CREATE INDEX IF NOT EXISTS idx_fg_activation ON FamilyGroups(activation_id);
+CREATE INDEX IF NOT EXISTS idx_fg_head_activation ON FamilyGroups(activation_id, jefe_hogar_person_id) WHERE status='activo';
+
+
 -- Guarda el historial de las descripciones detalladas de cada centro)
 CREATE TABLE CentersDescription (
     center_id VARCHAR(10) PRIMARY KEY REFERENCES Centers(center_id) ON DELETE CASCADE,
@@ -658,7 +663,7 @@ VALUES
 WITH act AS (
   SELECT activation_id
   FROM CentersActivations
-  WHERE center_id = 'C001' AND ended_at IS NULL
+  WHERE center_id = 'C002' AND ended_at IS NULL
   ORDER BY started_at DESC
   LIMIT 1
 )
@@ -668,7 +673,6 @@ FROM act;
 
 INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
 (1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
-
 
 -- Confirmaciones finales de integridad de datos
 

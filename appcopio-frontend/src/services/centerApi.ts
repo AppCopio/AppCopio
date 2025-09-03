@@ -1,68 +1,39 @@
 // src/services/centerApi.ts
-const API_URL = import.meta.env.VITE_API_URL ?? ""; //
-import { CenterData } from "../types/center"; // Importamos la nueva interfaz
+import api from "../lib/api";
+import { CenterData } from "../types/center";
 
-// La función ahora usa la interfaz importada
-export const createCenter = async (centerData: CenterData, token: string) => {
+// Crear centro
+export const createCenter = async (centerData: CenterData) => {
   try {
-    const response = await fetch(`${API_URL}/centers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(centerData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al crear el centro.');
-    }
-
-    return await response.json();
-  } catch (error) {
+    const { data } = await api.post(`/centers`, centerData);
+    return data;
+  } catch (error: any) {
     console.error("API Error:", error);
-    throw error;
+    const message = error?.response?.data?.message || "Error al crear el centro.";
+    throw new Error(message);
   }
 };
 
-export const updateCenter = async (centerId: string, centerData: CenterData, token: string) => {
+// Actualizar centro
+export const updateCenter = async (centerId: string, centerData: CenterData) => {
   try {
-    const response = await fetch(`${API_URL}/centers/${centerId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(centerData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al actualizar el centro.');
-    }
-
-    return await response.json();
-  } catch (error) {
+    const { data } = await api.put(`/centers/${centerId}`, centerData);
+    return data;
+  } catch (error: any) {
     console.error("API Error:", error);
-    throw error;
+    const message = error?.response?.data?.message || "Error al actualizar el centro.";
+    throw new Error(message);
   }
 };
-export const deleteCenter = async (centerId: string, token: string) => {
-    try {
-        const response = await fetch(`${API_URL}/centers/${centerId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Error al eliminar el centro.');
-        }
-    } catch (error) {
-        console.error("API Error:", error);
-        throw error;
-    }
+// Eliminar centro
+export const deleteCenter = async (centerId: string) => {
+  try {
+    const { data } = await api.delete(`/centers/${centerId}`);
+    return data;
+  } catch (error: any) {
+    console.error("API Error:", error);
+    const message = error?.response?.data?.message || "Error al eliminar el centro.";
+    throw new Error(message);
+  }
 };

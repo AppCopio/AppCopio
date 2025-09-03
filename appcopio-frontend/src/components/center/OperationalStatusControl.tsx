@@ -65,7 +65,7 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
   };
 
   // Solo los encargados pueden cambiar el estado operativo
-  if (user?.role !== 'Encargado') {
+  if (user?.role_name !== 'Encargado') {
     return (
       <div className="operational-status-display">
         <span className={`status-indicator ${getStatusClass(currentStatus)}`}>

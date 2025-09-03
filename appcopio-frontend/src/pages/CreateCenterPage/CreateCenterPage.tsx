@@ -74,7 +74,7 @@ const CreateCenterPage: React.FC = () => {
 center_id: '',
     name: '',
     address: '',
-    type: 'albergue',
+    type: 'Albergue',
     folio: '',
     capacity: 0,
     latitude: 0,
@@ -260,8 +260,7 @@ center_id: '',
         setIsSaving(true);
         if (navigator.onLine) {
             try {
-                const token = user?.token || '';
-                const newCenter = await createCenter(formData, token);
+                const newCenter = await createCenter(formData);
                 setSuccess(`Centro "${newCenter.name}" creado con éxito.`);
                 localStorage.removeItem('pendingCenterRegistrationForm');
                 setTimeout(() => navigate('/admin/centers'), 2000);

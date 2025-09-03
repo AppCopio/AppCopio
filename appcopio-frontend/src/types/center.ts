@@ -12,6 +12,7 @@ export interface CenterData {
     should_be_active: boolean;
     comunity_charge_id: number | null; //esto no se si se está pocupabndo
     municipal_manager_id: number | null;
+    is_active: boolean;
 
     // Campos de CentersDescription
     nombre_dirigente: string;
@@ -133,7 +134,7 @@ export const initialCenterData: CenterData = {
     center_id: '',
     name: '',
     address: '',
-    type: 'albergue',
+    type: 'Albergue',
     folio: '',
     capacity: 0,
     latitude: 0,
@@ -141,6 +142,7 @@ export const initialCenterData: CenterData = {
     should_be_active: false,
     comunity_charge_id: null,
     municipal_manager_id: null,
+    is_active: true,
 
     // Campos de CentersDescription
     nombre_dirigente: '',

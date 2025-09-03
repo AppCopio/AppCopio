@@ -28,9 +28,29 @@ const StepGrupoFamiliar = React.forwardRef<StepHandle, Props>(({ personas, onCha
     onChangeAll(arr.length ? arr : [initialPerson(true)]);
   };
 
+  /* * * * * * V A L I D A C I Ó N   C A M P O S   D U P L I C A D O S * * * * * */
+
+  // 👇 Añade dentro del componente StepGrupoFamiliar
+  const normalizeRut = (v: string) => (v || "").replace(/[^0-9kK]/g, "").toUpperCase();
+
+  // Set con los RUTs que aparecen más de una vez (ya normalizados)
+  const dupRutSet = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    personas.forEach((p) => {
+      const s = normalizeRut(p.rut || "");
+      if (!s) return;
+      counts.set(s, (counts.get(s) || 0) + 1);
+    });
+    const dups = new Set<string>();
+    counts.forEach((c, s) => { if (c > 1) dups.add(s); });
+    return dups;
+  }, [personas]);
+
+
   /* * * * * * V A L I D A C I Ó N   C A M P O S   V A C Í O S * * * * * */
   const [validateTick, setValidateTick] = React.useState(-1); // para forzar validación en PersonFormCard
 
+   /* * * * * * V A L I D A C I O N E S   * * * * * */
   React.useImperativeHandle(ref, () => ({
     validate: () => {
       if (personas.length < 1) return false;
@@ -50,12 +70,21 @@ const StepGrupoFamiliar = React.forwardRef<StepHandle, Props>(({ personas, onCha
         return !(reqOk && parentescoOk);
       });
 
-      const allOk = firstBad === -1;
+      // 2) Primer índice con RUT duplicado (no vacío)
+      const firstDup = personas.findIndex((p) => {
+        const s = normalizeRut(p.rut || "");
+        return s && dupRutSet.has(s);
+      });
 
+
+      const allOk = (firstBad === -1 && firstDup === -1);
+
+      // Scroll al primer error (si hubiera)
       if (!allOk) {
         // Fuerza mostrar errores en todas las tarjetas
         setValidateTick((t) => t + 1);
-        const elId = `person-card-${firstBad}`;
+        const target = ((firstBad !== -1) ? firstBad : firstDup);
+        const elId = `person-card-${target}`;
         requestAnimationFrame(() => {
           document.getElementById(elId)?.scrollIntoView({ behavior: "smooth", block: "center" });
         });
@@ -76,6 +105,7 @@ const StepGrupoFamiliar = React.forwardRef<StepHandle, Props>(({ personas, onCha
           onRemove={removePerson}
           isRemovable={i !== 0}
           forceValidate={validateTick}
+          isRutDuplicated={dupRutSet.has(normalizeRut(p.rut || ""))}
         />
       ))}
 

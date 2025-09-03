@@ -96,10 +96,10 @@ const CenterEditPage: React.FC = () => {
         setIsSaving(true);
         if (navigator.onLine) {
             try {
-                const token = user?.token || '';
                 if (!centerId) throw new Error("ID del centro no disponible.");
                 
-                await updateCenter(centerId, formData, token);
+                await updateCenter(centerId, formData);
+
                 alert(`Centro "${formData.name}" actualizado con éxito.`);
                 navigate('/admin/centers');
             } catch (err: any) {
@@ -124,10 +124,9 @@ const CenterEditPage: React.FC = () => {
       setIsSaving(true);
       if (navigator.onLine) {
         try {
-          const token = user?.token || '';
           if (!centerId) throw new Error("ID del centro no disponible.");
           
-          await deleteCenter(centerId, token);
+          await deleteCenter(centerId);
           alert(`Centro "${formData.name}" eliminado con éxito.`);
           navigate('/admin/centers');
         } catch (err: any) {
