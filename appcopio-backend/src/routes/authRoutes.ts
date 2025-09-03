@@ -108,7 +108,7 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
        VALUES ($1,$2,$3,$4,$5)`,
       [user.user_id, tokenHash, req.headers["user-agent"] || null, getClientIp(req), expiresAt]
     );
-
+    res.setHeader("Cache-Control", "no-store");
     // Cookie httpOnly con refresh y body con access + user enriquecido (incluye assignedCenters)
     res
       .cookie("refresh", refreshToken, { ...cookieOpts(), maxAge: expiresAt.getTime() - Date.now() })
@@ -165,7 +165,7 @@ const refreshHandler: RequestHandler = async (req, res): Promise<void> => {
        VALUES ($1,$2,$3,$4,$5)`,
             [payload.user_id, newHash, req.headers["user-agent"] || null, getClientIp(req), expiresAt]
         );
-
+        res.setHeader("Cache-Control", "no-store");
         res
             .cookie("refresh", newRefresh, { ...cookieOpts(), maxAge: expiresAt.getTime() - Date.now() })
             .json({ access_token: newAccess, user: newPayload });
