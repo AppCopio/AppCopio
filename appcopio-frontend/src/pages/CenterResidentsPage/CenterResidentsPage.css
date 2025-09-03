@@ -1,39 +1,31 @@
 .residents-container {
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
-.residents-header {
+.residents-table {
   width: 100%;
-  text-align: center;
-  margin-bottom: 20px;
+  border-collapse: collapse;
+  margin-top: 15px;
 }
 
-.capacity-info {
-  background-color: #f0f0f0;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
+.residents-table th,
+.residents-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
 }
 
-.capacity-info p {
-  margin: 0;
-  font-size: 1.1rem;
+.residents-table th {
+  background-color: #f5f5f5;
 }
 
+.error-message {
+  color: red;
+  font-weight: bold;
+}
 .export-buttons {
   display: flex;
-  justify-content: flex-start;
-  width: 100%;
   gap: 10px;
-  margin-bottom: 20px;
 }
 
 .export-btn {
@@ -48,139 +40,13 @@
 .export-btn:hover {
   background-color: #0056b3;
 }
-
-.navigate-button {
-  margin-bottom: 20px;
-}
-
-.navigate-btn {
-  padding: 10px 20px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.navigate-btn:hover {
-  background-color: #218838;
-}
-
-.residents-table, .people-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-.residents-table th, .people-table th, .residents-table td, .people-table td {
-  border: 1px solid #ddd;
-  padding: 10px;
-  text-align: left;
-}
-
-.residents-table th, .people-table th {
-  background-color: #f5f5f5;
-}
-
-.filter-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  margin-top: 20px;
-}
-
-.filter-section input {
-  padding: 8px;
-  margin: 5px 0;
-  width: 250px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.filter-section label {
-  font-size: 1rem;
-  margin-bottom: 5px;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-content {
-  background: white;
-  padding: 20px;
+.capacity-info {
+  background-color: #f0f0f0;
+  padding: 1rem;
   border-radius: 8px;
-  width: 500px;
+  margin-bottom: 1rem;
 }
-
-.error-message {
-  color: red;
-  font-weight: bold;
-}
-
-@media (max-width: 768px) {
-  .capacity-info {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .export-buttons {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .residents-table, .people-table {
-    font-size: 0.9rem;
-  }
-
-  .filter-section input {
-    width: 200px;
-  }
-}
-.person-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.person-filters div {
-  display: flex;
-  flex-direction: column;
-  width: 150px; /* Establecer un ancho más pequeño */
-}
-
-.person-filters label {
-  font-size: 0.9rem;
-  margin-bottom: 5px;
-}
-
-.person-filters input {
-  padding: 5px;
-  font-size: 0.9rem;
-  width: 100%;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  margin-bottom: 10px;
-}
-
-.person-filters input[type="date"] {
-  padding: 5px;
-}
-
-.person-filters input[type="number"] {
-  padding: 5px;
-}
-
-.person-filters input[type="text"] {
-  padding: 5px;
+.capacity-info p {
+  margin: 0;
+  font-size: 1.1rem;
 }

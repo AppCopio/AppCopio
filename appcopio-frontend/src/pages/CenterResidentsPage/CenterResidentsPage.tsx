@@ -13,24 +13,6 @@ interface ResidentGroup {
   family_id: number;
 }
 
-interface Person {
-  rut: string;
-  nombre: string;
-  fecha_ingreso: string;
-  fecha_salida: string;
-  edad: number;
-  genero: string;
-  primer_apellido: string;
-  segundo_apellido: string;
-  nacionalidad: string;
-  estudia: boolean;
-  trabaja: boolean;
-  perdida_trabajo: boolean;
-  rubro: string;
-  discapacidad: boolean;
-  dependencia: boolean;
-}
-
 interface ActiveCenter {
   activation_id: number;
   center_id: string;
@@ -41,18 +23,8 @@ const CenterResidentsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const navigate = useNavigate();
   const [groups, setGroups] = useState<ResidentGroup[]>([]);
-  const [people, setPeople] = useState<Person[]>([]); // Lista de personas
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [filters, setFilters] = useState({
-    nombre: '',
-    rut: '',
-    fechaIngreso: '',
-    fechaSalida: '',
-    edad: '',
-    genero: '',
-  });
 
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
   const [exitReason, setExitReason] = useState('');
@@ -65,75 +37,27 @@ const CenterResidentsPage: React.FC = () => {
   const [currentCapacity, setCurrentCapacity] = useState<number>(0);
   const [availableCapacity, setAvailableCapacity] = useState<number>(0);
 
-  const [showFamilies, setShowFamilies] = useState(true); // Estado para manejar qué tabla mostrar
-
   const exportToPDF = () => {
     const doc = new jsPDF();
-    const title = showFamilies ? `Listado de Familias - Centro ${centerId}` : `Listado de Personas - Centro ${centerId}`;
-    doc.text(title, 14, 16);
-
-    const head = showFamilies
-      ? [['Nombre Jefe/a de Hogar', 'RUT', 'Nº Integrantes']]
-      : [['Nombre', 'RUT', 'Fecha Ingreso', 'Fecha Salida', 'Edad', 'Género', 'Primer Apellido', 'Segundo Apellido', 'Nacionalidad', 'Estudia', 'Trabaja', 'Pérdida de Trabajo', 'Rubro', 'Discapacidad', 'Dependencia']];
-
-    const body = showFamilies
-      ? groups.map(g => [g.nombre_completo, g.rut, g.integrantes_grupo])
-      : people.map(p => [
-          `${p.nombre} ${p.primer_apellido} ${p.segundo_apellido || ''}`,
-          p.rut,
-          p.fecha_ingreso,
-          p.fecha_salida,
-          p.edad,
-          p.genero,
-          p.primer_apellido,
-          p.segundo_apellido,
-          p.nacionalidad,
-          p.estudia ? 'Sí' : 'No',
-          p.trabaja ? 'Sí' : 'No',
-          p.perdida_trabajo ? 'Sí' : 'No',
-          p.rubro,
-          p.discapacidad ? 'Sí' : 'No',
-          p.dependencia ? 'Sí' : 'No',
-        ]);
+    doc.text(`Listado de Personas - Centro ${centerId}`, 14, 16);
 
     autoTable(doc, {
       startY: 20,
-      head: head,
-      body: body,
+      head: [['Nombre Jefe/a de Hogar', 'RUT', 'Nº Integrantes']],
+      body: groups.map(g => [g.nombre_completo, g.rut, g.integrantes_grupo]),
     });
 
-    doc.save(`Listado_${showFamilies ? 'Familias' : 'Personas'}_${centerId}.pdf`);
+    doc.save(`Listado_Personas_${centerId}.pdf`);
   };
 
   const exportToCSV = () => {
-    const csv = showFamilies
-      ? Papa.unparse(groups, {
-          header: true,
-          columns: ['nombre_completo', 'rut', 'integrantes_grupo'],
-        })
-      : Papa.unparse(people, {
-          header: true,
-          columns: [
-            'nombre',
-            'rut',
-            'fecha_ingreso',
-            'fecha_salida',
-            'edad',
-            'genero',
-            'primer_apellido',
-            'segundo_apellido',
-            'nacionalidad',
-            'estudia',
-            'trabaja',
-            'perdida_trabajo',
-            'rubro',
-            'discapacidad',
-            'dependencia',
-          ],
-        });
+    const csv = Papa.unparse(groups, {
+      header: true,
+      columns: ['nombre_completo', 'rut', 'integrantes_grupo']
+    });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    saveAs(blob, `Listado_${showFamilies ? 'Familias' : 'Personas'}_${centerId}.csv`);
+    saveAs(blob, `Listado_Personas_${centerId}.csv`);
   };
 
   const fetchCenterCapacity = async (centerId: string) => {
@@ -159,29 +83,6 @@ const CenterResidentsPage: React.FC = () => {
     }
   };
 
-  const fetchPeople = async () => {
-    if (!centerId) return;
-    try {
-      const { nombre, rut, fechaIngreso, fechaSalida, edad, genero } = filters;
-      const params = new URLSearchParams({
-        nombre: nombre,
-        rut: rut,
-        fechaIngreso: fechaIngreso,
-        fechaSalida: fechaSalida,
-        edad: edad,
-        genero: genero,
-      }).toString();
-
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/people?${params}`);
-      if (!response.ok) throw new Error('Error al obtener las personas del centro');
-      const data = await response.json();
-      setPeople(data);
-    } catch (err) {
-      console.error('Error cargando personas:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    }
-  };
-
   const fetchActiveCenters = async () => {
     try {
       const response = await fetch(`http://localhost:4000/api/centers/${centerId}/active-centers`);
@@ -192,15 +93,13 @@ const CenterResidentsPage: React.FC = () => {
       console.error('Error al obtener centros activos:', error);
     }
   };
-
   useEffect(() => {
     if (centerId) {
       fetchCenterCapacity(centerId);
     }
     fetchResidents();
-    fetchPeople(); // Llamada a la API de personas
-    fetchActiveCenters();
-  }, [centerId, filters]);
+    fetchActiveCenters(); // ← Esta es la línea nueva
+  }, [centerId]);
 
   const handleOpenExitModal = (resident: ResidentGroup) => {
     setResidentToExit(resident);
@@ -244,29 +143,11 @@ const CenterResidentsPage: React.FC = () => {
     }
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFilters({
-      ...filters,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const filteredPeople = people.filter(person => {
-    return (
-      (filters.nombre ? person.nombre.toLowerCase().includes(filters.nombre.toLowerCase()) : true) &&
-      (filters.rut ? person.rut.includes(filters.rut) : true) &&
-      (filters.fechaIngreso ? person.fecha_ingreso.includes(filters.fechaIngreso) : true) &&
-      (filters.fechaSalida ? person.fecha_salida.includes(filters.fechaSalida) : true) &&
-      (filters.edad ? person.edad.toString().includes(filters.edad) : true) &&
-      (filters.genero ? person.genero.toLowerCase().includes(filters.genero.toLowerCase()) : true)
-    );
-  });
-
   return (
     <div className="residents-container">
       <div className="residents-header">
         <button onClick={() => navigate(-1)} className="back-button">← Volver</button>
-        <h2>Familias Albergadas - Centro {centerId}</h2>
+        <h2>Personas Albergadas - Centro {centerId}</h2>
       </div>
 
       <div className="capacity-info">
@@ -280,124 +161,33 @@ const CenterResidentsPage: React.FC = () => {
         <button onClick={exportToCSV} className="export-btn">Exportar a Excel</button>
       </div>
 
-      {/* Botón para ver listado de familias y personas */}
-      <div className="navigate-button">
-        <button onClick={() => setShowFamilies(true)} className="navigate-btn">Ver Listado de Familias</button>
-        <button onClick={() => setShowFamilies(false)} className="navigate-btn">Ver Listado de Personas</button>
-      </div>
-
-      {/* Mostrar el listado de familias */}
-      {showFamilies ? (
-        <div>
-          {groups.length === 0 ? (
-            <p>No hay familias registradas actualmente en este centro.</p>
-          ) : (
-            <table className="residents-table">
-              <thead>
-                <tr>
-                  <th>Nombre Jefe/a de Hogar</th>
-                  <th>RUT</th>
-                  <th>Nº Integrantes</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((resident, index) => (
-                  <tr key={index}>
-                    <td>{resident.nombre_completo}</td>
-                    <td>{resident.rut}</td>
-                    <td>{resident.integrantes_grupo}</td>
-                    <td>
-                      <button onClick={() => handleOpenExitModal(resident)} className="action-btn">Registrar Salida</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+      {groups.length === 0 ? (
+        <p>No hay personas registradas actualmente en este centro.</p>
       ) : (
-        <div>
-          {/* Filtros para listado de personas */}
-          <div className="person-filters">
-            <h3>Filtrar Personas Albergadas</h3>
-            <div>
-              <label>Nombre:</label>
-              <input type="text" name="nombre" value={filters.nombre} onChange={handleFilterChange} />
-            </div>
-            <div>
-              <label>RUT:</label>
-              <input type="text" name="rut" value={filters.rut} onChange={handleFilterChange} />
-            </div>
-            <div>
-              <label>Fecha de Ingreso:</label>
-              <input type="date" name="fechaIngreso" value={filters.fechaIngreso} onChange={handleFilterChange} />
-            </div>
-            <div>
-              <label>Fecha de Salida:</label>
-              <input type="date" name="fechaSalida" value={filters.fechaSalida} onChange={handleFilterChange} />
-            </div>
-            <div>
-              <label>Edad:</label>
-              <input type="number" name="edad" value={filters.edad} onChange={handleFilterChange} />
-            </div>
-            <div>
-              <label>Género:</label>
-              <input type="text" name="genero" value={filters.genero} onChange={handleFilterChange} />
-            </div>
-          </div>
-
-          {/* Mostrar el listado de personas */}
-          {filteredPeople.length === 0 ? (
-            <p>No hay personas registradas en este centro.</p>
-          ) : (
-            <table className="people-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>RUT</th>
-                  <th>Fecha Ingreso</th>
-                  <th>Fecha Salida</th>
-                  <th>Edad</th>
-                  <th>Género</th>
-                  <th>Primer Apellido</th>
-                  <th>Segundo Apellido</th>
-                  <th>Nacionalidad</th>
-                  <th>Estudia</th>
-                  <th>Trabaja</th>
-                  <th>Pérdida de Trabajo</th>
-                  <th>Rubro</th>
-                  <th>Discapacidad</th>
-                  <th>Dependencia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPeople.map((person, index) => (
-                  <tr key={index}>
-                    <td>{`${person.nombre} ${person.primer_apellido} ${person.segundo_apellido || ''}`}</td>
-                    <td>{person.rut}</td>
-                    <td>{person.fecha_ingreso}</td>
-                    <td>{person.fecha_salida}</td>
-                    <td>{person.edad}</td>
-                    <td>{person.genero}</td>
-                    <td>{person.primer_apellido}</td>
-                    <td>{person.segundo_apellido}</td>
-                    <td>{person.nacionalidad}</td>
-                    <td>{person.estudia ? 'Sí' : 'No'}</td>
-                    <td>{person.trabaja ? 'Sí' : 'No'}</td>
-                    <td>{person.perdida_trabajo ? 'Sí' : 'No'}</td>
-                    <td>{person.rubro}</td>
-                    <td>{person.discapacidad ? 'Sí' : 'No'}</td>
-                    <td>{person.dependencia ? 'Sí' : 'No'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <table className="residents-table">
+          <thead>
+            <tr>
+              <th>Nombre Jefe/a de Hogar</th>
+              <th>RUT</th>
+              <th>Nº Integrantes</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((resident, index) => (
+              <tr key={index}>
+                <td>{resident.nombre_completo}</td>
+                <td>{resident.rut}</td>
+                <td>{resident.integrantes_grupo}</td>
+                <td>
+                  <button onClick={() => handleOpenExitModal(resident)} className="action-btn">Registrar Salida</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
-      {/* Modal de salida */}
       {isExitModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
