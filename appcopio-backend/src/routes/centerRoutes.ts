@@ -124,6 +124,7 @@ const getCenterByIdHandler: RequestHandler = async (req, res) => {
     }
 };
 
+// POST- Crear un nuevo centro
 const createCenterHandler: RequestHandler = async (req, res) => {
     const client = await pool.connect();
     try {
@@ -298,6 +299,7 @@ const createCenterHandler: RequestHandler = async (req, res) => {
         client.release();
     }
 };
+
 // PUT /api/centers/:id - Actualizar un centro existente
 const updateCenterHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
@@ -396,6 +398,8 @@ const updateCenterHandler: RequestHandler = async (req, res) => {
     }
 };
 
+// ! IMPORTANTE: Conversar sobre eliminación real de centros, ya que elimina TODA la información asociada. Debieramos hacerla "soft".
+// TODO: Con eliminado soft, recordar cerrar los valid_to de asignaciones activas
 // DELETE /api/centers/:id - Eliminar un centro
 const deleteCenterHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
@@ -421,6 +425,7 @@ const deleteCenterHandler: RequestHandler = async (req, res) => {
     }
 };
 
+// TODO: al activar un centro, debe crear el registro en CentersActivations
 const updateStatusHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
     const { isActive } = req.body; 

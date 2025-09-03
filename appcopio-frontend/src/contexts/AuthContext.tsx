@@ -3,6 +3,8 @@ import api, { setAccessToken } from "../lib/api";
 
 type User = {
   user_id: number;
+  nombre: string;
+  imagen_perfil: string
   username: string;
   role_id: number;
   es_apoyo_admin: boolean;
@@ -51,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setAccessToken(data.access_token);
       setUser(data.user);
     } catch (e: any) {
-        console.log(e);
       const msg = e?.response?.data?.message || "Credenciales inválidas.";
       throw new Error(msg);
     } finally {

@@ -79,7 +79,7 @@ const UpdatesPage: React.FC = () => {
     const controller = new AbortController();
     const fetchWorkers = async () => {
       try {
-        const data = await fetchWithAbort<{ users: WorkerUser[] }>(`${apiUrl}/users?roleName=Trabajador Municipal`, controller.signal);
+        const data = await fetchWithAbort<{ users: WorkerUser[] }>(`${apiUrl}/users/active/role/2`, controller.signal);
         setWorkers(data.users || []);
       } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
@@ -134,7 +134,6 @@ const UpdatesPage: React.FC = () => {
     try {
         await fetch(`${apiUrl}/updates/${selectedRequest.request_id}`, {
             method: 'PATCH',
-            // Se elimina la cabecera 'Authorization' que contenía el token.
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });

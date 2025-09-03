@@ -1,7 +1,7 @@
 // src/components/fibe/FibeWizard.tsx
 import * as React from "react";
 import { useState, useRef } from "react";
-import { Box, Stepper, Step, StepLabel, Typography, Button } from "@mui/material";
+import { Toolbar, Box, Stepper, Step, StepLabel, Typography, Button } from "@mui/material";
 import StepHogar from "./StepHogar";
 import StepGrupoFamiliar from "./StepGrupoFamiliar";
 import StepResumen from "./StepResumen";
@@ -32,8 +32,10 @@ export default function FibeMultiStepForm({ onSubmit }: { onSubmit?: (data: Form
   };
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 980, mx: "auto" }}>
-      <Typography variant="h5" sx={{ mb: 2 }}>
+    
+    <Box sx={{ width: "100%", maxWidth: 980, mx: "auto"}}>
+      <Toolbar/>
+      <Typography variant="titlePage" sx={{ mb: 2 }}>
         Registro FIBE – Hogar y Grupo Familiar
       </Typography>
 
@@ -62,10 +64,10 @@ export default function FibeMultiStepForm({ onSubmit }: { onSubmit?: (data: Form
       {activeStep === 2 && <StepResumen data={data} />}
 
       <Box sx={{ display: "flex", justifyContent: "space-between", gap: 5, mt: 3 }}>
-        <Button className="nav-link nav-link--prev"  onClick={() => setActiveStep((s) => Math.max(0, s - 1))} disabled={activeStep === 0}>
+        <Button className="outlineGray"  onClick={() => setActiveStep((s) => Math.max(0, s - 1))} disabled={activeStep === 0}>
           Atrás
         </Button>
-        <Button className="nav-link nav-link--next" onClick={tryNext}> 
+        <Button className="bare" onClick={tryNext}> 
           {activeStep === steps.length - 1 ? "Enviar" : "Siguiente"}
         </Button>
       </Box>

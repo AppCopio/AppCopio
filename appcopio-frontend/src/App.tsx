@@ -27,6 +27,10 @@ import "./App.css";
 
 
 
+import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
+import MyUserPage from "./pages/MyUserPage/MyUserPage";
+
+
 function App() {
   return (
     <div className="App">
@@ -37,6 +41,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/typo" element={<ExampleFrontend />} />
           </Route>
 
           {/* --- 2. Rutas Protegidas por role_id --- */}
@@ -54,6 +59,7 @@ function App() {
               <Route path="/admin/users" element={<UsersManagementPage />} />
               <Route path="/admin/fibe" element={<FibePage />} />
               <Route path="/admin/updates" element={<UpdatesPage />} />
+              <Route path="/mi-perfil" element={<MyUserPage />} />
 
               <Route path="/mis-centros" element={<MisCentrosPage />} />
 
@@ -61,7 +67,7 @@ function App() {
                 <Route path="details" element={<CenterDetailsPage />} />
                 <Route path="inventory" element={<InventoryPage />} />
                 <Route path="inventory/history" element={<InventoryHistoryPage />} />
-                <Route path="needs/new" element={<NeedsFormPage />} />
+                <Route path="/center/:centerId/needs/new" element={<NeedsFormPage />} />
                 <Route path="needs/status" element={<NeedsStatusPage />} />
                 <Route path="residents" element={<CenterResidentsPage />} />
               </Route>
