@@ -133,7 +133,7 @@ export const initialCenterData: CenterData = {
     center_id: '',
     name: '',
     address: '',
-    type: 'albergue',
+    type: 'Albergue',
     folio: '',
     capacity: 0,
     latitude: 0,
