@@ -5,7 +5,10 @@ import type { Person } from '../types/person';
 
 const router = Router();
 
+/* * * * * * * * * *   R O U T E S  * * * * * * * * * * */
+
 // ---------- GET /persons  (list) ----------
+// ? Debería llevar el LIMIT 100
 export const listPersonsHandler: RequestHandler = async (_req, res) => {
   // Listado simple (ajusta columnas si quieres)
   const { rows } = await pool.query(`

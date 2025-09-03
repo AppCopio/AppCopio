@@ -10,14 +10,17 @@ import { initialData } from "../../types/fibe";
 
 import "./FibePage.css";
 
-export default function FibeMultiStepForm({ onSubmit }: { onSubmit?: (data: FormData) => void }) {
+export default function FibeMultiStepForm({ onSubmit, disabled }: { 
+  onSubmit?: (data: FormData) => void 
+  disabled?: boolean;
+}) {
   const [activeStep, setActiveStep] = useState(0);
   const [data, setData] = useState<FormData>(initialData);
 
   const hogarRef = useRef<StepHandle>(null);
   const grupoRef = useRef<StepHandle>(null);
 
-  const steps = ["Hogar", "Grupo familiar", "Comprobación"];
+  const steps = ["Datos FIBE", "Información grupo familiar", "Comprobación de datos"];
 
   const tryNext = () => {
     // Validación por paso
@@ -64,10 +67,10 @@ export default function FibeMultiStepForm({ onSubmit }: { onSubmit?: (data: Form
       {activeStep === 2 && <StepResumen data={data} />}
 
       <Box sx={{ display: "flex", justifyContent: "space-between", gap: 5, mt: 3 }}>
-        <Button className="outlineGray"  onClick={() => setActiveStep((s) => Math.max(0, s - 1))} disabled={activeStep === 0}>
+        <Button className="outlineGray"  onClick={() => setActiveStep((s) => Math.max(0, s - 1))} disabled={activeStep === 0 || disabled}>
           Atrás
         </Button>
-        <Button className="bare" onClick={tryNext}> 
+        <Button className="bare" onClick={tryNext} disabled={disabled}> 
           {activeStep === steps.length - 1 ? "Enviar" : "Siguiente"}
         </Button>
       </Box>

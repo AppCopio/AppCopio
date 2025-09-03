@@ -1,29 +1,42 @@
 .residents-container {
   padding: 20px;
+  font-family: Arial, sans-serif;
 }
 
-.residents-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
+.residents-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
-.residents-table th,
-.residents-table td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
+.back-button {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
-.residents-table th {
-  background-color: #f5f5f5;
+.back-button:hover {
+  background-color: #0056b3;
 }
 
-.error-message {
-  color: red;
-  font-weight: bold;
+.capacity-info {
+  background-color: #f0f0f0;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
 }
+
+.capacity-info p {
+  margin: 5px 0;
+  font-size: 1rem;
+}
+
 .export-buttons {
+  margin-bottom: 20px;
   display: flex;
   gap: 10px;
 }
@@ -40,13 +53,134 @@
 .export-btn:hover {
   background-color: #0056b3;
 }
-.capacity-info {
-  background-color: #f0f0f0;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+
+.navigate-button {
+  margin-bottom: 20px;
 }
-.capacity-info p {
-  margin: 0;
-  font-size: 1.1rem;
+
+.navigate-btn {
+  background-color: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.navigate-btn:hover {
+  background-color: #218838;
+}
+
+.residents-table,
+.people-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.residents-table th,
+.people-table th,
+.residents-table td,
+.people-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+.residents-table th,
+.people-table th {
+  background-color: #f5f5f5;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.person-filters {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start; /* Alinea los filtros a la izquierda */
+}
+
+.person-filters div {
+  margin-right: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.person-filters label {
+  font-weight: bold;
+}
+
+.person-filters input,
+.person-filters select {
+  padding: 6px;
+  margin-top: 5px;
+  width: 130px; /* Hacemos los filtros más pequeños */
+}
+
+.filter-button {
+  background-color: #007bff;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.filter-button:hover {
+  background-color: #0056b3;
+}
+
+.modal-actions button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.modal-actions button:hover {
+  background-color: #0056b3;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
 }

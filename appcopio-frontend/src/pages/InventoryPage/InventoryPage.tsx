@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { addRequestToOutbox } from '../../utils/offlineDb';
 import { fetchWithAbort } from '../../services/api';
-import { registerForSync } from '../../utils/syncManager';
 import './InventoryPage.css';
+import { getUser } from '../../services/usersApi';
+import api from '../../lib/api';
 
 // --- INTERFACES (MODIFICADAS) ---
 // Se actualiza la interfaz para reflejar los nuevos datos que envía el backend
@@ -32,9 +33,9 @@ interface GroupedInventory {
 const SYNC_TAG = 'sync-inventory-updates';
 
 // --- COMPONENTE PRINCIPAL ---
-const InventoryPage: React.FC = () => {
+const InventoryPage: React.FC = async () => {
   const { centerId } = useParams<{ centerId: string }>();
-  const { user, token } = useAuth(); // Se obtiene el token de autenticación
+  const { user } = useAuth(); // Se obtiene el token de autenticación
   const apiUrl = import.meta.env.VITE_API_URL;
 
   // --- ESTADOS ---
@@ -55,11 +56,40 @@ const InventoryPage: React.FC = () => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryToDelete, setCategoryToDelete] = useState('');
+  const [sortOrder, setSortOrder] = useState<string>('descendente'); // 'ascendente' o 'descendente'
+
 
   // --- LÓGICA DE PERMISOS ---
-  const isAdminOrSupport = user?.role_name === 'Administrador' || user?.es_apoyo_admin;
-  const isAssignedToCenter = user?.assignedCenters?.includes(centerId || '');
+  const [assignedCenters, setAssignedCenters] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user?.user_id) {
+      setAssignedCenters([]);
+      return;
+    }
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        const u = await getUser(user.user_id, ctrl.signal);
+        setAssignedCenters(u.assignedCenters ?? []);
+      } catch (err) {
+        console.error(err);
+        setAssignedCenters([]);
+      }
+    })();
+    return () => ctrl.abort();
+  }, [user?.user_id]);
+
+  // Permisos
+  const isAdminOrSupport =
+    user?.role_name === "Administrador" || !!user?.es_apoyo_admin;
+
+  const isAssignedToCenter = centerId
+    ? assignedCenters.includes(centerId)
+    : false;
+
   const canManage = isAdminOrSupport || isAssignedToCenter;
+
 
   // --- FUNCIONES ---
   
@@ -180,249 +210,268 @@ const InventoryPage: React.FC = () => {
   }, [centerId, apiUrl]);
 
   // --- MANEJADORES DE EVENTOS ---
-  const handleAddItemSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!centerId || !newItemCategory) return alert("Por favor, selecciona una categoría.");
-      setIsSubmitting(true);
-      
-      // MODIFICADO: Se añade 'unit' al cuerpo de la petición y la cabecera de autorización.
-      const request = {
-          url: `${apiUrl}/centers/${centerId}/inventory`,
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` 
-          },
-          body: { 
-            itemName: newItemName, 
-            categoryId: parseInt(newItemCategory, 10),
-            quantity: newItemQuantity,
-            unit: newItemUnit,
-            user: user,
-          },
-      };
+  // Función para ordenar el inventario por fecha
+  // Función para ordenar el inventario por fecha
+  // Función para ordenar el inventario por fecha
+  const handleSortByDate = (sortOrder: string) => {
+    const sortedInventory = { ...inventory };
 
-      try {
-        const response = await fetch(request.url, {
-          method: request.method,
-          headers: request.headers,
-          body: JSON.stringify(request.body),
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.msg || 'Error del servidor al añadir el item');
+    // Ordenamos los ítems dentro de cada categoría
+    for (const category in sortedInventory) {
+      sortedInventory[category] = sortedInventory[category].sort((a, b) => {
+        const dateA = new Date(a.updated_at);
+        const dateB = new Date(b.updated_at);
+
+        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+          console.error(`Fecha inválida: ${a.updated_at} o ${b.updated_at}`);
+          return 0; // No ordenamos si alguna de las fechas es inválida
         }
-      } catch (err) {
-        if (!navigator.onLine) {
-          addRequestToOutbox(request);
-          registerForSyncLocal();
-          alert('Estás sin conexión. El nuevo item se añadirá cuando vuelvas a tener internet.');
-        } else {
-          alert(`No se pudo añadir el item: ${(err as Error).message}`);
-        }
-      } finally {
-        setIsAddModalOpen(false);
-        setNewItemName('');
-        setNewItemQuantity(1);
-        setNewItemUnit(''); // Limpiar el campo de unidad
-        await fetchInventory(false);
-        setIsSubmitting(false);
-      }
-    };
 
-
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newCategoryName.trim() === '') return alert('El nombre de la categoría no puede estar vacío.');
-    setIsSubmitting(true);
-    // MODIFICADO: Se añade la cabecera de autorización.
-    const request = { 
-        url: `${apiUrl}/categories`, 
-        method: 'POST', 
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: { name: newCategoryName.trim() } 
-    };
-    try {
-      const response = await fetch(request.url, {
-        method: request.method,
-        headers: request.headers,
-        body: JSON.stringify(request.body),
+        // Orden ascendente (más antiguo primero) o descendente (más reciente primero)
+        return sortOrder === 'ascendente'
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
       });
-      if (response.status === 409) throw new Error('La categoría ya existe.');
-      if (!response.ok) throw new Error('Error del servidor.');
-      const newCategory: Category = await response.json();
-      setCategories(prev => [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewCategoryName('');
-      alert(`Categoría "${newCategoryName.trim()}" añadida con éxito.`);
-    } catch (err) {
-      if (!navigator.onLine) {
-        addRequestToOutbox(request);
-        registerForSyncLocal();
-        setCategories(prev => [...prev, { category_id: Date.now(), name: newCategoryName.trim() }].sort((a, b) => a.name.localeCompare(b.name)));
-        setNewCategoryName('');
-        alert('Sin conexión. La categoría se añadirá al recuperar la conexión.');
-      } else {
-        alert(`Error: ${(err as Error).message}`);
-      }
-    } finally {
-      setIsSubmitting(false);
     }
+
+    setInventory(sortedInventory); // Actualizamos el inventario
   };
+
+  
+ // --- MANEJADORES DE EVENTOS ---
+
+const handleAddItemSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!centerId || !newItemCategory) return alert("Por favor, selecciona una categoría.");
+  setIsSubmitting(true);
+
+  const payload = {
+    itemName: newItemName,
+    categoryId: parseInt(newItemCategory, 10),
+    quantity: newItemQuantity,
+    unit: newItemUnit,
+    user: user, // si el backend toma user del JWT, puedes remover este campo
+  };
+
+  try {
+    // ONLINE: usa api (axios) – el Authorization lo agrega el interceptor
+    await api.post(`/centers/${centerId}/inventory`, payload);
+  } catch (err: any) {
+    if (!navigator.onLine) {
+      // OFFLINE: encola sin Authorization (se inyecta al reproducir)
+      addRequestToOutbox({
+        url: `${apiUrl}/centers/${centerId}/inventory`,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      });
+      registerForSyncLocal();
+      alert('Estás sin conexión. El nuevo item se añadirá cuando vuelvas a tener internet.');
+    } else {
+      const msg = err?.response?.data?.msg || err?.message || 'Error del servidor al añadir el item';
+      alert(`No se pudo añadir el item: ${msg}`);
+    }
+  } finally {
+    setIsAddModalOpen(false);
+    setNewItemName('');
+    setNewItemQuantity(1);
+    setNewItemUnit('');
+    await fetchInventory(false);
+    setIsSubmitting(false);
+  }
+};
+
+
+const handleAddCategory = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (newCategoryName.trim() === '') return alert('El nombre de la categoría no puede estar vacío.');
+  setIsSubmitting(true);
+
+  const payload = { name: newCategoryName.trim() };
+
+  try {
+    // ONLINE
+    const { data: newCategory } = await api.post(`/categories`, payload);
+    setCategories(prev => [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
+    setNewCategoryName('');
+    alert(`Categoría "${payload.name}" añadida con éxito.`);
+  } catch (err: any) {
+    if (!navigator.onLine) {
+      // OFFLINE
+      addRequestToOutbox({
+        url: `${apiUrl}/categories`,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      });
+      registerForSyncLocal();
+      setCategories(prev => [
+        ...prev,
+        { category_id: Date.now(), name: payload.name }
+      ].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewCategoryName('');
+      alert('Sin conexión. La categoría se añadirá al recuperar la conexión.');
+    } else {
+      const status = err?.response?.status;
+      if (status === 409) {
+        alert('La categoría ya existe.');
+      } else {
+        alert(`Error: ${err?.response?.data?.message || err?.message || 'Error del servidor.'}`);
+      }
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
 
 const handleDeleteCategory = async () => {
-    if (categoryToDelete === '') return alert('Selecciona una categoría para eliminar.');
-    if (!window.confirm(`¿Seguro que deseas eliminar esta categoría?`)) return;
-    setIsSubmitting(true);
-    // MODIFICADO: Se añade la cabecera de autorización.
-    const request = { 
-        url: `${apiUrl}/categories/${categoryToDelete}`, 
-        method: 'DELETE', 
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: null 
-    };
-    try {
-      const response = await fetch(request.url, { method: request.method, headers: request.headers });
-      if (response.status === 400) throw new Error('No se puede eliminar: la categoría tiene productos asociados.');
-      if (!response.ok) throw new Error('Error del servidor.');
+  if (categoryToDelete === '') return alert('Selecciona una categoría para eliminar.');
+  if (!window.confirm(`¿Seguro que deseas eliminar esta categoría?`)) return;
+  setIsSubmitting(true);
+
+  try {
+    // ONLINE
+    await api.delete(`/categories/${categoryToDelete}`);
+    setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
+    setCategoryToDelete('');
+    alert('Categoría eliminada con éxito.');
+  } catch (err: any) {
+    if (!navigator.onLine) {
+      // OFFLINE
+      addRequestToOutbox({
+        url: `${apiUrl}/categories/${categoryToDelete}`,
+        method: 'DELETE',
+        headers: {}, // sin Authorization
+        body: null,
+      });
+      registerForSyncLocal();
       setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
       setCategoryToDelete('');
-      alert('Categoría eliminada con éxito.');
-    } catch (err) {
-      if (!navigator.onLine) {
-        addRequestToOutbox(request);
-        registerForSyncLocal();
-        setCategories(prev => prev.filter(cat => String(cat.category_id) !== categoryToDelete));
-        setCategoryToDelete('');
-        alert('Sin conexión. La categoría se eliminará al recuperar la conexión.');
+      alert('Sin conexión. La categoría se eliminará al recuperar la conexión.');
+    } else {
+      const status = err?.response?.status;
+      if (status === 400) {
+        alert('No se puede eliminar: la categoría tiene productos asociados.');
       } else {
-        alert(`Error: ${(err as Error).message}`);
+        alert(`Error: ${err?.response?.data?.message || err?.message || 'Error del servidor.'}`);
       }
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
-  const handleOpenEditModal = (item: InventoryItem) => {
-    setEditingItem(item);
-    setIsEditModalOpen(true);
-  };
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
-    setEditingItem(null);
-  };
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!editingItem) return;
-    const { name, value } = e.target;
-    setEditingItem({ ...editingItem, [name]: Number(value) });
-  };
 
-  const handleSaveChanges = async () => {
-    if (!editingItem || !centerId) return;
-    const itemToSave = { ...editingItem };
-    const itemId = itemToSave.item_id;
-    setIsSubmitting(true);
-    
-    // Optimistic UI update
-    setInventory(prev => {
-        const newInventory = { ...prev };
-        const categoryKey = itemToSave.category || 'Sin Categoría';
-        if (newInventory[categoryKey]) {
-          newInventory[categoryKey] = newInventory[categoryKey].map(i => 
-              i.item_id === itemId ? itemToSave : i
-          );
-        }
-        return newInventory;
-    });
+const handleOpenEditModal = (item: InventoryItem) => {
+  setEditingItem(item);
+  setIsEditModalOpen(true);
+};
+const handleCloseEditModal = () => {
+  setIsEditModalOpen(false);
+  setEditingItem(null);
+};
+const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (!editingItem) return;
+  const { name, value } = e.target;
+  setEditingItem({ ...editingItem, [name]: Number(value) });
+};
 
-    // MODIFICADO: Se añade la cabecera de autorización.
-    const request = {
-      url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}` 
-      },
-      body: { quantity: itemToSave.quantity }
-    };
+const handleSaveChanges = async () => {
+  if (!editingItem || !centerId) return;
+  const itemToSave = { ...editingItem };
+  const itemId = itemToSave.item_id;
+  setIsSubmitting(true);
 
-    try {
-      const response = await fetch(request.url, {
-        method: request.method,
-        headers: request.headers,
-        body: JSON.stringify(request.body)
+  // Optimistic UI update
+  setInventory(prev => {
+    const newInventory = { ...prev };
+    const categoryKey = itemToSave.category || 'Sin Categoría';
+    if (newInventory[categoryKey]) {
+      newInventory[categoryKey] = newInventory[categoryKey].map(i =>
+        i.item_id === itemId ? itemToSave : i
+      );
+    }
+    return newInventory;
+  });
+
+  const payload = { quantity: itemToSave.quantity };
+
+  try {
+    // ONLINE
+    await api.put(`/centers/${centerId}/inventory/${itemId}`, payload);
+  } catch (err) {
+    if (!navigator.onLine) {
+      // OFFLINE
+      addRequestToOutbox({
+        url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
       });
-      if (!response.ok) throw new Error('Falló la actualización.');
-    } catch (err) {
-      if (!navigator.onLine) {
-        addRequestToOutbox(request);
-        registerForSyncLocal();
-        alert('Sin conexión. El cambio se guardará cuando recuperes la conexión.');
-      } else {
-        alert('No se pudieron guardar los cambios. Revisa tu conexión.');
-        fetchInventory(false); // Revertir si falla en línea
-      }
-    } finally {
-        handleCloseEditModal(); 
-        setIsSubmitting(false);
+      registerForSyncLocal();
+      alert('Sin conexión. El cambio se guardará cuando recuperes la conexión.');
+    } else {
+      alert('No se pudieron guardar los cambios. Revisa tu conexión.');
+      fetchInventory(false); // Revertir si falla en línea
     }
-  };
+  } finally {
+    handleCloseEditModal();
+    setIsSubmitting(false);
+  }
+};
 
-  const handleDeleteItem = async () => {
-    if (!editingItem || !centerId) return;
-    if (!window.confirm(`¿Seguro que quieres eliminar "${editingItem.name}"?`)) return;
-    
-    const itemToDelete = { ...editingItem };
-    const itemId = itemToDelete.item_id;
-    const originalInventory = inventory;
-    setIsSubmitting(true);
 
-    // Optimistic UI update
-    setInventory(prev => {
-        const newInventory = { ...prev };
-        const categoryKey = itemToDelete.category || 'Sin Categoría';
-        if (newInventory[categoryKey]) {
-            newInventory[categoryKey] = newInventory[categoryKey].filter(i => i.item_id !== itemId);
-            if(newInventory[categoryKey].length === 0) {
-                delete newInventory[categoryKey];
-            }
-        }
-        return newInventory;
-    });
-    
-    // MODIFICADO: Se añade la cabecera de autorización.
-    const request = {
-      url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: null
-    };
+const handleDeleteItem = async () => {
+  if (!editingItem || !centerId) return;
+  if (!window.confirm(`¿Seguro que quieres eliminar "${editingItem.name}"?`)) return;
 
-    try {
-      const response = await fetch(request.url, { method: request.method, headers: request.headers });
-      if (!response.ok) throw new Error('No se pudo eliminar el item del servidor.');
-    } catch (err) {
-      if (!navigator.onLine) {
-        addRequestToOutbox(request);
-        registerForSyncLocal();
-        alert('Sin conexión. El item se eliminará cuando recuperes la conexión.');
-      } else {
-        alert('No se pudo eliminar el item. Revisa tu conexión.');
-        setInventory(originalInventory); // Revertir si falla
+  const itemToDelete = { ...editingItem };
+  const itemId = itemToDelete.item_id;
+  const originalInventory = inventory;
+  setIsSubmitting(true);
+
+  // Optimistic UI update
+  setInventory(prev => {
+    const newInventory = { ...prev };
+    const categoryKey = itemToDelete.category || 'Sin Categoría';
+    if (newInventory[categoryKey]) {
+      newInventory[categoryKey] = newInventory[categoryKey].filter(i => i.item_id !== itemId);
+      if (newInventory[categoryKey].length === 0) {
+        delete newInventory[categoryKey];
       }
-    } finally {
-      handleCloseEditModal();
-      setIsSubmitting(false);
     }
-  };
+    return newInventory;
+  });
+
+  try {
+    // ONLINE
+    await api.delete(`/centers/${centerId}/inventory/${itemId}`);
+  } catch (err) {
+    if (!navigator.onLine) {
+      // OFFLINE
+      addRequestToOutbox({
+        url: `${apiUrl}/centers/${centerId}/inventory/${itemId}`,
+        method: 'DELETE',
+        headers: {}, // sin Authorization
+        body: null,
+      });
+      registerForSyncLocal();
+      alert('Sin conexión. El item se eliminará cuando recuperes la conexión.');
+    } else {
+      alert('No se pudo eliminar el item. Revisa tu conexión.');
+      setInventory(originalInventory); // Revertir si falla
+    }
+  } finally {
+    handleCloseEditModal();
+    setIsSubmitting(false);
+  }
+};
 
   // --- RENDERIZADO ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
   if (error && Object.keys(inventory).length === 0) return <div className="inventory-container error-message">Error: {error}</div>;
-
+  
   return (
     <div className="inventory-container">
       <div className="inventory-header">
@@ -461,7 +510,25 @@ const handleDeleteCategory = async () => {
           Limpiar Filtro
         </button>
       </div>
-
+      {/* FILTRO POR FECHA DE ACTUALIZACIÓN */}
+      {/* Ordenar por fecha */}
+      <div className="filter-container" style={{ marginBottom: '20px' }}>
+        <label htmlFor="ordenarPorFecha" style={{ marginRight: '10px' }}>
+          <strong>Ordenar por Fecha de Actualización:</strong>
+        </label>
+        <select
+          id="ordenarPorFecha"
+          value={sortOrder}
+          onChange={(e) => {
+            setSortOrder(e.target.value); // Actualizamos el estado de `sortOrder`
+            handleSortByDate(e.target.value); // Luego ordenamos el inventario
+          }} // Aquí debe llamarse handleSortByDate
+        >
+          <option value="descendente">Más Reciente Primero</option>
+          <option value="ascendente">Más Antiguo Primero</option>
+        </select>
+      </div>
+          
       {/* MODAL PARA AÑADIR ITEM (MODIFICADO) */}
       {isAddModalOpen && (
         <div className="modal-overlay">

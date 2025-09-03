@@ -1,30 +1,43 @@
 // src/config/db.ts
-import { Pool } from 'pg'; // Importa el constructor Pool de la librería pg
-import dotenv from 'dotenv'; // Importa dotenv para cargar variables de entorno
+import { Pool } from 'pg';
 
-dotenv.config(); // Esto lee tu archivo .env y carga sus variables en process.env
+// Carga dotenv SOLO en desarrollo (para no pisar env de Render)
+if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('dotenv').config();
+}
 
-// Creamos un 'pool' de conexiones a la base de datos
-// El pool maneja múltiples conexiones eficientemente
-const pool = new Pool({
-  host: process.env.DB_HOST, // Lee el host desde .env
-  port: parseInt(process.env.DB_PORT || '5432'), // Lee el puerto (y lo convierte a número)
-  user: process.env.DB_USER, // Lee el usuario desde .env
-  password: process.env.DB_PASSWORD, // Lee la contraseña desde .env
-  database: process.env.DB_NAME, // Lee el nombre de la base de datos desde .env
-});
+const isProd = process.env.NODE_ENV === 'production';
+const connectionString = process.env.DATABASE_URL || ''; // Render
 
-// Evento que se dispara cuando una conexión del pool se establece con éxito
+// Render/Postgres gestionado requiere SSL
+const sslConfig = { require: true, rejectUnauthorized: false } as const;
+
+// Si existe DATABASE_URL => úsala (Render). Si no, usa las DB_* (local).
+export const pool = connectionString
+  ? new Pool({
+      connectionString,
+      ssl: sslConfig,
+    })
+  : new Pool({
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: Number(process.env.DB_PORT || 5432),
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'postgres',
+      ssl: isProd ? sslConfig : undefined, // en local normalmente sin SSL
+    });
+
+// Logs útiles para confirmar que NO está usando localhost en prod
 pool.on('connect', () => {
-  console.log('¡Backend conectado exitosamente a la base de datos PostgreSQL! 🎉');
+  const safeUrl = connectionString
+    ? connectionString.replace(/:\/\/.*@/, '://****@')
+    : `${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || 5432}`;
+  console.log('✅ Conexión PostgreSQL OK →', safeUrl);
 });
 
-// Evento que se dispara si hay un error en el pool (ej. credenciales incorrectas, BD no disponible)
 pool.on('error', (err) => {
-  console.error('Error inesperado en el cliente del pool de PostgreSQL', err);
-  // En un caso real, podrías querer manejar esto de forma más robusta
-  // process.exit(-1); // Comentado para no detener el server en cada error durante dev
+  console.error('❌ Error en el pool de PostgreSQL', err);
 });
 
-// Exportamos el pool para que otras partes de nuestra aplicación puedan usarlo para hacer consultas
 export default pool;

@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, HashRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 
 import { StyledEngineProvider, ThemeProvider } from "@mui/material/styles";
@@ -27,11 +27,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <StyledEngineProvider injectFirst>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
+          <HashRouter>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </HashRouter>
       </ThemeProvider>
     </StyledEngineProvider>
   </React.StrictMode>,

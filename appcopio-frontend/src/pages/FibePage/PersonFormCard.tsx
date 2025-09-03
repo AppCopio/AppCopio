@@ -13,6 +13,7 @@ type Props = {
   onRemove: (index: number) => void;
   isRemovable: boolean;
   forceValidate?: number;
+  isRutDuplicated?: boolean;
 };
 
 export default function PersonFormCard({
@@ -22,6 +23,7 @@ export default function PersonFormCard({
   onRemove,
   isRemovable,
   forceValidate,
+  isRutDuplicated,
 }: Props) {
   const isHead = index === 0;
 
@@ -118,11 +120,14 @@ export default function PersonFormCard({
       return !isValidRut(s);
     }, [touched.rut, person.rut]);
   
+  const rutDupError =
+  !!isRutDuplicated && !isEmpty(person.rut) && !rutDVInvalid;
 
   /* * * * * * E R R O R E S   D E   V A L I D A C I Ó N * * * * * */
   const errors = {
     rut: required.rut && isEmpty(person.rut),
     rutDV: rutDVInvalid,
+    rutDup: rutDupError,
     nombre: required.nombre && isEmpty(person.nombre),
     primer_apellido: required.primer_apellido && isEmpty(person.primer_apellido),
     nacionalidad: required.nacionalidad && isEmpty(person.nacionalidad),
@@ -169,20 +174,25 @@ export default function PersonFormCard({
               onChange={(e) => {
                 const formatted = formatRut(e.target.value);
                 onChange(index, { rut: formatted });
+                markTouched("rut");
               }}
               onBlur={() => markTouched("rut")}
               required={required.rut}
               // ⬇️ (opcional) hint de teclado y patrón
               inputProps={{ inputMode: "numeric", pattern: "[0-9kK\\.-]*" }}
               placeholder="12.345.678-5"
-              error={touched.rut && errors.rut /* ver punto 3 si usas DV */}
-              helperText={touched.rut
-                ? errors.rut
-                  ? "Ingresa el RUT."
-                  : errors.rutDV
-                    ? "RUT inválido."
-                    : " "
-                : " "}
+              error={touched.rut && (errors.rut || errors.rutDV || errors.rutDup)}
+              helperText={
+                touched.rut
+                  ? errors.rut
+                    ? "Ingresa el RUT."
+                    : errors.rutDV
+                      ? "RUT inválido."
+                      : errors.rutDup
+                        ? "RUT duplicado en el grupo."
+                        : " "
+                  : " "
+              }
               />
 
             <TextField

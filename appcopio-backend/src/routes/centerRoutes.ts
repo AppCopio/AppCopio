@@ -35,7 +35,7 @@ const isAdmin: RequestHandler = (req, res, next) => {
 const getAllCentersHandler: RequestHandler = async (req, res) => {
     try {
         const centersResult = await pool.query(
-            'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers'
+            'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers ORDER BY center_id ASC'
         );
         const centers = centersResult.rows;
 
@@ -427,27 +427,59 @@ const deleteCenterHandler: RequestHandler = async (req, res) => {
 
 // TODO: al activar un centro, debe crear el registro en CentersActivations
 const updateStatusHandler: RequestHandler = async (req, res) => {
-    const { id } = req.params;
-    const { isActive } = req.body; 
-    if (typeof isActive !== 'boolean') {
-        res.status(400).json({ message: 'El campo "isActive" es requerido y debe ser un booleano.' });
-        return;
+  const { id } = req.params;
+  const { isActive, userId } = req.body;
+
+  if (typeof isActive !== 'boolean') {
+    res.status(400).json({ message: 'El campo "isActive" es requerido y debe ser un booleano.' });
+  }
+
+  if (!userId) {
+    res.status(400).json({ message: 'El campo "userId" es requerido.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Actualizamos el estado del centro
+    const updatedCenter = await client.query(
+      'UPDATE Centers SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE center_id = $2 RETURNING *',
+      [isActive, id]
+    );
+
+    if (updatedCenter.rows.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ message: 'Centro no encontrado.' });
     }
-    try {
-        const updatedCenter = await pool.query(
-            'UPDATE Centers SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE center_id = $2 RETURNING *',
-            [isActive, id]
-        );
-        if (updatedCenter.rows.length === 0) {
-            res.status(404).json({ message: 'Centro no encontrado.' });
-        } else {
-            res.status(200).json(updatedCenter.rows[0]);
-        }
-    } catch (error) {
-        console.error(`Error al actualizar estado del centro ${id}:`, error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
+
+    // Si el centro se activa, insertamos un nuevo registro de activación
+    if (isActive) {
+      await client.query(
+        'INSERT INTO CentersActivations (center_id, activated_by, notes) VALUES ($1, $2, $3)',
+        [id, userId, 'Activación del centro debido a emergencia.']
+      );
     }
+
+    // Si el centro se desactiva, actualizamos el registro de activación
+    if (!isActive) {
+      await client.query(
+        'UPDATE CentersActivations SET ended_at = CURRENT_TIMESTAMP, deactivated_by = $2 WHERE center_id = $1 AND ended_at IS NULL',
+        [id, userId]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.status(200).json(updatedCenter.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`Error al actualizar estado del centro ${id}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  } finally {
+    client.release();
+  }
 };
+
 
 // PATCH /api/centers/:id/operational-status - Actualizar estado operativo
 const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
@@ -765,6 +797,38 @@ const getActiveCenters: RequestHandler = async (req, res) => {
   }
 
 }
+const getCurrentResidentsPersonsHandler: RequestHandler = async (req, res) => {
+  const { centerId } = req.params;
+
+  if (!centerId) {
+    res.status(400).json({ error: 'El ID del centro es requerido' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT p.person_id, p.rut, p.nombre, p.primer_apellido, p.segundo_apellido, p.nacionalidad, 
+              p.genero, p.edad, p.created_at, p.updated_at
+       FROM Persons p
+       JOIN FamilyGroupMembers fgm ON fgm.person_id = p.person_id
+       JOIN FamilyGroups fg ON fg.family_id = fgm.family_id
+       JOIN CentersActivations ca ON ca.activation_id = fg.activation_id
+       WHERE ca.center_id = $1`,
+      [centerId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'No se encontraron personas albergadas en este centro' });
+      return;
+    }
+
+    const persons = result.rows;
+    res.json(persons);
+  } catch (err) {
+    console.error('Error al obtener las personas albergadas:', err);
+    res.status(500).json({ error: 'Error interno del servidor al obtener las personas albergadas' });
+  }
+};
 
 
 
@@ -787,6 +851,7 @@ router.delete('/:centerId/inventory/:itemId', deleteInventoryItemHandler);
 router.get('/:centerId/residents', getCurrentResidentsHandler);
 router.get('/:centerId/capacity', getCenterCapacityHandler);
 router.get('/:centerId/active-centers', getActiveCenters);
+router.get('/:centerId/people', getCurrentResidentsPersonsHandler); // Esta ruta devuelve las personas del centro
 
 
 export default router;

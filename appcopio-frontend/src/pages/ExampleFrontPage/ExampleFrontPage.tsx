@@ -6,7 +6,6 @@ import {
   Chip,
   Container,
   Divider,
-  Grid,
   Link,
   Paper,
   Stack,
@@ -14,7 +13,6 @@ import {
   Card,
   CardContent,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 
 type DSVariant =
   | "titleHero"
@@ -62,8 +60,6 @@ const ITEMS: { label: string; variant: DSVariant; sample?: string }[] = [
 ];
 
 export default function ExampleFrontPage() {
-  const theme = useTheme();
-
   return (
     <Container sx={{ py: 6 }}>
       <Stack spacing={4}>
@@ -80,40 +76,48 @@ export default function ExampleFrontPage() {
         <Paper variant="outlined" sx={{ p: 3 }}>
           <Typography variant="subheading">Variantes</Typography>
           <Divider sx={{ my: 2 }} />
-          <Stack spacing={3}>
-            {ITEMS.map(({ label, variant, sample }) => {
-              const spec = (theme.typography as any)[variant] || {};
-              return (
-                <Box key={variant}>
-                  <Grid container spacing={2} alignItems="baseline">
-                    <Grid item xs={12} md={3}>
-                      <Stack spacing={0.5}>
-                        <Typography variant="bodySmallStrong">{label}</Typography>
-                      </Stack>
-                    </Grid>
-                    <Grid item xs={12} md={9}>
-                      <Typography
-                        variant={variant as any}
-                        sx={
-                          variant === "bodyCode"
-                            ? {
-                                display: "inline-block",
-                                px: 1,
-                                py: 0.5,
-                                borderRadius: 1,
-                                bgcolor: "action.hover",
-                              }
-                            : undefined
-                        }
-                      >
-                        {sample || "Texto de ejemplo"}
-                      </Typography>
-                    </Grid>
-                  </Grid>
+
+          {/* Grid responsivo sin <Grid/> de MUI */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "minmax(240px, 320px) 1fr",
+              },
+              columnGap: 2,
+              rowGap: 3,
+              alignItems: "baseline",
+            }}
+          >
+            {ITEMS.map(({ label, variant, sample }) => (
+              <React.Fragment key={variant}>
+                <Box>
+                  <Stack spacing={0.5}>
+                    <Typography variant="bodySmallStrong">{label}</Typography>
+                  </Stack>
                 </Box>
-              );
-            })}
-          </Stack>
+                <Box>
+                  <Typography
+                    variant={variant as any}
+                    sx={
+                      variant === "bodyCode"
+                        ? {
+                            display: "inline-block",
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            bgcolor: "action.hover",
+                          }
+                        : undefined
+                    }
+                  >
+                    {sample || "Texto de ejemplo"}
+                  </Typography>
+                </Box>
+              </React.Fragment>
+            ))}
+          </Box>
         </Paper>
 
         {/* HTML con clases globales (.ds-*) */}
@@ -121,18 +125,24 @@ export default function ExampleFrontPage() {
           <Typography variant="subheading">Clases globales (.ds-*)</Typography>
           <Divider sx={{ my: 2 }} />
 
-          <Grid container spacing={3}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: 3,
+            }}
+          >
             {/* Titulares (Montserrat) */}
-            <Grid item xs={12} md={6}>
+            <Box>
               <div className="ds-titleHero">Title Hero — .ds-titleHero</div>
               <div className="ds-titlePage" style={{ marginTop: 8 }}>Title Page — .ds-titlePage</div>
               <div className="ds-subtitle" style={{ marginTop: 8 }}>Subtitle — .ds-subtitle</div>
               <div className="ds-heading" style={{ marginTop: 8 }}>Heading — .ds-heading</div>
               <div className="ds-subheading" style={{ marginTop: 8 }}>Subheading — .ds-subheading</div>
-            </Grid>
+            </Box>
 
             {/* Cuerpo, enlaces y código (Inter) */}
-            <Grid item xs={12} md={6}>
+            <Box>
               <p className="ds-bodyBase">Body Base — .ds-bodyBase</p>
               <p className="ds-bodyStrong" style={{ marginTop: 8 }}>Body Strong — .ds-bodyStrong</p>
               <p className="ds-bodyEmphasis" style={{ marginTop: 8 }}>Body Emphasis — .ds-bodyEmphasis</p>
@@ -146,10 +156,10 @@ export default function ExampleFrontPage() {
 
               <code className="ds-bodyCode">GET /api/centers</code>
               <pre className="ds-bodyCode" style={{ marginTop: 8 }}>{`curl -X POST https://api.example.com/centers \\
-          -H "Content-Type: application/json" \\
-          -d '{ "name": "Centro Las Condes", "is_active": true }'`}</pre>
-            </Grid>
-          </Grid>
+  -H "Content-Type: application/json" \\
+  -d '{ "name": "Centro Las Condes", "is_active": true }'`}</pre>
+            </Box>
+          </Box>
 
           <Box sx={{ mt: 2 }}>
             <Typography variant="bodySmall" sx={{ color: "text.secondary" }}>
@@ -165,43 +175,48 @@ export default function ExampleFrontPage() {
           </Typography>
           <Divider sx={{ my: 2 }} />
 
-          <Grid container spacing={3}>
+          {/* Rejilla fluida a base de CSS Grid */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: 3,
+            }}
+          >
             {/* A) MUI base */}
-            <Grid item xs={12} md={4}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="subheading">MUI base</Typography>
-                  <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
-                    <Button variant="contained">Primario</Button>
-                    <Button variant="outlined">Secundario</Button>
-                    <Button variant="text">Texto</Button>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="subheading">MUI base</Typography>
+                <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
+                  <Button variant="contained">Primario</Button>
+                  <Button variant="outlined">Secundario</Button>
+                  <Button variant="text">Texto</Button>
+                </Stack>
+              </CardContent>
+            </Card>
 
             {/* B) Solo tipografía */}
-            <Grid item xs={12} md={4}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="subheading">Tipografía aplicada</Typography>
-                  <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
-                    <Button sx={(t) => t.typography.subheading}>Subheading</Button>
-                    <Button sx={(t) => t.typography.bodyStrong}>Body Strong</Button>
-                    <Button sx={(t) => t.typography.bodySmall}>Body Small</Button>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="subheading">Tipografía aplicada</Typography>
+                <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
+                  <Button sx={(t) => t.typography.subheading}>Subheading</Button>
+                  <Button sx={(t) => t.typography.bodyStrong}>Body Strong</Button>
+                  <Button sx={(t) => t.typography.bodySmall}>Body Small</Button>
+                </Stack>
+              </CardContent>
+            </Card>
 
-            {/* C) Nuestras variantes */}
-            <Grid item xs={12} md={8}>
+            {/* C) Nuestras variantes — span 2 columnas en md+ */}
+            <Box sx={{ gridColumn: { xs: "auto", md: "1 / -1" } }}>
               <Card variant="outlined">
                 <CardContent>
                   <Typography variant="subheading">Diseño (custom variants)</Typography>
 
                   {/* 1) Looks básicos (tamaño normal) */}
-                  <Typography variant="bodySmallStrong" sx={{ mt: 2 }}>Looks (tamaño normal)</Typography>
+                  <Typography variant="bodySmallStrong" sx={{ mt: 2 }}>
+                    Looks (tamaño normal)
+                  </Typography>
                   <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
                     <Button>brand (default)</Button>
                     <Button variant="softGray">softGray</Button>
@@ -224,52 +239,47 @@ export default function ExampleFrontPage() {
                   {/* 3) textBare con tamaños */}
                   <Typography variant="bodySmallStrong">textBare con tamaños</Typography>
                   <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
-                    <Button variant="textBare" size="tiny">textBare tiny</Button>
+                    <Button variant="textBare" size="small">textBare tiny</Button>
                     <Button variant="textBare" size="small">textBare small</Button>
                     <Button variant="textBare">textBare normal</Button>
                     <Button variant="textBare" size="large">textBare large</Button>
                   </Stack>
                 </CardContent>
               </Card>
-            </Grid>
-
+            </Box>
 
             {/* D) Links & Chips */}
-            <Grid item xs={12} md={6}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="heading">Links & Chips</Typography>
-                  <Stack spacing={2} sx={{ mt: 2 }}>
-                    <Typography variant="bodyBase">
-                      Este es un <Link href="#" variant="bodyLink">enlace de ejemplo</Link> dentro de un párrafo.
-                    </Typography>
-                    <Stack direction="row" spacing={1}>
-                      <Chip label="Etiqueta (bodySmallStrong)" />
-                      <Chip label="Otro Chip" variant="outlined" />
-                    </Stack>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="heading">Links & Chips</Typography>
+                <Stack spacing={2} sx={{ mt: 2 }}>
+                  <Typography variant="bodyBase">
+                    Este es un <Link href="#" variant="bodyLink">enlace de ejemplo</Link> dentro de un párrafo.
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Chip label="Etiqueta (bodySmallStrong)" />
+                    <Chip label="Otro Chip" variant="outlined" />
                   </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
+                </Stack>
+              </CardContent>
+            </Card>
 
             {/* E) Bloque de código */}
-            <Grid item xs={12} md={6}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="heading">Bloque de código (bodyCode)</Typography>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography
-                      variant="bodyCode"
-                      component="pre"
-                      sx={{ p: 2, borderRadius: 1, bgcolor: "action.hover", overflow: "auto" }}
-                    >{`curl -X POST https://api.example.com/centers \\
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="heading">Bloque de código (bodyCode)</Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Typography
+                    variant="bodyCode"
+                    component="pre"
+                    sx={{ p: 2, borderRadius: 1, bgcolor: "action.hover", overflow: "auto" }}
+                  >{`curl -X POST https://api.example.com/centers \\
   -H "Content-Type: application/json" \\
   -d '{ "name": "Centro Las Condes", "is_active": true }'`}</Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
         </Paper>
       </Stack>
     </Container>

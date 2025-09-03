@@ -179,3 +179,26 @@
 .btn-clear-filter:hover {
   background-color: #039BE5 !important; /* celeste más fuerte al pasar el mouse */
 }
+
+{/* FILTRO POR FECHA DE ACTUALIZACIÓN */}
+<div className="filter-container" style={{ marginBottom: '20px' }}>
+  <label htmlFor="ordenarPorFecha" style={{ marginRight: '10px' }}>
+    <strong>Ordenar por Fecha de Actualización:</strong>
+  </label>
+  <select
+    id="ordenarPorFecha"
+    value={sortOrder}
+    onChange={(e) => {
+      setSortOrder(e.target.value);
+    }}
+  >
+    <option value="descendente">Más Reciente Primero</option>
+    <option value="ascendente">Más Antiguo Primero</option>
+  </select>
+  <button
+    onClick={() => setSortOrder('descendente')} // Reset al valor por defecto
+    className="btn-clear-filter"
+  >
+    Limpiar Filtro
+  </button>
+</div>

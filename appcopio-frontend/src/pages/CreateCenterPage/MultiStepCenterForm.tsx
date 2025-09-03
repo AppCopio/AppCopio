@@ -70,9 +70,7 @@ const MultiStepCenterForm: React.FC = () => {
       setIsSaving(true);
       if (navigator.onLine) {
           try {
-              const token = user?.token || '';
-              // El objeto formData ya tiene la estructura correcta para el backend
-              const newCenter = await createCenter(formData, token);
+              const newCenter = await createCenter(formData);
               alert(`Centro "${newCenter.name}" creado con éxito.`);
               navigate('/admin/centers');
           } catch (err: any) {

@@ -20,3 +20,7 @@ export interface UsersApiResponse {
   users: User[];
   total: number;
 }
+
+export interface UserWithCenters extends User {
+  assignedCenters: string[]; 
+}

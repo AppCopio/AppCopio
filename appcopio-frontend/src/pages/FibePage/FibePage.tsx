@@ -1,9 +1,10 @@
 // src/pages/FibePage.tsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import FibeMultiStepForm from "./FibeMultiStepForm";
 import "./FibePage.css";
 
-import { createCompose } from "../../services/fibeApi";
+import { createFibeSubmission } from "../../services/fibeApi";
 import type { FormData } from "../../types/fibe"; // ajusta la ruta si tu type vive en otro lado
 
 export default function Page() {
@@ -11,7 +12,15 @@ export default function Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // TODO: reemplazar por el activation_id real (de la vista/estado/URL)
-  const ACTIVATION_ID = 123;
+  const activationId  = 1;
+
+  /* // 1) De la query string: /admin/fibe?activation_id=123
+  const [params] = useSearchParams();
+  const activationId = useMemo(
+    () => Number(params.get("activation_id")) || 0,
+    [params]
+  );
+  */
 
   // onSubmit que recibe el payload del form (FormData) y dispara la transacción
   const handleSubmit = async (payload: FormData) => {
@@ -20,14 +29,14 @@ export default function Page() {
       // Idempotencia opcional para reintentos seguros
       const idem = (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
 
-      const resp = await createCompose(
-        { activation_id: ACTIVATION_ID, data: payload },
+      const resp = await createFibeSubmission(
+        { activation_id: activationId , data: payload },
         { idempotencyKey: idem }
       );
 
       console.log("Transacción FIBE OK:", resp);
       alert(`Familia creada. ID: ${resp.family_id}`);
-      // Aquí podrías redirigir, limpiar el formulario, etc.
+      // TODO: navegar, limpiar formulario, etc.
       // navigate(`/familias/${resp.family_id}`)
     } catch (err: any) {
       console.error("Error FIBE:", err);
@@ -39,14 +48,8 @@ export default function Page() {
 
   return (
     <div>
-      <FibeMultiStepForm
-        onSubmit={handleSubmit}
-        // si tu componente soporta deshabilitado:
-        disabled={isSubmitting}
-      />
-      {isSubmitting && (
-        <div className="sending">Enviando datos…</div>
-      )}
+      <FibeMultiStepForm onSubmit={handleSubmit} disabled={isSubmitting}/>
+      {isSubmitting && (<div className="sending">Enviando datos…</div>)}
     </div>
   );
 }
