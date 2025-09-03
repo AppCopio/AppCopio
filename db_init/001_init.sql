@@ -606,7 +606,7 @@ VALUES
 -- Inventario de prueba
 INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) VALUES
 ('C001', 1, 200, 1), ('C001', 2, 150, 1), ('C001', 8, 100, 1),
-('C002', 1, 80, 2), ('C002', 4, 50, 2);
+('C002', 1, 20, 2), ('C002', 4, 50, 2);
 
 -- Log de inventario correspondiente al stock inicial
 INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, reason, created_by) VALUES
