@@ -34,7 +34,21 @@ const port = process.env.PORT || 4000;
 
 // Middlewares
 app.use(express.json()); 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+const allowedOrigins = [
+  "http://localhost:5173",          
+  "https://appcopio.vercel.app/",    
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
 app.use(cookieParser());
 app.set('trust proxy', 1);
 

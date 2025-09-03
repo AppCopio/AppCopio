@@ -22,7 +22,7 @@ function cookieOpts() {
     httpOnly: true,
     secure: prod,
     sameSite: crossSite ? "none" as const : "lax" as const,
-    path: "/api/auth",
+    path: "/",  
   };
 }
 
