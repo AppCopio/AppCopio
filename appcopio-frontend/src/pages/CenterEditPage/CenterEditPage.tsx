@@ -40,7 +40,7 @@ const CenterEditPage: React.FC = () => {
             setIsLoading(true);
             try {
                 const data = await fetchWithAbort<CenterData>(
-                    `http://localhost:4000/api/centers/${centerId}`,
+                    `${import.meta.env.VITE_API_URL}/centers/${centerId}`,
                     new AbortController().signal
                 );
                 // Se guardan los datos originales y se establecen en el formulario
