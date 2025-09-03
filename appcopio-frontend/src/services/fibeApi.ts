@@ -1,3 +1,4 @@
+// src/services/fibeApi.ts
 import type { FormData } from "../types/fibe"; // ajusta la ruta si tu type vive en otro archivo
 
 // --- Helpers (borra si ya los importas desde un apiClient central) ---
@@ -21,7 +22,6 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
-
 export type ComposeResponse = {
   family_id: number;
   jefe_person_id: number;
@@ -36,10 +36,10 @@ export type ComposeResponse = {
  * @param payload  { activation_id, data }
  * @param opts     { idempotencyKey? } opcional, recomendado para reintentos
  */
-export async function createCompose(
+export async function createFibeSubmission(
   payload: { activation_id: number; data: FormData },
   opts?: { idempotencyKey?: string }
-) {
+): Promise<ComposeResponse> {
   const headers =
     opts?.idempotencyKey
       ? { "Content-Type": "application/json", "Idempotency-Key": opts.idempotencyKey }

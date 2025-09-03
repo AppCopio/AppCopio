@@ -663,7 +663,7 @@ VALUES
 WITH act AS (
   SELECT activation_id
   FROM CentersActivations
-  WHERE center_id = 'C001' AND ended_at IS NULL
+  WHERE center_id = 'C002' AND ended_at IS NULL
   ORDER BY started_at DESC
   LIMIT 1
 )
@@ -673,7 +673,6 @@ FROM act;
 
 INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
 (1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
-
 
 -- Confirmaciones finales de integridad de datos
 

@@ -37,7 +37,7 @@ export const createFibeSubmissionHandler: RequestHandler<
     jefe_person_id: number;
     jefe_member_id: number;
     members: Array<{ index: number; person_id: number; member_id: number }>;
-  } | { message: string, detail: string },
+  } | { message: string; detail?: unknown },
   { activation_id: number; data: FormData }
 > = async (req, res, next) => {
   const client = await pool.connect();
@@ -71,7 +71,7 @@ export const createFibeSubmissionHandler: RequestHandler<
     }
 
     // ¿está ya como miembro activo en esta activación?
-    const jefeMemberHit = await hasActiveMembershipByRutInActivationDB(client, activation_id, jefe_person_id);
+    const jefeMemberHit = await hasActiveMembershipByRutInActivationDB(client, activation_id, jefe.rut);
     if (jefeMemberHit) {
       await client.query("ROLLBACK");
       return res.status(409).json({
@@ -102,7 +102,7 @@ export const createFibeSubmissionHandler: RequestHandler<
       const p = personas[i];
 
       // ¿ya es miembro activo en esta activación?
-      const hit = await hasActiveMembershipByRutInActivationDB(client, activation_id, person_id);
+      const hit = await hasActiveMembershipByRutInActivationDB(client, activation_id, p.rut);
       if (hit) {
         await client.query("ROLLBACK");
         return res.status(409).json({

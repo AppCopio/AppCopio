@@ -35,7 +35,7 @@ const isAdmin: RequestHandler = (req, res, next) => {
 const getAllCentersHandler: RequestHandler = async (req, res) => {
     try {
         const centersResult = await pool.query(
-            'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers'
+            'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers ORDER BY center_id ASC'
         );
         const centers = centersResult.rows;
 
