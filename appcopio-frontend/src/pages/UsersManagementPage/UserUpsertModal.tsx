@@ -132,7 +132,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
   const selectedRole = roles.find(r => r.role_id === (roleId === "" ? -1 : roleId));
   const needsCenter = selectedRole?.role_id === 3;
   const needsApoyo = selectedRole?.role_id === 2;
-
+  const roleNameForAssignment = selectedRole?.role_name ?? "";
 
   // Usa useMemo para validar el RUT, para que se recalcule solo cuando cambian las dependencias
   const rutDVInvalid = React.useMemo(() => {
@@ -191,7 +191,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
             const toAdd = currentAssigned.includes(centerId) ? [] : [centerId];
             await Promise.all([
               ...toRemove.map((id) => removeCenterFromUser(user.user_id, id)),
-              ...toAdd.map((id) => assignCenterToUser(user.user_id, centerId, u.role_name)),
+              ...toAdd.map((id) => assignCenterToUser(user.user_id, centerId, roleNameForAssignment)),
             ]);
           } else {
             if (currentAssigned.length > 0) {

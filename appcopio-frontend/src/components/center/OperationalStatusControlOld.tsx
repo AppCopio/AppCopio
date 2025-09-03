@@ -13,6 +13,19 @@ interface OperationalStatusControlProps {
   isUpdating?: boolean;
 }
 
+const getStatusClass = (status: OperationalStatus): string => {
+    switch (status) {
+      case 'Abierto':
+        return 'status-open';
+      case 'Cerrado Temporalmente':
+        return 'status-closed';
+      case 'Capacidad Máxima':
+        return 'status-full';
+      default:
+        return 'status-unknown';
+    }
+  };
+
 const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
   centerId,
   currentStatus,
@@ -23,7 +36,7 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   // Solo los encargados pueden cambiar el estado operativo
-  if (user?.role !== 'Encargado') {
+  if (user?.role_name !== 'Encargado') {
     return (
       <div className="operational-status-display">
         <span className={`status-indicator ${getStatusClass(currentStatus)}`}>
@@ -46,18 +59,7 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
     setIsOpen(false);
   };
 
-  const getStatusClass = (status: OperationalStatus): string => {
-    switch (status) {
-      case 'Abierto':
-        return 'status-open';
-      case 'Cerrado Temporalmente':
-        return 'status-closed';
-      case 'Capacidad Máxima':
-        return 'status-full';
-      default:
-        return 'status-unknown';
-    }
-  };
+  
 
   const getStatusIcon = (status: OperationalStatus): string => {
     switch (status) {

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchWithAbort } from '../../services/api';
+import { getUser } from '../../services/usersApi'; 
 import './MisCentrosPage.css';
 
 // Usamos la misma interfaz que ya tenemos definida en otras partes
@@ -24,8 +25,7 @@ const MisCentrosPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Si no hay usuario o no tiene centros asignados, no hacemos nada.
-    if (!user || !user.assignedCenters || user.assignedCenters.length === 0) {
+    if (!user?.user_id) {
       setIsLoading(false);
       return;
     }
@@ -36,14 +36,22 @@ const MisCentrosPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Obtenemos la lista completa de centros
-        const allCenters = await fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal);
-        
-        // Filtramos la lista para quedarnos solo con los que el usuario tiene asignados
-        const userCenters = (allCenters || []).filter(center => 
-          user.assignedCenters.includes(center.center_id)
+        const fullUser = await getUser(user.user_id, controller.signal);
+
+        if (!fullUser.assignedCenters || fullUser.assignedCenters.length === 0) {
+          setAssignedCenters([]);
+          return;
+        }
+
+        const allCenters = await fetchWithAbort<Center[]>(
+          `${apiUrl}/centers`,
+          controller.signal
         );
-        
+
+        const userCenters = (allCenters || []).filter(center =>
+          fullUser.assignedCenters.includes(center.center_id)
+        );
+
         setAssignedCenters(userCenters);
 
       } catch (err) {
@@ -63,7 +71,7 @@ const MisCentrosPage: React.FC = () => {
     return () => {
       controller.abort();
     };
-  }, [user, apiUrl]);
+  }, [user?.user_id, apiUrl]);
 
   if (isLoading) {
     return <div className="mis-centros-container">Cargando tus centros asignados...</div>;
