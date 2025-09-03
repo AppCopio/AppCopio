@@ -237,27 +237,7 @@ const InventoryPage: React.FC = async () => {
     setInventory(sortedInventory); // Actualizamos el inventario
   };
 
-  const handleAddItemSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!centerId || !newItemCategory) return alert("Por favor, selecciona una categoría.");
-      setIsSubmitting(true);
-      
-      // MODIFICADO: Se añade 'unit' al cuerpo de la petición y la cabecera de autorización.
-      const request = {
-          url: `${apiUrl}/centers/${centerId}/inventory`,
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` 
-          },
-          body: { 
-            itemName: newItemName, 
-            categoryId: parseInt(newItemCategory, 10),
-            quantity: newItemQuantity,
-            unit: newItemUnit,
-            user: user,
-          },
-      };
+  
  // --- MANEJADORES DE EVENTOS ---
 
 const handleAddItemSubmit = async (e: React.FormEvent) => {
