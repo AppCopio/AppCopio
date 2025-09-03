@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "jest"],   // 👈 aquí sí agregamos jest
+    "rootDir": "."               // 👈 permite compilar archivos fuera de src (tests)
+  },
+  "include": ["src/**/*", "test/**/*"]
+}
