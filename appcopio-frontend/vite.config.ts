@@ -16,19 +16,19 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Regla para que la autenticación NUNCA se cachee
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/auth'),
+            urlPattern: ({ request }) => request.url.includes('/api/auth'),
             handler: 'NetworkOnly',
           },
           {
             // Regla para las peticiones GET a nuestra API (sin cambios)
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            urlPattern: ({ request }) => request.url.includes('/api/'),
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'api-cache' },
           },
           // --- INICIO DE LA NUEVA REGLA OFFLINE ---
           {
             // Se aplica a cualquier petición a nuestra API que NO sea GET.
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            urlPattern: ({ request }) => request.url.includes('/api/'),
             handler: 'NetworkOnly', // Siempre intenta ir a la red primero.
             method: 'POST', // Aplica a POST
             options: {
@@ -43,19 +43,19 @@ export default defineConfig({
           },
           // Repetimos la regla para otros métodos
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            urlPattern: ({ request }) => request.url.includes('/api/'),
             handler: 'NetworkOnly',
             method: 'PUT',
             options: { backgroundSync: { name: 'appcopio-mutation-queue' } },
           },
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            urlPattern: ({ request }) => request.url.includes('/api/'),
             handler: 'NetworkOnly',
             method: 'PATCH',
             options: { backgroundSync: { name: 'appcopio-mutation-queue' } },
           },
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+           urlPattern: ({ request }) => request.url.includes('/api/'),
             handler: 'NetworkOnly',
             method: 'DELETE',
             options: { backgroundSync: { name: 'appcopio-mutation-queue' } },

@@ -1,9 +1,16 @@
 services:
   db:
+<<<<<<< HEAD
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: benja
+=======
     image: postgres:15
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+>>>>>>> a93b53c59e16ed87cea1b639450ffd6a52b3dacd
       POSTGRES_DB: appcopio_db
     volumes:
       - dbdata:/var/lib/postgresql/data
@@ -40,4 +47,8 @@ services:
 volumes:
   dbdata:
   backend_node_modules:
+<<<<<<< HEAD
   frontend_node_modules:
+=======
+  frontend_node_modules:
+>>>>>>> a93b53c59e16ed87cea1b639450ffd6a52b3dacd
