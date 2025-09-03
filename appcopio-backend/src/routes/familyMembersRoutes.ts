@@ -6,6 +6,48 @@ const router = Router();
 
 import type { FamilyMemberCreate } from "../types/family";
 
+const normalizeRut = (v: string) => (v || "").replace(/[^0-9kK]/g, "").toUpperCase();
+
+/* * * * * * * * * *   F X ' S   D E   A P O Y O   * * * * * * * * * * */
+
+/** ¿La persona ya es miembro “activo” de alguna familia en esta activación? */
+export async function hasActiveMembershipByRutInActivationDB(
+  db: Db,
+  activation_id: number,
+  rutRaw: string
+): Promise<{ family_id: number; member_id: number } | null> {
+  const clean = normalizeRut(rutRaw);
+  const sql = `
+    SELECT fg.family_id, fgm.member_id
+    FROM Persons p
+    JOIN FamilyGroupMembers fgm ON fgm.person_id = p.person_id
+    JOIN FamilyGroups fg ON fg.family_id = fgm.family_id
+    WHERE fg.activation_id = $1
+      AND upper(regexp_replace(p.rut, '[^0-9Kk]', '', 'g')) = $2
+    LIMIT 1
+  `;
+  const { rows } = await db.query(sql, [activation_id, clean]);
+  return rows[0] ?? null;
+}
+
+/** ¿Ya es jefe de hogar “activo” en esta activación? */
+export async function findActiveHeadFamilyInActivationDB(
+  db: Db,
+  activation_id: number,
+  person_id: number
+): Promise<{ family_id: number } | null> {
+  const sql = `
+    SELECT family_id
+    FROM FamilyGroups
+    WHERE activation_id = $1
+      AND jefe_hogar_person_id = $2
+    LIMIT 1
+  `;
+  const { rows } = await db.query(sql, [activation_id, person_id]);
+  return rows[0] ?? null;
+}
+
+
 // ---------- GET /family-members (list) ----------
 export const listFamilyMembersHandler: RequestHandler = async (_req, res, next) => {
   try {

@@ -202,6 +202,11 @@ CREATE TABLE FamilyGroupMembers (
     UNIQUE(family_id, person_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_fgm_person ON FamilyGroupMembers(person_id);
+CREATE INDEX IF NOT EXISTS idx_fg_activation ON FamilyGroups(activation_id);
+CREATE INDEX IF NOT EXISTS idx_fg_head_activation ON FamilyGroups(activation_id, jefe_hogar_person_id) WHERE status='activo';
+
+
 -- Guarda el historial de las descripciones detalladas de cada centro)
 CREATE TABLE CentersDescription (
     center_id VARCHAR(10) PRIMARY KEY REFERENCES Centers(center_id) ON DELETE CASCADE,
