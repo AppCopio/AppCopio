@@ -12,18 +12,7 @@ const StepGeneral = React.forwardRef<any, StepGeneralProps>(({ value, onChange }
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
         const { name, value: newValue } = event.target;
-        
-        let processedValue = newValue;
-        // Convertir la latitud y la longitud a números si los campos coinciden
-        if (name === 'latitude' || name === 'longitude') {
-            processedValue = parseFloat(newValue as string);
-            // Si el valor no es un número válido, se establece como null o 0, según tu lógica.
-            if (isNaN(processedValue as number)) {
-                processedValue = 0; // O null, según cómo manejes los valores no numéricos
-            }
-        }
-
-        onChange(name as keyof CenterData, processedValue);
+        onChange(name as keyof CenterData, newValue);
         if (fieldErrors[name as string]) {
             setFieldErrors(prev => ({ ...prev, [name as string]: '' }));
         }
@@ -146,8 +135,8 @@ const StepGeneral = React.forwardRef<any, StepGeneralProps>(({ value, onChange }
                     label="Tipo de Centro"
                     onChange={handleChange as any}
                 >
-                    <MenuItem value="Albergue">Albergue</MenuItem>
-                    <MenuItem value="Albergue Comunitario">Albergue Comunitario</MenuItem>
+                    <MenuItem value="albergue">Albergue</MenuItem>
+                    <MenuItem value="acopio">Acopio</MenuItem>
                 </Select>
                 {!!fieldErrors.type && <p style={{color: 'red', fontSize: '0.75rem', marginLeft: '14px', marginTop: '3px'}}>{fieldErrors.type}</p>}
             </FormControl>
