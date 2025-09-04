@@ -14,7 +14,8 @@ export function ActivationProvider({ centerId, children }: { centerId: string | 
   const [loading, setLoading] = useState(true);
   const [activation, setActivation] = useState<ActiveActivation | null>(null);
 
-  const load = async () => {
+  const load = async (signal?: AbortSignal) => {
+    setActivation(null)
     setLoading(true);
     try {
       const a = await getActiveActivation(centerId);
@@ -24,9 +25,13 @@ export function ActivationProvider({ centerId, children }: { centerId: string | 
     }
   };
 
-  useEffect(() => { load(); }, [centerId]);
+  useEffect(() => { 
+    const ctrl =  new AbortController();
+    load(ctrl.signal);
+    return () => ctrl.abort() 
+  }, [centerId]);
 
-  const value = useMemo(() => ({ loading, activation, refresh: load }), [loading, activation]);
+  const value = useMemo(() => ({ loading, activation, refresh: () => load() }), [loading, activation]);
   return <ActivationContext.Provider value={value}>{children}</ActivationContext.Provider>;
 }
 
