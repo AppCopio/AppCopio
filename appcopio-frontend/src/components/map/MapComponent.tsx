@@ -28,23 +28,17 @@ const valparaisoCoords = { lat: -33.04, lng: -71.61 };
 // Lógica de estilos actualizada para considerar el estado operativo
 const getPinStatusClass = (center: Center): string => {
   if (!center.is_active) {
-    return 'status-inactive'; // Gris
+    return 'status-inactive'; // Gris - centro inactivo
   }
   
-  // Se da prioridad al estado operativo sobre el nivel de abastecimiento
+  // Prioridad al estado operativo
   if (center.operational_status === 'Cerrado Temporalmente') {
-    return 'status-temporarily-closed';
+    return 'status-inactive'; // Gris - cerrado temporalmente
   } else if (center.operational_status === 'Capacidad Máxima') {
-    return 'status-full-capacity';
-  }
-  
-  // Si está 'Abierto' o no tiene estado operativo, se usa el porcentaje
-  if (center.fullnessPercentage < 33) {
-    return 'status-critical'; // Rojo
-  } else if (center.fullnessPercentage < 66) {
-    return 'status-warning'; 	// Naranja
+    return 'status-full-capacity'; // Rojo - capacidad máxima
   } else {
-    return 'status-ok'; 		// Verde
+    // Si está 'Abierto' o no tiene estado operativo -> Verde
+    return 'status-ok'; // Verde - abierto con capacidad
   }
 };
 
