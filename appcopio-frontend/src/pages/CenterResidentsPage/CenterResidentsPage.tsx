@@ -45,6 +45,8 @@ const CenterResidentsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const apiUrl = import.meta.env.VITE_API_URL;
+  
   const [filters, setFilters] = useState({
     nombre: '',
     rut: '',
@@ -198,7 +200,7 @@ const CenterResidentsPage: React.FC = () => {
 
 
   const fetchCenterCapacity = async (centerId: string) => {
-    const response = await fetch(`http://localhost:4000/api/centers/${centerId}/capacity`);
+    const response = await fetch(`http://${apiUrl}/api/centers/${centerId}/capacity`);
     const data = await response.json();
     setCenterCapacity(data.capacity);
     setCurrentCapacity(data.current_capacity);
@@ -208,7 +210,7 @@ const CenterResidentsPage: React.FC = () => {
   const fetchResidents = async () => {
     if (!centerId) return;
     try {
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/residents`);
+      const response = await fetch(`http://${apiUrl}/api/centers/${centerId}/residents`);
       if (!response.ok) throw new Error('Error al obtener los residentes del centro');
       const data = await response.json();
       setGroups(data);
@@ -233,7 +235,7 @@ const CenterResidentsPage: React.FC = () => {
         genero: genero,
       }).toString();
 
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/people?${params}`);
+      const response = await fetch(`http://${apiUrl}/api/centers/${centerId}/people?${params}`);
       if (!response.ok) throw new Error('Error al obtener las personas del centro');
       const data = await response.json();
       setPeople(data);
@@ -245,7 +247,7 @@ const CenterResidentsPage: React.FC = () => {
 
   const fetchActiveCenters = async () => {
     try {
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/active-centers`);
+      const response = await fetch(`http://${apiUrl}/api/centers/${centerId}/active-centers`);
       if (!response.ok) throw new Error('No se pudieron cargar los centros activos');
       const data = await response.json();
       setActiveCenters(data);
@@ -285,7 +287,7 @@ const CenterResidentsPage: React.FC = () => {
     }
 
     try {
-      const url = `http://localhost:4000/api/family/${residentToExit.family_id}/depart`;
+      const url = `http://${apiUrl}/api/family/${residentToExit.family_id}/depart`;
       const response = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
