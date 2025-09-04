@@ -33,7 +33,7 @@ interface GroupedInventory {
 const SYNC_TAG = 'sync-inventory-updates';
 
 // --- COMPONENTE PRINCIPAL ---
-const InventoryPage: React.FC = async () => {
+const InventoryPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const { user } = useAuth(); // Se obtiene el token de autenticación
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -73,7 +73,6 @@ const InventoryPage: React.FC = async () => {
         const u = await getUser(user.user_id, ctrl.signal);
         setAssignedCenters(u.assignedCenters ?? []);
       } catch (err) {
-        console.error(err);
         setAssignedCenters([]);
       }
     })();

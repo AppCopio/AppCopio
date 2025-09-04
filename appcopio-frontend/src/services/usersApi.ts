@@ -1,4 +1,5 @@
 // src/services/userApi.ts
+import axios from "axios";
 import api from "../lib/api";
 import { UserWithCenters } from "../types/user";
 
@@ -48,11 +49,19 @@ export async function getUser(
   signal?: AbortSignal
 ): Promise<UserWithCenters> {
   try {
-    const { data } = await api.get<UserWithCenters>(`/users/${userId}`, {
-      signal,
-    });
+    const { data } = await api.get<UserWithCenters>(`/users/${userId}`, { signal });
     return data;
   } catch (err: any) {
+    if (
+      axios.isCancel?.(err) ||
+      err?.code === "ERR_CANCELED" ||
+      err?.message === "canceled" ||
+      err?.name === "CanceledError" || // axios
+      err?.name === "AbortError"       // fetch
+    ) {
+      // Re-lanzamos un sentinel para que el caller lo ignore
+      throw { aborted: true };
+    }
     throw new Error(msgFromError(err, "Error al obtener el usuario."));
   }
 }

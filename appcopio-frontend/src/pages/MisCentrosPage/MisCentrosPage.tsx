@@ -54,11 +54,18 @@ const MisCentrosPage: React.FC = () => {
 
         setAssignedCenters(userCenters);
 
-      } catch (err) {
-        if (err instanceof Error && err.name !== 'AbortError') {
-          console.error("Error al cargar detalles de los centros:", err);
-          setError("No se pudieron cargar los datos de los centros asignados.");
+      } catch (err: any) {
+        if (
+          err?.aborted ||
+          err?.code === "ERR_CANCELED" ||
+          err?.message === "canceled" ||
+          err?.name === "AbortError" ||
+          err?.name === "CanceledError"
+        ) {
+          return;
         }
+        console.error("Error al cargar detalles de los centros:", err);
+        setError("No se pudieron cargar los datos de los centros asignados.");
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);

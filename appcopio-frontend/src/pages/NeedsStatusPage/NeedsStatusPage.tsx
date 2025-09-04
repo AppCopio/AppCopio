@@ -46,18 +46,18 @@ const NeedsStatusPage: React.FC = () => {
         // --- INICIO DE LA DEPURACIÓN ---
         // ✅ 1. Mostramos en consola TODO lo que llegó de la API.
         // Aquí deberías ver todos los updates, y cada uno debería tener la propiedad "center_id".
-        console.log("1. Datos CRUDOS recibidos de la API:", data.requests);
+        //console.log("1. Datos CRUDOS recibidos de la API:", data.requests);
         
         const centerRequests = data.requests.filter(req => {
           // ✅ 2. Mostramos en consola la comparación que se hace para CADA update.
           // Esto nos dirá si los IDs coinciden como esperamos.
-          console.log(`Comparando: (req.center_id) ${req.center_id} === ${centerId} (centerId de la URL)`);
+          //console.log(`Comparando: (req.center_id) ${req.center_id} === ${centerId} (centerId de la URL)`);
           return req.center_id === centerId;
         });
 
         // ✅ 3. Mostramos el resultado FINAL del filtro.
         // Si aquí ves un array vacío, el problema está en la comparación. Si ves los datos, ¡éxito!
-        console.log("2. Solicitudes FILTRADAS para este centro:", centerRequests);
+        //console.log("2. Solicitudes FILTRADAS para este centro:", centerRequests);
         // --- FIN DE LA DEPURACIÓN ---
         
         setRequests(centerRequests);

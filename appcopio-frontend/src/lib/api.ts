@@ -20,7 +20,6 @@ export function setAccessToken(token: string | null) {
 }
 
 api.interceptors.request.use((config) => {
-  // redundante si usas defaults, pero útil para requests personalizados
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
   return config;
 });
@@ -29,7 +28,6 @@ let isRefreshing = false;
 let queue: Array<(t: string | null) => void> = [];
 
 async function doRefresh() {
-  // OJO: como baseURL ya incluye /api, aquí usamos la ruta corta
   const { data } = await api.post("/auth/refresh");
   return data.access_token as string;
 }
