@@ -259,3 +259,10 @@ export const initialCenterData: CenterData = {
     importa_conocimientos_capacitaciones: false,
     observaciones_importa_conocimientos_capacitaciones: ''
 };
+
+export type ActiveActivation = {
+  activation_id: number;
+  center_id: string;
+  started_at: string;
+  ended_at: string | null;
+};

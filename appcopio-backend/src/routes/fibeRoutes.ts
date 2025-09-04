@@ -7,11 +7,11 @@ import { createFamilyGroupFromHouseholdDB } from "./familyRoutes";
 import { createFamilyMemberDB, hasActiveMembershipByRutInActivationDB, findActiveHeadFamilyInActivationDB } from "./familyMembersRoutes";
 
 import type { FormData } from "../types/fibe";
+import type { Db } from "../types/db";
 
 const router = Router();
 
-export type Db = { query: (q: string, p?: any[]) => Promise<{ rows: any[]; rowCount: number }> };
-
+// ---------- F X ' S   D E   A P O Y O ----------
 /** ¿Existe la activación y está vigente? */
 export async function assertActivationOpenDB(db: Db, activation_id: number): Promise<void> {
   const { rows } = await db.query(
@@ -25,7 +25,9 @@ export async function assertActivationOpenDB(db: Db, activation_id: number): Pro
   }
 }
 
-// ---------- POST /fibe/compose (operación atómica) ----------
+// ---------- F I B E ----------
+
+// POST /fibe/registration/:id (operación atómica)
 export const createFibeSubmissionHandler: RequestHandler<
   any,
   {
@@ -35,7 +37,7 @@ export const createFibeSubmissionHandler: RequestHandler<
     members: Array<{ index: number; person_id: number; member_id: number }>;
   } | { message: string; detail?: unknown },
   { activation_id: number; data: FormData }
-> = async (req, res, next): Promise<void> => {  // ← opcionalmente fuerzo Promise<void>
+> = async (req, res, next): Promise<void> => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -135,6 +137,6 @@ export const createFibeSubmissionHandler: RequestHandler<
   }
 };
 
-router.post("/compose", createFibeSubmissionHandler);
+router.post("/registration", createFibeSubmissionHandler);
 
 export default router;

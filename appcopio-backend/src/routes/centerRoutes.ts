@@ -1,6 +1,6 @@
 import { Request, Response, Router, RequestHandler } from 'express';
 import pool from '../config/db';
-
+import { ActiveActivationRow } from '../types/center';
 // Interfaz para extender el objeto Request de Express y añadir la propiedad user
 interface AuthenticatedRequest extends Request {
     user?: {
@@ -10,6 +10,8 @@ interface AuthenticatedRequest extends Request {
 
 const router = Router();
 
+/* * * * * * F X ' S   D E   A P O Y O * * * * * */
+
 const itemRatiosPerPerson: { [key: string]: number } = {
     'Alimentos y Bebidas': 1,
     'Ropa de Cama y Abrigo': 1,
@@ -18,7 +20,7 @@ const itemRatiosPerPerson: { [key: string]: number } = {
     'Herramientas': 1
 };
 
-//
+
 // Por lo que entendí esto es para verificar el rol de administrador (DIDECO)
 const isAdmin: RequestHandler = (req, res, next) => {
     // Implementación de autenticación con token JWT
@@ -30,6 +32,8 @@ const isAdmin: RequestHandler = (req, res, next) => {
         res.status(403).json({ message: 'Acceso denegado. Se requiere rol de Administrador.' });
     }
 };
+
+/* * * * * * C E N T R O S * * * * * */
 
 // GET /api/centers - (Sin cambios en esta función)
 const getAllCentersHandler: RequestHandler = async (req, res) => {
@@ -100,8 +104,6 @@ const getAllCentersHandler: RequestHandler = async (req, res) => {
         }
     }
 };
-
-// --- RUTAS DE CENTROS (Sin cambios) ---
 
 // GET /api/centers/:id - Obtener un centro específico
 const getCenterByIdHandler: RequestHandler = async (req, res) => {
@@ -514,6 +516,178 @@ const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
     }
 };
 
+/* * * * * * C E N T R O   A C T I V O  * * * * * */
+
+
+const getCurrentResidentsHandler: RequestHandler = async (req, res) => {
+  const { centerId } = req.params;
+
+  const query = `
+    SELECT 
+      fg.family_id,
+      p.rut,
+      CONCAT(p.nombre, ' ', p.primer_apellido) AS nombre_completo,
+      COUNT(fgm.person_id) AS integrantes_grupo
+    FROM CentersActivations ca
+    JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id
+    JOIN FamilyGroupMembers fgm ON fgm.family_id = fg.family_id
+    JOIN Persons p ON p.person_id = fg.jefe_hogar_person_id
+    WHERE ca.center_id = $1 
+      AND ca.ended_at IS NULL
+      AND fg.status = 'activo'  -- Filtra por familias activas
+    GROUP BY fg.family_id, p.rut, p.nombre, p.primer_apellido
+    ORDER BY nombre_completo
+  `;
+
+  try {
+    const result = await pool.query(query, [centerId]);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error(`Error al obtener residentes del centro ${centerId}:`, error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+};
+
+const getCenterCapacityHandler: RequestHandler = async (req, res) => {
+  const { centerId } = req.params;
+
+  try {
+    // Consultar la capacidad total del centro
+    const centerResult = await pool.query(
+      'SELECT capacity FROM Centers WHERE center_id = $1',
+      [centerId]
+    );
+
+    // Si no se encuentra el centro
+    if (centerResult.rows.length === 0) {
+        res.status(404).json({ message: 'Centro no encontrado' });
+        return;
+    }
+
+    const capacity = centerResult.rows[0].capacity;
+
+    // Consultar la cantidad de familias activas en el centro
+    const currentCapacityResult = await pool.query(
+      `SELECT COALESCE(SUM(fgm.integrantes), 0) AS current_capacity
+        FROM Centers c
+        LEFT JOIN CentersActivations ca ON ca.center_id = c.center_id AND ca.ended_at IS NULL
+        LEFT JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id AND fg.status = 'activo'
+        LEFT JOIN (
+            SELECT family_id, COUNT(*) AS integrantes
+            FROM FamilyGroupMembers
+            GROUP BY family_id
+        ) fgm ON fgm.family_id = fg.family_id
+        WHERE c.center_id = $1`,
+      [centerId]
+    );
+
+    // Calculando la capacidad ocupada y disponible
+    const currentCapacity = currentCapacityResult.rows[0].current_capacity || 0;
+    const availableCapacity = capacity - currentCapacity;
+
+    // Enviar la respuesta con la capacidad total, ocupada y disponible
+    res.json({
+      capacity, // Capacidad total
+      current_capacity: currentCapacity, // Capacidad ocupada
+      available_capacity: availableCapacity // Capacidad disponible
+    });
+
+  } catch (error) {
+    console.error('Error al obtener la capacidad del centro:', error);
+    res.status(500).json({ message: 'Error interno del servidor al obtener la capacidad del centro' });
+  }
+};
+
+// GET /api/active-centers - Listar centros activos
+const getActiveCenters: RequestHandler = async (req, res) => {
+    try {
+    const result = await pool.query(`
+      SELECT ca.activation_id, ca.center_id, c.name AS center_name
+      FROM CentersActivations ca
+      JOIN Centers c ON ca.center_id = c.center_id
+      WHERE ca.ended_at IS NULL
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener centros activos:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+
+}
+
+const getCurrentResidentsPersonsHandler: RequestHandler = async (req, res) => {
+  const { centerId } = req.params;
+
+  if (!centerId) {
+    res.status(400).json({ error: 'El ID del centro es requerido' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT p.person_id, p.rut, p.nombre, p.primer_apellido, p.segundo_apellido, p.nacionalidad, 
+              p.genero, p.edad, p.created_at, p.updated_at
+       FROM Persons p
+       JOIN FamilyGroupMembers fgm ON fgm.person_id = p.person_id
+       JOIN FamilyGroups fg ON fg.family_id = fgm.family_id
+       JOIN CentersActivations ca ON ca.activation_id = fg.activation_id
+       WHERE ca.center_id = $1`,
+      [centerId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'No se encontraron personas albergadas en este centro' });
+      return;
+    }
+
+    const persons = result.rows;
+    res.json(persons);
+  } catch (err) {
+    console.error('Error al obtener las personas albergadas:', err);
+    res.status(500).json({ error: 'Error interno del servidor al obtener las personas albergadas' });
+  }
+};
+
+// GET /centers/:id/activation-active
+// Devuelve la activación abierta (ended_at IS NULL) o 204 si no hay
+const getActiveActivationHandler: RequestHandler<{ id: string }> = async (req, res) => {
+  const centerId = (req.params.id ?? "").trim();
+
+  // Validación simple: VARCHAR(10) no vacío
+  if (!centerId || centerId.length > 10) {
+    res.status(400).json({ message: "Invalid center id" });
+    return;
+  }
+
+  try {
+    const { rows } = await pool.query<ActiveActivationRow>(
+      `
+      SELECT ca.activation_id, ca.center_id, ca.started_at, ca.ended_at
+      FROM CentersActivations ca
+      WHERE ca.center_id = $1
+        AND ca.ended_at IS NULL
+      ORDER BY ca.started_at DESC
+      LIMIT 1
+      `,
+
+      [centerId]
+    );
+
+    if (rows.length === 0) {
+      res.status(204).end(); // No Content: no hay activación abierta
+      return;
+    }
+
+    res.json(rows[0]); // { activation_id, center_id, started_at, ended_at:null }
+  } catch (err) {
+    console.error("getActiveActivationHandler error:", err);
+    res.status(500).json({ message: "Error fetching active activation" });
+  }
+};
+
+
+
+/* * * * * * I N V E N T A R I O  * * * * * */
 
 // GET /api/centers/:centerId/inventory - (Sin cambios en esta función)
 const getInventoryHandler: RequestHandler = async (req, res) => {
@@ -699,138 +873,6 @@ const deleteInventoryItemHandler: RequestHandler = async (req: AuthenticatedRequ
     }
 };
 
-const getCurrentResidentsHandler: RequestHandler = async (req, res) => {
-  const { centerId } = req.params;
-
-  const query = `
-    SELECT 
-      fg.family_id,
-      p.rut,
-      CONCAT(p.nombre, ' ', p.primer_apellido) AS nombre_completo,
-      COUNT(fgm.person_id) AS integrantes_grupo
-    FROM CentersActivations ca
-    JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id
-    JOIN FamilyGroupMembers fgm ON fgm.family_id = fg.family_id
-    JOIN Persons p ON p.person_id = fg.jefe_hogar_person_id
-    WHERE ca.center_id = $1 
-      AND ca.ended_at IS NULL
-      AND fg.status = 'activo'  -- Filtra por familias activas
-    GROUP BY fg.family_id, p.rut, p.nombre, p.primer_apellido
-    ORDER BY nombre_completo
-  `;
-
-  try {
-    const result = await pool.query(query, [centerId]);
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error(`Error al obtener residentes del centro ${centerId}:`, error);
-    res.status(500).json({ message: 'Error interno del servidor.' });
-  }
-};
-
-
-
-
-const getCenterCapacityHandler: RequestHandler = async (req, res) => {
-  const { centerId } = req.params;
-
-  try {
-    // Consultar la capacidad total del centro
-    const centerResult = await pool.query(
-      'SELECT capacity FROM Centers WHERE center_id = $1',
-      [centerId]
-    );
-
-    // Si no se encuentra el centro
-    if (centerResult.rows.length === 0) {
-        res.status(404).json({ message: 'Centro no encontrado' });
-        return;
-    }
-
-    const capacity = centerResult.rows[0].capacity;
-
-    // Consultar la cantidad de familias activas en el centro
-    const currentCapacityResult = await pool.query(
-      `SELECT COALESCE(SUM(fgm.integrantes), 0) AS current_capacity
-        FROM Centers c
-        LEFT JOIN CentersActivations ca ON ca.center_id = c.center_id AND ca.ended_at IS NULL
-        LEFT JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id AND fg.status = 'activo'
-        LEFT JOIN (
-            SELECT family_id, COUNT(*) AS integrantes
-            FROM FamilyGroupMembers
-            GROUP BY family_id
-        ) fgm ON fgm.family_id = fg.family_id
-        WHERE c.center_id = $1`,
-      [centerId]
-    );
-
-    // Calculando la capacidad ocupada y disponible
-    const currentCapacity = currentCapacityResult.rows[0].current_capacity || 0;
-    const availableCapacity = capacity - currentCapacity;
-
-    // Enviar la respuesta con la capacidad total, ocupada y disponible
-    res.json({
-      capacity, // Capacidad total
-      current_capacity: currentCapacity, // Capacidad ocupada
-      available_capacity: availableCapacity // Capacidad disponible
-    });
-
-  } catch (error) {
-    console.error('Error al obtener la capacidad del centro:', error);
-    res.status(500).json({ message: 'Error interno del servidor al obtener la capacidad del centro' });
-  }
-};
-
-// GET /api/active-centers - Listar centros activos
-const getActiveCenters: RequestHandler = async (req, res) => {
-    try {
-    const result = await pool.query(`
-      SELECT ca.activation_id, ca.center_id, c.name AS center_name
-      FROM CentersActivations ca
-      JOIN Centers c ON ca.center_id = c.center_id
-      WHERE ca.ended_at IS NULL
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error al obtener centros activos:", error);
-    res.status(500).json({ message: "Error interno del servidor" });
-  }
-
-}
-const getCurrentResidentsPersonsHandler: RequestHandler = async (req, res) => {
-  const { centerId } = req.params;
-
-  if (!centerId) {
-    res.status(400).json({ error: 'El ID del centro es requerido' });
-    return;
-  }
-
-  try {
-    const result = await pool.query(
-      `SELECT p.person_id, p.rut, p.nombre, p.primer_apellido, p.segundo_apellido, p.nacionalidad, 
-              p.genero, p.edad, p.created_at, p.updated_at
-       FROM Persons p
-       JOIN FamilyGroupMembers fgm ON fgm.person_id = p.person_id
-       JOIN FamilyGroups fg ON fg.family_id = fgm.family_id
-       JOIN CentersActivations ca ON ca.activation_id = fg.activation_id
-       WHERE ca.center_id = $1`,
-      [centerId]
-    );
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'No se encontraron personas albergadas en este centro' });
-      return;
-    }
-
-    const persons = result.rows;
-    res.json(persons);
-  } catch (err) {
-    console.error('Error al obtener las personas albergadas:', err);
-    res.status(500).json({ error: 'Error interno del servidor al obtener las personas albergadas' });
-  }
-};
-
-
 
 // --- REGISTRO DE TODAS LAS RUTAS ---
 router.get('/', getAllCentersHandler);
@@ -852,6 +894,6 @@ router.get('/:centerId/residents', getCurrentResidentsHandler);
 router.get('/:centerId/capacity', getCenterCapacityHandler);
 router.get('/:centerId/active-centers', getActiveCenters);
 router.get('/:centerId/people', getCurrentResidentsPersonsHandler); // Esta ruta devuelve las personas del centro
-
+router.get("/:id/activation-active", getActiveActivationHandler);
 
 export default router;

@@ -1,13 +1,6 @@
 // src/services/fibeApi.ts
 import api from "../lib/api";
-import type { FormData } from "../types/fibe"; 
-
-export type ComposeResponse = {
-  family_id: number;
-  jefe_person_id: number;
-  jefe_member_id: number;
-  members: Array<{ index: number; person_id: number; member_id: number }>;
-};
+import type { FormData, ComposeResponse } from "../types/fibe";
 
 /**
  * Crea familia + personas + membresías en una sola transacción.
@@ -22,7 +15,7 @@ export async function createFibeSubmission(
 ): Promise<ComposeResponse> {
   try {
     const { data } = await api.post<ComposeResponse>(
-      "/fibe/compose",
+      "/fibe/registration",
       payload,
       opts?.idempotencyKey
         ? { headers: { "Idempotency-Key": opts.idempotencyKey } }
