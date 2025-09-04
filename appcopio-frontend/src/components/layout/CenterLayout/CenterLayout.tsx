@@ -12,9 +12,7 @@ const CenterLayout: React.FC = () => {
     <div className="center-layout">
 
       <div className="center-header">
-        <h2>
-          Gestionando: {currentCenter ? currentCenter.name : `Centro ${centerId}`}
-        </h2>
+
         <nav className="center-subnav">
           <Link to={`/center/${centerId}/inventory`}>Inventario</Link>
           <Link to={`/center/${centerId}/details`}>Ver Detalles</Link>

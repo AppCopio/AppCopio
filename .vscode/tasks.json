@@ -96,6 +96,34 @@
 			"command": "git add .",
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Git Commit Final",
+			"type": "shell",
+			"command": "git commit -m 'criterio hdu22 arreglado'",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Pull",
+			"type": "shell",
+			"command": "git pull origin main",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Force Push",
+			"type": "shell",
+			"command": "git push origin main --force",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Add All Changes",
+			"type": "shell",
+			"command": "git add .",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

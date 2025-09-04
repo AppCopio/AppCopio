@@ -100,7 +100,7 @@ const CenterDetailsPage: React.FC = () => {
     setIsUpdatingOperationalStatus(true);
 
     try {
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/operational-status`, {
+      const response = await fetch(`${apiUrl}/api/centers/${centerId}/operational-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -241,7 +241,7 @@ const CenterDetailsPage: React.FC = () => {
               onSuccess={async () => {
                 closeAssign();
                 try {
-                  const r = await fetch(`http://localhost:4000/api/centers/${centerId}`);
+                  const r = await fetch(`${apiUrl}/api/centers/${centerId}`);
                   if (r.ok) setCenter(await r.json());
                 } catch {}
               }}
