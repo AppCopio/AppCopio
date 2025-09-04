@@ -25,9 +25,6 @@ import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
 
 import "./App.css";
 
-
-
-import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
 import MyUserPage from "./pages/MyUserPage/MyUserPage";
 
 
@@ -41,7 +38,6 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/typo" element={<ExampleFrontend />} />
           </Route>
 
           {/* --- 2. Rutas Protegidas por role_id --- */}

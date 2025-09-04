@@ -124,6 +124,20 @@
 			"command": "git add .",
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Git Commit Criterio HDU22 Completo",
+			"type": "shell",
+			"command": "git commit -m 'Implementacion completa criterio HDU22 - estados operativos, mapeo BD-frontend, colores coherentes, control universal'",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Push Criterio HDU22",
+			"type": "shell",
+			"command": "git push origin main",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

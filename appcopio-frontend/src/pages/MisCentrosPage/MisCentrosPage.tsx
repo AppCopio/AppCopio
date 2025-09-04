@@ -6,6 +6,19 @@ import { fetchWithAbort } from '../../services/api';
 import { getUser } from '../../services/usersApi'; 
 import './MisCentrosPage.css';
 
+// Función para determinar el estado del centro considerando tanto is_active como operational_status
+const getCenterStatus = (center: Center): string => {
+  if (!center.is_active) {
+    return 'Inactivo';
+  }
+  
+  if (center.operational_status === 'cerrado temporalmente') {
+    return 'Cerrado';
+  }
+  
+  return 'Activo';
+};
+
 // Usamos la misma interfaz que ya tenemos definida en otras partes
 interface Center {
   center_id: string;
@@ -13,6 +26,8 @@ interface Center {
   address: string;
   type: 'Acopio' | 'Albergue';
   is_active: boolean;
+  operational_status?: 'abierto' | 'cerrado temporalmente' | 'capacidad maxima';
+  public_note?: string;
   fullnessPercentage?: number;
 }
 
@@ -103,8 +118,8 @@ const MisCentrosPage: React.FC = () => {
             <li key={center.center_id} className="centro-card">
               <div className="card-header">
                 <h3>{center.name}</h3>
-                <span className={`status-pill ${center.is_active ? 'active' : 'inactive'}`}>
-                  {center.is_active ? 'Activo' : 'Inactivo'}
+                <span className={`status-pill ${getCenterStatus(center) === 'Activo' ? 'active' : 'inactive'}`}>
+                  {getCenterStatus(center)}
                 </span>
               </div>
               <div className="card-body">

@@ -10,7 +10,7 @@ interface Center {
   address: string;
   type: 'Acopio' | 'Albergue';
   is_active: boolean;
-  operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
+  operational_status?: 'abierto' | 'cerrado temporalmente' | 'capacidad maxima';
   public_note?: string;
   latitude: number | string; 
   longitude: number | string;
@@ -25,20 +25,51 @@ interface MapComponentProps {
 const apiKey = import.meta.env.VITE_Maps_API_KEY;
 const valparaisoCoords = { lat: -33.04, lng: -71.61 };
 
-// Lógica de estilos actualizada para considerar el estado operativo
+// Función para formatear el estado operativo para mostrar en la UI
+const formatOperationalStatus = (status?: string): string => {
+  if (!status) return 'No definido';
+  
+  switch (status) {
+    case 'abierto':
+      return 'Abierto';
+    case 'cerrado temporalmente':
+      return 'Cerrado Temporalmente';
+    case 'capacidad maxima':
+      return 'Capacidad Máxima';
+    default:
+      return status;
+  }
+};
+
+// Función para determinar el estado del centro considerando tanto is_active como operational_status
+const getCenterStatus = (center: Center): string => {
+  if (!center.is_active) {
+    return 'Inactivo';
+  }
+  
+  if (center.operational_status === 'cerrado temporalmente') {
+    return 'Cerrado';
+  }
+  
+  return 'Activo';
+};
+
+// Lógica de estilos corregida para el estado operativo
 const getPinStatusClass = (center: Center): string => {
   if (!center.is_active) {
     return 'status-inactive'; // Gris
   }
   
   // Se da prioridad al estado operativo sobre el nivel de abastecimiento
-  if (center.operational_status === 'Cerrado Temporalmente') {
-    return 'status-temporarily-closed';
-  } else if (center.operational_status === 'Capacidad Máxima') {
-    return 'status-full-capacity';
+  if (center.operational_status === 'cerrado temporalmente') {
+    return 'status-temporarily-closed'; // Gris
+  } else if (center.operational_status === 'capacidad maxima') {
+    return 'status-full-capacity'; // Rojo
+  } else if (center.operational_status === 'abierto') {
+    return 'status-open'; // Verde
   }
   
-  // Si está 'Abierto' o no tiene estado operativo, se usa el porcentaje
+  // Si no tiene estado operativo definido, se usa el porcentaje
   if (center.fullnessPercentage < 33) {
     return 'status-critical'; // Rojo
   } else if (center.fullnessPercentage < 66) {
@@ -78,7 +109,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
             <AdvancedMarker
               key={center.center_id}
               position={{ lat: Number(center.latitude), lng: Number(center.longitude) }}
-              title={`${center.name} - ${center.operational_status || `Abastecido al ${center.fullnessPercentage.toFixed(0)}%`}`}
+              title={`${center.name} - ${center.operational_status ? formatOperationalStatus(center.operational_status) : `Abastecido al ${center.fullnessPercentage.toFixed(0)}%`}`}
               onClick={() => setSelectedCenterId(center.center_id)}
             >
               <div className={`marker-pin ${getPinStatusClass(center)}`}>
@@ -96,14 +127,14 @@ const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
               <div className="infowindow-content">
                 <h4>{selectedCenter.name}</h4>
                 <p><strong>Tipo:</strong> {selectedCenter.type}</p>
-                <p><strong>Estado:</strong> {selectedCenter.is_active ? 'Activo' : 'Inactivo'}</p>
+                <p><strong>Estado:</strong> {getCenterStatus(selectedCenter)}</p>
                 
                 {/* Se añade la lógica para mostrar el estado operativo y la nota pública */}
                 {selectedCenter.operational_status && (
-                  <p><strong>Estado Operativo:</strong> {selectedCenter.operational_status}</p>
+                  <p><strong>Estado Operativo:</strong> {formatOperationalStatus(selectedCenter.operational_status)}</p>
                 )}
                 
-                {selectedCenter.operational_status === 'Cerrado Temporalmente' && selectedCenter.public_note && (
+                {selectedCenter.operational_status === 'cerrado temporalmente' && selectedCenter.public_note && (
                   <div className="public-note">
                     <p><strong>Nota:</strong> {selectedCenter.public_note}</p>
                   </div>

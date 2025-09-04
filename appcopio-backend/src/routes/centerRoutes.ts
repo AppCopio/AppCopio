@@ -485,6 +485,7 @@ const updateStatusHandler: RequestHandler = async (req, res) => {
 const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
     const { operationalStatus, publicNote } = req.body;
+    
     // NOTA: Los valores válidos ahora vienen del nuevo modelo de BDD.
     const validStatuses = ['capacidad maxima', 'cerrado temporalmente', 'abierto'];
     if (!operationalStatus || !validStatuses.includes(operationalStatus)) {
@@ -495,15 +496,18 @@ const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
     }
     try {
         const noteToSave = operationalStatus === 'cerrado temporalmente' ? publicNote : null;
+        
         const updatedCenterResult = await pool.query(
             `UPDATE Centers SET operational_status = $1, public_note = $2, updated_at = CURRENT_TIMESTAMP 
              WHERE center_id = $3 RETURNING *`,
             [operationalStatus, noteToSave, id]
         );
+        
         if (!updatedCenterResult || updatedCenterResult.rowCount === 0) {
             res.status(404).json({ message: 'Centro no encontrado para actualizar.' });
             return;
         }
+        
         res.status(200).json({
             message: 'Estado operativo actualizado exitosamente',
             center: updatedCenterResult.rows[0]

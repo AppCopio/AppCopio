@@ -46,14 +46,17 @@
   filter: grayscale(80%); /* Efecto para que se vea apagado */
 }
 
-/* Nuevos estados operativos */
+/* Nuevos estados operativos corregidos */
+.marker-pin.status-open {
+  border-color: #28a745; /* Verde - para estado operativo "Abierto" */
+}
 .marker-pin.status-temporarily-closed {
-  border-color: #fd7e14; /* Naranja más intenso */
-  background-color: #fff3cd; /* Fondo amarillo claro */
+  border-color: #6c757d; /* Gris - para "Cerrado Temporalmente" */
+  opacity: 0.7;
 }
 .marker-pin.status-full-capacity {
-  border-color: #ffc107; /* Amarillo */
-  background-color: #fff3cd; /* Fondo amarillo claro */
+  border-color: #dc3545; /* Rojo - para "Capacidad Máxima" */
+  background-color: #f8d7da; /* Fondo rojo claro */
 }
 
 
