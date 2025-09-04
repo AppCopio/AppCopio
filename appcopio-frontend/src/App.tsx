@@ -6,6 +6,7 @@ import CenterLayout from "./components/layout/CenterLayout/CenterLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ActivationProviderFromParams from "./components/guards/ActivationProviderFromParams";
 import RequireCenterActive from "./components/guards/RequireCenterActive";
+import "./App.css"
 
 import HomePage from "./pages/HomePage/HomePage";
 import MapPage from "./pages/MapPage/MapPage";
@@ -20,7 +21,6 @@ import UpdatesPage from "./pages/UpdatesPage/UpdatesPage";
 import InventoryHistoryPage from "./pages/InventoryHistoryPage/InventoryHistoryPage";
 import MisCentrosPage from "./pages/MisCentrosPage/MisCentrosPage";
 import FibePage from "./pages/FibePage/FibePage";
-import CreateCenterPage from "./pages/CreateCenterPage/CreateCenterPage";
 import CenterResidentsPage from "./pages/CenterResidentsPage/CenterResidentsPage";
 import CenterEditPage from "./pages/CenterEditPage/CenterEditPage";
 import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
@@ -68,7 +68,6 @@ function App() {
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
-
 
                   {/* Rutas que necesitan una activación activa */}
 
