@@ -27,7 +27,6 @@ import "./App.css";
 
 import MyUserPage from "./pages/MyUserPage/MyUserPage";
 
-
 function App() {
   return (
     <div className="App">
@@ -56,18 +55,20 @@ function App() {
               <Route path="/admin/fibe" element={<FibePage />} />
               <Route path="/admin/updates" element={<UpdatesPage />} />
               <Route path="/mi-perfil" element={<MyUserPage />} />
-
               <Route path="/mis-centros" element={<MisCentrosPage />} />
+              
 
               <Route path="/center/:centerId" element={<CenterLayout />}>
                 <Route path="details" element={<CenterDetailsPage />} />
                 <Route path="inventory" element={<InventoryPage />} />
                 <Route path="inventory/history" element={<InventoryHistoryPage />} />
-                <Route path="/center/:centerId/needs/new" element={<NeedsFormPage />} />
+                <Route path="needs/new" element={<NeedsFormPage />} />
                 <Route path="needs/status" element={<NeedsStatusPage />} />
                 <Route path="residents" element={<CenterResidentsPage />} />
-              </Route>
+                <Route path="updates" element={<UpdatesPage />} />
 
+              </Route>
+              
               {/* Edit de centros */}
               <Route path="/admin/centers/:centerId/edit" element={<CenterEditPage />} />
             </Route>

@@ -67,13 +67,7 @@ const getAllUpdatesHandler: RequestHandler = async (req, res) => {
  * Requiere autenticación para identificar al solicitante.
  */
 const createUpdateHandler: RequestHandler = async (req: AuthenticatedRequest, res) => {
-    const { center_id, description, urgency } = req.body;
-    const requested_by = req.user?.id;
-
-    if (!requested_by) {
-        res.status(401).json({ message: 'No autorizado. Se requiere iniciar sesión.' });
-        return;
-    }
+    const { center_id, description, urgency, created_by } = req.body;
 
     if (!center_id || !description || !urgency) {
         res.status(400).json({ message: 'center_id, description, y urgency son campos requeridos.' });
@@ -85,7 +79,7 @@ const createUpdateHandler: RequestHandler = async (req: AuthenticatedRequest, re
             `INSERT INTO UpdateRequests (center_id, description, urgency, requested_by)
              VALUES ($1, $2, $3, $4)
              RETURNING *`,
-            [center_id, description, urgency, requested_by]
+            [center_id, description, urgency, created_by]
         );
         res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -174,8 +168,59 @@ const deleteUpdateHandler: RequestHandler = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/updates/center/:centerId - Obtener solicitudes de actualización por centro.
+ * Query Params:
+ * - status: 'pending' | 'approved' | 'rejected' | 'canceled'
+ * - page: número de página
+ * - limit: resultados por página
+ */
+const getUpdatesByCenterHandler: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    const { status = 'pending', page = 1, limit = 10 } = req.query;
+    console.log(centerId,status);
+    const offset = (Number(page) - 1) * Number(limit);
+
+    try {
+        const result = await pool.query(
+            `SELECT 
+                ur.request_id,
+                ur.center_id,
+                ur.description,
+                ur.status,
+                ur.urgency,
+                ur.registered_at,
+                ur.resolution_comment,
+                c.name AS center_name,
+                requester.nombre AS requested_by_name,
+                assignee.nombre AS assigned_to_name
+            FROM UpdateRequests ur
+            JOIN Centers c ON ur.center_id = c.center_id
+            LEFT JOIN Users requester ON ur.requested_by = requester.user_id
+            LEFT JOIN Users assignee ON ur.assigned_to = assignee.user_id
+            WHERE ur.status = $1 AND ur.center_id = $4
+            ORDER BY ur.registered_at DESC
+            LIMIT $2 OFFSET $3`,
+            [status, limit, offset, centerId]
+        );
+
+        const countResult = await pool.query(
+            `SELECT COUNT(*) FROM UpdateRequests WHERE status = $1 AND center_id = $2`,
+            [status, centerId]
+        );
+
+        res.json({
+            total: Number(countResult.rows[0].count),
+            requests: result.rows
+        });
+    } catch (error) {
+        console.error('Error al obtener solicitudes de actualización por centro:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
 
 // --- REGISTRO DE RUTAS ---
+router.get('/center/:centerId', getUpdatesByCenterHandler);
 router.get('/', getAllUpdatesHandler);
 router.post('/', createUpdateHandler);
 router.patch('/:id', updateRequestHandler);
