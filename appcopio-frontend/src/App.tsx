@@ -66,6 +66,8 @@ function App() {
                   <Route path="needs/new" element={<NeedsFormPage />} />
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
+                  <Route path="updates" element={<UpdatesPage />} />
+
 
                   {/* Rutas que necesitan una activación activa */}
 
