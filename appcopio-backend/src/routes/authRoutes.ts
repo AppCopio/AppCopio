@@ -124,6 +124,7 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
 const refreshHandler: RequestHandler = async (req, res): Promise<void> => {
     const token = (req as any).cookies?.refresh;
     if (!token) {
+        console.log("mato")
         res.status(401).json({ error: "Missing refresh" });
         return;
     }
@@ -139,13 +140,16 @@ const refreshHandler: RequestHandler = async (req, res): Promise<void> => {
             [payload.user_id, tokenHash]
         );
         const row = rows[0];
+        console.log(row);
         if (!row || row.revoked_at || new Date(row.expires_at) < new Date()) {
+        console.log("mato2")
+
             res.status(401).json({ error: "Refresh invalid" });
             return;
         }
 
         // Rotación: revoco actual y emito nuevos
-        await pool.query(`UPDATE RefreshTokens SET revoked_at = now() WHERE id = $1`, [row.id]);
+        await pool.query(`UPDATE RefreshTokens SET revoked_at = now() + interval '10 seconds' WHERE id = $1`,[row.id]);
         const newPayload: JwtUser = {
             user_id: payload.user_id,
             username: payload.username,
@@ -169,7 +173,10 @@ const refreshHandler: RequestHandler = async (req, res): Promise<void> => {
         res
             .cookie("refresh", newRefresh, { ...cookieOpts(), maxAge: expiresAt.getTime() - Date.now() })
             .json({ access_token: newAccess, user: newPayload });
+        console.log("todo god")
     } catch {
+        console.log("mato3")
+
         res.status(401).json({ error: "Refresh invalid" });
     }
 };
