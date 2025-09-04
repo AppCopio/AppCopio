@@ -149,7 +149,7 @@ const refreshHandler: RequestHandler = async (req, res): Promise<void> => {
         }
 
         // Rotación: revoco actual y emito nuevos
-        await pool.query(`UPDATE RefreshTokens SET revoked_at = now() + interval '10 seconds' WHERE id = $1`,[row.id]);
+        //await pool.query(`UPDATE RefreshTokens SET revoked_at = now() + interval '10 seconds' WHERE id = $1`,[row.id]);
         const newPayload: JwtUser = {
             user_id: payload.user_id,
             username: payload.username,
