@@ -291,21 +291,17 @@ const CenterResidentsPage: React.FC = () => {
     }
 
     try {
-      const url = `http://${apiUrl}/family/${residentToExit.family_id}/depart`;
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          departure_reason: exitReason,
-          destination_activation_id: exitReason === 'traslado' ? destinationActivationId : null,
-        }),
+      await api.patch(`/family/${residentToExit.family_id}/depart`, {
+        departure_reason: exitReason,
+        destination_activation_id: exitReason === 'traslado' ? destinationActivationId : null,
+        departure_date: exitDate, 
       });
 
       alert('Salida registrada con éxito');
       handleCloseExitModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error registrando la salida:', err);
-      alert(`Error: ${(err as Error).message}`);
+      alert(err?.response?.data?.message || `Error: ${err.message}`);
     }
   };
 
