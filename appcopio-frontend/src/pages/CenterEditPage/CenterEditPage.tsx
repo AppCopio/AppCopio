@@ -16,6 +16,7 @@ interface StepHandle {
 }
 
 const steps = ['General', 'Inmueble', 'Evaluación'];
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const CenterEditPage: React.FC = () => {
     const { centerId } = useParams<{ centerId: string }>();
@@ -40,7 +41,7 @@ const CenterEditPage: React.FC = () => {
             setIsLoading(true);
             try {
                 const data = await fetchWithAbort<CenterData>(
-                    `http://localhost:4000/api/centers/${centerId}`,
+                    `http://${apiUrl}/api/centers/${centerId}`,
                     new AbortController().signal
                 );
                 // Se guardan los datos originales y se establecen en el formulario

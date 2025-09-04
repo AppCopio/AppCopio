@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
+import api from '../../lib/api';
 
 interface ResidentGroup {
   rut: string;
@@ -200,61 +201,62 @@ const CenterResidentsPage: React.FC = () => {
 
 
   const fetchCenterCapacity = async (centerId: string) => {
-    const response = await fetch(`http://${apiUrl}/api/centers/${centerId}/capacity`);
-    const data = await response.json();
+  try {
+    const { data } = await api.get(`/centers/${centerId}/capacity`);
     setCenterCapacity(data.capacity);
     setCurrentCapacity(data.current_capacity);
     setAvailableCapacity(data.available_capacity);
-  };
+  } catch (err: any) {
+    console.error("Error al obtener capacidad del centro:", err);
+    alert(err?.response?.data?.message || "No se pudo cargar la capacidad del centro.");
+  }
+};
 
   const fetchResidents = async () => {
-    if (!centerId) return;
-    try {
-      const response = await fetch(`http://${apiUrl}/api/centers/${centerId}/residents`);
-      if (!response.ok) throw new Error('Error al obtener los residentes del centro');
-      const data = await response.json();
-      setGroups(data);
-    } catch (err) {
-      console.error('Error cargando residentes:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  if (!centerId) return;
+  try {
+    const { data } = await api.get(`/centers/${centerId}/residents`);
+    setGroups(data); // asegúrate que `data` ya tenga el shape esperado
+  } catch (err: any) {
+    console.error("Error cargando residentes:", err);
+    setError(err?.response?.data?.message || err?.message || "Error desconocido");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const fetchPeople = async () => {
-    if (!centerId) return;
-    try {
-      const { nombre, rut, fechaIngreso, fechaSalida, edad, genero } = filters;
-      const params = new URLSearchParams({
-        nombre: nombre,
-        rut: rut,
-        fechaIngreso: fechaIngreso,
-        fechaSalida: fechaSalida,
-        edad: edad,
-        genero: genero,
-      }).toString();
+  if (!centerId) return;
+  try {
+    const { nombre, rut, fechaIngreso, fechaSalida, edad, genero } = filters;
 
-      const response = await fetch(`http://${apiUrl}/api/centers/${centerId}/people?${params}`);
-      if (!response.ok) throw new Error('Error al obtener las personas del centro');
-      const data = await response.json();
-      setPeople(data);
-    } catch (err) {
-      console.error('Error cargando personas:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    }
-  };
+    const { data } = await api.get(`/centers/${centerId}/people`, {
+      params: {
+        nombre,
+        rut,
+        fechaIngreso,
+        fechaSalida,
+        edad,
+        genero,
+      },
+    });
+
+    setPeople(data);
+  } catch (err: any) {
+    console.error("Error cargando personas:", err);
+    setError(err?.response?.data?.message || err?.message || "Error desconocido");
+  }
+};
 
   const fetchActiveCenters = async () => {
-    try {
-      const response = await fetch(`http://${apiUrl}/api/centers/${centerId}/active-centers`);
-      if (!response.ok) throw new Error('No se pudieron cargar los centros activos');
-      const data = await response.json();
-      setActiveCenters(data);
-    } catch (error) {
-      console.error('Error al obtener centros activos:', error);
-    }
-  };
+  try {
+    const { data } = await api.get(`/centers/${centerId}/active-centers`);
+    setActiveCenters(data);
+  } catch (error: any) {
+    console.error("Error al obtener centros activos:", error);
+    alert(error?.response?.data?.message || "No se pudieron cargar los centros activos");
+  }
+};
 
   useEffect(() => {
     if (centerId) {
@@ -287,7 +289,7 @@ const CenterResidentsPage: React.FC = () => {
     }
 
     try {
-      const url = `http://${apiUrl}/api/family/${residentToExit.family_id}/depart`;
+      const url = `http://${apiUrl}/family/${residentToExit.family_id}/depart`;
       const response = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
