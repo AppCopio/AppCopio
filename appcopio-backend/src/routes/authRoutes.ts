@@ -14,16 +14,21 @@ const LoginSchema = z.object({
     password: z.string(),
 });
 
-/** Helpers */
 function cookieOpts() {
   const prod = process.env.NODE_ENV === "production";
-  const crossSite = process.env.CROSS_SITE_COOKIES === "1";
+  const crossSite = process.env.CROSS_SITE_COOKIES === "1"; 
+  const sameSite = crossSite ? "none" : "lax";
+
+  // Nota: SameSite=None exige Secure siempre
+  const secure = crossSite ? true : prod;
+
   return {
     httpOnly: true,
-    secure: prod,
-    sameSite: crossSite ? "none" as const : "lax" as const,
-    path: "/",  
-  };
+    secure,                 
+    sameSite,               
+    path: "/",
+    partitioned: true,
+  } as any;
 }
 
 const getClientIp = (req: Parameters<RequestHandler>[0]) =>
