@@ -7,12 +7,23 @@ import "./FibePage.css";
 import { createFibeSubmission } from "../../services/fibeApi";
 import type { FormData } from "../../types/fibe"; // ajusta la ruta si tu type vive en otro lado
 
+
+import { useActivation } from "../../contexts/ActivationContext";
+
+
+
+
 export default function Page() {
   // Estado de envío (opcional, por UX)
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // TODO: reemplazar por el activation_id real (de la vista/estado/URL)
-  const activationId  = 1;
+  //const activationId  = 1;
+
+
+
+  const { activation } = useActivation();
+  const activationId = useMemo(() => activation?.activation_id ?? 0, [activation]);
 
   /* // 1) De la query string: /admin/fibe?activation_id=123
   const [params] = useSearchParams();
@@ -40,7 +51,7 @@ export default function Page() {
       // navigate(`/familias/${resp.family_id}`)
     } catch (err: any) {
       console.error("Error FIBE:", err);
-      alert(err?.message ?? "Error enviando FIBE");
+      alert(err?.message ?? "Error registrando FIBE");
     } finally {
       setIsSubmitting(false);
     }

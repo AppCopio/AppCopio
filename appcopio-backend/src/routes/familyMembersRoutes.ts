@@ -1,10 +1,10 @@
 // src/routes/familyMembersRoutes.ts
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
+import type { FamilyMemberCreate } from "../types/family";
+import type { Db } from "../types/db";
 
 const router = Router();
-
-import type { FamilyMemberCreate } from "../types/family";
 
 const normalizeRut = (v: string) => (v || "").replace(/[^0-9kK]/g, "").toUpperCase();
 
@@ -94,8 +94,6 @@ export const getFamilyMemberHandler: RequestHandler<{ id: string }> = async (req
 };
 
 // ---------- POST /family-members (create -> retorna ID) ----------
-export type Db = { query: (q: string, p?: any[]) => Promise<{ rows: any[]; rowCount: number }> };
-
 export async function createFamilyMemberDB(
   db: Db,
   args: FamilyMemberCreate

@@ -56,3 +56,10 @@ export const parentescoOpciones = [
 export type StepHandle = {
   validate: () => boolean; // o Promise<boolean> si quisieras validar async
 };
+
+export type ComposeResponse = {
+  family_id: number;
+  jefe_person_id: number;
+  jefe_member_id: number;
+  members: Array<{ index: number; person_id: number; member_id: number }>;
+};

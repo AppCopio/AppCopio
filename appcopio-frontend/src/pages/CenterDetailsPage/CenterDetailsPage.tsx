@@ -40,6 +40,8 @@ import { fetchWithAbort } from '../../services/api';
 import ResponsibleSection from './ResponsibleSection';
 import AssignResponsibleDialog from './AssingResponsibleDialog';
 
+import { useActivation } from "../../contexts/ActivationContext";
+import { Button } from "@mui/material";
 // Importa los componentes de catastro
 import CenterCatastroDetails from './CenterCatastroDetails';
 import './CenterCatastroDetails.css'; // Importa el nuevo CSS
@@ -86,6 +88,10 @@ const CenterDetailsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState<boolean>(false);
+
+  const { activation } = useActivation();
+
+
 
   useEffect(() => {
     const fetchCenterDetails = async () => {
@@ -312,6 +318,14 @@ const CenterDetailsPage: React.FC = () => {
                 } catch {}
               }}
             />
+            {activation && (
+              <Button
+                variant="contained"
+                onClick={() => navigate(`/center/${center.center_id}/fibe`)}
+              >
+                Formulario FIBE
+              </Button>
+            )}
           </div>
         </div>
       </div>

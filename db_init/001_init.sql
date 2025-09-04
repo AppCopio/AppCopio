@@ -99,7 +99,7 @@ CREATE TABLE Products (
 -- Tabla de personas individuales: una persona se crea únicamente al ingresarla como parte de un grupo familiar
 CREATE TABLE Persons (
     person_id SERIAL PRIMARY KEY,
-    rut VARCHAR(20) UNIQUE NOT NULL,
+    rut VARCHAR(20) NOT NULL,
     nombre TEXT NOT NULL,
     primer_apellido TEXT NOT NULL,
     segundo_apellido TEXT,
@@ -174,6 +174,10 @@ CREATE TABLE CentersActivations (
     deactivated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
     notes TEXT
 );
+
+-- CREATE INDEX IF NOT EXISTS idx_centersactivations_active
+--   ON "CentersActivations"(center_id)
+--   WHERE ended_at IS NULL;
 
 -- Registro de grupos familiares ingresados en X centro activado
 CREATE TABLE FamilyGroups (
