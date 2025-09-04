@@ -1,33 +1,12 @@
 import { Request, Response, Router, RequestHandler } from 'express';
 import pool from '../config/db';
 
-// Mapeo de estados de BD a frontend y viceversa
-const statusDbToFrontend: { [key: string]: string } = {
-    'abierto': 'Abierto',
-    'cerrado temporalmente': 'Cerrado Temporalmente',
-    'capacidad maxima': 'Capacidad Máxima'
-};
-
-const statusFrontendToDb: { [key: string]: string } = {
-    'Abierto': 'abierto',
-    'Cerrado Temporalmente': 'cerrado temporalmente',
-    'Capacidad Máxima': 'capacidad maxima'
-};
-
 // Interfaz para extender el objeto Request de Express y añadir la propiedad user
 interface AuthenticatedRequest extends Request {
     user?: {
         id: number;
     };
 }
-
-// Función helper para mapear estado de BD a frontend
-const mapCenterStatus = (center: any) => {
-    if (center.operational_status && statusDbToFrontend[center.operational_status]) {
-        center.operational_status = statusDbToFrontend[center.operational_status];
-    }
-    return center;
-};
 
 const router = Router();
 
@@ -56,7 +35,7 @@ const isAdmin: RequestHandler = (req, res, next) => {
 const getAllCentersHandler: RequestHandler = async (req, res) => {
     try {
         const centersResult = await pool.query(
-            'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers'
+            'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers ORDER BY center_id ASC'
         );
         const centers = centersResult.rows;
 
@@ -105,12 +84,12 @@ const getAllCentersHandler: RequestHandler = async (req, res) => {
                 }
 
                 return {
-                    ...mapCenterStatus(center),
+                    ...center,
                     fullnessPercentage: parseFloat(overallFullnessPercentage.toFixed(2))
                 };
             } catch (innerError) {
                 console.error(`Error procesando el centro ${center.center_id}:`, innerError);
-                return { ...mapCenterStatus(center), fullnessPercentage: 0 }; 
+                return { ...center, fullnessPercentage: 0 }; 
             }
         }));
         res.json(centersWithFullness); 
@@ -137,7 +116,7 @@ const getCenterByIdHandler: RequestHandler = async (req, res) => {
         if (result.rows.length === 0) {
             res.status(404).json({ message: 'Centro no encontrado.' });
         } else {
-            res.status(200).json(mapCenterStatus(result.rows[0]));
+            res.status(200).json(result.rows[0]);
         }
     } catch (error) {
         console.error(`Error al obtener el centro ${id}:`, error);
@@ -526,23 +505,20 @@ const updateStatusHandler: RequestHandler = async (req, res) => {
 const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
     const { operationalStatus, publicNote } = req.body;
-    
-    // Validar que el estado sea válido
-    const validFrontendStatuses = Object.keys(statusFrontendToDb);
-    if (!operationalStatus || !validFrontendStatuses.includes(operationalStatus)) {
+    // NOTA: Los valores válidos ahora vienen del nuevo modelo de BDD.
+    const validStatuses = ['capacidad maxima', 'cerrado temporalmente', 'abierto'];
+    if (!operationalStatus || !validStatuses.includes(operationalStatus)) {
         res.status(400).json({ 
-            message: 'El campo "operationalStatus" es requerido y debe ser uno de: ' + validFrontendStatuses.join(', ') 
+            message: 'El campo "operationalStatus" es requerido y debe ser uno de: ' + validStatuses.join(', ') 
         });
         return;
     }
-    
-    const dbStatus = statusFrontendToDb[operationalStatus];
     try {
-        const noteToSave = operationalStatus === 'Cerrado Temporalmente' ? publicNote : null;
+        const noteToSave = operationalStatus === 'cerrado temporalmente' ? publicNote : null;
         const updatedCenterResult = await pool.query(
             `UPDATE Centers SET operational_status = $1, public_note = $2, updated_at = CURRENT_TIMESTAMP 
              WHERE center_id = $3 RETURNING *`,
-            [dbStatus, noteToSave, id]
+            [operationalStatus, noteToSave, id]
         );
         if (!updatedCenterResult || updatedCenterResult.rowCount === 0) {
             res.status(404).json({ message: 'Centro no encontrado para actualizar.' });
@@ -550,7 +526,7 @@ const updateOperationalStatusHandler: RequestHandler = async (req, res) => {
         }
         res.status(200).json({
             message: 'Estado operativo actualizado exitosamente',
-            center: mapCenterStatus(updatedCenterResult.rows[0])
+            center: updatedCenterResult.rows[0]
         });
     } catch (error) {
         console.error(`Error al actualizar estado operativo del centro ${id}:`, error);

@@ -25,7 +25,8 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
   const [publicNote, setPublicNote] = useState(currentNote);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
 
-  function getStatusClass(status: OperationalStatus): string {
+  // Helper functions - declaradas al principio para evitar errores de hoisting
+  const getStatusClass = (status: OperationalStatus): string => {
     switch (status) {
       case 'Abierto':
         return 'status-open';
@@ -36,7 +37,7 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
       default:
         return '';
     }
-  }
+  };
 
   const getStatusIcon = (status: OperationalStatus): string => {
     switch (status) {

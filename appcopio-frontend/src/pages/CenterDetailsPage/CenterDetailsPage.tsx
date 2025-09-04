@@ -191,8 +191,7 @@ const CenterDetailsPage: React.FC = () => {
               {center.operational_status && (<div className="info-item"><label>Estado Operativo:</label><span className={`operational-status-badge ${getOperationalStatusClass(center.operational_status)}`}>{center.operational_status}</span></div>)}
               {center.operational_status === 'Cerrado Temporalmente' && center.public_note && (<div className="info-item"><label>Información adicional:</label><div className="public-note-display">{center.public_note}</div></div>)}
             </div>
-            {/* Mostrar control de estado operativo para encargados de centros */}
-            {(user?.role_name === 'Encargado' || user?.role_name === 'Trabajador Municipal' || user?.role_name === 'Contacto Ciudadano') && center.operational_status && (
+            {user?.role_name === 'Encargado' && center.operational_status && (
               <OperationalStatusControl
                 centerId={centerId!}
                 currentStatus={center.operational_status}
