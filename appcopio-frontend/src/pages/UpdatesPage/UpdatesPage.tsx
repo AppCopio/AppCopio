@@ -50,7 +50,7 @@ const UpdatesPage: React.FC = () => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	// Determinar el rol del usuario para controlar la lógica y la UI
-	const isAdmin = user?.role_id === 1;
+	const isAdmin = user?.role_id === 1 || user?.role_id === 2 || user?.es_apoyo_admin === true;
 
 	// Use a single useEffect for fetching data
 	useEffect(() => {
@@ -142,7 +142,7 @@ const UpdatesPage: React.FC = () => {
 		}
 		if (action === 'approve') {
 			body.status = 'approved';
-			body.resolution_comment = resolutionComment || 'Aprobado por administrador.';
+			body.resolution_comment = resolutionComment || 'Aprobado';
 		}
 		if (action === 'reject') {
 			if (!resolutionComment) {
