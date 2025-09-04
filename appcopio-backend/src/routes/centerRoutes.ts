@@ -138,8 +138,9 @@ const createCenterHandler: RequestHandler = async (req, res) => {
             // Extraemos los datos del catastro
             ...catastroData
         } = req.body;
-
-        if (!name || typeof latitude !== 'number' || typeof longitude !== 'number') {
+        const lat = Number(latitude);
+        const lng = Number(longitude);
+        if (!name || typeof lat !== 'number' || typeof lng !== 'number') {
             await client.query('ROLLBACK');
             res.status(400).json({ message: 'Campos principales requeridos: name, type, latitude, longitude.' });
             return;
@@ -292,7 +293,7 @@ const createCenterHandler: RequestHandler = async (req, res) => {
         }
 
         await client.query('COMMIT');
-        res.status(201).json({ message: 'Centro y descripción de catastro creados exitosamente.', center_id: newCenterId });
+        res.status(201).json({ message: 'Centro y descripción de catastro creados exitosamente.', center_id: newCenterId, name: name});
     } catch (error: any) {
         await client.query('ROLLBACK');
         console.error('Error al crear el centro:', error);
