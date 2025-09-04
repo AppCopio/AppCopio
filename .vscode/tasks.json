@@ -28,7 +28,10 @@
 			"label": "Iniciar Frontend (PowerShell)",
 			"type": "shell",
 			"command": "powershell",
-			"args": ["-Command", "cd appcopio-frontend; npm run dev"],
+			"args": [
+				"-Command",
+				"cd appcopio-frontend; npm run dev"
+			],
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": []
@@ -37,10 +40,62 @@
 			"label": "Iniciar Backend (PowerShell)",
 			"type": "shell",
 			"command": "powershell",
-			"args": ["-Command", "cd appcopio-backend; npm start"],
+			"args": [
+				"-Command",
+				"cd appcopio-backend; npm start"
+			],
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": []
+		},
+		{
+			"label": "Git Push Main",
+			"type": "shell",
+			"command": "git push origin main",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Commit",
+			"type": "shell",
+			"command": "git commit -m \"criterio hdu22 arreglado\"",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Abort Cherry Pick",
+			"type": "shell",
+			"command": "git cherry-pick --abort",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Commit HDU22",
+			"type": "shell",
+			"command": "git commit -m \"criterio hdu22 arreglado\"",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Commit HDU22 Fixed",
+			"type": "shell",
+			"command": "git commit -m 'criterio hdu22 arreglado'",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Add and Commit",
+			"type": "shell",
+			"command": "git add . && git commit -m 'criterio hdu22 arreglado'",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Git Add",
+			"type": "shell",
+			"command": "git add .",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
