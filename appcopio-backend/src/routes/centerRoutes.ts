@@ -306,10 +306,9 @@ const createCenterHandler: RequestHandler = async (req, res) => {
 const updateCenterHandler: RequestHandler = async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
-    
-    // Lista de columnas válidas para la tabla CentersDescription
+
     const validDescriptionColumns = [
-        "nombre_organizacion", "nombre_dirigente", "cargo_dirigente", "telefono_contacto",
+        "nombre_organizacion", "nombre_dirigente", "cargo_dirigente", "telefono_contacto", "capacidad",
         "tipo_inmueble", "numero_habitaciones", "estado_conservacion", "muro_hormigon",
         "muro_albaneria", "muro_tabique", "muro_adobe", "muro_mat_precario", "piso_parquet",
         "piso_ceramico", "piso_alfombra", "piso_baldosa", "piso_radier", "piso_enchapado",
@@ -349,11 +348,11 @@ const updateCenterHandler: RequestHandler = async (req, res) => {
 
     try {
         await client.query('BEGIN');
-        
+
         const {
-            // Se separan explícitamente los campos de Centers del body, el resto va a catastroData
-            center_id, name, address, type, capacity, is_active, latitude, longitude, should_be_active,
-            comunity_charge_id, municipal_manager_id,
+            // Se incluyen explícitamente los campos de Centers a actualizar
+            name, address, type, capacity, is_active, latitude, longitude,
+            should_be_active, comunity_charge_id, municipal_manager_id,
             ...otherData
         } = req.body;
 
@@ -361,13 +360,64 @@ const updateCenterHandler: RequestHandler = async (req, res) => {
             .filter(([key, _]) => validDescriptionColumns.includes(key))
             .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
 
-        const catastroColumns = Object.keys(catastroData);
-        const catastroValues = Object.values(catastroData);
+        // Actualizar la tabla Centers si hay cambios en sus campos
+        const centerUpdates: string[] = [];
+        const centerValues: any[] = [];
+        let paramIndex = 1;
+
+        if (name !== undefined) {
+            centerUpdates.push(`name = $${paramIndex++}`);
+            centerValues.push(name);
+        }
+        if (address !== undefined) {
+            centerUpdates.push(`address = $${paramIndex++}`);
+            centerValues.push(address);
+        }
+        if (type !== undefined) {
+            centerUpdates.push(`type = $${paramIndex++}`);
+            centerValues.push(type);
+        }
+        if (capacity !== undefined) {
+            centerUpdates.push(`capacity = $${paramIndex++}`);
+            centerValues.push(capacity);
+        }
+        if (is_active !== undefined) {
+            centerUpdates.push(`is_active = $${paramIndex++}`);
+            centerValues.push(is_active);
+        }
+        if (latitude !== undefined) {
+            centerUpdates.push(`latitude = $${paramIndex++}`);
+            centerValues.push(latitude);
+        }
+        if (longitude !== undefined) {
+            centerUpdates.push(`longitude = $${paramIndex++}`);
+            centerValues.push(longitude);
+        }
+        if (should_be_active !== undefined) {
+            centerUpdates.push(`should_be_active = $${paramIndex++}`);
+            centerValues.push(should_be_active);
+        }
+        if (comunity_charge_id !== undefined) {
+            centerUpdates.push(`comunity_charge_id = $${paramIndex++}`);
+            centerValues.push(comunity_charge_id);
+        }
+        if (municipal_manager_id !== undefined) {
+            centerUpdates.push(`municipal_manager_id = $${paramIndex++}`);
+            centerValues.push(municipal_manager_id);
+        }
+
+        if (centerUpdates.length > 0) {
+            const updateCenterQuery = `
+                UPDATE Centers SET ${centerUpdates.join(', ')} WHERE center_id = $${paramIndex}
+            `;
+            await client.query(updateCenterQuery, [...centerValues, id]);
+        }
         
-        // La actualización de Centers se maneja aquí si es necesario
-        // En este caso, no se modifica nada en Centers
-        
-        if (catastroColumns.length > 0) {
+        // Actualización de CentersDescription
+        if (Object.keys(catastroData).length > 0) {
+            const catastroColumns = Object.keys(catastroData);
+            const catastroValues = Object.values(catastroData);
+            
             const updateParts = catastroColumns.map((col, i) => `${col} = $${i + 2}`).join(', ');
             
             const updateCatastroQuery = `
@@ -377,7 +427,6 @@ const updateCenterHandler: RequestHandler = async (req, res) => {
                 RETURNING *`;
             
             const allCatastroValues = [id, ...catastroValues];
-
             await client.query(updateCatastroQuery, allCatastroValues);
         }
 
