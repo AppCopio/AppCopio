@@ -149,8 +149,8 @@ const refreshHandler: RequestHandler = async (req, res): Promise<void> => {
         if (!row || row.revoked_at || new Date(row.expires_at) < new Date()) {
         console.log("mato2")
 
-            res.status(401).json({ error: "Refresh invalid" });
-            return;
+            //res.status(401).json({ error: "Refresh invalid" });
+            //return;
         }
 
         // Rotación: revoco actual y emito nuevos
