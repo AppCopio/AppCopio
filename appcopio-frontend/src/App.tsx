@@ -3,8 +3,9 @@ import { Routes, Route } from "react-router-dom";
 import PublicLayout from "./components/layout/PublicLayout/PublicLayout";
 import AdminLayout from "./components/layout/AdminLayout/AdminLayout";
 import CenterLayout from "./components/layout/CenterLayout/CenterLayout";
-//import EnsureActiveActivation from "./components/layout/CenterLayout/EnsureActiveActivation";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import ActivationProviderFromParams from "./components/guards/ActivationProviderFromParams";
+import RequireCenterActive from "./components/guards/RequireCenterActive";
 
 import HomePage from "./pages/HomePage/HomePage";
 import MapPage from "./pages/MapPage/MapPage";
@@ -25,7 +26,6 @@ import CenterEditPage from "./pages/CenterEditPage/CenterEditPage";
 import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
 import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
 import MyUserPage from "./pages/MyUserPage/MyUserPage";
-
 
 function App() {
   return (
