@@ -22,7 +22,7 @@ export default function RequireCenterActive(){
       
       navigate(`/center/${encodeURIComponent(centerId)}/details`, { replace: true, state: { toast: "Este centro no tiene una activación abierta." } });
     }
-  }, [loading, activation, navigate, centerId]);
+  }, [loading, activation, navigate, centerId, redirectTo]);
 
   if (loading) {
     return (
