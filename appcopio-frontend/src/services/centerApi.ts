@@ -55,9 +55,6 @@ export async function getActiveActivation(
       `/centers/${encodeURIComponent(id)}/activation-active`,
       {
         signal: opts?.signal,
-        // evitar que tome la respuesta de caché
-        params: { t: Date.now() },
-        headers: { 'Cache-Control': 'no-cache' },
         validateStatus: (s) => (s >= 200 && s < 300) || s === 204,
       }
     );
