@@ -71,7 +71,7 @@ function App() {
 
                   {/* Rutas que necesitan una activación activa */}
 
-                  <Route element={<RequireCenterActive redirectTo="../details" />}>
+                  <Route element={<RequireCenterActive redirectTo={(id) => `/center/${id}/details`} />}>
                     <Route path="fibe" element={<FibePage />} />
                     {/* Futuras: 
                     <Route path="bases de datos activacion" element={<BDDPage />} /> */}

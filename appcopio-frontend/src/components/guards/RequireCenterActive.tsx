@@ -3,14 +3,20 @@ import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 import { useActivation } from "../../contexts/ActivationContext";
 
-export default function RequireCenterActive(){
+type Props = {
+  redirectTo?: (centerId: string) => string;
+};
+
+export default function RequireCenterActive({ redirectTo }: Props){
   const { loading, activation } = useActivation();
   const navigate = useNavigate();
+ 
   const { centerId } = useParams<{ centerId: string }>();
+  const path = redirectTo ? redirectTo(centerId) : `/center/${centerId}/details`;
 
   useEffect(() => {
     if (!loading && !activation) {
-      navigate(`/center/${centerId}/details`, { replace: true, state: { toast: "Este centro no tiene una activación abierta." } });
+      navigate(path, { replace: true, state: { toast: "Este centro no tiene una activación abierta." } });
     }
   }, [loading, activation, navigate, centerId]);
 
