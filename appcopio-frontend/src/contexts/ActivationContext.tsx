@@ -14,17 +14,27 @@ export function ActivationProvider({ centerId, children }: { centerId: string | 
   const [loading, setLoading] = useState(true);
   const [activation, setActivation] = useState<ActiveActivation | null>(null);
 
-  const load = async () => {
+  const load = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const a = await getActiveActivation(centerId);
+      const a = await getActiveActivation(centerId, { signal });
       setActivation(a);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, [centerId]);
+  useEffect(() => {
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [centerId]);
+
+  useEffect(() => { 
+    const ctrl =  new AbortController();
+    load(ctrl.signal);
+    return () => ctrl.abort() 
+  }, [centerId]);
 
   const value = useMemo(() => ({ loading, activation, refresh: load }), [loading, activation]);
   return <ActivationContext.Provider value={value}>{children}</ActivationContext.Provider>;
@@ -34,9 +44,4 @@ export function useActivation() {
   const ctx = useContext(ActivationContext);
   if (!ctx) throw new Error("useActivation must be used within <ActivationProvider>");
   return ctx;
-}
-
-// (Opcional) hook que NO lanza:
-export function useMaybeActivation() {
-  return useContext(ActivationContext); // puede ser null
 }

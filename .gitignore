@@ -24,3 +24,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+appcopio-frontend/dev-dist/sw.js
+/appcopio-frontend/dev-dist
