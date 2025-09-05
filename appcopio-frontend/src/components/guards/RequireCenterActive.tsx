@@ -12,13 +12,13 @@ export default function RequireCenterActive({ redirectTo }: Props){
   const navigate = useNavigate();
  
   const { centerId } = useParams<{ centerId: string }>();
+  const path = redirectTo ? redirectTo(centerId) : `/center/${centerId}/details`;
 
   useEffect(() => {
     if (!loading && !activation) {
-      const path = redirectTo ? redirectTo(centerId) : `/center/${centerId}/details`;
       navigate(path, { replace: true, state: { toast: "Este centro no tiene una activación abierta." } });
     }
-  }, [loading, activation, navigate, centerId, redirectTo]);
+  }, [loading, activation, navigate, centerId]);
 
   if (loading) {
     return (
