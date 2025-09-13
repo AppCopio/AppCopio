@@ -1,27 +1,26 @@
-import * as React from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import LoadingScreen from "@/components/common/LoadingScreen";
+// src/components/auth/ProtectedRoute.tsx
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 type Props = {
-  children: React.ReactNode;
-  roles?: number[]; 
+  allowedRoleIds: number[];      
+  checkSupportAdmin?: boolean;   
 };
 
-export default function ProtectedRoute({ children, roles }: Props) {
-  const { user, loadingAuth } = useAuth();
-  console.log(user);
+export default function ProtectedRoute({ allowedRoleIds, checkSupportAdmin }: Props) {
+  const { isAuthenticated, loadingAuth, user } = useAuth();
   const location = useLocation();
 
-  if (loadingAuth) return <LoadingScreen />;
+  if (loadingAuth) return null; 
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (roles && !roles.includes(user.role_id)) {
-    return <Navigate to="/403" replace />;
-  }
+  const isSupport = (user as any)?.es_apoyo_admin === true;
+  const allowed = allowedRoleIds.includes(user.role_id) || (checkSupportAdmin && isSupport);
 
-  return <>{children}</>;
+  if (!allowed) return <Navigate to="/" replace />;
+
+  return <Outlet />;
 }
