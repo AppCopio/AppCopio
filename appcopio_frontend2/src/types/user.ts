@@ -13,8 +13,8 @@ export interface User {
   is_active: boolean;
   role_name?: string | null; 
   es_apoyo_admin?: boolean;
-  
-}
+  active_assignments?: number; 
+};
 
 export interface UsersApiResponse {
   users: User[];

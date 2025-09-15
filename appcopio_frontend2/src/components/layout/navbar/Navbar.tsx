@@ -51,7 +51,7 @@ export default function Navbar() {
 
         {isAdminOrSupport(user) && (
           <>
-            <li><NavLink to={paths.admin.centers} className={({ isActive }) => (isActive ? "active-link" : "")}>Gestión Centros</NavLink></li>
+            <li><NavLink to={paths.admin.centers.root} className={({ isActive }) => (isActive ? "active-link" : "")}>Gestión Centros</NavLink></li>
             <li><NavLink to={paths.admin.users}   className={({ isActive }) => (isActive ? "active-link" : "")}>Gestión Usuarios</NavLink></li>
             <li><NavLink to={paths.admin.updates} className={({ isActive }) => (isActive ? "active-link" : "")}>Actualizaciones</NavLink></li>
           </>

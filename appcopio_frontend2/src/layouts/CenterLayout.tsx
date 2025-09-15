@@ -1,89 +1,76 @@
 import * as React from "react";
-import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Box, Tabs, Tab, Typography, Stack, CircularProgress, Alert } from "@mui/material";
-import { getOneCenter } from "@/services/centers.service";
+import { Outlet, useParams, Link } from "react-router-dom";
+import "./CenterLayout.css";
+
 import type { Center } from "@/types/center";
+import { getOneCenter } from "@/services/centers.service";
+
 import { paths } from "@/routes/paths";
 
-export default function CenterLayout() {
-  const { centerId } = useParams<{ centerId: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
+type LayoutCenter = Pick<Center, "center_id" | "name" | "address">;
 
-  const [center, setCenter] = React.useState<Center | null>(null);
+const CenterLayout: React.FC = () => {
+  const { centerId } = useParams<{ centerId: string }>();
+  const [center, setCenter] = React.useState<LayoutCenter | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!centerId) return;
     const controller = new AbortController();
+
     (async () => {
       setLoading(true);
       setErr(null);
       try {
         const data = await getOneCenter(centerId, controller.signal);
-        setCenter(data);
-      } catch (e) {
-        if (!(e as any)?.name?.includes?.("Abort")) {
+        // Aseguramos shape mínimo (id como string para rutas)
+        setCenter({
+          center_id: String(data.center_id),
+          name: data.name,
+          address: data.address ?? "",
+        });
+      } catch (e: any) {
+        if (e?.name !== "CanceledError" && e?.name !== "AbortError") {
           setErr("No se pudo cargar el centro.");
         }
       } finally {
         setLoading(false);
       }
     })();
+
     return () => controller.abort();
   }, [centerId]);
 
-  const tabs = React.useMemo(() => {
-    const p = paths.center(centerId);
-    return [
-      { label: "Inventario", path: p.inventory },
-      { label: "Detalles",   path: p.details },
-      { label: "Solicitudes", path: p.needsNew },
-      { label: "Actualizaciones", path: p.updates },
-      { label: "Personas", path: p.residents },
-    ];
-  }, [centerId]);
-
-  // Activa el tab según URL
-  const value = React.useMemo(
-    () => tabs.findIndex(t => location.pathname.startsWith(t.path)),
-    [location.pathname, tabs]
-  );
-
-  const handleTabChange = (_: React.SyntheticEvent, idx: number) => {
-    navigate(tabs[idx].path);
-  };
+  const id = centerId ?? "";
+  const links = [
+    { label: "Inventario",            to: paths.center.inventory(id) },
+    { label: "Ver Detalles",          to: paths.center.details(id) },
+    { label: "Crear Solicitud",       to: paths.center.needsNew(id) },
+    { label: "Estado de Actualizaciones", to: paths.center.updates(id) },
+    { label: "Listado de Personas",   to: paths.center.residents(id) },
+  ];
 
   return (
-    <Box>
-      <Stack spacing={1} sx={{ mb: 2 }}>
-        <Typography variant="h6">
-          Gestionando: {center ? center.name : `Centro ${centerId}`}
-        </Typography>
-        <Tabs value={Math.max(0, value)} onChange={handleTabChange} variant="scrollable" allowScrollButtonsMobile>
-          {tabs.map((t) => (
-            <Tab key={t.path} label={t.label} />
+    <div className="center-layout">
+      <div className="center-header">
+        <h2>Gestionando: {center ? center.name : `Centro ${centerId}`}</h2>
+
+        {/* Mantiene la misma estructura y clases para que el CSS antiguo siga sirviendo */}
+        <nav className="center-subnav">
+          {links.map((l) => (
+            <Link key={l.to} to={l.to}>{l.label}</Link>
           ))}
-        </Tabs>
-      </Stack>
+        </nav>
+      </div>
 
-      {loading && (
-        <Stack alignItems="center" py={3}>
-          <CircularProgress />
-          <Typography variant="body2" color="text.secondary" mt={1}>
-            Cargando centro…
-          </Typography>
-        </Stack>
-      )}
-
-      {!loading && err && <Alert severity="error">{err}</Alert>}
-
-      {!loading && !err && (
-        <Box>
-          <Outlet />
-        </Box>
-      )}
-    </Box>
+      <main className="center-main-area">
+        {loading && <div className="loading">Cargando centro…</div>}
+        {!loading && err && <div className="error-message">{err}</div>}
+        {!loading && !err && <Outlet />}
+      </main>
+    </div>
   );
-}
+};
+
+export default CenterLayout;

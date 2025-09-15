@@ -1,78 +1,95 @@
-// App.tsx (FIX: hijos relativos bajo "admin" y "center/:centerId")
-import * as React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+// src/App.tsx
+import { Routes, Route } from "react-router-dom";
+import "./App.css";
 
-import MainLayout from "@/layouts/MainLayout";
-import ProtectedRoute from "@/components/routing/ProtectedRoute";
+// Rutas normalizadas
 import { paths } from "@/routes/paths";
 
-import LoginPage from "@/pages/Auth/LoginPage";
-import UsersManagementPage from "@/pages/UsersManagementPage";
+// Layouts
+import MainLayout from "@/layouts/MainLayout";
+import CenterLayout from "@/layouts/CenterLayout";
 
-// Placeholders (mantén los tuyos)
-const Home = () => <div>Home</div>;
-const Map = () => <div>Mapa</div>;
-const MyCenters = () => <div>Mis Centros</div>;
-const Profile = () => <div>Mi Perfil</div>;
-const Centers = () => <div>Centers</div>;
-const Updates = () => <div>Updates</div>;
-const CenterLayout = () => <div style={{ padding: 16 }}>Center Layout</div>;
-const CenterInventoryPage = () => <div>Inventory</div>;
-const CenterDetailsPage = () => <div>Details</div>;
-const CenterNewNeedPage = () => <div>New Need</div>;
-const CenterUpdatesPage = () => <div>Center Updates</div>;
-const CenterResidentsPage = () => <div>Residents</div>;
+// Guards
+import ProtectedRoute from "@/components/routing/ProtectedRoute";
+import ActivationProviderFromParams from "@/components/guards/ActivationProviderFromParams";
+import RequireCenterActive from "@/components/guards/RequireCenterActive";
+
+// Pages
+import HomePage from "@/pages/HomePage/HomePage";
+import MapPage from "@/pages/MapPage/MapPage";
+import LoginPage from "@/pages/Auth/LoginPage";
+import CenterManagementPage from "@/pages/CenterManagementPage/CenterManagementPage";
+import UsersManagementPage from "@/pages/UsersManagementPage/UsersManagementPage";
+import CenterDetailsPage from "@/pages/CenterDetailsPage/CenterDetailsPage";
+import InventoryPage from "@/pages/InventoryPage/InventoryPage";
+import NeedsFormPage from "@/pages/NeedsFormPage/NeedsFormPage";
+import NeedsStatusPage from "@/pages/NeedsStatusPage/NeedsStatusPage";
+import UpdatesPage from "@/pages/UpdatesPage/UpdatesPage";
+import InventoryHistoryPage from "@/pages/InventoryHistoryPage/InventoryHistoryPage";
+import MisCentrosPage from "@/pages/MisCentrosPage/MisCentrosPage";
+import FibePage from "@/pages/FibePage/FibePage";
+import CenterResidentsPage from "@/pages/CenterResidentsPage/CenterResidentsPage";
+import CenterEditPage from "@/pages/CenterEditPage/CenterEditPage";
+import MultiStepCenterForm from "@/pages/CreateCenterPage/steps/MultiStepCenterForm";
+import MyUserPage from "@/pages/MyUserPage/MyUserPage";
 
 export default function App() {
   return (
-    <Routes>
-      {/* Públicas fuera del layout (sin navbar) */}
-      <Route path={paths.login} element={<LoginPage />} />
-
-      {/* Todo lo demás con layout (navbar fija) */}
-      <Route element={<MainLayout />}>
-        {/* Home */}
-        <Route path={paths.home} element={<Home />} />
-        <Route path={paths.map} element={<Map />} />
-
-        {/* Perfil + Mis centros: cualquier autenticado */}
-        <Route element={<ProtectedRoute allowedRoleIds={[1, 2, 3]} checkSupportAdmin={true} />}>
-          <Route path={paths.profile} element={<Profile />} />
-          <Route path={paths.myCenters} element={<MyCenters />} />
-        </Route>
-
-        {/* ADMIN: ojo => padre con path "admin" y HIJOS RELATIVOS */}
-        <Route
-          path="admin"
-          element={<ProtectedRoute allowedRoleIds={[1]} checkSupportAdmin={true} />}
-        >
-          <Route index element={<Navigate to="users" replace />} />
-          <Route path="users" element={<UsersManagementPage />} />
-          <Route path="centers" element={<Centers />} />
-          <Route path="updates" element={<Updates />} />
-        </Route>
-
-        {/* CENTER: padre con path "center/:centerId" y HIJOS RELATIVOS */}
-        <Route
-          path="center/:centerId"
-          element={<ProtectedRoute allowedRoleIds={[1, 2, 3]} checkSupportAdmin={true} />}
-        >
-          <Route element={<CenterLayout />}>
-            <Route index element={<Navigate to="inventory" replace />} />
-            <Route path="inventory" element={<CenterInventoryPage />} />
-            <Route path="details" element={<CenterDetailsPage />} />
-            <Route path="needs/new" element={<CenterNewNeedPage />} />
-            <Route path="updates" element={<CenterUpdatesPage />} />
-            <Route path="residents" element={<CenterResidentsPage />} />
+    <div className="App">
+      <main className="content">
+        <Routes>
+          {/* 1) Públicas */}
+          <Route element={<MainLayout />}>
+            <Route path={paths.home} element={<HomePage />} />
+            <Route path={paths.map} element={<MapPage />} />
+            <Route path={paths.login} element={<LoginPage />} />
           </Route>
-        </Route>
 
-        {/* 404 dentro del layout */}
-        <Route path="*" element={<div>404</div>} />
-      </Route>
+          {/* 2) Protegidas (roles 1,2,3; incluye es_apoyo_admin) */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoleIds={[1, 2, 3]}
+                checkSupportAdmin={true}
+              />
+            }
+          >
+            {/* /admin con layout */}
+            <Route element={<MainLayout />}>
+              <Route path={paths.admin.centers.root} element={<CenterManagementPage />} />
+              <Route path={paths.admin.centers.new} element={<MultiStepCenterForm />} />
+              <Route path={paths.admin.users} element={<UsersManagementPage />} />
+              <Route path={paths.admin.updates} element={<UpdatesPage />} />
+              <Route path={paths.profile} element={<MyUserPage />} />
+              <Route path={paths.myCenters} element={<MisCentrosPage />} />
 
-      {/* Fallback global */}
-      <Route path="*" element={<Navigate to={paths.home} replace />} />
-    </Routes>
+              {/* center/:centerId con hijos relativos + providers/guards */}
+              <Route path={paths.center.pattern} element={<CenterLayout />}>
+                <Route element={<ActivationProviderFromParams />}>
+                  <Route path="details" element={<CenterDetailsPage />} />
+                  <Route path="inventory" element={<InventoryPage />} />
+                  <Route path="inventory/history" element={<InventoryHistoryPage />} />
+                  <Route path="needs/new" element={<NeedsFormPage />} />
+                  <Route path="needs/status" element={<NeedsStatusPage />} />
+                  <Route path="residents" element={<CenterResidentsPage />} />
+                  <Route path="updates" element={<UpdatesPage />} />
+
+                  {/* Requiere activación activa */}
+                  <Route element={<RequireCenterActive redirectTo="../details" />}>
+                    <Route path="fibe" element={<FibePage />} />
+                  </Route>
+                </Route>
+              </Route>
+
+              {/* Edit de centros */}
+              <Route path={paths.admin.centers.editPattern} element={<CenterEditPage />} />
+            </Route>
+          </Route>
+
+          {/* 404 */}
+          <Route path="*" element={<h2>404 - Página no encontrada</h2>} />
+        </Routes>
+      </main>
+    </div>
   );
 }
