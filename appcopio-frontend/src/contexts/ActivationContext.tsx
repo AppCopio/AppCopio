@@ -15,15 +15,20 @@ export function ActivationProvider({ centerId, children }: { centerId: string | 
   const [activation, setActivation] = useState<ActiveActivation | null>(null);
 
   const load = async (signal?: AbortSignal) => {
-    setActivation(null)
     setLoading(true);
     try {
-      const a = await getActiveActivation(centerId);
-      setActivation(a);
+      const act = await getActiveActivation(centerId, { signal });
+      setActivation(act);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [centerId]);
 
   useEffect(() => { 
     const ctrl =  new AbortController();
@@ -39,9 +44,4 @@ export function useActivation() {
   const ctx = useContext(ActivationContext);
   if (!ctx) throw new Error("useActivation must be used within <ActivationProvider>");
   return ctx;
-}
-
-// (Opcional) hook que NO lanza:
-export function useMaybeActivation() {
-  return useContext(ActivationContext); // puede ser null
 }
