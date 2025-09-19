@@ -1,7 +1,7 @@
 import React from 'react';
 import { Typography, Accordion, AccordionSummary, AccordionDetails, Chip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { CenterData } from '@/types/center';
+import { CenterData } from '../../types/center';
 
 // Definimos un tipo para las claves numéricas del mapa Likert
 type LikertKey = 1 | 2 | 3 | 4 | 5;

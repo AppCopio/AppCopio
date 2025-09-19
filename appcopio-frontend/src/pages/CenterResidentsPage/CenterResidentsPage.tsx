@@ -1,26 +1,45 @@
 // src/pages/CenterResidentsPage/CenterResidentsPage.tsx
-import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import "./CenterResidentsPage.css";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { saveAs } from "file-saver";
-import Papa from "papaparse";
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import './CenterResidentsPage.css';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { saveAs } from 'file-saver';
+import Papa from 'papaparse';
+import api from '../../lib/api';
 
-import {
-  ActiveCenter,
-  CapacityInfo,
-  Person,
-  ResidentGroup,
-  DepartureReason,
-} from "@/types/residents";
-import {
-  getCenterCapacity,
-  listResidentGroups,
-  listPeopleByCenter,
-  listActiveCentersForCenter,
-  registerFamilyDeparture,
-} from "@/services/residents.service";
+const apiUrl = import.meta.env.VITE_API_URL;
+
+interface ResidentGroup {
+  rut: string;
+  nombre_completo: string;
+  integrantes_grupo: number;
+  family_id: number;
+}
+
+interface Person {
+  rut: string;
+  nombre: string;
+  fecha_ingreso: string;
+  fecha_salida: string;
+  edad: number;
+  genero: string;
+  primer_apellido: string;
+  segundo_apellido: string;
+  nacionalidad: string;
+  estudia: boolean;
+  trabaja: boolean;
+  perdida_trabajo: boolean;
+  rubro: string;
+  discapacidad: boolean;
+  dependencia: boolean;
+}
+
+interface ActiveCenter {
+  activation_id: number;
+  center_id: string;
+  center_name: string;
+}
 
 const CenterResidentsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
@@ -28,26 +47,24 @@ const CenterResidentsPage: React.FC = () => {
 
   const [groups, setGroups] = useState<ResidentGroup[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
-
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
-    nombre: "",
-    rut: "",
-    fechaIngreso: "",
-    fechaSalida: "",
-    edad: "",
-    genero: "",
+    nombre: '',
+    rut: '',
+    fechaIngreso: '',
+    fechaSalida: '',
+    edad: '',
+    genero: '',
   });
 
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
-  const [exitReason, setExitReason] = useState<"" | DepartureReason>("");
-  const [exitDate, setExitDate] = useState("");
+  const [exitReason, setExitReason] = useState('');
+  const [exitDate, setExitDate] = useState('');
   const [residentToExit, setResidentToExit] = useState<ResidentGroup | null>(null);
-  const [destinationActivationId, setDestinationActivationId] = useState("");
+  const [destinationActivationId, setDestinationActivationId] = useState('');
   const [activeCenters, setActiveCenters] = useState<ActiveCenter[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [centerCapacity, setCenterCapacity] = useState<number>(0);
   const [currentCapacity, setCurrentCapacity] = useState<number>(0);
@@ -59,9 +76,7 @@ const CenterResidentsPage: React.FC = () => {
   const exportToPDF = () => {
     const doc = new jsPDF();
     const currentDate = new Date().toLocaleString();
-    const title = showFamilies
-      ? `Listado de Familias - Centro ${centerId}`
-      : `Listado de Personas - Centro ${centerId}`;
+    const title = showFamilies ? `Listado de Familias - Centro ${centerId}` : `Listado de Personas - Centro ${centerId}`;
 
     doc.setFontSize(18);
     doc.text(title, 14, 16);
@@ -69,31 +84,13 @@ const CenterResidentsPage: React.FC = () => {
     doc.text(`Fecha de descarga: ${currentDate}`, 14, 24);
 
     const head = showFamilies
-      ? [["Nombre Jefe/a de Hogar", "RUT", "Nº Integrantes"]]
-      : [
-          [
-            "Nombre",
-            "RUT",
-            "Fecha Ingreso",
-            "Fecha Salida",
-            "Edad",
-            "Género",
-            "Primer Apellido",
-            "Segundo Apellido",
-            "Nacionalidad",
-            "Estudia",
-            "Trabaja",
-            "Pérdida de Trabajo",
-            "Rubro",
-            "Discapacidad",
-            "Dependencia",
-          ],
-        ];
+      ? [['Nombre Jefe/a de Hogar', 'RUT', 'Nº Integrantes']]
+      : [['Nombre', 'RUT', 'Fecha Ingreso', 'Fecha Salida', 'Edad', 'Género', 'Primer Apellido', 'Segundo Apellido', 'Nacionalidad', 'Estudia', 'Trabaja', 'Pérdida de Trabajo', 'Rubro', 'Discapacidad', 'Dependencia']];
 
     const body = showFamilies
-      ? groups.map((g) => [g.nombre_completo, g.rut, g.integrantes_grupo])
-      : people.map((p) => [
-          `${p.nombre} ${p.primer_apellido} ${p.segundo_apellido || ""}`.trim(),
+      ? groups.map(g => [g.nombre_completo, g.rut, g.integrantes_grupo])
+      : people.map(p => [
+          `${p.nombre} ${p.primer_apellido} ${p.segundo_apellido || ''}`,
           p.rut,
           p.fecha_ingreso,
           p.fecha_salida,
@@ -102,24 +99,24 @@ const CenterResidentsPage: React.FC = () => {
           p.primer_apellido,
           p.segundo_apellido,
           p.nacionalidad,
-          p.estudia ? "Sí" : "No",
-          p.trabaja ? "Sí" : "No",
-          p.perdida_trabajo ? "Sí" : "No",
+          p.estudia ? 'Sí' : 'No',
+          p.trabaja ? 'Sí' : 'No',
+          p.perdida_trabajo ? 'Sí' : 'No',
           p.rubro,
-          p.discapacidad ? "Sí" : "No",
-          p.dependencia ? "Sí" : "No",
+          p.discapacidad ? 'Sí' : 'No',
+          p.dependencia ? 'Sí' : 'No',
         ]);
 
     autoTable(doc, {
       startY: 30,
       head,
       body,
-      theme: "grid",
+      theme: 'grid',
       styles: {
-        font: "helvetica",
+        font: 'helvetica',
         fontSize: 8,
-        halign: "center",
-        overflow: "linebreak",
+        halign: 'center',
+        overflow: 'linebreak',
         lineColor: [0, 0, 0],
         lineWidth: 0.1,
         fillColor: [240, 240, 240],
@@ -127,28 +124,31 @@ const CenterResidentsPage: React.FC = () => {
       headStyles: {
         fillColor: [25, 118, 210],
         textColor: 255,
-        fontStyle: "bold",
-        halign: "center",
+        fontStyle: 'bold',
+        halign: 'center',
         fontSize: 8,
       },
       margin: { top: 20, left: 10, right: 10 },
     });
 
-    doc.save(`Listado_${showFamilies ? "Familias" : "Personas"}_${centerId}.pdf`);
+    doc.save(`Listado_${showFamilies ? 'Familias' : 'Personas'}_${centerId}.pdf`);
   };
 
   const exportToCSV = () => {
     const csv = showFamilies
       ? Papa.unparse(
-          groups.map((g) => ({
+          groups.map(g => ({
             nombre_completo: g.nombre_completo,
             rut: g.rut,
             integrantes_grupo: g.integrantes_grupo,
           })),
-          { header: true, columns: ["nombre_completo", "rut", "integrantes_grupo"] }
+          {
+            header: true,
+            columns: ['nombre_completo', 'rut', 'integrantes_grupo'],
+          },
         )
       : Papa.unparse(
-          people.map((p) => ({
+          people.map(p => ({
             nombre: p.nombre,
             rut: p.rut,
             fecha_ingreso: p.fecha_ingreso,
@@ -158,74 +158,109 @@ const CenterResidentsPage: React.FC = () => {
             primer_apellido: p.primer_apellido,
             segundo_apellido: p.segundo_apellido,
             nacionalidad: p.nacionalidad,
-            estudia: p.estudia ? "Sí" : "No",
-            trabaja: p.trabaja ? "Sí" : "No",
-            perdida_trabajo: p.perdida_trabajo ? "Sí" : "No",
+            estudia: p.estudia ? 'Sí' : 'No',
+            trabaja: p.trabaja ? 'Sí' : 'No',
+            perdida_trabajo: p.perdida_trabajo ? 'Sí' : 'No',
             rubro: p.rubro,
-            discapacidad: p.discapacidad ? "Sí" : "No",
-            dependencia: p.dependencia ? "Sí" : "No",
+            discapacidad: p.discapacidad ? 'Sí' : 'No',
+            dependencia: p.dependencia ? 'Sí' : 'No',
           })),
           {
             header: true,
             columns: [
-              "nombre",
-              "rut",
-              "fecha_ingreso",
-              "fecha_salida",
-              "edad",
-              "genero",
-              "primer_apellido",
-              "segundo_apellido",
-              "nacionalidad",
-              "estudia",
-              "trabaja",
-              "perdida_trabajo",
-              "rubro",
-              "discapacidad",
-              "dependencia",
+              'nombre',
+              'rut',
+              'fecha_ingreso',
+              'fecha_salida',
+              'edad',
+              'genero',
+              'primer_apellido',
+              'segundo_apellido',
+              'nacionalidad',
+              'estudia',
+              'trabaja',
+              'perdida_trabajo',
+              'rubro',
+              'discapacidad',
+              'dependencia',
             ],
-          }
+          },
         );
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, `Listado_${showFamilies ? "Familias" : "Personas"}_${centerId}.csv`);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    saveAs(blob, `Listado_${showFamilies ? 'Familias' : 'Personas'}_${centerId}.csv`);
   };
 
-  // ---------- DATA LOAD ----------
+
+
+
+  const fetchCenterCapacity = async (centerId: string) => {
+  try {
+    const { data } = await api.get(`/centers/${centerId}/capacity`);
+    setCenterCapacity(data.capacity);
+    setCurrentCapacity(data.current_capacity);
+    setAvailableCapacity(data.available_capacity);
+  } catch (err: any) {
+    console.error("Error al obtener capacidad del centro:", err);
+    alert(err?.response?.data?.message || "No se pudo cargar la capacidad del centro.");
+  }
+};
+
+  const fetchResidents = async () => {
+  if (!centerId) return;
+  try {
+    const { data } = await api.get(`/centers/${centerId}/residents`);
+    setGroups(data); // asegúrate que `data` ya tenga el shape esperado
+  } catch (err: any) {
+    console.error("Error cargando residentes:", err);
+    setError(err?.response?.data?.message || err?.message || "Error desconocido");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  const fetchPeople = async () => {
+  if (!centerId) return;
+  try {
+    const { nombre, rut, fechaIngreso, fechaSalida, edad, genero } = filters;
+
+    const { data } = await api.get(`/centers/${centerId}/people`, {
+      params: {
+        nombre,
+        rut,
+        fechaIngreso,
+        fechaSalida,
+        edad,
+        genero,
+      },
+    });
+
+    setPeople(data);
+  } catch (err: any) {
+    console.error("Error cargando personas:", err);
+    setError(err?.response?.data?.message || err?.message || "Error desconocido");
+  }
+};
+
+  const fetchActiveCenters = async () => {
+  try {
+    const { data } = await api.get(`/centers/${centerId}/active-centers`);
+    setActiveCenters(data);
+  } catch (error: any) {
+    console.error("Error al obtener centros activos:", error);
+    alert(error?.response?.data?.message || "No se pudieron cargar los centros activos");
+  }
+};
+
   useEffect(() => {
-    let cancel = false;
-    async function load() {
-      if (!centerId) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const [cap, grps, ppl, actives] = await Promise.all([
-          getCenterCapacity(centerId),
-          listResidentGroups(centerId),
-          listPeopleByCenter(centerId, filters),
-          listActiveCentersForCenter(centerId),
-        ]);
-        if (cancel) return;
-
-        setCenterCapacity(cap.capacity ?? 0);
-        setCurrentCapacity(cap.current_capacity ?? 0);
-        setAvailableCapacity(cap.available_capacity ?? 0);
-
-        setGroups(Array.isArray(grps) ? grps : []);
-        setPeople(Array.isArray(ppl) ? ppl : []);
-        setActiveCenters(Array.isArray(actives) ? actives : []);
-      } catch (e: any) {
-        if (!cancel) setError(e?.response?.data?.message || e?.message || "Error al cargar los datos.");
-      } finally {
-        if (!cancel) setLoading(false);
-      }
+    if (centerId) {
+      fetchCenterCapacity(centerId);
     }
-    load();
-    return () => {
-      cancel = true;
-    };
+    fetchResidents();
+    fetchPeople();
+    fetchActiveCenters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [centerId, JSON.stringify(filters)]);
+  }, [centerId, JSON.stringify(filters)]); // ✅ evita loops y re-render innecesario
 
   // ---------- EXIT MODAL ----------
   const handleOpenExitModal = (resident: ResidentGroup) => {
@@ -233,88 +268,61 @@ const CenterResidentsPage: React.FC = () => {
     setIsExitModalOpen(true);
   };
 
-  const resetExitForm = () => {
+  const handleCloseExitModal = () => {
     setIsExitModalOpen(false);
-    setExitReason("");
-    setExitDate("");
-    setDestinationActivationId("");
-    setResidentToExit(null);
-  };
-
-  const handleCloseExitModal = async () => {
-    resetExitForm();
-    if (centerId) {
-      try {
-        const [cap, grps] = await Promise.all([getCenterCapacity(centerId), listResidentGroups(centerId)]);
-        setCenterCapacity(cap.capacity ?? 0);
-        setCurrentCapacity(cap.current_capacity ?? 0);
-        setAvailableCapacity(cap.available_capacity ?? 0);
-        setGroups(grps);
-      } catch {
-        /* noop */
-      }
-    }
+    setExitReason('');
+    setExitDate('');
+    setDestinationActivationId('');
+    fetchResidents();
+    if (centerId) fetchCenterCapacity(centerId);
   };
 
   const handleExitSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!residentToExit || !residentToExit.family_id || !exitReason || !exitDate) {
-      window.alert("Debe completar todos los campos necesarios.");
-      return;
-    }
-    if (exitReason === "traslado" && !destinationActivationId) {
-      window.alert("Seleccione el centro de destino para un traslado.");
+    if (
+      !residentToExit ||
+      !residentToExit.family_id ||
+      !exitReason ||
+      !exitDate ||
+      (exitReason === 'traslado' && !destinationActivationId)
+    ) {
+      alert('Debe completar todos los campos necesarios');
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      await registerFamilyDeparture({
-        family_id: residentToExit.family_id,
-        departure_reason: exitReason as DepartureReason,
-        destination_activation_id: exitReason === "traslado" ? destinationActivationId : null,
-        departure_date: exitDate,
+      await api.patch(`/family/${residentToExit.family_id}/depart`, {
+        departure_reason: exitReason,
+        destination_activation_id: exitReason === 'traslado' ? destinationActivationId : null,
+        departure_date: exitDate, 
       });
-      window.alert("Salida registrada con éxito.");
-      await handleCloseExitModal();
+
+      alert('Salida registrada con éxito');
+      handleCloseExitModal();
     } catch (err: any) {
-      console.error("Error registrando la salida:", err);
-      window.alert(err?.response?.data?.message || `Error: ${err?.message || "No se pudo registrar la salida."}`);
-    } finally {
-      setIsSubmitting(false);
+      console.error('Error registrando la salida:', err);
+      alert(err?.response?.data?.message || `Error: ${err.message}`);
     }
   };
 
   // ---------- FILTERS ----------
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
+    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const filteredPeople = useMemo(() => {
-    return people.filter((person) => {
-      return (
-        (filters.nombre ? person.nombre.toLowerCase().includes(filters.nombre.toLowerCase()) : true) &&
-        (filters.rut ? person.rut.includes(filters.rut) : true) &&
-        (filters.fechaIngreso ? (person.fecha_ingreso || "").includes(filters.fechaIngreso) : true) &&
-        (filters.fechaSalida ? (person.fecha_salida || "").includes(filters.fechaSalida) : true) &&
-        (filters.edad ? String(person.edad).includes(String(filters.edad)) : true) &&
-        (filters.genero ? person.genero.toLowerCase().includes(filters.genero.toLowerCase()) : true)
-      );
-    });
-  }, [people, filters]);
+  const filteredPeople = people.filter(person => {
+    return (
+      (filters.nombre ? person.nombre.toLowerCase().includes(filters.nombre.toLowerCase()) : true) &&
+      (filters.rut ? person.rut.includes(filters.rut) : true) &&
+      (filters.fechaIngreso ? person.fecha_ingreso.includes(filters.fechaIngreso) : true) &&
+      (filters.fechaSalida ? person.fecha_salida.includes(filters.fechaSalida) : true) &&
+      (filters.edad ? person.edad.toString().includes(filters.edad) : true) &&
+      (filters.genero ? person.genero.toLowerCase().includes(filters.genero.toLowerCase()) : true)
+    );
+  });
 
   // ---------- RENDER ----------
-  if (!error && loading) return <div className="residents-container">Cargando...</div>;
-  if (error)
-    return (
-      <div className="residents-container">
-        <div className="error-box">{error}</div>
-        <button onClick={() => navigate(-1)} className="back-button" style={{ marginTop: 12 }}>
-          ← Volver
-        </button>
-      </div>
-    );
+  if (isLoading) return <div className="residents-container">Cargando...</div>;
 
   return (
     <div className="residents-container">
@@ -337,7 +345,7 @@ const CenterResidentsPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="export-buttons" style={{ marginBottom: "1rem" }}>
+      <div className="export-buttons" style={{ marginBottom: '1rem' }}>
         <button onClick={exportToPDF} className="export-btn">
           Exportar a PDF
         </button>
@@ -347,18 +355,10 @@ const CenterResidentsPage: React.FC = () => {
       </div>
 
       <div className="navigate-button">
-        <button
-          onClick={() => setShowFamilies(true)}
-          className={`navigate-btn ${showFamilies ? "active" : ""}`}
-          aria-pressed={showFamilies}
-        >
+        <button onClick={() => setShowFamilies(true)} className="navigate-btn">
           Ver Listado de Familias
         </button>
-        <button
-          onClick={() => setShowFamilies(false)}
-          className={`navigate-btn ${!showFamilies ? "active" : ""}`}
-          aria-pressed={!showFamilies}
-        >
+        <button onClick={() => setShowFamilies(false)} className="navigate-btn">
           Ver Listado de Personas
         </button>
       </div>
@@ -378,8 +378,8 @@ const CenterResidentsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {groups.map((resident) => (
-                  <tr key={resident.family_id ?? `${resident.rut}-${resident.nombre_completo}`}>
+                {groups.map((resident, index) => (
+                  <tr key={index}>
                     <td>{resident.nombre_completo}</td>
                     <td>{resident.rut}</td>
                     <td>{resident.integrantes_grupo}</td>
@@ -448,9 +448,9 @@ const CenterResidentsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredPeople.map((person) => (
-                  <tr key={person.rut}>
-                    <td>{`${person.nombre} ${person.primer_apellido} ${person.segundo_apellido || ""}`.trim()}</td>
+                {filteredPeople.map((person, index) => (
+                  <tr key={index}>
+                    <td>{`${person.nombre} ${person.primer_apellido} ${person.segundo_apellido || ''}`}</td>
                     <td>{person.rut}</td>
                     <td>{person.fecha_ingreso}</td>
                     <td>{person.fecha_salida}</td>
@@ -459,12 +459,12 @@ const CenterResidentsPage: React.FC = () => {
                     <td>{person.primer_apellido}</td>
                     <td>{person.segundo_apellido}</td>
                     <td>{person.nacionalidad}</td>
-                    <td>{person.estudia ? "Sí" : "No"}</td>
-                    <td>{person.trabaja ? "Sí" : "No"}</td>
-                    <td>{person.perdida_trabajo ? "Sí" : "No"}</td>
+                    <td>{person.estudia ? 'Sí' : 'No'}</td>
+                    <td>{person.trabaja ? 'Sí' : 'No'}</td>
+                    <td>{person.perdida_trabajo ? 'Sí' : 'No'}</td>
                     <td>{person.rubro}</td>
-                    <td>{person.discapacidad ? "Sí" : "No"}</td>
-                    <td>{person.dependencia ? "Sí" : "No"}</td>
+                    <td>{person.discapacidad ? 'Sí' : 'No'}</td>
+                    <td>{person.dependencia ? 'Sí' : 'No'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -480,12 +480,7 @@ const CenterResidentsPage: React.FC = () => {
             <form onSubmit={handleExitSubmit}>
               <div className="form-group">
                 <label htmlFor="exitReason">Motivo de la salida:</label>
-                <select
-                  id="exitReason"
-                  value={exitReason}
-                  onChange={(e) => setExitReason(e.target.value as DepartureReason | "")}
-                  required
-                >
+                <select id="exitReason" value={exitReason} onChange={(e) => setExitReason(e.target.value)} required>
                   <option value="">Seleccione un motivo</option>
                   <option value="traslado">Traslado a otro centro</option>
                   <option value="regreso">Regreso a casa</option>
@@ -495,16 +490,10 @@ const CenterResidentsPage: React.FC = () => {
 
               <div className="form-group">
                 <label htmlFor="exitDate">Fecha de salida:</label>
-                <input
-                  id="exitDate"
-                  type="date"
-                  value={exitDate}
-                  onChange={(e) => setExitDate(e.target.value)}
-                  required
-                />
+                <input id="exitDate" type="date" value={exitDate} onChange={(e) => setExitDate(e.target.value)} required />
               </div>
 
-              {exitReason === "traslado" && (
+              {exitReason === 'traslado' && (
                 <div className="form-group">
                   <label htmlFor="destinationActivationId">Centro de destino:</label>
                   <select
@@ -514,7 +503,7 @@ const CenterResidentsPage: React.FC = () => {
                     required
                   >
                     <option value="">Seleccione centro...</option>
-                    {activeCenters.map((center) => (
+                    {activeCenters.map(center => (
                       <option key={center.activation_id} value={center.activation_id}>
                         {center.center_name} ({center.center_id})
                       </option>
@@ -524,11 +513,11 @@ const CenterResidentsPage: React.FC = () => {
               )}
 
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={resetExitForm} disabled={isSubmitting}>
+                <button type="button" className="btn-secondary" onClick={handleCloseExitModal}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? "Registrando..." : "Registrar Salida"}
+                <button type="submit" className="btn-primary">
+                  Registrar Salida
                 </button>
               </div>
             </form>

@@ -10,7 +10,7 @@ import {
   Skeleton,
 } from "@mui/material";
 import { Person as PersonIcon, Groups as GroupsIcon } from "@mui/icons-material";
-import { getOne as getUser } from "@/services/users.service";
+import { getUser } from "../../services/usersApi";
 
 type UserLite = {
   user_id: number;
@@ -136,7 +136,7 @@ export default function ResponsibleSection({
               variant="textBare"
               sx={(t) => t.typography.bodySmall}
               onClick={onAssignMunicipal}
-              disabled={!onAssignMunicipal}  
+              disabled={!onAssignMunicipal || !navigator.onLine}  // desactiva si no hay callback o sin conexión
             >
               Cambiar
             </Button>
@@ -159,7 +159,7 @@ export default function ResponsibleSection({
               sx={(t) => t.typography.bodySmall}
               size="small"
               onClick={onAssignCommunity}
-              disabled={!onAssignCommunity }
+              disabled={!onAssignCommunity || !navigator.onLine}
             >
               Cambiar
             </Button>

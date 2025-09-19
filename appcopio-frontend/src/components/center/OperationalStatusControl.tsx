@@ -1,12 +1,9 @@
 // src/components/center/OperationalStatusControl.tsx
-import React, { useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
-import "./OperationalStatusControl.css";
+import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import './OperationalStatusControl.css';
 
-type OperationalStatus =
-  | "Abierto"
-  | "Cerrado Temporalmente"
-  | "Capacidad Máxima";
+type OperationalStatus = 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
 
 interface OperationalStatusControlProps {
   centerId: string;
@@ -19,9 +16,9 @@ interface OperationalStatusControlProps {
 const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
   centerId,
   currentStatus,
-  currentNote = "",
+  currentNote = '',
   onStatusChange,
-  isUpdating = false,
+  isUpdating = false
 }) => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -30,56 +27,51 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
 
   function getStatusClass(status: OperationalStatus): string {
     switch (status) {
-      case "Abierto":
-        return "status-open";
-      case "Cerrado Temporalmente":
-        return "status-temporarily-closed";
-      case "Capacidad Máxima":
-        return "status-full-capacity";
+      case 'Abierto':
+        return 'status-open';
+      case 'Cerrado Temporalmente':
+        return 'status-temporarily-closed';
+      case 'Capacidad Máxima':
+        return 'status-full-capacity';
       default:
-        return "";
+        return '';
     }
   }
 
   const getStatusIcon = (status: OperationalStatus): string => {
     switch (status) {
-      case "Abierto":
-        return "✅";
-      case "Cerrado Temporalmente":
-        return "⏸️";
-      case "Capacidad Máxima":
-        return "🚫";
+      case 'Abierto':
+        return '✅';
+      case 'Cerrado Temporalmente':
+        return '⏸️';
+      case 'Capacidad Máxima':
+        return '🚫';
       default:
-        return "❓";
+        return '❓';
     }
   };
 
   const getStatusDescription = (status: OperationalStatus): string => {
     switch (status) {
-      case "Abierto":
-        return "El centro está disponible para recibir ayuda y personas";
-      case "Cerrado Temporalmente":
-        return "El centro está temporalmente cerrado";
-      case "Capacidad Máxima":
-        return "El centro ha alcanzado su capacidad máxima";
+      case 'Abierto':
+        return 'El centro está disponible para recibir ayuda y personas';
+      case 'Cerrado Temporalmente':
+        return 'El centro está temporalmente cerrado';
+      case 'Capacidad Máxima':
+        return 'El centro ha alcanzado su capacidad máxima';
       default:
-        return "";
+        return '';
     }
   };
 
   // Usuarios que pueden cambiar el estado operativo
-  if (
-    !user ||
-    !["Encargado", "Trabajador Municipal", "Contacto Ciudadano"].includes(
-      user.role_name ?? ""
-    )
-  ) {
+  if (!user || !['Encargado', 'Trabajador Municipal', 'Contacto Ciudadano'].includes(user.role_name)) {
     return (
       <div className="operational-status-display">
         <span className={`status-indicator ${getStatusClass(currentStatus)}`}>
           {getStatusIcon(currentStatus)} {currentStatus}
         </span>
-        {currentStatus === "Cerrado Temporalmente" && currentNote && (
+        {currentStatus === 'Cerrado Temporalmente' && currentNote && (
           <div className="public-note-display">
             <strong>Nota:</strong> {currentNote}
           </div>
@@ -89,24 +81,24 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
   }
 
   const statusOptions: OperationalStatus[] = [
-    "Abierto",
-    "Cerrado Temporalmente",
-    "Capacidad Máxima",
+    'Abierto',
+    'Cerrado Temporalmente', 
+    'Capacidad Máxima'
   ];
 
   const handleStatusSelect = (newStatus: OperationalStatus) => {
     setIsOpen(false);
-
-    if (newStatus === "Cerrado Temporalmente") {
+    
+    if (newStatus === 'Cerrado Temporalmente') {
       setShowNoteEditor(true);
     } else {
-      setPublicNote("");
+      setPublicNote('');
       onStatusChange(newStatus);
     }
   };
 
   const handleNoteSubmit = () => {
-    onStatusChange("Cerrado Temporalmente", publicNote);
+    onStatusChange('Cerrado Temporalmente', publicNote);
     setShowNoteEditor(false);
   };
 
@@ -120,9 +112,7 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
       <div className="operational-status-control">
         <div className="note-editor">
           <h4>Configurar Cierre Temporal</h4>
-          <p>
-            Agregar una nota pública (opcional) para informar a los ciudadanos:
-          </p>
+          <p>Agregar una nota pública (opcional) para informar a los ciudadanos:</p>
           <textarea
             value={publicNote}
             onChange={(e) => setPublicNote(e.target.value)}
@@ -133,14 +123,14 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
           />
           <small>{publicNote.length}/200 caracteres</small>
           <div className="note-actions">
-            <button
+            <button 
               onClick={handleNoteSubmit}
               disabled={isUpdating}
               className="btn-confirm"
             >
-              {isUpdating ? "⏳ Aplicando..." : "Confirmar Cierre"}
+              {isUpdating ? '⏳ Aplicando...' : 'Confirmar Cierre'}
             </button>
-            <button
+            <button 
               onClick={handleNoteCancel}
               disabled={isUpdating}
               className="btn-cancel"
@@ -160,7 +150,7 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
         <div className="status-selector-container">
           <button
             id="status-selector"
-            className={`status-button ${getStatusClass(currentStatus)} ${isUpdating ? "updating" : ""}`}
+            className={`status-button ${getStatusClass(currentStatus)} ${isUpdating ? 'updating' : ''}`}
             onClick={() => setIsOpen(!isOpen)}
             disabled={isUpdating}
           >
@@ -169,19 +159,17 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
             {isUpdating ? (
               <span className="loading-spinner">⏳</span>
             ) : (
-              <span className={`dropdown-arrow ${isOpen ? "open" : ""}`}>
-                ▼
-              </span>
+              <span className={`dropdown-arrow ${isOpen ? 'open' : ''}`}>▼</span>
             )}
           </button>
-
+          
           {isOpen && !isUpdating && (
             <div className="status-dropdown">
               {statusOptions.map((status) => (
                 <button
                   key={status}
                   className={`status-option ${getStatusClass(status)} ${
-                    status === currentStatus ? "current" : ""
+                    status === currentStatus ? 'current' : ''
                   }`}
                   onClick={() => handleStatusSelect(status)}
                 >
@@ -199,10 +187,10 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
         </div>
       </div>
 
-      {currentStatus === "Cerrado Temporalmente" && currentNote && (
+      {currentStatus === 'Cerrado Temporalmente' && currentNote && (
         <div className="current-note">
           <strong>Nota actual:</strong> {currentNote}
-          <button
+          <button 
             onClick={() => setShowNoteEditor(true)}
             className="btn-edit-note"
             disabled={isUpdating}
@@ -214,8 +202,7 @@ const OperationalStatusControl: React.FC<OperationalStatusControlProps> = ({
 
       <div className="status-help">
         <p className="help-text">
-          <strong>Importante:</strong> Cambiar el estado afectará cómo se
-          muestra tu centro en el mapa público y en los reportes municipales.
+          <strong>Importante:</strong> Cambiar el estado afectará cómo se muestra tu centro en el mapa público y en los reportes municipales.
         </p>
       </div>
     </div>

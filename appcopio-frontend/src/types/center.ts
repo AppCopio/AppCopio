@@ -1,24 +1,3 @@
-export type CenterOperationalStatus =
-  | "abierto"
-  | "cerrado temporalmente"
-  | "capacidad maxima";
-
-export type CenterTypeName = "Acopio" | "Albergue";
-
-export type Center = {
-  center_id: string;     // normalizado a string
-  name: string;
-  address?: string | null;
-  type: CenterTypeName;    // UI usa 'Acopio' | 'Albergue'
-  is_active: boolean;
-  operational_status?: CenterOperationalStatus;
-  public_note?: string | null;
-  capacity?: number | null;
-  latitude?: number | string | null;
-  longitude?: number | string | null;
-  fullnessPercentage?: number; // 0..100 (si viene)
-};
-
 // src/types/center.ts
 
 export interface CenterData {

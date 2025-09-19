@@ -5,19 +5,15 @@ export type Person = {
   rut: string;
   nombre: string;
   primer_apellido: string;
-  segundo_apellido?: string;
-
+  segundo_apellido: string;
   nacionalidad: Nationality | "";
   genero: Gender | "";
-
-  edad: number | ""; // importante para controlar TextField
-
+  edad: number | "";
   estudia: boolean;
   trabaja: boolean;
   perdida_trabajo: boolean;
+  rubro: string;
   discapacidad: boolean;
   dependencia: boolean;
-
-  parentesco?: string; // "Jefe de hogar" para index 0
-  rubro?: string;
+  parentesco: string; // 1ra persona fijo "Jefe de hogar"
 };

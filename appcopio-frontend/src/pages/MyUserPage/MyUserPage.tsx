@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Avatar,
   Box,
@@ -9,50 +9,22 @@ import {
   Stack,
   Divider,
 } from "@mui/material";
-
-import { useAuth } from "@/contexts/AuthContext";
-import { getOne as getUser } from "@/services/users.service";
-import type { User } from "@/types/user";
-import { msgFromError } from "@/lib/errors";
+import { useAuth } from "../../contexts/AuthContext";
+import { getUser } from "../../services/usersApi";
+import { User } from "../../types/user";
 
 export default function MyUserPage() {
-  const { user, loadingAuth: authLoading } = useAuth();
-  const [data, setData] = React.useState<User | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const { user } = useAuth();
+  const [data, setData] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
+  useEffect(() => {
+    if (!user) return;
     setLoading(true);
-    setError(null);
-
-    getUser(user.user_id, controller.signal)
+    getUser(user.user_id)
       .then((res) => setData(res))
-      .catch((e) => {
-        if (controller.signal.aborted) return;
-        setError(msgFromError(e) || "Error al cargar usuario");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [authLoading, user?.user_id]);
-
-  if (authLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+      .finally(() => setLoading(false));
+  }, [user]);
 
   if (!user) {
     return <Typography>No estás autenticado</Typography>;
@@ -66,28 +38,20 @@ export default function MyUserPage() {
     );
   }
 
-  if (error) {
-    return <Typography color="error">{error}</Typography>;
-  }
-
   if (!data) {
     return <Typography>Error al cargar usuario</Typography>;
   }
 
   const userAttributes = [
     { label: "RUT", value: data.rut },
-    { label: "Rol", value: (data as any).role_name ?? data.role_id },
+    { label: "Rol", value: data.role_name },
     { label: "Género", value: data.genero },
     { label: "Celular", value: data.celular },
   ];
 
-  const formatDate = (date: string | number | Date) =>
-    new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short" }).format(
-      new Date(date)
-    );
-
-  const initial =
-    (data.nombre?.trim()?.[0] || data.username?.trim()?.[0] || "U").toUpperCase();
+  const formatDate = (dateString: string | number | Date) => {
+    return new Date(dateString).toLocaleString();
+  };
 
   return (
     <Box
@@ -95,19 +59,28 @@ export default function MyUserPage() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        minHeight: "100vh", // mismo aspecto que antes
+        minHeight: "100vh",
         bgcolor: "background.default",
       }}
     >
       <Paper elevation={3} sx={{ p: 4, width: "100%", maxWidth: 600 }}>
-        <Stack direction="column" spacing={3} divider={<Divider flexItem />} alignItems="center">
-          <Stack direction="column" alignItems="center" spacing={1} sx={{ textAlign: "center" }}>
+        <Stack
+          direction="column"
+          spacing={3}
+          divider={<Divider flexItem />}
+          alignItems="center"
+        >
+          <Stack
+            direction="column"
+            alignItems="center"
+            spacing={1}
+            sx={{ textAlign: "center" }}
+          >
             <Avatar
               src={data.imagen_perfil || undefined}
-              sx={{ width: 100, height: 100, mb: 1, fontSize: "3rem" }}
-              alt={data.nombre || data.username || "Usuario"}
+              sx={{ width: 100, height: 100, mb: 1, fontSize: '3rem' }}
             >
-              {initial}
+              {data.nombre?.[0] ?? data.username?.[0]}
             </Avatar>
             <Typography variant="h5" component="h1" gutterBottom>
               {data.nombre || data.username}
@@ -116,8 +89,11 @@ export default function MyUserPage() {
               {data.email}
             </Typography>
           </Stack>
-
-          <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />}>
+          <Stack
+            direction="row"
+            spacing={2}
+            divider={<Divider orientation="vertical" flexItem />}
+          >
             <Chip
               label={data.is_active ? "Activo" : "Inactivo"}
               color={data.is_active ? "success" : "default"}
@@ -129,11 +105,10 @@ export default function MyUserPage() {
               size="small"
             />
           </Stack>
-
           <Stack spacing={2} sx={{ width: "100%" }}>
-            {userAttributes.map((attr) => (
+            {userAttributes.map((attr, index) => (
               <Stack
-                key={attr.label}
+                key={index}
                 direction="row"
                 justifyContent="space-between"
                 alignItems="center"
@@ -141,15 +116,22 @@ export default function MyUserPage() {
                 <Typography variant="subtitle1" color="text.secondary">
                   {attr.label}
                 </Typography>
-                <Typography variant="body1">{attr.value || "—"}</Typography>
+                <Typography variant="body1">
+                  {attr.value || "—"}
+                </Typography>
               </Stack>
             ))}
-
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+            >
               <Typography variant="subtitle1" color="text.secondary">
                 Fecha de creación
               </Typography>
-              <Typography variant="body1">{formatDate(data.created_at)}</Typography>
+              <Typography variant="body1">
+                {formatDate(data.created_at)}
+              </Typography>
             </Stack>
           </Stack>
         </Stack>

@@ -1,57 +1,57 @@
-import * as React from "react";
+// src/pages/FibePage.tsx
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-
 import FibeMultiStepForm from "./FibeMultiStepForm";
 import "./FibePage.css";
 
-import { createFibeSubmission } from "@/services/fibe.service";
-import type { FibeFormData, CreateFibeSubmissionDTO } from "@/types/fibe";
-import { useActivation } from "@/contexts/ActivationContext";
+import { createFibeSubmission } from "../../services/fibeApi";
+import type { FormData } from "../../types/fibe"; // ajusta la ruta si tu type vive en otro lado
 
-export default function FibePage() {
+
+import { useActivation } from "../../contexts/ActivationContext";
+
+
+
+
+export default function Page() {
+  // Estado de envío (opcional, por UX)
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 1) Intentamos sacar el activation_id desde el contexto
-  const { activation } = useActivation();
-  const activationIdFromCtx = activation?.activation_id;
+  // TODO: reemplazar por el activation_id real (de la vista/estado/URL)
+  //const activationId  = 1;
 
-  // 2) Fallback: querystring ?activation_id=123
+
+
+  const { activation } = useActivation();
+  const activationId = useMemo(() => activation?.activation_id ?? 0, [activation]);
+
+  /* // 1) De la query string: /admin/fibe?activation_id=123
   const [params] = useSearchParams();
-  const activationIdFromQS = useMemo(
-    () => Number(params.get("activation_id")) || undefined,
+  const activationId = useMemo(
+    () => Number(params.get("activation_id")) || 0,
     [params]
   );
+  */
 
-  // 3) Resolución final del activation_id (ctx > querystring)
-  const activation_id = useMemo(
-    () => activationIdFromCtx ?? activationIdFromQS,
-    [activationIdFromCtx, activationIdFromQS]
-  );
-
-  const handleSubmit = async (payload: FibeFormData) => {
-    if (!activation_id) {
-      alert("Falta activation_id (no viene en contexto ni querystring).");
-      return;
-    }
-
+  // onSubmit que recibe el payload del form (FormData) y dispara la transacción
+  const handleSubmit = async (payload: FormData) => {
     setIsSubmitting(true);
     try {
-      // Idempotencia opcional para reintentos
-      const idem = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+      // Idempotencia opcional para reintentos seguros
+      const idem = (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
 
-      const dto: CreateFibeSubmissionDTO = {
-        activation_id,
-        data: payload,
-      };
+      const resp = await createFibeSubmission(
+        { activation_id: activationId , data: payload },
+        { idempotencyKey: idem }
+      );
 
-      const resp = await createFibeSubmission(dto, { idempotencyKey: idem });
+      console.log("Transacción FIBE OK:", resp);
       alert(`Familia creada. ID: ${resp.family_id}`);
-      // TODO: navegar o limpiar formulario si corresponde
+      // TODO: navegar, limpiar formulario, etc.
       // navigate(`/familias/${resp.family_id}`)
     } catch (err: any) {
       console.error("Error FIBE:", err);
-      alert(err?.response?.data?.message || err?.message || "Error registrando FIBE");
+      alert(err?.message ?? "Error registrando FIBE");
     } finally {
       setIsSubmitting(false);
     }
@@ -59,8 +59,8 @@ export default function FibePage() {
 
   return (
     <div>
-      <FibeMultiStepForm onSubmit={handleSubmit} disabled={isSubmitting} />
-      {isSubmitting && <div className="sending">Enviando datos…</div>}
+      <FibeMultiStepForm onSubmit={handleSubmit} disabled={isSubmitting}/>
+      {isSubmitting && (<div className="sending">Enviando datos…</div>)}
     </div>
   );
 }

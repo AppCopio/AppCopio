@@ -1,12 +1,8 @@
+// src/pages/UsersManagementPage/AssignCentersModal.tsx
 import * as React from "react";
-import type { User } from "@/types/user";
-import type { Center } from "@/types/center";
-import {
-  assignCenterToUser,
-  removeCenterFromUser,
-  getOne as getUser,
-} from "@/services/users.service";
-import { listCenters } from "@/services/centers.service";
+import type { User } from "../../types/user";
+import { fetchWithAbort } from "../../services/api";
+import { assignCenterToUser, removeCenterFromUser, getUser } from "../../services/usersApi";
 
 import {
   Alert,
@@ -30,28 +26,26 @@ import {
 } from "@mui/material";
 import { Refresh as RefreshIcon, Search as SearchIcon } from "@mui/icons-material";
 
-// Si ya usas un ConfirmDialog común en el proyecto
-import ConfirmDialog from "@/components/common/ConfirmDialog";
+interface Center {
+  center_id: string;
+  name: string;
+}
 
-type Props = {
+interface Props {
   user: User;
   onClose: () => void;
-  onSave: () => void; // refrescar lista externa
-};
+  onSave: () => void;
+}
 
-const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
+export const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
   const [allCenters, setAllCenters] = React.useState<Center[]>([]);
   const [selectedCenters, setSelectedCenters] = React.useState<Set<string>>(new Set());
   const [initialAssignments, setInitialAssignments] = React.useState<Set<string>>(new Set());
-
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
-  const [showOnlyAssigned, setShowOnlyAssigned] = React.useState(false);
-
-  // Confirmación al remover todos o varios centros
-  const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const pendingActionRef = React.useRef<(() => Promise<void>) | null>(null);
+  const [showOnlyAssigned, setShowOnlyAssigned] = React.useState(false); // 👈 NUEVO
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   const controllerRef = React.useRef<AbortController | null>(null);
 
@@ -65,24 +59,25 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
     try {
       const [userData, centersData] = await Promise.all([
         getUser(user.user_id, controller.signal),
-        listCenters(controller.signal),
+        fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal),
       ]);
 
       const userAssignedCenters = new Set<string>(
-        (userData.assignedCenters || []).map((id) => String(id))
+        ((userData.assignedCenters || []) as (string | number)[]).map(String)
       );
 
       setSelectedCenters(userAssignedCenters);
       setInitialAssignments(userAssignedCenters);
-      setAllCenters(centersData); // ya normalizados a string en el service
+
+      setAllCenters((centersData || []).map((c) => ({ ...c, center_id: String(c.center_id) })));
     } catch (err: any) {
-      if (controller.signal.aborted || err?.name === "AbortError" || err?.aborted) return;
+      if (controller.signal.aborted || err?.name === "AbortError") return;
       console.error(err);
       setError("No se pudieron cargar los datos para la asignación.");
     } finally {
       if (!controller.signal.aborted) setIsLoading(false);
     }
-  }, [user.user_id]);
+  }, [apiUrl, user.user_id]);
 
   React.useEffect(() => {
     loadData();
@@ -97,6 +92,7 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
     if (showOnlyAssigned) {
       list = list.filter((c) => selectedCenters.has(c.center_id));
     }
+
     if (q) {
       list = list.filter(
         (c) =>
@@ -107,7 +103,7 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
     return list;
   }, [allCenters, query, showOnlyAssigned, selectedCenters]);
 
-  // Visibles + contadores (para seleccionar todo visible)
+  // Contadores/estados para "Seleccionar todo" según lo visible
   const visibleIds = React.useMemo(
     () => new Set(filteredCenters.map((c) => c.center_id)),
     [filteredCenters]
@@ -116,18 +112,8 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
     () => [...selectedCenters].filter((id) => visibleIds.has(id)).length,
     [selectedCenters, visibleIds]
   );
-  const allVisibleSelected =
-    filteredCenters.length > 0 && visibleSelectedCount === filteredCenters.length;
+  const allVisibleSelected = filteredCenters.length > 0 && visibleSelectedCount === filteredCenters.length;
   const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
-
-  // ¿Hubo cambios?
-  const hasChanges = React.useMemo(() => {
-    if (selectedCenters.size !== initialAssignments.size) return true;
-    for (const id of selectedCenters) {
-      if (!initialAssignments.has(id)) return true;
-    }
-    return false;
-  }, [selectedCenters, initialAssignments]);
 
   const handleToggleOne = (centerId: string) => {
     setSelectedCenters((prev) => {
@@ -149,51 +135,24 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
     });
   };
 
-  const doPersist = React.useCallback(async () => {
+  const handleSaveChanges = async () => {
     setIsLoading(true);
-    try {
-      const toAdd = [...selectedCenters].filter((id) => !initialAssignments.has(id));
-      const toRemove = [...initialAssignments].filter((id) => !selectedCenters.has(id));
+    const toAdd = [...selectedCenters].filter((id) => !initialAssignments.has(id));
+    const toRemove = [...initialAssignments].filter((id) => !selectedCenters.has(id));
 
+    try {
       await Promise.all([
-        ...toAdd.map((center_id) =>
-          assignCenterToUser(user.user_id, center_id, user.role_name ?? "")
-        ),
+        ...toAdd.map((center_id) => assignCenterToUser(user.user_id, center_id, user.role_name ?? "")),
         ...toRemove.map((center_id) => removeCenterFromUser(user.user_id, center_id)),
       ]);
-
-      onSave(); // refresca lista externa
-      onClose();
+      onSave();
     } catch (err) {
       console.error(err);
-      setError("Error al guardar las asignaciones.");
+      alert("Error al guardar las asignaciones.");
     } finally {
       setIsLoading(false);
+      onClose();
     }
-  }, [selectedCenters, initialAssignments, user.user_id, user.role_name, onSave, onClose]);
-
-  const handleSaveChanges = async () => {
-    // Confirmación si se están quitando TODOS o muchos
-    const toRemove = [...initialAssignments].filter((id) => !selectedCenters.has(id));
-    if (toRemove.length > 0) {
-      pendingActionRef.current = doPersist;
-      setConfirmOpen(true);
-      return;
-    }
-    await doPersist();
-  };
-
-  const handleConfirm = async () => {
-    setConfirmOpen(false);
-    if (pendingActionRef.current) {
-      await pendingActionRef.current();
-      pendingActionRef.current = null;
-    }
-  };
-
-  const handleCancelConfirm = () => {
-    setConfirmOpen(false);
-    pendingActionRef.current = null;
   };
 
   return (
@@ -226,11 +185,7 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
 
       {!isLoading && !error && (
         <>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            alignItems={{ xs: "stretch", sm: "center" }}
-          >
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
             <TextField
               size="small"
               placeholder="Buscar centro por nombre o ID…"
@@ -246,6 +201,7 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
               sx={{ flex: 1 }}
             />
 
+            {/* 👇 NUEVO: Solo asignados */}
             <FormControlLabel
               control={
                 <Checkbox
@@ -320,29 +276,12 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
 
           <Stack direction="row" justifyContent="flex-end" spacing={1}>
             <Button onClick={onClose}>Cancelar</Button>
-            <Button
-              variant="contained"
-              onClick={handleSaveChanges}
-              disabled={!hasChanges || isLoading}
-            >
+            <Button variant="contained" onClick={handleSaveChanges}>
               Guardar cambios
             </Button>
           </Stack>
         </>
       )}
-
-      {/* Confirmación para eliminaciones */}
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Confirmar cambios en asignaciones"
-        message="Se eliminarán una o más asignaciones de centro para este usuario. ¿Deseas continuar?"
-        confirmText="Sí, continuar"
-        cancelText="Cancelar"
-        onConfirm={handleConfirm}
-        onClose={handleCancelConfirm}
-      />
     </Stack>
   );
 };
-
-export default AssignCentersModal;
