@@ -1,72 +1,81 @@
-// AuthContext.tsx
-import React, { createContext, useContext, useEffect, useState } from "react";
-import api, { setAccessToken } from "../lib/api";
+// src/contexts/AuthContext.tsx
+import * as React from "react";
+import { setAccessToken,api } from "@/lib/api"; // usa default/named según tu lib
+import type { User } from "@/types/user";
 
-type User = {
-  user_id: number;
-  nombre: string;
-  imagen_perfil: string;
-  username: string;
-  role_id: number;
-  es_apoyo_admin: boolean;
-  role_name: string;
-  is_active: boolean;
-} | null;
+const STORAGE_TOKEN_KEY = "appcopio:access_token";
+const STORAGE_USER_KEY  = "appcopio:user";
 
-type Ctx = {
+type AuthContextState = {
+  user: User | null;
   isAuthenticated: boolean;
-  user: User;
-  isLoading: boolean;
+  loadingAuth: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
-const AuthCtx = createContext<Ctx>({} as any);
+const AuthCtx = React.createContext<AuthContextState>({} as AuthContextState);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = React.useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.post("/auth/refresh");
-        setAccessToken(data.access_token);
-        setUser(data.user);
-      } catch {
-        setAccessToken(null);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+  // 🚫 Sin refresh: solo rehidratamos desde storage al montar
+  React.useEffect(() => {
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    const userStr = localStorage.getItem(STORAGE_USER_KEY);
+    if (token) setAccessToken(token);
+    if (userStr) setUser(JSON.parse(userStr));
+    setLoadingAuth(false);
   }, []);
 
   async function login(username: string, password: string) {
+    setLoadingAuth(true);
     try {
-      setIsLoading(true);
-      const { data } = await api.post("/auth/login", { username, password });
+      const { data } = await api.post<{ access_token: string; user: User }>("/auth/login", {
+        username,
+        password,
+      });
       setAccessToken(data.access_token);
       setUser(data.user);
+      localStorage.setItem(STORAGE_TOKEN_KEY, data.access_token);
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(data.user));
     } catch (e: any) {
-      const msg = e?.response?.data?.message || "Credenciales inválidas.";
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Credenciales inválidas.";
       throw new Error(msg);
     } finally {
-      setIsLoading(false);
+      setLoadingAuth(false);
     }
   }
 
   async function logout() {
-    await api.post("/auth/logout");
-    setAccessToken(null);
-    setUser(null);
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      setAccessToken(null);
+      setUser(null);
+      localStorage.removeItem(STORAGE_TOKEN_KEY);
+      localStorage.removeItem(STORAGE_USER_KEY);
+    }
   }
 
   return (
-    <AuthCtx.Provider value={{ isAuthenticated: !!user, user, isLoading, login, logout }}>
+    <AuthCtx.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loadingAuth,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthCtx.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthCtx);
+export const useAuth = () => React.useContext(AuthCtx);

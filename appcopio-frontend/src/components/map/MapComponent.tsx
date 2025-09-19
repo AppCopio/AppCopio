@@ -1,94 +1,67 @@
-import React, { useState } from 'react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
-import { useAuth } from '../../contexts/AuthContext';
-import './MapComponent.css';
+import * as React from "react";
+import { APIProvider, Map, AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Center } from "@/types/center";
+import "./MapComponent.css";
 
-// Interfaz actualizada para incluir el estado operativo
-interface Center {
-  center_id: string;
-  name: string;
-  address: string;
-  type: 'Acopio' | 'Albergue';
-  is_active: boolean;
-  operational_status?: 'abierto' | 'cerrado temporalmente' | 'capacidad maxima';
-  public_note?: string;
-  latitude: number | string; 
-  longitude: number | string;
-  fullnessPercentage: number; 
-}
-
-// Se mantiene la interfaz para las props que el componente recibe
-interface MapComponentProps {
+type MapComponentProps = {
   centers: Center[];
-}
+};
 
-const apiKey = import.meta.env.VITE_Maps_API_KEY;
+const apiKey = import.meta.env.VITE_Maps_API_KEY as string | undefined;
 const valparaisoCoords = { lat: -33.04, lng: -71.61 };
 
-// Función para formatear el estado operativo para mostrar en la UI
-const formatOperationalStatus = (status?: string): string => {
-  if (!status) return 'No definido';
-  
+// Mostrar texto bonito para el estado operativo
+const formatOperationalStatus = (status?: Center["operational_status"]): string => {
+  if (!status) return "No definido";
   switch (status) {
-    case 'abierto':
-      return 'Abierto';
-    case 'cerrado temporalmente':
-      return 'Cerrado Temporalmente';
-    case 'capacidad maxima':
-      return 'Capacidad Máxima';
+    case "abierto":
+      return "Abierto";
+    case "cerrado temporalmente":
+      return "Cerrado Temporalmente";
+    case "capacidad maxima":
+      return "Capacidad Máxima";
     default:
-      return status;
+      return String(status);
   }
 };
 
-// Función para determinar el estado del centro considerando tanto is_active como operational_status
+// Estado general combinando is_active + operational_status
 const getCenterStatus = (center: Center): string => {
-  if (!center.is_active) {
-    return 'Inactivo';
-  }
-  
-  if (center.operational_status === 'cerrado temporalmente') {
-    return 'Cerrado';
-  }
-  
-  return 'Activo';
+  if (center.is_active === false) return "Inactivo";
+  if (center.operational_status === "cerrado temporalmente") return "Cerrado";
+  return "Activo";
 };
 
-// Lógica de estilos corregida para el estado operativo
+// Clase de pin según estado/ocupación
 const getPinStatusClass = (center: Center): string => {
-  if (!center.is_active) {
-    return 'status-inactive'; // Gris
-  }
-  
-  // Se da prioridad al estado operativo sobre el nivel de abastecimiento
-  if (center.operational_status === 'cerrado temporalmente') {
-    return 'status-temporarily-closed'; // Gris
-  } else if (center.operational_status === 'capacidad maxima') {
-    return 'status-full-capacity'; // Rojo
-  } else if (center.operational_status === 'abierto') {
-    return 'status-open'; // Verde
-  }
-  
-  // Si no tiene estado operativo definido, se usa el porcentaje
-  if (center.fullnessPercentage < 33) {
-    return 'status-critical'; // Rojo
-  } else if (center.fullnessPercentage < 66) {
-    return 'status-warning'; 	// Naranja
-  } else {
-    return 'status-ok'; 		// Verde
-  }
+  if (center.is_active === false) return "status-inactive";
+
+  if (center.operational_status === "cerrado temporalmente") return "status-temporarily-closed";
+  if (center.operational_status === "capacidad maxima") return "status-full-capacity";
+  if (center.operational_status === "abierto") return "status-open";
+
+  // fallback por porcentaje
+  const fp = Number(center.fullnessPercentage ?? 0);
+  if (fp < 33) return "status-critical";
+  if (fp < 66) return "status-warning";
+  return "status-ok";
 };
 
-// Se corrige la firma del componente para que acepte las props correctamente
-const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
+export default function MapComponent({ centers }: MapComponentProps) {
   const { isAuthenticated } = useAuth();
-  const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
+  const [selectedCenterId, setSelectedCenterId] = React.useState<string | null>(null);
 
-  const centersToDisplay = isAuthenticated
-    ? centers
-    : centers.filter(center => center.is_active);
+  // Públicos solo ven activos
+  const centersToDisplay = React.useMemo(
+    () => (isAuthenticated ? centers : centers.filter((c) => c.is_active !== false)),
+    [isAuthenticated, centers]
+  );
 
-  const selectedCenter = centers.find(c => c.center_id === selectedCenterId);
+  const selectedCenter = React.useMemo(
+    () => centers.find((c) => String(c.center_id) === selectedCenterId) || null,
+    [centers, selectedCenterId]
+  );
 
   if (!apiKey) {
     return <div className="error-message">Error: Falta la Clave API de Google Maps.</div>;
@@ -101,46 +74,68 @@ const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
           defaultCenter={valparaisoCoords}
           defaultZoom={13}
           mapId="appcopio-map-main"
-          gestureHandling={'greedy'}
-          disableDefaultUI={true}
-          fullscreenControl={true}
+          gestureHandling="greedy"
+          disableDefaultUI
+          fullscreenControl
         >
-          {centersToDisplay.map(center => (
+          {centersToDisplay.map((center) => (
             <AdvancedMarker
-              key={center.center_id}
-              position={{ lat: Number(center.latitude), lng: Number(center.longitude) }}
-              title={`${center.name} - ${center.operational_status ? formatOperationalStatus(center.operational_status) : `Abastecido al ${center.fullnessPercentage.toFixed(0)}%`}`}
-              onClick={() => setSelectedCenterId(center.center_id)}
+              key={String(center.center_id)}
+              position={{
+                lat: Number(center.latitude),
+                lng: Number(center.longitude),
+              }}
+              title={
+                center.operational_status
+                  ? `${center.name} - ${formatOperationalStatus(center.operational_status)}`
+                  : `${center.name} - Abastecido al ${Number(center.fullnessPercentage ?? 0).toFixed(0)}%`
+              }
+              onClick={() => setSelectedCenterId(String(center.center_id))}
             >
               <div className={`marker-pin ${getPinStatusClass(center)}`}>
-                <span>{center.type === 'Albergue' ? '🏠' : '📦'}</span>
+                <span>{center.type === "Albergue" ? "🏠" : "📦"}</span>
               </div>
             </AdvancedMarker>
           ))}
 
           {selectedCenter && (
             <InfoWindow
-              position={{ lat: Number(selectedCenter.latitude), lng: Number(selectedCenter.longitude) }}
+              position={{
+                lat: Number(selectedCenter.latitude),
+                lng: Number(selectedCenter.longitude),
+              }}
               onCloseClick={() => setSelectedCenterId(null)}
               pixelOffset={[0, -40]}
             >
               <div className="infowindow-content">
                 <h4>{selectedCenter.name}</h4>
-                <p><strong>Tipo:</strong> {selectedCenter.type}</p>
-                <p><strong>Estado:</strong> {getCenterStatus(selectedCenter)}</p>
-                
-                {/* Se añade la lógica para mostrar el estado operativo y la nota pública */}
+                <p>
+                  <strong>Tipo:</strong> {selectedCenter.type}
+                </p>
+                <p>
+                  <strong>Estado:</strong> {getCenterStatus(selectedCenter)}
+                </p>
+
                 {selectedCenter.operational_status && (
-                  <p><strong>Estado Operativo:</strong> {formatOperationalStatus(selectedCenter.operational_status)}</p>
-                )}
-                
-                {selectedCenter.operational_status === 'cerrado temporalmente' && selectedCenter.public_note && (
-                  <div className="public-note">
-                    <p><strong>Nota:</strong> {selectedCenter.public_note}</p>
-                  </div>
+                  <p>
+                    <strong>Estado Operativo:</strong>{" "}
+                    {formatOperationalStatus(selectedCenter.operational_status)}
+                  </p>
                 )}
 
-                <p><strong>Nivel de Abastecimiento:</strong> {selectedCenter.fullnessPercentage.toFixed(0)}%</p>
+                {selectedCenter.operational_status === "cerrado temporalmente" &&
+                  selectedCenter.public_note && (
+                    <div className="public-note">
+                      <p>
+                        <strong>Nota:</strong> {selectedCenter.public_note}
+                      </p>
+                    </div>
+                  )}
+
+                <p>
+                  <strong>Nivel de Abastecimiento:</strong>{" "}
+                  {Number(selectedCenter.fullnessPercentage ?? 0).toFixed(0)}%
+                </p>
               </div>
             </InfoWindow>
           )}
@@ -148,6 +143,4 @@ const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
       </div>
     </APIProvider>
   );
-};
-
-export default MapComponent;
+}

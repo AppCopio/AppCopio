@@ -1,26 +1,45 @@
-import type { Person } from "./person";
-import type { HouseholdData } from "./family";
 
+import type { Person } from "@/types/person";
+import type { HouseholdData } from "@/types/family";
+
+export type CreateFibeSubmissionDTO = {
+  activation_id: number;
+  data: FibeFormData;
+};
+
+export type CreateFibeSubmissionResponse = {
+  family_id: number;
+  // ...lo que tu backend devuelva además
+  [k: string]: unknown;
+};
+
+
+// === Tipos del formulario (tus nombres) ===
 export type FormData = {
   hogar: HouseholdData;
   personas: Person[];
 };
 
+// Opciones predefinidas
 export const NEEDS_OPTIONS = [
-  "Alimentos", 
-  "Agua", 
+  "Alimentos",
+  "Agua",
   "Alimentación lactantes",
-  "Colchones/frazadas", 
-  "Artículos de higiene personal", 
+  "Colchones/frazadas",
+  "Artículos de higiene personal",
   "Solución habitacional transitoria",
-  "Pañales adulto", 
-  "Pañales niño", 
-  "Vestuario", 
-  "Calefacción", 
-  "Artículos de aseo", 
-  "Materiales de cocina", 
-  "Materiales de construcción"];
+  "Pañales adulto",
+  "Pañales niño",
+  "Vestuario",
+  "Calefacción",
+  "Artículos de aseo",
+  "Materiales de cocina",
+  "Materiales de construcción",
+];
 
+export type FibeFormData = FormData;
+
+// Persona inicial (jefe si isHead = true)
 export const initialPerson = (isHead = false): Person => ({
   rut: "",
   nombre: "",
@@ -38,11 +57,13 @@ export const initialPerson = (isHead = false): Person => ({
   parentesco: isHead ? "Jefe de hogar" : "",
 });
 
+// Estado inicial del formulario
 export const initialData: FormData = {
   hogar: { fibeFolio: "", observations: "", selectedNeeds: [] },
   personas: [initialPerson(true)],
 };
 
+// Parentescos
 export const parentescoOpciones = [
   "Jefe de hogar",
   "Cónyuge/Pareja",
@@ -54,9 +75,10 @@ export const parentescoOpciones = [
 
 // API que expone cada paso al padre
 export type StepHandle = {
-  validate: () => boolean; // o Promise<boolean> si quisieras validar async
+  validate: () => boolean; // o Promise<boolean> si quisieras async
 };
 
+// Respuesta compuesta del backend (ajústala si tu API cambia)
 export type ComposeResponse = {
   family_id: number;
   jefe_person_id: number;

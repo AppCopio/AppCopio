@@ -23,11 +23,9 @@ import {
     Radio // Importado para los radio buttons
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useAuth } from '../../contexts/AuthContext';
-import { registerForSync } from '../../utils/syncManager';
 import './CreateCenterPage.css';
-import { createCenter } from '../../services/centerApi';
-import { CenterData } from '../../types/center'; 
+import { createCenter } from '@/services/centers.service';
+import { CenterData } from '@/types/center'; 
 
 // Opciones para la escala de Likert
 const likertOptions = [
@@ -68,7 +66,6 @@ const LikertScaleInput: React.FC<{
 
 const CreateCenterPage: React.FC = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
     const [formData, setFormData] = useState<CenterData>({
         // Campos de la tabla Centers
 center_id: '',
@@ -272,7 +269,6 @@ center_id: '',
             }
         } else {
             localStorage.setItem('pendingCenterRegistrationForm', JSON.stringify(formData));
-            registerForSync('sync-centers');
             alert('Sin conexión. El formulario se guardó y se sincronizará cuando recuperes la red.');
             setIsLoading(false);
             setIsConfirmationOpen(false);

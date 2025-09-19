@@ -1,6 +1,6 @@
 import React from 'react';
 import { FormControl, Typography, RadioGroup, FormControlLabel, Radio } from '@mui/material';
-import { CenterData } from '../../types/center';
+import { CenterData } from '@/types/center';
 
 const likertOptions = [
     { value: 1, label: 'No existe' },

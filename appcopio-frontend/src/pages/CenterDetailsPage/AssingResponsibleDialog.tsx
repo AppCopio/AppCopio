@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Autocomplete, CircularProgress, Stack, Typography } from "@mui/material";
-import { listActiveUsersByRole, assignCenterToUser, getActiveAssignmentsByUserRole } from "../../services/usersApi";
+import { listActiveUsersByRole, assignCenterToUser, getActiveAssignmentsByUserRole } from "@/services/users.service";
 import ConfirmImpactDialog from "./ConfirmImpactDialog";
 
 type RoleK = "trabajador municipal" | "contacto ciudadano";

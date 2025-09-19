@@ -1,11 +1,4 @@
-// src/pages/UsersManagementPage/UsersManagementPage.tsx
-import * as React from "react";
-import type { User } from "../../types/user";
-import { listUsers, updateUser, deleteUser } from "../../services/usersApi";
-import { AssignCentersModal } from "./AssignCentersModal";
-import UserUpsertModal from "./UserUpsertModal";
-
-// MUI
+import * as React from 'react';
 import {
   Box,
   Button,
@@ -27,121 +20,129 @@ import {
   Toolbar,
   Tooltip,
   Typography,
-} from "@mui/material";
+  LinearProgress,
+  Alert,
+} from '@mui/material';
 import {
   Delete as DeleteIcon,
   Edit as EditIcon,
   MapsHomeWork as AssignIcon,
-  Refresh as RefreshIcon,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
+
+import type { User } from '@/types/user';
+import * as usersService from '@/services/users.service';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import AssignCentersModal from "@/pages/UsersManagementPage/AssignCentersModal";
+import UserUpsertModal from './UserUpsertModal';
 
 export default function UsersManagementPage() {
   const [rows, setRows] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
   const [assigningUser, setAssigningUser] = React.useState<User | null>(null);
   const [upsertMode, setUpsertMode] = React.useState<
-    null | { mode: "create" } | { mode: "edit"; user: User }
+    null | { mode: 'create' } | { mode: 'edit'; user: User }
   >(null);
+
+  const [confirm, setConfirm] = React.useState<{
+    open: boolean;
+    msg: string;
+    onOk?: () => Promise<void> | void;
+  }>({ open: false, msg: '' });
+
+  const ask = (msg: string, onOk: () => Promise<void> | void) =>
+    setConfirm({ open: true, msg, onOk });
+  const closeConfirm = () => setConfirm({ open: false, msg: '' });
 
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const { users } = await listUsers({});
-      setRows(users as User[]);
+      const { users } = await usersService.list();
+      setRows(users);
     } catch (e: any) {
-      setError(e?.message ?? "Error al cargar usuarios");
+      setError(e?.message ?? 'Error al cargar usuarios');
     } finally {
       setLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
-    load();
+    const ac = new AbortController();
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { users } = await usersService.list();
+        if (!ac.signal.aborted) setRows(users);
+      } catch (e: any) {
+        if (!ac.signal.aborted) setError(e?.message ?? 'Error al cargar usuarios');
+      } finally {
+        if (!ac.signal.aborted) setLoading(false);
+      }
+    })();
+    return () => ac.abort();
   }, [load]);
 
-  async function handleToggleSupport(user: User) {
-    const ok = window.confirm(
-      `¿Cambiar permiso de Apoyo de Administrador para ${user.nombre}?`
-    );
-    if (!ok) return;
-    try {
-      await updateUser(user.user_id, { es_apoyo_admin: !user.es_apoyo_admin });
+  // --- Acciones con confirmación ---
+  const handleToggleSupport = (u: User) =>
+    ask(`¿Cambiar permiso de Apoyo de Administrador para ${u.nombre}?`, async () => {
+      await usersService.update(u.user_id, { es_apoyo_admin: !u.es_apoyo_admin });
       await load();
-    } catch (e: any) {
-      alert(e?.message ?? "Error al actualizar permiso");
-    }
-  }
+      closeConfirm();
+    });
 
-  async function handleToggleActive(user: User) {
-    const ok = window.confirm(`¿Activar/desactivar usuario ${user.nombre}?`);
-    if (!ok) return;
-    try {
-      await updateUser(user.user_id, { is_active: !user.is_active });
+  const handleToggleActive = (u: User) =>
+    ask(`¿Activar/desactivar usuario ${u.nombre}?`, async () => {
+      await usersService.update(u.user_id, { is_active: !u.is_active });
       await load();
-    } catch (e: any) {
-      alert(e?.message ?? "Error al actualizar permiso");
-    }
-  }
+      closeConfirm();
+    });
 
-  async function handleDelete(u: User) {
-    const ok = window.confirm(`¿Eliminar usuario ${u.nombre}?`);
-    if (!ok) return;
-    try {
-      await deleteUser(u.user_id);
+  const handleDelete = (u: User) =>
+    ask(`¿Eliminar usuario ${u.nombre}?`, async () => {
+      await usersService.remove(u.user_id);
       await load();
-    } catch (e: any) {
-      alert(e?.message ?? "Error al eliminar");
-    }
-  }
+      closeConfirm();
+    });
 
   return (
     <Container maxWidth="lg" sx={{ py: 2 }}>
       <Stack spacing={2}>
-        {/* Encabezado tipo Dashboard */}
+        {/* Encabezado */}
         <Toolbar
           disableGutters
           sx={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto 1fr", 
-            alignItems: "center",
+            display: 'grid',
+            gridTemplateColumns: '1fr auto 1fr',
+            alignItems: 'center',
             gap: 1,
           }}
         >
           <Box />
-          {/* columna izquierda vacía */}
-
           <Typography variant="h5" fontWeight={700} textAlign="center">
             Gestión de Usuarios
           </Typography>
-
-          <Box
-            sx={{
-              justifySelf: "end",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-            }}
-          >
-            <Button
-              variant="contained"
-              onClick={() => setUpsertMode({ mode: "create" })}
-            >
+          <Box sx={{ justifySelf: 'end' }}>
+            <Button variant="contained" onClick={() => setUpsertMode({ mode: 'create' })}>
               Crear Usuario
             </Button>
           </Box>
         </Toolbar>
+
+        {loading && <LinearProgress />}
+        {error && <Alert severity="error">{error}</Alert>}
 
         <Paper elevation={1}>
           <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">Nombre</TableCell>
-                  <TableCell align="center">Username</TableCell>
-                  <TableCell align="center">Email</TableCell>
-                  <TableCell align="center">Rol</TableCell>
+                  <TableCell>Nombre</TableCell>
+                  <TableCell>Username</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Rol</TableCell>
                   <TableCell align="center">Apoyo Admin</TableCell>
                   <TableCell align="center">Acciones</TableCell>
                 </TableRow>
@@ -149,7 +150,6 @@ export default function UsersManagementPage() {
               <TableBody>
                 {rows.map((user) => {
                   const isTM = user.role_id === 2;
-                  const isCC = user.role_id === 3;
                   return (
                     <TableRow key={user.user_id} hover>
                       <TableCell>{user.nombre}</TableCell>
@@ -158,62 +158,43 @@ export default function UsersManagementPage() {
                       <TableCell>
                         <Chip
                           size="small"
-                          label={user.role_name}
+                          label={user.role_name ?? user.role_id}
                           color={
-                            user.role_name === "Administrador"
-                              ? "primary"
-                              : user.role_name === "Trabajador Municipal"
-                              ? "success"
-                              : "default"
+                            user.role_name === 'Administrador'
+                              ? 'primary'
+                              : user.role_name === 'Trabajador Municipal'
+                              ? 'success'
+                              : 'default'
                           }
                           variant="outlined"
                         />
                       </TableCell>
                       <TableCell align="center">
-                        {isTM ? (
+                        {isTM && (
                           <Switch
                             checked={!!user.es_apoyo_admin}
                             onChange={() => handleToggleSupport(user)}
-                            inputProps={{
-                              "aria-label": "Apoyo Admin",
-                            }}
+                            inputProps={{ 'aria-label': 'Apoyo Admin' }}
                           />
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            
-                          </Typography>
                         )}
                       </TableCell>
-                      <TableCell >
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          justifyContent="flex-end"
-                          alignItems="center"
-                        >
-                          {(isTM ) && (
+                      <TableCell align="center">
+                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          {isTM && (
                             <Tooltip title="Asignar Centros">
-                              <IconButton
-                                size="small"
-                                onClick={() => setAssigningUser(user)}
-                              >
+                              <IconButton size="small" onClick={() => setAssigningUser(user)}>
                                 <AssignIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           )}
                           <Tooltip title="Editar">
-                            <span>
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  setUpsertMode({ mode: "edit", user })
-                                }
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </span>
+                            <IconButton
+                              size="small"
+                              onClick={() => setUpsertMode({ mode: 'edit', user })}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
                           </Tooltip>
-
                           <Tooltip title="Eliminar">
                             <IconButton
                               size="small"
@@ -227,6 +208,7 @@ export default function UsersManagementPage() {
                             <Switch
                               checked={!!user.is_active}
                               onChange={() => handleToggleActive(user)}
+                              inputProps={{ 'aria-label': 'Activo' }}
                             />
                           </Tooltip>
                         </Stack>
@@ -236,7 +218,7 @@ export default function UsersManagementPage() {
                 })}
                 {rows.length === 0 && !loading && (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={6}>
                       <Box py={6} textAlign="center" color="text.secondary">
                         No hay usuarios para mostrar.
                       </Box>
@@ -249,14 +231,8 @@ export default function UsersManagementPage() {
         </Paper>
       </Stack>
 
-      {/* Dialog MUI para AssignCentersModal */}
-      <Dialog
-        open={!!assigningUser}
-        onClose={() => setAssigningUser(null)}
-        fullWidth
-        maxWidth="md"
-        scroll="paper"
-      >
+      {/* Modal Asignar Centros */}
+      <Dialog open={!!assigningUser} onClose={() => setAssigningUser(null)} fullWidth maxWidth="md">
         <DialogContent dividers>
           {assigningUser && (
             <AssignCentersModal
@@ -271,21 +247,16 @@ export default function UsersManagementPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!upsertMode}
-        onClose={() => setUpsertMode(null)}
-        fullWidth
-        maxWidth="sm"
-        scroll="paper"
-      >
+      {/* Modal Crear/Editar Usuario */}
+      <Dialog open={!!upsertMode} onClose={() => setUpsertMode(null)} fullWidth maxWidth="sm">
         <DialogTitle>
-          {upsertMode?.mode === "edit" ? "Editar usuario" : "Nuevo usuario"}
+          {upsertMode?.mode === 'edit' ? 'Editar usuario' : 'Nuevo usuario'}
         </DialogTitle>
         <DialogContent dividers>
           {upsertMode && (
             <UserUpsertModal
               mode={upsertMode.mode}
-              user={upsertMode.mode === "edit" ? upsertMode.user : undefined}
+              user={upsertMode.mode === 'edit' ? upsertMode.user : undefined}
               onClose={() => setUpsertMode(null)}
               onSaved={async () => {
                 await load();
@@ -294,6 +265,16 @@ export default function UsersManagementPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirmación */}
+      <ConfirmDialog
+        open={confirm.open}
+        message={confirm.msg}
+        onClose={closeConfirm}
+        onConfirm={async () => {
+          await confirm.onOk?.();
+        }}
+      />
     </Container>
   );
 }
