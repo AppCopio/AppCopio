@@ -3,8 +3,10 @@ import { Routes, Route } from "react-router-dom";
 import PublicLayout from "./components/layout/PublicLayout/PublicLayout";
 import AdminLayout from "./components/layout/AdminLayout/AdminLayout";
 import CenterLayout from "./components/layout/CenterLayout/CenterLayout";
-//import EnsureActiveActivation from "./components/layout/CenterLayout/EnsureActiveActivation";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import ActivationProviderFromParams from "./components/guards/ActivationProviderFromParams";
+import RequireCenterActive from "./components/guards/RequireCenterActive";
+import "./App.css"
 
 import HomePage from "./pages/HomePage/HomePage";
 import MapPage from "./pages/MapPage/MapPage";
@@ -19,17 +21,11 @@ import UpdatesPage from "./pages/UpdatesPage/UpdatesPage";
 import InventoryHistoryPage from "./pages/InventoryHistoryPage/InventoryHistoryPage";
 import MisCentrosPage from "./pages/MisCentrosPage/MisCentrosPage";
 import FibePage from "./pages/FibePage/FibePage";
-import CreateCenterPage from "./pages/CreateCenterPage/CreateCenterPage";
 import CenterResidentsPage from "./pages/CenterResidentsPage/CenterResidentsPage";
 import CenterEditPage from "./pages/CenterEditPage/CenterEditPage";
 import MultiStepCenterForm from "./pages/CreateCenterPage/MultiStepCenterForm";
 import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
 import MyUserPage from "./pages/MyUserPage/MyUserPage";
-
-import ActivationProviderFromParams from "./components/guards/ActivationProviderFromParams";
-import RequireCenterActive from "./components/guards/RequireCenterActive";
-
-import "./App.css";
 
 function App() {
   return (
@@ -60,8 +56,8 @@ function App() {
               {/* <Route path="/admin/fibe" element={<FibePage />} />*/}
               <Route path="/admin/updates" element={<UpdatesPage />} />
               <Route path="/mi-perfil" element={<MyUserPage />} />
-
               <Route path="/mis-centros" element={<MisCentrosPage />} />
+              
 
               <Route path="/center/:centerId" element={<CenterLayout />}>
                 <Route element={<ActivationProviderFromParams />}>
@@ -71,6 +67,7 @@ function App() {
                   <Route path="needs/new" element={<NeedsFormPage />} />
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
+                  <Route path="updates" element={<UpdatesPage />} />
 
                   {/* Rutas que necesitan una activación activa */}
 

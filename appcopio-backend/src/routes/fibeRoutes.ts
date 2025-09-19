@@ -127,7 +127,7 @@ export const createFibeSubmissionHandler: RequestHandler<
     await client.query("ROLLBACK");
     if (e?.code === "23505") {
       // UNIQUE violations
-      res.status(409).json({ message: "Unique constraint violation", detail: e.detail });
+      res.status(409).json({ message: "Possibly rut unique constraint violation", detail: e.detail });
       return;
     }
     next(e); 

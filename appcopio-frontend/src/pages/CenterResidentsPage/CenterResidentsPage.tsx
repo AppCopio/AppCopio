@@ -1,3 +1,4 @@
+// src/pages/CenterResidentsPage/CenterResidentsPage.tsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './CenterResidentsPage.css';
@@ -5,6 +6,9 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
+import api from '../../lib/api';
+
+const apiUrl = import.meta.env.VITE_API_URL;
 
 interface ResidentGroup {
   rut: string;
@@ -40,8 +44,9 @@ interface ActiveCenter {
 const CenterResidentsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const navigate = useNavigate();
+
   const [groups, setGroups] = useState<ResidentGroup[]>([]);
-  const [people, setPeople] = useState<Person[]>([]); // Lista de personas
+  const [people, setPeople] = useState<Person[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,20 +70,19 @@ const CenterResidentsPage: React.FC = () => {
   const [currentCapacity, setCurrentCapacity] = useState<number>(0);
   const [availableCapacity, setAvailableCapacity] = useState<number>(0);
 
-  const [showFamilies, setShowFamilies] = useState(true); // Estado para manejar qué tabla mostrar
+  const [showFamilies, setShowFamilies] = useState(true);
 
+  // ---------- EXPORTS ----------
   const exportToPDF = () => {
     const doc = new jsPDF();
-    const currentDate = new Date().toLocaleString(); // Fecha de descarga
+    const currentDate = new Date().toLocaleString();
     const title = showFamilies ? `Listado de Familias - Centro ${centerId}` : `Listado de Personas - Centro ${centerId}`;
 
-    // Encabezado
     doc.setFontSize(18);
     doc.text(title, 14, 16);
     doc.setFontSize(12);
     doc.text(`Fecha de descarga: ${currentDate}`, 14, 24);
 
-    // Cabecera de la tabla con estilos
     const head = showFamilies
       ? [['Nombre Jefe/a de Hogar', 'RUT', 'Nº Integrantes']]
       : [['Nombre', 'RUT', 'Fecha Ingreso', 'Fecha Salida', 'Edad', 'Género', 'Primer Apellido', 'Segundo Apellido', 'Nacionalidad', 'Estudia', 'Trabaja', 'Pérdida de Trabajo', 'Rubro', 'Discapacidad', 'Dependencia']];
@@ -105,14 +109,14 @@ const CenterResidentsPage: React.FC = () => {
 
     autoTable(doc, {
       startY: 30,
-      head: head,
-      body: body,
+      head,
+      body,
       theme: 'grid',
       styles: {
         font: 'helvetica',
-        fontSize: 8, // Fuente más pequeña para las celdas
+        fontSize: 8,
         halign: 'center',
-        overflow: 'linebreak', // Ajustar texto largo
+        overflow: 'linebreak',
         lineColor: [0, 0, 0],
         lineWidth: 0.1,
         fillColor: [240, 240, 240],
@@ -122,75 +126,68 @@ const CenterResidentsPage: React.FC = () => {
         textColor: 255,
         fontStyle: 'bold',
         halign: 'center',
-        fontSize: 8, // Reducir tamaño de fuente en los encabezados
-      },
-      columnStyles: {
-        // Ajuste de las columnas para que se vean bien organizadas
-        'Nombre': { cellWidth: 45 },
-        'RUT': { cellWidth: 30 },
-        'Fecha Ingreso': { cellWidth: 30 },
-        'Fecha Salida': { cellWidth: 30 },
-        'Edad': { cellWidth: 15 },
-        'Género': { cellWidth: 15 },
-        'Primer Apellido': { cellWidth: 25 },
-        'Segundo Apellido': { cellWidth: 25 },
-        'Nacionalidad': { cellWidth: 25 },
-        'Estudia': { cellWidth: 15 },
-        'Trabaja': { cellWidth: 15 },
-        'Pérdida de Trabajo': { cellWidth: 20 },
-        'Rubro': { cellWidth: 20 },
-        'Discapacidad': { cellWidth: 20 },
-        'Dependencia': { cellWidth: 20 },
-      },
-      alternateRowStyles: {
-        fillColor: [255, 255, 255], // Alternar color de fila
+        fontSize: 8,
       },
       margin: { top: 20, left: 10, right: 10 },
     });
 
-
     doc.save(`Listado_${showFamilies ? 'Familias' : 'Personas'}_${centerId}.pdf`);
   };
 
- const exportToCSV = () => {
+  const exportToCSV = () => {
     const csv = showFamilies
-      ? Papa.unparse(groups.map(g => ({
-          nombre_completo: g.nombre_completo,
-          rut: g.rut,
-          integrantes_grupo: g.integrantes_grupo,
-        })), {
-          header: true,
-          columns: ['nombre_completo', 'rut', 'integrantes_grupo'],
-        })
-      : Papa.unparse(people.map(p => ({
-          nombre: p.nombre,
-          rut: p.rut,
-          fecha_ingreso: p.fecha_ingreso,
-          fecha_salida: p.fecha_salida,
-          edad: p.edad,
-          genero: p.genero,
-          primer_apellido: p.primer_apellido,
-          segundo_apellido: p.segundo_apellido,
-          nacionalidad: p.nacionalidad,
-          estudia: p.estudia ? 'Sí' : 'No',
-          trabaja: p.trabaja ? 'Sí' : 'No',
-          perdida_trabajo: p.perdida_trabajo ? 'Sí' : 'No',
-          rubro: p.rubro,
-          discapacidad: p.discapacidad ? 'Sí' : 'No',
-          dependencia: p.dependencia ? 'Sí' : 'No',
-        }), {
-          header: true,
-          columns: [
-            'nombre', 'rut', 'fecha_ingreso', 'fecha_salida', 'edad', 'genero', 
-            'primer_apellido', 'segundo_apellido', 'nacionalidad', 'estudia', 
-            'trabaja', 'perdida_trabajo', 'rubro', 'discapacidad', 'dependencia'
-          ], 
-        }));
+      ? Papa.unparse(
+          groups.map(g => ({
+            nombre_completo: g.nombre_completo,
+            rut: g.rut,
+            integrantes_grupo: g.integrantes_grupo,
+          })),
+          {
+            header: true,
+            columns: ['nombre_completo', 'rut', 'integrantes_grupo'],
+          },
+        )
+      : Papa.unparse(
+          people.map(p => ({
+            nombre: p.nombre,
+            rut: p.rut,
+            fecha_ingreso: p.fecha_ingreso,
+            fecha_salida: p.fecha_salida,
+            edad: p.edad,
+            genero: p.genero,
+            primer_apellido: p.primer_apellido,
+            segundo_apellido: p.segundo_apellido,
+            nacionalidad: p.nacionalidad,
+            estudia: p.estudia ? 'Sí' : 'No',
+            trabaja: p.trabaja ? 'Sí' : 'No',
+            perdida_trabajo: p.perdida_trabajo ? 'Sí' : 'No',
+            rubro: p.rubro,
+            discapacidad: p.discapacidad ? 'Sí' : 'No',
+            dependencia: p.dependencia ? 'Sí' : 'No',
+          })),
+          {
+            header: true,
+            columns: [
+              'nombre',
+              'rut',
+              'fecha_ingreso',
+              'fecha_salida',
+              'edad',
+              'genero',
+              'primer_apellido',
+              'segundo_apellido',
+              'nacionalidad',
+              'estudia',
+              'trabaja',
+              'perdida_trabajo',
+              'rubro',
+              'discapacidad',
+              'dependencia',
+            ],
+          },
+        );
 
-    // Aquí nos aseguramos de que csv sea una cadena
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-
-    // Usamos el archivo CSV generado para descargarlo
     saveAs(blob, `Listado_${showFamilies ? 'Familias' : 'Personas'}_${centerId}.csv`);
   };
 
@@ -198,71 +195,74 @@ const CenterResidentsPage: React.FC = () => {
 
 
   const fetchCenterCapacity = async (centerId: string) => {
-    const response = await fetch(`http://localhost:4000/api/centers/${centerId}/capacity`);
-    const data = await response.json();
+  try {
+    const { data } = await api.get(`/centers/${centerId}/capacity`);
     setCenterCapacity(data.capacity);
     setCurrentCapacity(data.current_capacity);
     setAvailableCapacity(data.available_capacity);
-  };
+  } catch (err: any) {
+    console.error("Error al obtener capacidad del centro:", err);
+    alert(err?.response?.data?.message || "No se pudo cargar la capacidad del centro.");
+  }
+};
 
   const fetchResidents = async () => {
-    if (!centerId) return;
-    try {
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/residents`);
-      if (!response.ok) throw new Error('Error al obtener los residentes del centro');
-      const data = await response.json();
-      setGroups(data);
-    } catch (err) {
-      console.error('Error cargando residentes:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  if (!centerId) return;
+  try {
+    const { data } = await api.get(`/centers/${centerId}/residents`);
+    setGroups(data); // asegúrate que `data` ya tenga el shape esperado
+  } catch (err: any) {
+    console.error("Error cargando residentes:", err);
+    setError(err?.response?.data?.message || err?.message || "Error desconocido");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const fetchPeople = async () => {
-    if (!centerId) return;
-    try {
-      const { nombre, rut, fechaIngreso, fechaSalida, edad, genero } = filters;
-      const params = new URLSearchParams({
-        nombre: nombre,
-        rut: rut,
-        fechaIngreso: fechaIngreso,
-        fechaSalida: fechaSalida,
-        edad: edad,
-        genero: genero,
-      }).toString();
+  if (!centerId) return;
+  try {
+    const { nombre, rut, fechaIngreso, fechaSalida, edad, genero } = filters;
 
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/people?${params}`);
-      if (!response.ok) throw new Error('Error al obtener las personas del centro');
-      const data = await response.json();
-      setPeople(data);
-    } catch (err) {
-      console.error('Error cargando personas:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    }
-  };
+    const { data } = await api.get(`/centers/${centerId}/people`, {
+      params: {
+        nombre,
+        rut,
+        fechaIngreso,
+        fechaSalida,
+        edad,
+        genero,
+      },
+    });
+
+    setPeople(data);
+  } catch (err: any) {
+    console.error("Error cargando personas:", err);
+    setError(err?.response?.data?.message || err?.message || "Error desconocido");
+  }
+};
 
   const fetchActiveCenters = async () => {
-    try {
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/active-centers`);
-      if (!response.ok) throw new Error('No se pudieron cargar los centros activos');
-      const data = await response.json();
-      setActiveCenters(data);
-    } catch (error) {
-      console.error('Error al obtener centros activos:', error);
-    }
-  };
+  try {
+    const { data } = await api.get(`/centers/${centerId}/active-centers`);
+    setActiveCenters(data);
+  } catch (error: any) {
+    console.error("Error al obtener centros activos:", error);
+    alert(error?.response?.data?.message || "No se pudieron cargar los centros activos");
+  }
+};
 
   useEffect(() => {
     if (centerId) {
       fetchCenterCapacity(centerId);
     }
     fetchResidents();
-    fetchPeople(); // Llamada a la API de personas
+    fetchPeople();
     fetchActiveCenters();
-  }, [centerId, filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centerId, JSON.stringify(filters)]); // ✅ evita loops y re-render innecesario
 
+  // ---------- EXIT MODAL ----------
   const handleOpenExitModal = (resident: ResidentGroup) => {
     setResidentToExit(resident);
     setIsExitModalOpen(true);
@@ -274,42 +274,40 @@ const CenterResidentsPage: React.FC = () => {
     setExitDate('');
     setDestinationActivationId('');
     fetchResidents();
-    fetchCenterCapacity(centerId as string);
+    if (centerId) fetchCenterCapacity(centerId);
   };
 
   const handleExitSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!residentToExit || !residentToExit.family_id || !exitReason || !exitDate || (exitReason === 'traslado' && !destinationActivationId)) {
+    if (
+      !residentToExit ||
+      !residentToExit.family_id ||
+      !exitReason ||
+      !exitDate ||
+      (exitReason === 'traslado' && !destinationActivationId)
+    ) {
       alert('Debe completar todos los campos necesarios');
       return;
     }
 
     try {
-      const url = `http://localhost:4000/api/family/${residentToExit.family_id}/depart`;
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          departure_reason: exitReason,
-          destination_activation_id: exitReason === 'traslado' ? destinationActivationId : null,
-        }),
+      await api.patch(`/family/${residentToExit.family_id}/depart`, {
+        departure_reason: exitReason,
+        destination_activation_id: exitReason === 'traslado' ? destinationActivationId : null,
+        departure_date: exitDate, 
       });
-
-      if (!response.ok) throw new Error('Error al registrar la salida');
 
       alert('Salida registrada con éxito');
       handleCloseExitModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error registrando la salida:', err);
-      alert(`Error: ${(err as Error).message}`);
+      alert(err?.response?.data?.message || `Error: ${err.message}`);
     }
   };
 
+  // ---------- FILTERS ----------
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFilters({
-      ...filters,
-      [e.target.name]: e.target.value,
-    });
+    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const filteredPeople = people.filter(person => {
@@ -323,31 +321,48 @@ const CenterResidentsPage: React.FC = () => {
     );
   });
 
+  // ---------- RENDER ----------
+  if (isLoading) return <div className="residents-container">Cargando...</div>;
+
   return (
     <div className="residents-container">
       <div className="residents-header">
-        <button onClick={() => navigate(-1)} className="back-button">← Volver</button>
+        <button onClick={() => navigate(-1)} className="back-button">
+          ← Volver
+        </button>
         <h2>Familias/Personas Albergadas - Centro {centerId}</h2>
       </div>
 
       <div className="capacity-info">
-        <p><strong>Capacidad Total:</strong> {centerCapacity}</p>
-        <p><strong>Ocupado:</strong> {currentCapacity}</p>
-        <p><strong>Disponible:</strong> {availableCapacity}</p>
+        <p>
+          <strong>Capacidad Total:</strong> {centerCapacity}
+        </p>
+        <p>
+          <strong>Ocupado:</strong> {currentCapacity}
+        </p>
+        <p>
+          <strong>Disponible:</strong> {availableCapacity}
+        </p>
       </div>
 
       <div className="export-buttons" style={{ marginBottom: '1rem' }}>
-        <button onClick={exportToPDF} className="export-btn">Exportar a PDF</button>
-        <button onClick={exportToCSV} className="export-btn">Exportar a Excel</button>
+        <button onClick={exportToPDF} className="export-btn">
+          Exportar a PDF
+        </button>
+        <button onClick={exportToCSV} className="export-btn">
+          Exportar a Excel
+        </button>
       </div>
 
-      {/* Botón para ver listado de familias y personas */}
       <div className="navigate-button">
-        <button onClick={() => setShowFamilies(true)} className="navigate-btn">Ver Listado de Familias</button>
-        <button onClick={() => setShowFamilies(false)} className="navigate-btn">Ver Listado de Personas</button>
+        <button onClick={() => setShowFamilies(true)} className="navigate-btn">
+          Ver Listado de Familias
+        </button>
+        <button onClick={() => setShowFamilies(false)} className="navigate-btn">
+          Ver Listado de Personas
+        </button>
       </div>
 
-      {/* Mostrar el listado de familias */}
       {showFamilies ? (
         <div>
           {groups.length === 0 ? (
@@ -369,7 +384,9 @@ const CenterResidentsPage: React.FC = () => {
                     <td>{resident.rut}</td>
                     <td>{resident.integrantes_grupo}</td>
                     <td>
-                      <button onClick={() => handleOpenExitModal(resident)} className="action-btn">Registrar Salida</button>
+                      <button onClick={() => handleOpenExitModal(resident)} className="action-btn">
+                        Registrar Salida
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -379,7 +396,6 @@ const CenterResidentsPage: React.FC = () => {
         </div>
       ) : (
         <div>
-          {/* Filtros para listado de personas */}
           <div className="person-filters">
             <h3>Filtrar</h3>
             <div>
@@ -408,7 +424,6 @@ const CenterResidentsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Mostrar el listado de personas */}
           {filteredPeople.length === 0 ? (
             <p>No hay personas registradas en este centro.</p>
           ) : (
@@ -458,7 +473,6 @@ const CenterResidentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de salida */}
       {isExitModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -499,8 +513,12 @@ const CenterResidentsPage: React.FC = () => {
               )}
 
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={handleCloseExitModal}>Cancelar</button>
-                <button type="submit" className="btn-primary">Registrar Salida</button>
+                <button type="button" className="btn-secondary" onClick={handleCloseExitModal}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary">
+                  Registrar Salida
+                </button>
               </div>
             </form>
           </div>
