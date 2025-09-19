@@ -1,142 +1,145 @@
 // src/routes/fibeRoutes.ts
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
-
-import { createPersonDB } from "./personsRoutes";
-import { createFamilyGroupFromHouseholdDB } from "./familyRoutes";
-import { createFamilyMemberDB, hasActiveMembershipByRutInActivationDB, findActiveHeadFamilyInActivationDB } from "./familyMembersRoutes";
-
-import type { FormData } from "../types/fibe";
 import type { Db } from "../types/db";
+import type { FormData } from "../types/fibe";
+import { FibePersonData, PersonCreate, Gender } from "../types/person";
+
+import { createPersonDB } from "../services/personService";
+import { createFamilyGroupInDB } from "../services/familyService";
+import { createFamilyMemberDB, hasActiveMembershipByRutInActivationDB, findActiveHeadFamilyInActivationDB } from "../services/familyMemberService";
 
 const router = Router();
 
-// ---------- F X ' S   D E   A P O Y O ----------
-/** ¿Existe la activación y está vigente? */
-export async function assertActivationOpenDB(db: Db, activation_id: number): Promise<void> {
-  const { rows } = await db.query(
-    `SELECT 1 FROM CentersActivations WHERE activation_id = $1 AND ended_at IS NULL`,
-    [activation_id]
-  );
-  if (!rows.length) {
-    const err: any = new Error("Activation not found or closed");
-    err.http = 400;
-    throw err;
-  }
+// =================================================================
+// 1. SECCIÓN DE UTILIDADES (Helpers & DB Functions)
+// =================================================================
+
+async function assertActivationIsOpen(db: Db, activation_id: number): Promise<void> {
+    const { rowCount } = await db.query(
+        `SELECT 1 FROM CentersActivations WHERE activation_id = $1 AND ended_at IS NULL`,
+        [activation_id]
+    );
+    if (rowCount === 0) {
+        throw { status: 400, message: "La activación del centro no es válida o ha sido cerrada." };
+    }
 }
 
-// ---------- F I B E ----------
+/**
+ * NUEVO: Helper para transformar los datos del formulario FIBE a un objeto
+ * limpio y seguro para ser insertado en la base de datos.
+ * Esto soluciona los errores de tipos incompatibles.
+ * @param data Los datos de la persona desde el formulario.
+ * @returns Un objeto que cumple con el tipo PersonCreate.
+ */
+function toPersonCreate(data: FibePersonData): PersonCreate {
+    return {
+        rut: data.rut,
+        nombre: data.nombre,
+        primer_apellido: data.primer_apellido,
+        segundo_apellido: data.segundo_apellido || null,
+        // Si genero es "", lo convertimos a null.
+        genero: data.genero === "" ? null : data.genero as Gender, 
+        // Si edad es "", lo convertimos a null.
+        edad: data.edad === "" ? null : data.edad as number,
+    };
+}
 
-// POST /fibe/registration/:id (operación atómica)
-export const createFibeSubmissionHandler: RequestHandler<
-  any,
-  {
-    family_id: number;
-    jefe_person_id: number;
-    jefe_member_id: number;
-    members: Array<{ index: number; person_id: number; member_id: number }>;
-  } | { message: string; detail?: unknown },
-  { activation_id: number; data: FormData }
-> = async (req, res, next): Promise<void> => {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
+// =================================================================
+// 2. SECCIÓN DE CONTROLADORES (Logic Handlers)
+// =================================================================
 
-    const { activation_id, data } = req.body;
-    const { hogar, personas } = data;
+const processFibeRegistration: RequestHandler = async (req, res) => {
+    const { activation_id, data } = req.body as { activation_id: number; data: FormData };
+    const { hogar, personas } = data || {};
 
-    // sanity check
-    if (!Array.isArray(personas) || personas.length < 1) {
-      await client.query("ROLLBACK");
-      res.status(400).json({ message: "No persons provided" });
-      return; // ← no devolvemos Response
-    }
-
-    // Activación abierta
-    await assertActivationOpenDB(client, activation_id);
-
-    // 1) Jefe de hogar (posición 0)
-    const jefe = personas[0];
-    const jefe_person_id = await createPersonDB(client, jefe);
-
-    // ¿ya es jefe activo en esta activación?
-    const headHit = await findActiveHeadFamilyInActivationDB(client, activation_id, jefe_person_id);
-    if (headHit) {
-      await client.query("ROLLBACK");
-      res.status(409).json({
-        message: "Head of household already registered for this activation",
-        detail: { family_id: headHit.family_id, rut: jefe.rut }
-      });
-      return;
-    }
-
-    // ¿está ya como miembro activo en esta activación? (valido por RUT string)
-    const jefeMemberHit = await hasActiveMembershipByRutInActivationDB(client, activation_id, jefe.rut);
-    if (jefeMemberHit) {
-      await client.query("ROLLBACK");
-      res.status(409).json({
-        message: "Head person is already member of another family in this activation",
-        detail: { family_id: jefeMemberHit.family_id, rut: jefe.rut }
-      });
-      return;
-    }
-
-    // 2) FamilyGroup con jefe_hogar_person_id
-    const family_id = await createFamilyGroupFromHouseholdDB(client, {
-      activation_id,
-      jefe_hogar_person_id: jefe_person_id,
-      data: hogar,
-    });
-
-    // 3) Miembro: jefe en FamilyGroupMembers
-    const jefe_member_id = await createFamilyMemberDB(client, {
-      family_id,
-      person_id: jefe_person_id,
-      parentesco: jefe.parentesco, // "Jefe de hogar"
-    });
-
-    // 4) Resto de personas
-    const members: Array<{ index: number; person_id: number; member_id: number }> = [];
-    for (let i = 1; i < personas.length; i++) {
-      const p = personas[i];
-
-      // validar por RUT antes de crear
-      const hit = await hasActiveMembershipByRutInActivationDB(client, activation_id, p.rut);
-      if (hit) {
-        await client.query("ROLLBACK");
-        res.status(409).json({
-          message: "Person already registered in another family for this activation",
-          detail: { index: i, rut: p.rut, family_id: hit.family_id }
-        });
+    if (!activation_id || !Array.isArray(personas) || personas.length < 1) {
+        res.status(400).json({ error: "Se requieren 'activation_id' y al menos una persona en el array 'personas'." });
         return;
-      }
-
-      const person_id = await createPersonDB(client, p);
-      const member_id = await createFamilyMemberDB(client, {
-        family_id,
-        person_id,
-        parentesco: p.parentesco,
-      });
-      members.push({ index: i, person_id, member_id });
     }
 
-    await client.query("COMMIT");
-    res.status(201).json({ family_id, jefe_person_id, jefe_member_id, members });
-    return;
-  } catch (e: any) {
-    await client.query("ROLLBACK");
-    if (e?.code === "23505") {
-      // UNIQUE violations
-      res.status(409).json({ message: "Possibly rut unique constraint violation", detail: e.detail });
-      return;
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        
+        await assertActivationIsOpen(client, activation_id);
+
+        const jefeDeHogarData: FibePersonData = personas[0];
+        
+        const existingMembership = await hasActiveMembershipByRutInActivationDB(client, activation_id, jefeDeHogarData.rut);
+        if (existingMembership) {
+            throw { status: 409, message: "El jefe de hogar ya es miembro de otra familia en esta activación.", detail: { rut: jefeDeHogarData.rut, family_id: existingMembership.family_id } };
+        }
+        
+        // CAMBIO: Usamos el helper de transformación antes de llamar al servicio.
+        const jefePersonId = await createPersonDB(client, toPersonCreate(jefeDeHogarData));
+        
+        const existingFamilyHead = await findActiveHeadFamilyInActivationDB(client, activation_id, jefePersonId);
+        if (existingFamilyHead) {
+            throw { status: 409, message: "Esta persona ya es jefe de otro hogar en esta activación.", detail: { rut: jefeDeHogarData.rut, family_id: existingFamilyHead.family_id } };
+        }
+
+        const familyId = await createFamilyGroupInDB(client, {
+            activation_id,
+            jefe_hogar_person_id: jefePersonId,
+            data: hogar,
+        });
+
+        const jefeMemberId = await createFamilyMemberDB(client, {
+            family_id: familyId,
+            person_id: jefePersonId,
+            parentesco: jefeDeHogarData.parentesco,
+        });
+
+        const createdMembers = [];
+        for (let i = 1; i < personas.length; i++) {
+            const memberData: FibePersonData = personas[i];
+            
+            const memberMembership = await hasActiveMembershipByRutInActivationDB(client, activation_id, memberData.rut);
+            if (memberMembership) {
+                throw { status: 409, message: `La persona con RUT ${memberData.rut} ya pertenece a otra familia.`, detail: { index: i, rut: memberData.rut, family_id: memberMembership.family_id } };
+            }
+            
+            // CAMBIO: Usamos el helper de transformación aquí también.
+            const personId = await createPersonDB(client, toPersonCreate(memberData));
+            
+            const memberId = await createFamilyMemberDB(client, {
+                family_id: familyId,
+                person_id: personId,
+                parentesco: memberData.parentesco,
+            });
+            createdMembers.push({ index: i, person_id: personId, member_id: memberId });
+        }
+
+        await client.query("COMMIT");
+        res.status(201).json({
+            message: "Registro FIBE procesado exitosamente.",
+            family_id: familyId,
+            jefe_person_id: jefePersonId,
+            jefe_member_id: jefeMemberId,
+            members: createdMembers
+        });
+
+    } catch (error: any) {
+        await client.query("ROLLBACK");
+        console.error("Error en processFibeRegistration:", error);
+        
+        if (error.status) {
+            res.status(error.status).json({ error: error.message, detail: error.detail });
+        } else if (error.code === '23505') {
+            res.status(409).json({ error: "Error de duplicidad. Posiblemente un RUT ya existe.", detail: error.detail });
+        } else {
+            res.status(500).json({ error: "Error interno del servidor durante el registro FIBE." });
+        }
+    } finally {
+        client.release();
     }
-    next(e); 
-    return;
-  } finally {
-    client.release();
-  }
 };
 
-router.post("/registration", createFibeSubmissionHandler);
+// =================================================================
+// 3. SECCIÓN DE RUTAS (Endpoints)
+// =================================================================
+
+router.post("/register", processFibeRegistration);
 
 export default router;
