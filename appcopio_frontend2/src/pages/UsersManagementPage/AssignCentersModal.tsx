@@ -58,6 +58,7 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
   const loadData = React.useCallback(async () => {
     controllerRef.current?.abort();
     const controller = new AbortController();
+    const signal = controller.signal;
     controllerRef.current = controller;
 
     setIsLoading(true);
@@ -151,25 +152,42 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
 
   const doPersist = React.useCallback(async () => {
     setIsLoading(true);
+    setError(null);
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    
     try {
       const toAdd = [...selectedCenters].filter((id) => !initialAssignments.has(id));
       const toRemove = [...initialAssignments].filter((id) => !selectedCenters.has(id));
 
-      await Promise.all([
-        ...toAdd.map((center_id) =>
-          assignCenterToUser(user.user_id, center_id, user.role_name ?? "")
-        ),
-        ...toRemove.map((center_id) => removeCenterFromUser(user.user_id, center_id)),
-      ]);
+      // Corrección: Crea un array de promesas, pasando la signal a cada una.
+      const addPromises = toAdd.map((center_id) =>
+        // Asegúrate de que esta función está definida para recibir la signal.
+        assignCenterToUser({ user_id: user.user_id, center_id, role: user.role_name ?? "" }, signal)
+      );
+      const removePromises = toRemove.map((center_id) =>
+        removeCenterFromUser({ user_id: user.user_id, center_id }, signal)
+      );
 
+      await Promise.all([...addPromises, ...removePromises]);
       onSave(); // refresca lista externa
       onClose();
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.log('Request was aborted.');
+        return;
+      }
       console.error(err);
-      setError("Error al guardar las asignaciones.");
+      setError(err?.message || "Error al guardar las asignaciones.");
     } finally {
       setIsLoading(false);
     }
+
+    return () => {
+      controller.abort();
+    };
+
   }, [selectedCenters, initialAssignments, user.user_id, user.role_name, onSave, onClose]);
 
   const handleSaveChanges = async () => {
