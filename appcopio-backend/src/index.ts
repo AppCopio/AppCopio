@@ -30,7 +30,6 @@ app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(cookieParser());
-app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRoutes);
 
 /** Orígenes permitidos */
 const allowedOrigins = [
@@ -54,6 +53,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 /** Rate limit solo en auth */
 app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRoutes);

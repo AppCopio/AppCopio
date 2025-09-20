@@ -76,7 +76,7 @@ export default function AssignResponsibleDialog({
   const doAssign = async () => {
     try {
       setSaving(true);
-      await assignCenterToUser(user!.user_id, centerId, role!);
+      await assignCenterToUser({ user_id: user.user_id, center_id: centerId, role: user.role_name ?? "" })
       onSuccess?.();     // el contenedor decide si refresca
       onClose();         // cerrar modal
     } catch (e: any) {

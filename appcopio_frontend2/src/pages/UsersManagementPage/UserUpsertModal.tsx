@@ -250,14 +250,14 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
             const toRemove = currentAssigned.filter((id) => id !== centerId);
             const toAdd = currentAssigned.includes(centerId) ? [] : [centerId];
             await Promise.all([
-              ...toRemove.map((id) => removeCenterFromUser(user.user_id, id)),
-              ...toAdd.map((id) => assignCenterToUser(user.user_id, centerId, roleNameForAssignment)),
+              ...toRemove.map((id) => removeCenterFromUser({ user_id: user.user_id, center_id: id})),
+              ...toAdd.map((id) => assignCenterToUser({ user_id: user.user_id, center_id: id, role: roleNameForAssignment})),
             ]);
           } else if (currentAssigned.length > 0) {
-            await Promise.all(currentAssigned.map((id) => removeCenterFromUser(user.user_id, id)));
+            await Promise.all(currentAssigned.map((id) => removeCenterFromUser({ user_id: user.user_id, center_id: id})));
           }
         } else if (currentAssigned.length > 0) {
-          await Promise.all(currentAssigned.map((id) => removeCenterFromUser(user.user_id, id)));
+          await Promise.all(currentAssigned.map((id) => removeCenterFromUser({ user_id: user.user_id, center_id: id})));
         }
       } else {
         const payload: UserCreateDTO = {
@@ -274,7 +274,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
         };
         const created = await createUser(payload);
         if (needsCenter && centerId) {
-          await assignCenterToUser(created.user_id, centerId, roleNameForAssignment);
+          await assignCenterToUser({ user_id: created.user_id, center_id: centerId, role: roleNameForAssignment});
         }
       }
 

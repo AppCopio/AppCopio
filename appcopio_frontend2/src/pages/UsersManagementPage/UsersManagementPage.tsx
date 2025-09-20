@@ -34,7 +34,7 @@ import {
   listUsers, updateUser, deleteUser
 } from '@/services/users.service';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
-import AssignCentersModal from "@/pages/UsersManagementPage/AssignCentersModal";
+import AssignCentersModal from "./AssignCentersModal";
 import UserUpsertModal from './UserUpsertModal';
 
 export default function UsersManagementPage() {
