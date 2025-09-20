@@ -6,7 +6,7 @@ import StepInmueble from "@/pages/CreateCenterPage/steps/StepInmueble";
 import StepEvaluacion from "@/pages/CreateCenterPage/steps/StepEvaluacion";
 import { CenterData, initialCenterData } from "@/types/center";
 import { useNavigate, useParams } from "react-router-dom";
-import { getCenter, updateCenter, deleteCenter } from "@/services/centers.service";
+import { getOneCenter, updateCenter, deleteCenter } from "@/services/centers.service";
 import { useAuth } from "@/contexts/AuthContext";
 import deepEqual from "fast-deep-equal";
 import "./CenterEditPage.css";
