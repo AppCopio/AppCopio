@@ -23,7 +23,7 @@ const CenterLayout: React.FC = () => {
       setLoading(true);
       setErr(null);
       try {
-        const data = await getOneCenter(centerId, controller.signal);
+        const data = await getOneCenter(centerId); // ! Retorna la data si no se envía el controller
         // Aseguramos shape mínimo (id como string para rutas)
         setCenter({
           center_id: String(data.center_id),
