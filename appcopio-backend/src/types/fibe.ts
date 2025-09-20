@@ -1,9 +1,9 @@
-import type { FibePersonData, Person } from "./person";
+import type { Person } from "./person";
 import type { HouseholdData } from "./family";
 
 export type FormData = {
   hogar: HouseholdData;
-  personas: FibePersonData[];
+  personas: Person[];
 };
 
 export const NEEDS_OPTIONS = [

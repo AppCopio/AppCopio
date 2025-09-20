@@ -1,121 +1,167 @@
-// src/routes/personsRoutes.ts
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
-import { PersonCreate } from '../types/person';
-import { getPersons, getPersonById, createPersonDB, updatePersonById } from '../services/personService';
+
+import type { Person } from '../types/person';
 
 const router = Router();
 
-// =================================================================
-// 1. SECCIÓN DE CONTROLADORES (Logic Handlers)
-// =================================================================
+/* * * * * * * * * *   R O U T E S  * * * * * * * * * * */
 
-/**
- * @controller GET /api/persons
- * @description Obtiene una lista de personas.
- */
-const listPersons: RequestHandler = async (req, res) => {
-    try {
-        const persons = await getPersons(pool);
-        res.json(persons);
-    } catch (error) {
-        console.error("Error en listPersons:", error);
-        res.status(500).json({ error: "Error interno del servidor." });
-    }
+// ---------- GET /persons  (list) ----------
+// ? Debería llevar el LIMIT 100
+export const listPersonsHandler: RequestHandler = async (_req, res) => {
+  // Listado simple (ajusta columnas si quieres)
+  const { rows } = await pool.query(`
+    SELECT
+      person_id, rut, nombre, primer_apellido, segundo_apellido,
+      nacionalidad, genero, edad, estudia, trabaja,
+      perdida_trabajo, rubro, discapacidad, dependencia,
+      created_at, updated_at
+    FROM Persons
+    ORDER BY person_id DESC
+    LIMIT 100
+  `);
+  res.json(rows);
 };
 
-/**
- * @controller GET /api/persons/:id
- * @description Obtiene una persona por su ID.
- */
-const getPerson: RequestHandler = async (req, res) => {
-    const personId = parseInt(req.params.id, 10);
-    if (isNaN(personId)) {
-        res.status(400).json({ error: "El ID debe ser un número válido." });
-        return;
-    }
-
-    try {
-        const person = await getPersonById(pool, personId);
-        if (!person) {
-            res.status(404).json({ error: 'Persona no encontrada.' });
-        } else {
-            res.json(person);
-        }
-    } catch (error) {
-        console.error(`Error en getPerson (id: ${personId}):`, error);
-        res.status(500).json({ error: "Error interno del servidor." });
-    }
+// ---------- GET /persons/:id  (show) ----------
+export const getPersonHandler: RequestHandler<{ id: string }> = async (req, res) => {
+  const id = Number(req.params.id);
+  const { rows } = await pool.query(
+    `
+    SELECT
+      person_id, rut, nombre, primer_apellido, segundo_apellido,
+      nacionalidad, genero, edad, estudia, trabaja,
+      perdida_trabajo, rubro, discapacidad, dependencia,
+      created_at, updated_at
+    FROM Persons
+    WHERE person_id = $1
+    `,
+    [id]
+  );
+  if (rows.length === 0){
+    res.status(404).json({ message: 'Person not found' });
+    return
+  } 
+  res.json(rows[0]);
+  return;
 };
 
-/**
- * @controller POST /api/persons
- * @description Crea una nueva persona.
- */
-const createPerson: RequestHandler = async (req, res) => {
-    // El cuerpo de la petición debe cumplir con la interfaz PersonCreate
-    const personData: PersonCreate = req.body;
-
-    // Aquí irían validaciones más robustas de los datos (ej: con Zod o Joi)
-    if (!personData.rut || !personData.nombre || !personData.primer_apellido) {
-        res.status(400).json({ error: "Los campos 'rut', 'nombre' y 'primer_apellido' son requeridos." });
-        return;
-    }
-
-    try {
-        const personId = await createPersonDB(pool, personData);
-        res.status(201).json({ person_id: personId });
-    } catch (e: any) {
-        if (e?.code === '23505') { // unique_violation (RUT duplicado)
-            res.status(409).json({ error: 'El RUT ya existe.' });
-        } else {
-            console.error("Error en createPerson:", e);
-            res.status(500).json({ error: "Error interno del servidor." });
-        }
-    }
+// ---------- POST /persons  (create -> retorna ID) ----------
+export const createPersonHandler: RequestHandler<any, { person_id: number } | { message: string }, Person> = async (req, res, next) => {
+  try {
+    const person_id = await createPerson(req.body);
+    res.status(201).json({ person_id });
+  } catch (e: any) {
+    // Único ejemplo: rut duplicado
+    if (e?.code === '23505'){
+      res.status(409).json({ message: 'RUT already exists' });
+      return;
+    } 
+    next(e);
+  }
 };
 
-/**
- * @controller PUT /api/persons/:id
- * @description Actualiza una persona existente.
- */
-const updatePerson: RequestHandler = async (req, res) => {
-    const personId = parseInt(req.params.id, 10);
-    if (isNaN(personId)) {
-        res.status(400).json({ error: "El ID debe ser un número válido." });
-        return;
-    }
 
-    const personData: PersonCreate = req.body;
-    if (!personData.rut || !personData.nombre || !personData.primer_apellido) {
-        res.status(400).json({ error: "Los campos 'rut', 'nombre' y 'primer_apellido' son requeridos." });
-        return;
-    }
+export async function createPerson(p: Person): Promise<number> {
+  return createPersonDB(pool, p);
+}
 
-    try {
-        const updatedPerson = await updatePersonById(pool, personId, personData);
-        if (!updatedPerson) {
-            res.status(404).json({ error: "Persona no encontrada." });
-        } else {
-            res.json(updatedPerson);
-        }
-    } catch (e: any) {
-        if (e?.code === '23505') {
-            res.status(409).json({ error: 'El RUT ya existe y pertenece a otra persona.' });
-        } else {
-            console.error(`Error en updatePerson (id: ${personId}):`, e);
-            res.status(500).json({ error: "Error interno del servidor." });
-        }
-    }
+// Crea la persona y retorna el ID generado -> transacciones complejas
+export type Db = { query: (q: string, p?: any[]) => Promise<{ rows: any[]; rowCount: number }> };
+
+export async function createPersonDB(db: Db, p: Person): Promise<number> {
+  const sql = `
+    INSERT INTO Persons (
+      rut, nombre, primer_apellido, segundo_apellido,
+      nacionalidad, genero, edad, estudia, trabaja,
+      perdida_trabajo, rubro, discapacidad, dependencia
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    RETURNING person_id
+  `;
+  const params = [
+    p.rut,
+    p.nombre,
+    p.primer_apellido,
+    p.segundo_apellido,
+    p.nacionalidad,
+    p.genero,
+    p.edad as number,
+    p.estudia,
+    p.trabaja,
+    p.perdida_trabajo,
+    p.rubro,
+    p.discapacidad,
+    p.dependencia,
+  ];
+  const { rows } = await db.query(sql, params);
+  return rows[0].person_id as number;
+}
+
+// ---------- PUT /persons/:id  (replace) ----------
+export const replacePersonHandler: RequestHandler<{ id: string }, { person_id: number } | { message: string }, Person> = async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const p = req.body;
+
+    const sql = `
+      UPDATE Persons SET
+        rut = $1,
+        nombre = $2,
+        primer_apellido = $3,
+        segundo_apellido = $4,
+        nacionalidad = $5,
+        genero = $6,
+        edad = $7,
+        estudia = $8,
+        trabaja = $9,
+        perdida_trabajo = $10,
+        rubro = $11,
+        discapacidad = $12,
+        dependencia = $13,
+        updated_at = NOW()
+      WHERE person_id = $14
+      RETURNING person_id
+    `;
+    const params = [
+      p.rut,
+      p.nombre,
+      p.primer_apellido,
+      p.segundo_apellido,
+      p.nacionalidad,
+      p.genero,
+      p.edad as number, // asumimos normalizado
+      p.estudia,
+      p.trabaja,
+      p.perdida_trabajo,
+      p.rubro,
+      p.discapacidad,
+      p.dependencia,
+      id,
+    ];
+
+    const { rows } = await pool.query<{ person_id: number }>(sql, params);
+    if (rows.length === 0){
+      res.status(404).json({ message: 'Person not found' });
+      return
+    } 
+    res.json({ person_id: rows[0].person_id });
+    return;
+  } catch (e: any) {
+    if (e?.code === '23505'){
+      res.status(409).json({ message: 'RUT already exists' });
+      return;
+    } 
+    next(e);
+  }
 };
 
-// =================================================================
-// 2. SECCIÓN DE RUTAS (Endpoints)
-// =================================================================
 
-router.get('/', listPersons);
-router.post('/', createPerson);
-router.get('/:id', getPerson);
-router.put('/:id', updatePerson);
+// ---------- Enrutar ----------
+router.get('/', listPersonsHandler);
+router.get('/:id', getPersonHandler);
+router.post('/', createPersonHandler);
+router.put('/:id', replacePersonHandler);
 
 export default router;

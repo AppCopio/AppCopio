@@ -56,9 +56,3 @@ export interface UserActivationResponse {
 export interface UserPasswordResponse {
   ok: true;
 }
-
-//tuve que agregar esto para el service de usuarios, segun yo no afecta pero cualquier wea ta x eso juju
-export interface Role {
-  role_id: number;
-  role_name: string;
-}

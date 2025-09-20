@@ -1,137 +1,233 @@
 // src/routes/userRoutes.ts
 import { Router, RequestHandler } from "express";
+import bcrypt from "bcryptjs";
 import pool from "../config/db";
-import { getUsers, getUserWithAssignments, createUser, updateUserById, deleteUserById, getActiveUsersByRole } from '../services/userService';
-import { UserCreate, UserUpdate } from "../services/userService";
 
 const router = Router();
 
-// =================================================================
-// 1. SECCIÓN DE CONTROLADORES (Logic Handlers)
-// =================================================================
-
-const listUsers: RequestHandler = async (req, res) => {
-    try {
-        const { search, role_id, active, page = "1", pageSize = "20" } = req.query;
-        const result = await getUsers(pool, {
-            search: search as string,
-            role_id: role_id ? Number(role_id) : undefined,
-            active: active ? active === "1" : undefined,
-            page: Number(page),
-            pageSize: Number(pageSize)
-        });
-        res.json(result);
-    } catch (err) {
-        console.error("Error en listUsers:", err);
-        res.status(500).json({ error: "Error interno del servidor." });
-    }
+type ListUsersQuery = {
+  search?: string;
+  role_id?: string;
+  active?: "1" | "0";
+  page?: string;
+  pageSize?: string;
 };
 
-const getUser: RequestHandler = async (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    if (isNaN(userId)) {
-        res.status(400).json({ error: "El ID debe ser un número válido." });
-        return;
-    }
-    try {
-        const user = await getUserWithAssignments(pool, userId);
-        if (!user) {
-            res.status(404).json({ error: "Usuario no encontrado." });
-        } else {
-            res.json(user);
-        }
-    } catch (err) {
-        console.error(`Error en getUser (id: ${userId}):`, err);
-        res.status(500).json({ error: "Error interno del servidor." });
-    }
+const addVal = (params: any[], v: any) => {
+  params.push(v);
+  return `$${params.length}`;
 };
 
-const createNewUser: RequestHandler = async (req, res) => {
-    const userData: UserCreate = req.body;
-    if (!userData.rut || !userData.username || !userData.password || !userData.email || !userData.role_id) {
-        res.status(400).json({ error: "Faltan campos obligatorios: rut, username, password, email, role_id." });
-        return;
-    }
-    try {
-        const newUser = await createUser(pool, userData);
-        res.status(201).json(newUser);
-    } catch (e: any) {
-        if (e?.code === "23505") {
-            res.status(409).json({ error: "El RUT, email o nombre de usuario ya existe." });
-        } else {
-            console.error("Error en createNewUser:", e);
-            res.status(500).json({ error: "Error interno del servidor." });
-        }
-    }
+// GET /api/users - Obtener y filtrar usuarios
+const listUsersHandler: RequestHandler<unknown, any, any, ListUsersQuery> = async (req, res) => {
+  const { search = "", role_id, active, page = "1", pageSize = "20" } = req.query;
+  const p: any[] = [];
+  const where: string[] = [];
+
+  if (search) {
+    const like = `%${search}%`;
+    where.push(`(u.rut ILIKE ${addVal(p, like)} OR u.nombre ILIKE ${addVal(p, like)} OR u.email ILIKE ${addVal(p, like)} OR u.username ILIKE ${addVal(p, like)})`);
+  }
+  if (role_id) {
+    where.push(`u.role_id = ${addVal(p, Number(role_id))}`);
+  }
+  if (active === "1" || active === "0") {
+    where.push(`u.is_active = ${addVal(p, active === "1")}`);
+  }
+
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const pageSz = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 20));
+  const offset = (pageNum - 1) * pageSz;
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+  const countSql = `SELECT COUNT(*)::int AS total FROM users u ${whereSql}`;
+  const listSql = `
+    SELECT
+      u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
+      u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
+      r.role_name
+    FROM users u
+    JOIN roles r ON r.role_id = u.role_id
+    ${whereSql}
+    ORDER BY u.nombre ASC
+    LIMIT ${pageSz} OFFSET ${offset}
+  `;
+
+  try {
+    const [countRs, listRs] = await Promise.all([
+      pool.query(countSql, p),
+      pool.query(listSql, p),
+    ]);
+    res.json({ users: listRs.rows, total: countRs.rows[0].total });
+  } catch (err) {
+    console.error("GET /users error:", err);
+    res.status(500).json({ error: "Error al listar usuarios" });
+  }
 };
 
-const updateUser: RequestHandler = async (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    if (isNaN(userId)) {
-        res.status(400).json({ error: "El ID debe ser un número válido." });
-        return;
+// GET /api/users/:id - Obtener un usuario y sus centros asignados
+const getUserByIdHandler: RequestHandler<{ id: string }> = async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    const userQuery = `
+        SELECT u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
+               u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
+               r.role_name
+        FROM users u
+        JOIN roles r ON r.role_id = u.role_id
+        WHERE u.user_id = $1`;
+    
+    const assignmentsQuery = `SELECT center_id FROM centerassignments WHERE user_id = $1 AND valid_to IS NULL`;
+    
+    const [userResult, assignmentsResult] = await Promise.all([
+        pool.query(userQuery, [id]),
+        pool.query(assignmentsQuery, [id])
+    ]);
+
+    if (userResult.rowCount === 0) {
+      res.status(404).json({ error: "Usuario no encontrado" });
+      return;
     }
-    try {
-        const updatedUser = await updateUserById(pool, userId, req.body as UserUpdate);
-        if (!updatedUser) {
-            res.status(404).json({ error: "Usuario no encontrado o no se proporcionaron campos para actualizar." });
-        } else {
-            res.json(updatedUser);
-        }
-    } catch (e: any) {
-        if (e?.code === "23505") {
-            res.status(409).json({ error: "El email o nombre de usuario ya existe." });
-        } else {
-            console.error(`Error en updateUser (id: ${userId}):`, e);
-            res.status(500).json({ error: "Error interno del servidor." });
-        }
-    }
+    
+    const user = userResult.rows[0];
+    const assignedCenters = assignmentsResult.rows.map(row => row.center_id);
+    res.json({ ...user, assignedCenters });
+  } catch (err) {
+    console.error("GET /users/:id error:", err);
+    res.status(500).json({ error: "Error al obtener usuario" });
+  }
 };
 
-const deleteUser: RequestHandler = async (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    if (isNaN(userId)) {
-        res.status(400).json({ error: "El ID debe ser un número válido." });
-        return;
+// POST /api/users - Crear un nuevo usuario (CORREGIDO)
+const createUserHandler: RequestHandler = async (req, res) => {
+  try {
+    const { rut, username, password, email, role_id, nombre, genero, celular, imagen_perfil, es_apoyo_admin = false, is_active = true } = req.body || {};
+    if (!rut || !username || !password || !email || !role_id) {
+      res.status(400).json({ error: "Faltan campos obligatorios" });
+      return;
     }
-    try {
-        const deletedCount = await deleteUserById(pool, userId);
-        if (deletedCount === 0) {
-            res.status(404).json({ error: "Usuario no encontrado." });
-        } else {
-            res.status(204).send();
-        }
-    } catch (e) {
-        console.error(`Error en deleteUser (id: ${userId}):`, e);
-        res.status(500).json({ error: "Error interno del servidor." });
+    const hash = await bcrypt.hash(password, 10);
+    const insertSql = `
+      INSERT INTO users
+        (rut, username, password_hash, email, role_id, nombre, genero, celular, imagen_perfil, is_active, es_apoyo_admin)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING user_id, rut, username, email, role_id, created_at, nombre, is_active, es_apoyo_admin
+    `;
+    const rs = await pool.query(insertSql, [rut, username, hash, email, Number(role_id), nombre, genero, celular, imagen_perfil, is_active, es_apoyo_admin]);
+    res.status(201).json(rs.rows[0]);
+  } catch (e: any) {
+    if (e?.code === "23505") {
+      res.status(409).json({ error: "RUT, email o username ya existe" });
+      return;
     }
+    console.error("POST /users error:", e);
+    res.status(500).json({ error: "Error al crear usuario" });
+  }
 };
 
-const listByRole: RequestHandler = async (req, res) => {
-    const roleId = parseInt(req.params.roleId, 10);
-    if (isNaN(roleId)) {
-        res.status(400).json({ error: "El ID del rol debe ser un número válido." });
-        return;
+// PUT /api/users/:id - Actualizar un usuario (CORREGIDO)
+const updateUserHandler: RequestHandler<{ id: string }> = async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    // Se elimina 'center_id'.
+    const { email, username, role_id, nombre, genero, celular, imagen_perfil, is_active, es_apoyo_admin } = req.body || {};
+    const fields: string[] = [];
+    const vals: any[] = [];
+    let idx = 1;
+    
+    if (email !== undefined) { fields.push(`email = $${idx++}`); vals.push(email); }
+    if (username !== undefined) { fields.push(`username = $${idx++}`); vals.push(username); }
+    if (role_id !== undefined) { fields.push(`role_id = $${idx++}`); vals.push(Number(role_id)); }
+    // Se elimina la lógica para 'center_id'.
+    if (nombre !== undefined) { fields.push(`nombre = $${idx++}`); vals.push(nombre); }
+    if (genero !== undefined) { fields.push(`genero = $${idx++}`); vals.push(genero); }
+    if (celular !== undefined) { fields.push(`celular = $${idx++}`); vals.push(celular); }
+    if (imagen_perfil !== undefined) { fields.push(`imagen_perfil = $${idx++}`); vals.push(imagen_perfil); }
+    if (is_active !== undefined) { fields.push(`is_active = $${idx++}`); vals.push(!!is_active); }
+    if (es_apoyo_admin !== undefined) { fields.push(`es_apoyo_admin = $${idx++}`); vals.push(!!es_apoyo_admin); }
+
+    if (!fields.length) {
+      res.status(400).json({ error: "Nada para actualizar" });
+      return;
     }
-    try {
-        const result = await getActiveUsersByRole(pool, roleId);
-        res.json(result);
-    } catch (e) {
-        console.error(`Error en listByRole (roleId: ${roleId}):`, e);
-        res.status(500).json({ error: "Error interno del servidor." });
+    const sql = `UPDATE users SET ${fields.join(", ")} WHERE user_id = $${idx} RETURNING *`;
+    vals.push(id);
+    const rs = await pool.query(sql, vals);
+    if (!rs.rowCount) {
+      res.status(404).json({ error: "Usuario no encontrado" });
+      return;
     }
+    res.json(rs.rows[0]);
+  } catch (e: any) {
+    if (e?.code === "23505") {
+      res.status(409).json({ error: "Email o username ya existe" });
+      return;
+    }
+    console.error("PUT /users/:id error:", e);
+    res.status(500).json({ error: "Error al actualizar usuario" });
+  }
+};
+
+// DELETE /api/users/:id - Eliminar un usuario
+const deleteUserHandler: RequestHandler<{ id: string }> = async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    const rs = await pool.query("DELETE FROM users WHERE user_id = $1", [id]);
+    if (!rs.rowCount) {
+      res.status(404).json({ error: "Usuario no encontrado" });
+      return;
+    }
+    res.status(204).send();
+  } catch (e) {
+    console.error("DELETE /users/:id error:", e);
+    res.status(500).json({ error: "Error al eliminar usuario" });
+  }
 };
 
 
-// =================================================================
-// 2. SECCIÓN DE RUTAS (Endpoints)
-// =================================================================
+// GET /api/users/active/role/:roleId
+const listActiveUsersByRoleWithAssignmentCount: RequestHandler = async (req, res) => {
+  const roleId = Number(req.params.roleId);
+  if (!Number.isInteger(roleId)) {
+    res.status(400).json({ error: "roleId inválido" });
+    return;
+  }
 
-router.get("/", listUsers);
-router.post("/", createNewUser);
-router.get("/active/by-role/:roleId", listByRole); // CAMBIO: Ruta más semántica
-router.get("/:id", getUser);
-router.put("/:id", updateUser);
-router.delete("/:id", deleteUser);
+  const sql = `
+    SELECT
+      u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
+      u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
+      r.role_name,
+      COALESCE(a.active_assignments, 0)::int AS active_assignments
+    FROM users u
+    JOIN roles r ON r.role_id = u.role_id
+    LEFT JOIN (
+      SELECT user_id, COUNT(*) AS active_assignments
+      FROM centerassignments
+      WHERE valid_to IS NULL
+      GROUP BY user_id
+    ) a ON a.user_id = u.user_id
+    WHERE u.is_active = TRUE
+      AND u.role_id = $1
+    ORDER BY u.nombre ASC;
+  `;
+
+  try {
+    const rs = await pool.query(sql, [roleId]);
+    res.json({ users: rs.rows, total: rs.rowCount });
+  } catch (e) {
+    console.error("GET /users/active/role/:roleId error:", e);
+    res.status(500).json({ error: "Error al listar usuarios por rol" });
+  }
+};
+
+// --- REGISTRO DE TODAS LAS RUTAS ---
+router.get("/active/role/:roleId", listActiveUsersByRoleWithAssignmentCount);
+router.get("/", listUsersHandler);
+router.get("/:id", getUserByIdHandler);
+router.post("/", createUserHandler);
+router.put("/:id", updateUserHandler);
+router.delete("/:id", deleteUserHandler);
+
 
 export default router;
