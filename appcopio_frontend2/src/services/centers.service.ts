@@ -60,7 +60,7 @@ export async function listCenters(signal?: AbortSignal): Promise<Center[]> {
 /**
  * Obtiene los detalles de un único centro por su ID.
  */
-export async function getCenter(centerId: string, signal?: AbortSignal): Promise<Center | null> {
+export async function getOneCenter(centerId: string, signal?: AbortSignal): Promise<Center | null> {
   try {
     const { data } = await api.get<any>(`/centers/${centerId}`, { signal });
     return normalizeCenter(data);

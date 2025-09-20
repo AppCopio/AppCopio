@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { getOne as getUser } from "@/services/users.service";
+import { getUser } from "@/services/users.service";
 import type { User } from "@/types/user";
 import { msgFromError } from "@/lib/errors";
 

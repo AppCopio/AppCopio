@@ -7,8 +7,8 @@ import "./CenterDetailsPage.css";
 
 import type { Center } from "@/types/center";
 import {
-  getCenter,
-  mapStatusToFrontend,
+  getOneCenter,
+  mapStatusToBackend,
   updateOperationalStatus,
   OperationalStatusUI,
 } from "@/services/centers.service";

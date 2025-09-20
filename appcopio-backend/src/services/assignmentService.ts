@@ -56,12 +56,12 @@ export async function createOrUpdateAssignment(client: PoolClient, data: {
     );
 
     // Si el mismo usuario ya está asignado, no hacemos nada y devolvemos la asignación existente.
-    if (activeRs.rowCount > 0 && Number(activeRs.rows[0].user_id) === Number(user_id)) {
+    if (activeRs.rowCount && Number(activeRs.rows[0].user_id) === Number(user_id)) {
         return { isNew: false, data: activeRs.rows[0] };
     }
 
     // Si hay otro usuario, cerramos su tramo
-    if (activeRs.rowCount > 0) {
+    if (activeRs.rowCount) {
       await client.query(
         `UPDATE centerassignments SET valid_to = NOW(), changed_by = $3
          WHERE center_id = $1 AND role = $2 AND valid_to IS NULL`,

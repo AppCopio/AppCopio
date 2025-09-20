@@ -9,7 +9,7 @@ import {
   deleteInventoryItem,
 } from "@/services/inventory.service";
 import { listCategories, createCategory, deleteCategory } from "@/services/categories.service";
-import { getOne as getUser } from "@/services/users.service";
+import { getUser } from "@/services/users.service";
 import type {
   InventoryItem,
   GroupedInventory,

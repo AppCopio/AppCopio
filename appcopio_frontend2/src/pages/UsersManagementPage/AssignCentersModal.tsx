@@ -4,7 +4,7 @@ import type { Center } from "@/types/center";
 import {
   assignCenterToUser,
   removeCenterFromUser,
-  getOne as getUser,
+  getUser,
 } from "@/services/users.service";
 import { listCenters } from "@/services/centers.service";
 

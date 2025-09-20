@@ -10,7 +10,7 @@ import {
   Skeleton,
 } from "@mui/material";
 import { Person as PersonIcon, Groups as GroupsIcon } from "@mui/icons-material";
-import { getOne as getUser } from "@/services/users.service";
+import { getUser} from "@/services/users.service";
 
 type UserLite = {
   user_id: number;

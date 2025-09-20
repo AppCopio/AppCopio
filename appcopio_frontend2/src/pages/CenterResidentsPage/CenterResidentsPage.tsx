@@ -18,7 +18,7 @@ import {
   getCenterCapacity,
   listResidentGroups,
   listPeopleByCenter,
-  listActiveCentersForCenter,
+  listActiveCenters,
   registerFamilyDeparture,
 } from "@/services/residents.service";
 
@@ -203,7 +203,7 @@ const CenterResidentsPage: React.FC = () => {
           getCenterCapacity(centerId),
           listResidentGroups(centerId),
           listPeopleByCenter(centerId, filters),
-          listActiveCentersForCenter(centerId),
+          listActiveCenters(centerId),
         ]);
         if (cancel) return;
 

@@ -42,7 +42,7 @@ const CenterEditPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await getCenter(centerId);
+        const data = await getOneCenter(centerId);
         setOriginalData(data as unknown as CenterData); // asumiendo shape compatible
         setFormData(data as unknown as CenterData);
       } catch (err: any) {

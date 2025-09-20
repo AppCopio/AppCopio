@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { getOne as getUser } from "@/services/users.service";
+import { getUser } from "@/services/users.service";
 import { listCenters } from "@/services/centers.service";
 import type { Center } from "@/types/center";
 import { msgFromError } from "@/lib/errors";

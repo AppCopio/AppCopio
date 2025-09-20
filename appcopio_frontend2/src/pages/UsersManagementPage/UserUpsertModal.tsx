@@ -20,16 +20,16 @@ import {
 
 import type { User, UserCreateDTO, UserUpdateDTO } from "@/types/user";
 import {
-  getRoles,
-  create as createUser,
-  update as updateUser,
+  listRoles,
+  createUser,
+  updateUser,
   assignCenterToUser,
   removeCenterFromUser,
-  getOne as getUser,
-  type Role,
+  getUser,
 } from "@/services/users.service";
 import { listCenters } from "@/services/centers.service";
 import type { Center } from "@/types/center";
+import type { Role } from "@/types/user";
 
 /** Utils RUT (mueve a "@/utils/rut" si lo reutilizas) */
 const cleanRut = (v: string) => v.replace(/[^0-9kK]/g, "").toUpperCase();
@@ -115,7 +115,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
       try {
         setLoadingCatalogs(true);
         const [rolesList, centersList] = await Promise.all([
-          getRoles(controller.signal), // ahora devuelve Role[]
+          listRoles(controller.signal), // ahora devuelve Role[]
           listCenters(controller.signal),
         ]);
         if (!mounted) return;

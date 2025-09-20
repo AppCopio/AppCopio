@@ -9,6 +9,10 @@ import type {
   Role 
 } from '@/types/user'; // Usamos tus tipos exactos
 
+import type {
+  ActiveAssignment
+} from '@/types/assignment';
+
 // =================================================================
 // SECCIÓN 1: CRUD de Usuarios
 // =================================================================
@@ -138,6 +142,31 @@ export async function listActiveUsersByRole(roleId: number, signal?: AbortSignal
     return data?.users ?? [];
   } catch (error) {
     console.error(`Error fetching active users for role ${roleId}:`, error);
+    return [];
+  }
+}
+
+export async function getActiveAssignmentsByUserRole(
+  userId: number,
+  role: string,
+  options?: { excludeCenterId?: string; signal?: AbortSignal }
+): Promise<ActiveAssignment[]> {
+  const { excludeCenterId, signal } = options ?? {};
+  try {
+    const { data } = await api.get<{ assignments: ActiveAssignment[]; count: number }>(
+      '/assignments/active/by-user-role',
+      {
+        params: {
+          user_id: userId,
+          role, // el backend ya hace trim/lowercase
+          ...(excludeCenterId ? { exclude_center_id: excludeCenterId } : {}),
+        },
+        signal,
+      }
+    );
+    return data?.assignments ?? [];
+  } catch (error) {
+    console.error(`Error fetching active assignments for user ${userId} and role ${role}:`, error);
     return [];
   }
 }
