@@ -19,6 +19,17 @@ DROP TABLE IF EXISTS Users CASCADE;
 DROP TABLE IF EXISTS Roles CASCADE;
 DROP SEQUENCE IF EXISTS centers_seq CASCADE;
 
+DROP TABLE IF EXISTS DatasetRecordCoreRelations CASCADE;
+DROP TABLE IF EXISTS DatasetRecordRelations CASCADE;
+DROP TABLE IF EXISTS DatasetRecordOptionValues CASCADE;
+DROP TABLE IF EXISTS DatasetFieldOptions CASCADE;
+DROP TABLE IF EXISTS DatasetRecords CASCADE;
+DROP TABLE IF EXISTS DatasetFields CASCADE;
+DROP TABLE IF EXISTS Datasets CASCADE;
+DROP TABLE IF EXISTS TemplateFields CASCADE;
+DROP TABLE IF EXISTS Templates CASCADE;
+DROP TABLE IF EXISTS AuditLog CASCADE;
+
 -- ==========================================================
 -- PASO 2: CREACIÓN DE TABLAS EN ORDEN LÓGICO DE DEPENDENCIAS
 -- ==========================================================
@@ -359,6 +370,202 @@ CREATE TABLE CentersDescription (
         REFERENCES Centers(center_id)
         ON DELETE CASCADE
 );
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Bases de datos creadas
+CREATE TABLE Datasets (
+    dataset_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    activation_id  INT NOT NULL REFERENCES CentersActivations(activation_id),
+    center_id      VARCHAR(10) NOT NULL REFERENCES Centers(center_id), -- redundante, para evitarnos JOINs
+    name           TEXT NOT NULL, -- nombre visible en UI
+    key            TEXT NOT NULL, -- slug/clave única por activación (para rutas limpias sin ocupar el id de la base de datos)
+    config         JSONB NOT NULL DEFAULT '{}'::jsonb, -- configuración general (ejemplo: permisos, opciones, orden, columnas escondidas, etc.)
+    schema_snapshot JSONB, -- snapshot del schema lógico (columnas y opciones) actual, se usa para auditoría e historial
+    
+    created_by     INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    updated_by     INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ,
+    deleted_at     TIMESTAMPTZ,
+    CONSTRAINT datasets_uq UNIQUE (activation_id, key), -- evita keys duplicadas en una misma activación
+    CONSTRAINT datasets_uq_id_act_dtst UNIQUE (dataset_id, activation_id),
+    CONSTRAINT datasets_key_lower_chk CHECK (key = lower(key))
+);
+
+-- Columnas de cada base de datos
+CREATE TABLE DatasetFields (
+    field_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dataset_id     UUID NOT NULL REFERENCES Datasets(dataset_id) ON DELETE CASCADE,
+    name           TEXT NOT NULL, -- nombre visible en UI
+    key            TEXT NOT NULL, -- clave única a utilizar en dataset.records.data (permite distinguir columnas entre sí)
+    type           TEXT NOT NULL CHECK (type IN (
+                        'text','number','bool','date','time','datetime',
+                        'select','multi_select','relation'
+                    )),
+    required       BOOLEAN NOT NULL DEFAULT FALSE,
+    unique_field   BOOLEAN NOT NULL DEFAULT FALSE, 
+    config         JSONB NOT NULL DEFAULT '{}'::jsonb, -- configuración de la columna (valores máximos, precisión numérica, formato, etc.)
+    position       INT NOT NULL DEFAULT 0,
+    is_active      BOOLEAN NOT NULL DEFAULT TRUE, -- archivar campos sin eliminarlos (para "ocultar" columnas en la vista del usuario u otro)
+    -- Para relaciones
+    is_multi       BOOLEAN NOT NULL DEFAULT FALSE, --uno a muchos (true) o uno a uno (false)
+    relation_target_kind TEXT CHECK (relation_target_kind IN ('dynamic','core')), -- dynamic = otro dataset, core = a registros de tablas de la BD de SQL
+    relation_target_dataset_id UUID, -- si es dynamic, a qué dataset apunta
+    relation_target_core   TEXT, -- nombre lógico de la tabla SQL ('persons','family_groups')
+    
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ,
+    deleted_at     TIMESTAMPTZ,
+
+    CONSTRAINT datasetfields_key_lower_chk CHECK (key = lower(key)),
+    CONSTRAINT df_relation_meta_coherence_chk CHECK (
+        (type <> 'relation'
+        AND is_multi = FALSE
+        AND relation_target_kind IS NULL
+        AND relation_target_dataset_id IS NULL
+        AND relation_target_core IS NULL)
+        OR
+        (type = 'relation'
+        AND relation_target_kind = 'dynamic'
+        AND relation_target_dataset_id IS NOT NULL
+        AND relation_target_core IS NULL)
+        OR
+        (type = 'relation'
+        AND relation_target_kind = 'core'
+        AND relation_target_core IS NOT NULL
+        AND relation_target_dataset_id IS NULL)
+    )
+);
+
+CREATE UNIQUE INDEX dataset_fields_uq_active_key ON DatasetFields (dataset_id, key) WHERE is_active; -- Unicidad de key entre campos activos de una misma base de datos
+
+CREATE INDEX dataset_fields_by_dataset_pos ON DatasetFields(dataset_id, position); -- orden de las columnas en la UI rápido
+CREATE INDEX dataset_fields_rel_target_ds  ON DatasetFields(relation_target_dataset_id); -- listar qué campos apuntan a cierto dataset
+
+-- Opciones para las columnas (si son del tipo selesct/multi_select)
+CREATE TABLE DatasetFieldOptions (
+    option_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    field_id     UUID NOT NULL REFERENCES DatasetFields(field_id) ON DELETE CASCADE,
+    label        TEXT NOT NULL, -- texto visible en UI
+    value        TEXT NOT NULL, -- key estable para filtros
+    color        TEXT, -- color HEX para UI
+    position     INT NOT NULL DEFAULT 0, 
+    is_active    BOOLEAN NOT NULL DEFAULT TRUE, -- "eliminar" opciones sin perder historial
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ,
+    CONSTRAINT dfo_value_lower_chk CHECK (value = lower(value))
+);
+
+CREATE UNIQUE INDEX dataset_field_options_uq_active ON DatasetFieldOptions(field_id, value) WHERE is_active;  
+CREATE INDEX dataset_field_options_by_field_pos ON DatasetFieldOptions(field_id, position);
+
+-- Filas / registros de las bases de datos
+CREATE TABLE DatasetRecords (
+    record_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dataset_id    UUID NOT NULL REFERENCES Datasets(dataset_id) ON DELETE CASCADE,
+    activation_id INT NOT NULL REFERENCES CentersActivations(activation_id),
+    center_id     VARCHAR(10) NOT NULL REFERENCES Centers(center_id),
+    version       INT NOT NULL DEFAULT 1, -- optimistic locking
+    data          JSONB NOT NULL DEFAULT '{}'::jsonb,  -- solo los valores atómicos bajo key de la columna
+    
+    created_by    INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    updated_by    INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ,
+    deleted_at    TIMESTAMPTZ,
+    FOREIGN KEY (dataset_id, activation_id) REFERENCES Datasets(dataset_id, activation_id) ON DELETE CASCADE
+);
+
+CREATE INDEX dataset_records_by_ds_upd ON DatasetRecords(dataset_id, updated_at DESC); 
+CREATE INDEX dataset_records_by_act_upd ON DatasetRecords(activation_id, updated_at DESC);
+
+-- Índice GIN para búsquedas por data (exists/contains). Para filtros intensivos crea índices por-campo (expresiones).
+CREATE INDEX dataset_records_data_gin ON DatasetRecords USING gin (data jsonb_path_ops);
+
+-- Valores para las filas en campos del tipo select/multi_select
+CREATE TABLE DatasetRecordOptionValues (
+    record_id   UUID NOT NULL REFERENCES DatasetRecords(record_id) ON DELETE CASCADE,
+    field_id    UUID NOT NULL REFERENCES DatasetFields(field_id) ON DELETE CASCADE,
+    option_id   UUID NOT NULL REFERENCES DatasetFieldOptions(option_id) ON DELETE CASCADE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ,
+    PRIMARY KEY (record_id, field_id, option_id)
+);
+CREATE INDEX drov_by_field_option ON DatasetRecordOptionValues(field_id, option_id);
+
+-- Valores para las filas en campos del tipo relation (a otros dataset)
+CREATE TABLE DatasetRecordRelations (
+    record_id        UUID NOT NULL REFERENCES DatasetRecords(record_id) ON DELETE CASCADE,
+    field_id         UUID NOT NULL REFERENCES DatasetFields(field_id) ON DELETE CASCADE,
+    target_record_id UUID NOT NULL REFERENCES DatasetRecords(record_id) ON DELETE CASCADE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ,
+    PRIMARY KEY (record_id, field_id, target_record_id)
+);
+CREATE INDEX drr_by_field_target ON DatasetRecordRelations(field_id, target_record_id); -- útil para backlink
+
+-- Valores para las filas en campos del tipo relation (a entidades como familia, personas, etc.)
+CREATE TABLE DatasetRecordCoreRelations (
+    record_id     UUID NOT NULL REFERENCES DatasetRecords(record_id) ON DELETE CASCADE,
+    field_id      UUID NOT NULL REFERENCES DatasetFields(field_id) ON DELETE CASCADE,
+    target_core   TEXT NOT NULL,  -- nombre de la tabla, ejemplo: 'persons','familyGroups'
+    target_id     INT NOT NULL,  -- PK de la entidad core
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ,
+    PRIMARY KEY (record_id, field_id, target_core, target_id)
+);
+CREATE INDEX drcr_by_field_core ON DatasetRecordCoreRelations(field_id, target_core, target_id);
+
+-- Plantillas para las bases de datos
+CREATE TABLE Templates (
+    template_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name         TEXT NOT NULL,
+    description  TEXT,
+    is_public    BOOLEAN NOT NULL DEFAULT FALSE, -- para cuando tengamos más de una municipalidad
+    created_by   INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ
+);
+
+-- Columnas de cada plantilla de las bases de datos
+CREATE TABLE TemplateFields (
+    template_field_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id       UUID NOT NULL REFERENCES Templates(template_id) ON DELETE CASCADE,
+    name              TEXT NOT NULL,
+    slug              TEXT NOT NULL,
+    field_type        TEXT NOT NULL CHECK (field_type IN (
+                        'text','number','bool','date','time','datetime',
+                        'select','multi_select','relation'
+                        )),
+    is_required       BOOLEAN NOT NULL DEFAULT FALSE,
+    is_multi          BOOLEAN NOT NULL DEFAULT FALSE,
+    position          INTEGER NOT NULL DEFAULT 0,
+    settings          JSONB NOT NULL DEFAULT '{}'::jsonb,
+    relation_target_kind TEXT,
+    relation_target_template_id UUID,
+    relation_target_core   TEXT,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ,
+    CONSTRAINT tf_slug_lower_chk CHECK (slug = lower(slug))
+);
+CREATE UNIQUE INDEX template_fields_uq_slug ON TemplateFields(template_id, slug);
+
+-- auditoría de cambios en las bases de datos y sus registros
+CREATE TABLE AuditLog (
+    audit_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    activation_id  INT,
+    center_id      VARCHAR(10),
+    actor_user_id  INT,
+    action         TEXT NOT NULL CHECK (action IN ('insert','update','delete')),
+    entity_type    TEXT NOT NULL,      -- p.ej. 'datasets','dataset_fields',...
+    entity_id      UUID,
+    at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    before         JSONB,
+    after          JSONB
+);
+CREATE INDEX audit_by_activation ON AuditLog(activation_id, at DESC); --listado cronológico de cambios en una activación
+CREATE INDEX audit_by_entity     ON AuditLog(entity_type, entity_id); -- para la historia de un dataset, columna o registro en específico
 
 -- ==========================================================
 -- PASO 3: INSERCIÓN DE DATOS DE PRUEBA COMPLETOS
