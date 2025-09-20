@@ -30,7 +30,9 @@ import {
 } from '@mui/icons-material';
 
 import type { User } from '@/types/user';
-import * as usersService from '@/services/users.service';
+import {
+  listUsers, updateUser, deleteUser
+} from '@/services/users.service';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import AssignCentersModal from "@/pages/UsersManagementPage/AssignCentersModal";
 import UserUpsertModal from './UserUpsertModal';
@@ -59,7 +61,7 @@ export default function UsersManagementPage() {
     setLoading(true);
     setError(null);
     try {
-      const { users } = await usersService.list();
+      const { users } = await listUsers();
       setRows(users);
     } catch (e: any) {
       setError(e?.message ?? 'Error al cargar usuarios');
@@ -74,7 +76,7 @@ export default function UsersManagementPage() {
       setLoading(true);
       setError(null);
       try {
-        const { users } = await usersService.list();
+        const { users } = await listUsers();
         if (!ac.signal.aborted) setRows(users);
       } catch (e: any) {
         if (!ac.signal.aborted) setError(e?.message ?? 'Error al cargar usuarios');
@@ -88,21 +90,21 @@ export default function UsersManagementPage() {
   // --- Acciones con confirmación ---
   const handleToggleSupport = (u: User) =>
     ask(`¿Cambiar permiso de Apoyo de Administrador para ${u.nombre}?`, async () => {
-      await usersService.update(u.user_id, { es_apoyo_admin: !u.es_apoyo_admin });
+      await updateUser(u.user_id, { es_apoyo_admin: !u.es_apoyo_admin });
       await load();
       closeConfirm();
     });
 
   const handleToggleActive = (u: User) =>
     ask(`¿Activar/desactivar usuario ${u.nombre}?`, async () => {
-      await usersService.update(u.user_id, { is_active: !u.is_active });
+      await updateUser(u.user_id, { is_active: !u.is_active });
       await load();
       closeConfirm();
     });
 
   const handleDelete = (u: User) =>
     ask(`¿Eliminar usuario ${u.nombre}?`, async () => {
-      await usersService.remove(u.user_id);
+      await deleteUser(u.user_id);
       await load();
       closeConfirm();
     });

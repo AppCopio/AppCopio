@@ -31,13 +31,30 @@ function normalizeCenter(raw: any): Center {
 }
 
 export type OperationalStatusUI = "Abierto" | "Cerrado Temporalmente" | "Capacidad Máxima";
+export type OperationalStatusBCK = "abierto" | "cerrado temporalmente" | "capacidad maxima";
 
-export function mapStatusToBackend(status: OperationalStatusUI): string {
+// Función para mapear estados del backend al frontend  
+export function mapStatusToBackend(status: OperationalStatusUI): string | undefined {
   switch (status) {
     case "Abierto": return "abierto";
     case "Cerrado Temporalmente": return "cerrado temporalmente";
     case "Capacidad Máxima": return "capacidad maxima";
+    default: return undefined;
   }
+}
+
+// Función para mapear estados del backend al frontend  
+export function mapStatusToFrontend(status?: OperationalStatusBCK): string | undefined {
+  switch (status) {
+    case 'abierto': return 'Abierto';
+    case 'cerrado temporalmente': return 'Cerrado Temporalmente';
+    case 'capacidad maxima': return 'Capacidad Máxima';
+    default: return undefined;
+  }
+};
+
+function isCanceled(err: any) {
+  return err?.code === "ERR_CANCELED" || err?.name === "CanceledError";
 }
 
 // =================================================================

@@ -8,7 +8,7 @@ import "./CenterDetailsPage.css";
 import type { Center } from "@/types/center";
 import {
   getOneCenter,
-  mapStatusToBackend,
+  mapStatusToFrontend,
   updateOperationalStatus,
   OperationalStatusUI,
 } from "@/services/centers.service";
@@ -58,7 +58,7 @@ const CenterDetailsPage: React.FC = () => {
       setError(null);
       try {
         const [c, inv] = await Promise.all([
-          getCenter(centerId),
+          getOneCenter(centerId),
           listCenterInventory(centerId),
         ]);
         if (!alive) return;
@@ -231,7 +231,7 @@ const CenterDetailsPage: React.FC = () => {
               onSuccess={async () => {
                 closeAssign();
                 try {
-                  const c = await getCenter(centerId!);
+                  const c = await getOneCenter(centerId!);
                   setCenter({
                     ...(c as any),
                     operational_status: mapStatusToFrontend((c as any).operational_status),
