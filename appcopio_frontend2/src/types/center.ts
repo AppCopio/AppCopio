@@ -25,7 +25,7 @@ export interface CenterData {
     center_id: string;
     name: string;
     address: string;
-    type: 'Albergue' | 'Acopio' | 'Albergue Comunitario' | 'acopio' | '';
+    type: 'Albergue' | 'Acopio' | 'Albergue Comunitario' | 'acopio' | ''; //type: CenterTypeName
     folio: string;
     capacity: number;
     latitude: number;
@@ -34,6 +34,9 @@ export interface CenterData {
     comunity_charge_id: number | null; //esto no se si se está pocupabndo
     municipal_manager_id: number | null;
     is_active: boolean;
+    operational_status?: CenterOperationalStatus;
+    public_note?: string | null;
+    fullnessPercentage?: number;
 
     // Campos de CentersDescription
     nombre_dirigente: string;
