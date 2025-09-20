@@ -19,6 +19,7 @@ import familyRoutes from "./routes/familyRoutes";
 import familyMembersRoutes from "./routes/familyMembersRoutes";
 import fibeRoutes from "./routes/fibeRoutes";
 import roleRoutes from "./routes/roleRoutes";
+import {requireAuth} from "./auth/middleware";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(cookieParser());
+app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRoutes);
 
 /** Orígenes permitidos */
 const allowedOrigins = [
@@ -61,7 +63,7 @@ app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
 
-app.use("/api/centers", centerRoutes);
+app.use("/api/centers", requireAuth, centerRoutes)
 //app.use("/api/products", productRoutes);
 app.use("/api/updates", updateRoutes);
 app.use("/api/users", userRouter);

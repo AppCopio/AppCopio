@@ -113,7 +113,7 @@ const deleteCenter: RequestHandler = async (req, res) => {
 
 const setActivationStatus: RequestHandler = async (req, res) => {
     const { isActive } = req.body;
-    const userId = (req as any).user?.id;
+    const userId = (req as any).user?.user_id;
     if (typeof isActive !== 'boolean') {
         res.status(400).json({ error: 'Se requiere el campo "isActive" (boolean).' });
         return;
