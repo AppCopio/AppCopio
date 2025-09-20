@@ -2,12 +2,12 @@ import * as React from "react";
 import { Outlet, useParams, Link } from "react-router-dom";
 import "./CenterLayout.css";
 
-import type { Center } from "@/types/center";
+import type { CenterData } from "@/types/center";
 import { getOneCenter } from "@/services/centers.service";
 
 import { paths } from "@/routes/paths";
 
-type LayoutCenter = Pick<Center, "center_id" | "name" | "address">;
+type LayoutCenter = Pick<CenterData, "center_id" | "name" | "address">;
 
 const CenterLayout: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
@@ -25,11 +25,12 @@ const CenterLayout: React.FC = () => {
       try {
         const data = await getOneCenter(centerId); // ! Retorna la data si no se envía el controller
         // Aseguramos shape mínimo (id como string para rutas)
-        setCenter({
-          center_id: String(data.center_id),
+        setCenter( data ?? null /*{
+          data ?? null
+         center_id: String(data.center_id),
           name: data.name,
           address: data.address ?? "",
-        });
+        }*/);
       } catch (e: any) {
         if (e?.name !== "CanceledError" && e?.name !== "AbortError") {
           setErr("No se pudo cargar el centro.");
