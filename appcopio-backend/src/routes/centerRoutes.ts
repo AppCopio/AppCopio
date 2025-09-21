@@ -169,6 +169,28 @@ const listActiveCenters: RequestHandler = async (req, res) => {
     }
 };
 
+// GET /centers/:id/active-activation
+// Devuelve la activación abierta (ended_at IS NULL) o 204 si no hay
+const getCenterActiveActivation: RequestHandler = async (req, res) => {
+  const centerId = (req.params.id ?? "").trim();
+  // Validación simple: VARCHAR(10) no vacío
+  if (!centerId || centerId.length > 10) {
+    res.status(400).json({ message: "Invalid center id" });
+    return;
+  }
+  try {
+        const centerActivation = await getActiveActivation(pool, centerId);
+        if (!centerActivation) {
+            res.status(204).end(); // No Content: no hay activación abierta
+            return;
+        }
+        res.json(centerActivation);
+  } catch (error) {
+    console.error("getCenterActiveActivation error:", error);
+    res.status(500).json({ message: "Error fetching active activation" });
+  }
+};
+
 // =================================================================
 // 3. CONTROLADORES: RESIDENTES, CAPACIDAD E INVENTARIO
 // =================================================================
@@ -297,7 +319,8 @@ router.delete('/:id', deleteCenter);
 // --- Rutas de Estado y Activación ---
 router.patch('/:id/status', setActivationStatus);
 router.patch('/:id/operational-status', setOperationalStatus);
-router.get('/status/active', listActiveCenters); 
+router.get('/status/active', listActiveCenters);
+router.get('/:id/activation', getCenterActiveActivation);
 
 // --- Rutas de Datos Específicos del Centro ---
 router.get('/:centerId/capacity', getCapacity);

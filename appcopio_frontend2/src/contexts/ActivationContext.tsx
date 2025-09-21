@@ -1,4 +1,4 @@
-import * as React from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { getActiveActivation } from "@/services/centers.service";
 import type { ActiveActivation } from "@/types/center";
 
@@ -8,87 +8,40 @@ type ActivationState = {
   refresh: () => Promise<void>;
 };
 
-const ActivationContext = React.createContext<ActivationState | null>(null);
+const ActivationContext = createContext<ActivationState | null>(null);
 
-export function ActivationProvider({
-  centerId,
-  children,
-}: {
-  centerId: string | number;
-  children: React.ReactNode;
-}) {
-  const [loading, setLoading] = React.useState(true);
-  const [activation, setActivation] = React.useState<ActiveActivation | null>(
-    null
-  );
+export function ActivationProvider({ centerId, children }: { centerId: string | number; children: React.ReactNode }) {
+  const [loading, setLoading] = useState(true);
+  const [activation, setActivation] = useState<ActiveActivation | null>(null);
 
-  const load = React.useCallback(async () => {
-    const controller = new AbortController();
+  const load = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const a = await getActiveActivation(centerId, controller.signal);
-      setActivation(a);
-    } catch (err: any) {
-      const isCanceled =
-        err?.code === "ERR_CANCELED" ||
-        err?.name === "CanceledError" ||
-        err?.name === "AbortError";
-      if (!isCanceled)
-        console.error("[ActivationProvider] refresh error:", err);
+      const act = await getActiveActivation(centerId, { signal });
+      setActivation(act);
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [centerId]);
 
-  React.useEffect(() => {
-    let mounted = true;
-    const controller = new AbortController();
-
-    (async () => {
-      setLoading(true);
-      try {
-        const a = await getActiveActivation(centerId, controller.signal);
-        if (mounted) setActivation(a);
-      } catch (err: any) {
-        // Ignorar cancelaciones
-        const isCanceled =
-          err?.code === "ERR_CANCELED" ||
-          err?.name === "CanceledError" ||
-          err?.name === "AbortError";
-        if (!isCanceled) {
-          console.error("[ActivationProvider] load error:", err);
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      controller.abort();
-    };
+  useEffect(() => { 
+    const ctrl =  new AbortController();
+    load(ctrl.signal);
+    return () => ctrl.abort() 
   }, [centerId]);
 
-  const value = React.useMemo(
-    () => ({ loading, activation, refresh: load }),
-    [loading, activation, load]
-  );
-
-  return (
-    <ActivationContext.Provider value={value}>
-      {children}
-    </ActivationContext.Provider>
-  );
+  const value = useMemo(() => ({ loading, activation, refresh: () => load() }), [loading, activation]);
+  return <ActivationContext.Provider value={value}>{children}</ActivationContext.Provider>;
 }
 
 export function useActivation() {
-  const ctx = React.useContext(ActivationContext);
-  if (!ctx)
-    throw new Error("useActivation must be used within <ActivationProvider>");
+  const ctx = useContext(ActivationContext);
+  if (!ctx) throw new Error("useActivation must be used within <ActivationProvider>");
   return ctx;
-}
-
-// opcional: hook seguro que puede devolver null
-export function useMaybeActivation() {
-  return React.useContext(ActivationContext);
 }

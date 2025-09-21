@@ -247,11 +247,23 @@ export async function getOneCenter(centerId: string, signal?: AbortSignal): Prom
 /**
  * Obtiene la activación abierta (si existe) para un centro.
  */
-export async function getActiveActivation(centerId: string, signal?: AbortSignal): Promise<ActiveActivation | null> {
+export async function getActiveActivation(centerId: string, opts?: { signal?: AbortSignal }): Promise<ActiveActivation | null> {
   try {
     // CAMBIO: Se actualizó la ruta según la refactorización del backend.
-    const { data } = await api.get<ActiveActivation | null>(`/centers/${centerId}/activation`, { signal });
-    return data;
+    const res = await api.get<ActiveActivation | null>(`/centers/${centerId}/activation`,
+      {
+        signal: opts?.signal,
+        // evitar que tome la respuesta de caché
+        params: { t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache' },
+        validateStatus: (s) => (s >= 200 && s < 300) || s === 204,
+      }
+    );
+    if (res.status === 204) return null;
+
+    const data = res.data as any;
+    if (!data || !data.activation_id) return null;
+    return data as ActiveActivation;  
   } catch (error) {
     console.error(`Error fetching active activation for center ${centerId}:`, error);
     return null;

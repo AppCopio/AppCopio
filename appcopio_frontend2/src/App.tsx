@@ -75,7 +75,7 @@ export default function App() {
                   <Route path="updates" element={<UpdatesPage />} />
 
                   {/* Requiere activación activa */}
-                  <Route element={<RequireCenterActive redirectTo="../details" />}>
+                  <Route element={<RequireCenterActive/>}>
                     <Route path="fibe" element={<FibePage />} />
                   </Route>
                 </Route>

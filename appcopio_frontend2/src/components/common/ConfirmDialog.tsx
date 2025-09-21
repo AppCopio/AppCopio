@@ -8,6 +8,7 @@ export default function ConfirmDialog({
   onConfirm,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
+  showCancel = true,
 }: {
   open: boolean;
   title?: string;
@@ -16,13 +17,14 @@ export default function ConfirmDialog({
   onConfirm: () => void | Promise<void>;
   confirmText?: string;
   cancelText?: string;
+  showCancel?: boolean; 
 }) {
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>{message}</DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{cancelText}</Button>
+        {showCancel && <Button onClick={onClose}>{cancelText}</Button>}
         <Button variant="contained" onClick={onConfirm}>
           {confirmText}
         </Button>
