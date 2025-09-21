@@ -2,6 +2,7 @@
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
 
+
 // CAMBIO: Importamos TODAS las funciones necesarias desde nuestro servicio, incluyendo las de inventario.
 import {
     getAllCenters, getCenterById,
@@ -19,6 +20,9 @@ import {
     updateInventoryItem as updateInventoryItemService,
     deleteInventoryItem as deleteInventoryItemService
 } from '../services/centerService';
+
+import { getCenterGroups } from '../services/familyService';
+
 
 const router = Router();
 
@@ -219,6 +223,23 @@ const listPeople: RequestHandler = async (req, res) => {
     }
 };
 
+const listGroups: RequestHandler = async (req, res) => {
+    //const { id } = req.params; // 'id' es un string
+    try {
+        // No hay validación numérica porque el ID no es un número.
+        // Pasamos el 'id' directamente al servicio.
+        const groups = await getCenterGroups(pool,req.params.centerID);
+        res.status(200).json(groups);
+
+    } catch (err) {
+        console.error(`Error en listCenterGroups (centerId: ${req.params.centerID}):`, err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+};
+
+
+
+
 const getInventory: RequestHandler = async (req, res) => {
     try {
         const inventory = await getInventoryByCenterId(pool, req.params.centerId);
@@ -325,7 +346,7 @@ router.get('/:id/activation', getCenterActiveActivation);
 // --- Rutas de Datos Específicos del Centro ---
 router.get('/:centerId/capacity', getCapacity);
 router.get('/:centerId/people', listPeople);
-
+router.get('/:centerID/residents',listGroups)
 // --- Rutas de Inventario ---
 router.get('/:centerId/inventory', getInventory);
 router.post('/:centerId/inventory', addInventoryItem);

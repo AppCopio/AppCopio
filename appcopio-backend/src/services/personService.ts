@@ -35,11 +35,33 @@ export async function getPersonById(db: Db, id: number): Promise<Person | null> 
 }
 
 /**
- * Inserta una nueva persona en la base de datos o la actualiza si el RUT ya existe.
+ * Inserta una nueva persona en la base de datos.
+
  * @param db Pool de conexión a la base de datos.
  * @param p Datos de la persona a crear, de tipo PersonCreate.
- * @returns El ID de la persona creada o actualizada.
+ * @returns El ID de la persona creada.
  */
+export async function createPersonDB(db: Db, p: PersonCreate): Promise<number> {
+    const sql = `
+        INSERT INTO Persons (rut, nombre, primer_apellido, segundo_apellido, genero, edad)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING person_id`;
+
+    const params = [
+        normalizeRut(p.rut),
+        p.nombre,
+        p.primer_apellido,
+        p.segundo_apellido || null,
+        p.genero || null,
+        p.edad ?? null,
+    ];
+
+    const { rows } = await db.query(sql, params);
+    return rows[0].person_id as number;
+}
+
+//-------------------------VERSION VIEJA DE createPersonDB, si cambiamos el rut a UNIQUE HAY Q USAR ESTA
+/** 
 export async function createPersonDB(db: Db, p: PersonCreate): Promise<number> {
     const sql = `
         INSERT INTO Persons (rut, nombre, primer_apellido, segundo_apellido, genero, edad)
@@ -65,6 +87,8 @@ export async function createPersonDB(db: Db, p: PersonCreate): Promise<number> {
     const { rows } = await db.query(sql, params);
     return rows[0].person_id as number;
 }
+
+*/
 
 /**
  * Actualiza una persona existente en la base de datos por su ID.
