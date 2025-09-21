@@ -51,6 +51,23 @@ export async function listPeopleByCenter(centerId: string, params?: Record<strin
     return [];
   }
 }
+/**
+export async function listPeopleByCenter(
+  centerId: string,
+  params: {
+    nombre?: string;
+    rut?: string;
+    fechaIngreso?: string;
+    fechaSalida?: string;
+    edad?: string | number;
+    genero?: string;
+  }
+): Promise<Person[]> {
+  const { data } = await api.get(`/centers/${centerId}/people`, { params });
+  return data;
+}
+
+ */
 
 /**
  * Obtiene una lista de todos los centros de acopio/albergue que están actualmente activos.
@@ -72,12 +89,12 @@ export async function listActiveCenters(signal?: AbortSignal): Promise<ActiveCen
 export async function registerFamilyDeparture(input: {
   familyId: number;
   departure_reason: DepartureReason;
+  destination_activation_id: string | null;
+  departure_date: string; // YYYY-MM-DD
 }, signal?: AbortSignal): Promise<void> {
   try {
     const { familyId, ...payload } = input;
-    // CAMBIO CRÍTICO: La ruta ahora es '/families/:familyId/depart'
-    // y el payload es más simple, como lo definimos en el backend.
-    await api.patch(`/families/${familyId}/depart`, payload, { signal });
+    await api.patch(`/family/${familyId}/depart`, payload, { signal });
   } catch (error) {
     console.error(`Error registering departure for family ${input.familyId}:`, error);
     throw error;

@@ -1,8 +1,6 @@
 //le saque el sort pq en la ruta que arregle ya vienen ordenados alfabeticamente
 //le meti trycatch a las cosas
 
-
-
 import { api } from "@/lib/api";
 import type { Category } from "@/types/inventory";
 

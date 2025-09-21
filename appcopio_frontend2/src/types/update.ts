@@ -16,12 +16,6 @@ export interface UpdatesApiResponse {
   requests: UpdateRequest[];
   total: number;
 }
-
-export interface WorkerUser {
-  user_id: number;
-  nombre: string;
-}
-
 export interface UpdateCreateDTO {
   center_id: string;
   title: string;

@@ -2,9 +2,10 @@ import * as React from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-import { listUpdates, listActiveWorkersByRole, patchUpdateRequest } from "@/services/updates.service";
-import type { UpdateRequest, UpdateStatus, WorkerUser } from "@/types/update";
-
+import { listUpdates, patchUpdateRequest} from "@/services/updates.service";
+import { listActiveUsersByRole, listActiveWorkersByRole} from "@/services/users.service";
+import type { UpdateRequest, UpdateStatus } from "@/types/update";
+import type { WorkerUser } from "@/types/user";
 import "./UpdatesPage.css";
 
 // IDs de roles (ajusta si cambian)
@@ -72,7 +73,7 @@ export default function UpdatesPage() {
     const controller = new AbortController();
     (async () => {
       try {
-        const data = await listActiveWorkersByRole(ROLE_ID_TMO, controller.signal);
+        const data = await listActiveUsersByRole(ROLE_ID_TMO, controller.signal);
         setWorkers(data);
       } catch {
         /* silencioso como antes */

@@ -62,3 +62,8 @@ export interface Role {
   role_id: number;
   role_name: string;
 }
+
+export interface WorkerUser {
+  user_id: number;
+  nombre: string;
+}

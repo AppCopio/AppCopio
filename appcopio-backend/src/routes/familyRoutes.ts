@@ -188,6 +188,8 @@ const updateFamily: RequestHandler = async (req, res) => {
     }
 };
 
+// TODO: revisar departFamilyGroup, hay mucha lógica de la versión anterior que simplemente se borró.
+
 /**
  * @controller PATCH /api/families/:familyId/depart
  * @description Registra la salida de un grupo familiar de un centro.
@@ -231,6 +233,129 @@ const departFamilyGroup: RequestHandler = async (req, res) => {
         client.release();
     }
 };
+
+
+/**
+const departFamilyGroupHandler: RequestHandler = async (req, res) => {
+  const { familyId } = req.params;
+  const { departure_reason, destination_activation_id } = req.body;
+
+  if (!departure_reason) {
+    res.status(400).json({ message: 'El motivo de la salida es obligatorio.' });
+    return;
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Contar cuántos miembros tiene el grupo familiar
+    const membersCountResult = await client.query(
+      'SELECT COUNT(*) as member_count FROM FamilyGroupMembers WHERE family_id = $1',
+      [familyId]
+    );
+    const memberCount = parseInt(membersCountResult.rows[0].member_count, 10);
+
+    // 2. Obtener la activación y centro de origen del grupo
+    const groupInfoResult = await client.query(
+      'SELECT activation_id FROM FamilyGroups WHERE family_id = $1 FOR UPDATE',
+      [familyId]
+    );
+    if (groupInfoResult.rows.length === 0) {
+      throw new Error('Grupo familiar no encontrado.');
+    }
+    const originActivationId = groupInfoResult.rows[0].activation_id;
+
+    // 3. Obtener el center_id del centro de origen
+    const originCenterResult = await client.query(
+      'SELECT center_id FROM CentersActivations WHERE activation_id = $1',
+      [originActivationId]
+    );
+    const originCenterId = originCenterResult.rows[0]?.center_id;
+
+    // 4. Actualizar el estado del grupo familiar a 'inactivo' y registrar la salida
+    await client.query(
+      `UPDATE FamilyGroups 
+      SET status = 'inactivo', 
+          departure_date = NOW(), 
+          departure_reason = $1, 
+          destination_activation_id = $2
+      WHERE family_id = $3`,
+      [departure_reason, destination_activation_id || null, familyId]
+    );
+
+
+    // 5. Calcular capacidad actual del centro de origen
+    const originCapacityResult = await client.query(
+      `SELECT c.capacity - COALESCE(SUM(fgm.integrantes), 0) AS current_capacity
+      FROM Centers c
+      LEFT JOIN CentersActivations ca ON ca.center_id = c.center_id
+      LEFT JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id AND fg.status = 'activo'
+      LEFT JOIN (
+        SELECT family_id, COUNT(*) AS integrantes
+        FROM FamilyGroupMembers
+        GROUP BY family_id
+      ) fgm ON fgm.family_id = fg.family_id
+      WHERE c.center_id = $1
+      GROUP BY c.capacity`,
+      [originCenterId]
+    );
+    const originCurrentCapacity = originCapacityResult.rows[0]?.current_capacity ?? null;
+
+    // 6. Si es un traslado, calcular capacidad del centro de destino
+    let destinationCurrentCapacity: number | null = null;
+    if (departure_reason === 'traslado' && destination_activation_id) {
+      const destinationCenterResult = await client.query(
+        'SELECT center_id FROM CentersActivations WHERE activation_id = $1',
+        [destination_activation_id]
+      );
+      if (destinationCenterResult.rows.length === 0) {
+        res.status(400).json({ message: `destination_activation_id ${destination_activation_id} no existe en CentersActivations.` });
+        return;
+      }
+
+      const destinationCenterId = destinationCenterResult.rows[0].center_id;
+
+      const destinationCapacityResult = await client.query(
+        `SELECT c.capacity - COALESCE(COUNT(fg.family_id), 0) AS current_capacity
+         FROM Centers c
+         LEFT JOIN CentersActivations ca ON ca.center_id = c.center_id
+         LEFT JOIN FamilyGroups fg ON fg.activation_id = ca.activation_id AND fg.status = 'activo'
+         WHERE c.center_id = $1
+         GROUP BY c.capacity`,
+        [destinationCenterId]
+      );
+      destinationCurrentCapacity = destinationCapacityResult.rows[0]?.current_capacity ?? null;
+
+      // 7. Actualizar el estado de la familia en el centro de destino
+      await client.query(
+        `UPDATE FamilyGroups
+        SET status = 'activo',
+            activation_id = $1
+        WHERE family_id = $2`,
+        [destination_activation_id, familyId]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.status(200).json({
+        message: 'Salida del grupo familiar registrada con éxito.',
+        origin_current_capacity: originCurrentCapacity,
+        ...(destinationCurrentCapacity !== null && {
+            destination_current_capacity: destinationCurrentCapacity
+        })
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error al registrar la salida del grupo familiar:', error);
+        res.status(500).json({ message: 'Error interno del servidor al registrar la salida.' });
+    } finally {
+        client.release();
+    }
+};
+ */
 
 
 // =================================================================

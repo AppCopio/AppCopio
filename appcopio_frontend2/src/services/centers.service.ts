@@ -14,19 +14,38 @@ import type { InventoryItem } from "@/types/inventory";
 // (Estos helpers son útiles para asegurar que la UI siempre reciba datos consistentes)
 // =================================================================
 
+/* --- Normalización a valores de UI (según brief) --- */
+type CenterTypeUI = Center["type"]; // "Acopio" | "Albergue"
+
+function toUIType(raw: any): CenterTypeUI {
+  const v = String(raw ?? "").toLowerCase();
+  if (v === "acopio") return "Acopio";
+  if (v === "albergue") return "Albergue";
+  // fallback conservador
+  return "Acopio";
+}
+
+function toUIOperationalStatus(raw: any): Center["operational_status"] {
+  if (raw == null) return undefined;
+  const v = String(raw).toLowerCase();
+  if (v.includes("cerrado")) return "cerrado temporalmente";
+  if (v.includes("capacidad")) return "capacidad maxima";
+  return "abierto";
+}
+
 function normalizeCenter(raw: any): Center {
   return {
     center_id: String(raw.center_id ?? ""),
     name: String(raw.name ?? ""),
     address: raw.address ?? null,
-    type: raw.type === "Albergue" ? "Albergue" : "Acopio", // Simple validation
+    type: toUIType(raw.type),
     is_active: Boolean(raw.is_active),
-    operational_status: raw.operational_status ?? "abierto",
+    operational_status: toUIOperationalStatus(raw.operational_status),
     public_note: raw.public_note ?? null,
     capacity: raw.capacity ?? null,
     latitude: raw.latitude ?? null,
     longitude: raw.longitude ?? null,
-    fullnessPercentage: raw.fullnessPercentage ?? 0,
+    fullnessPercentage: typeof raw.fullnessPercentage === "number" ? raw.fullnessPercentage : 0,
   };
 };
 
@@ -35,21 +54,21 @@ function normalizeCenterData(raw: any): CenterData {
     center_id: String(raw.center_id ?? ""),
     name: String(raw.name ?? ""),
     address: raw.address ?? null,
-    type: raw.type === "Albergue" ? "Albergue" : "Acopio", // Simple validation
+    type: toUIType(raw.type),
     is_active: Boolean(raw.is_active),
-    operational_status: raw.operational_status ?? "abierto",
+    operational_status: toUIOperationalStatus(raw.operational_status),
     public_note: raw.public_note ?? null,
     capacity: raw.capacity ?? null,
     latitude: raw.latitude ?? null,
     longitude: raw.longitude ?? null,
-    fullnessPercentage: raw.fullnessPercentage ?? 0,
+    fullnessPercentage: typeof raw.fullnessPercentage === "number" ? raw.fullnessPercentage : 0,
     folio: raw.folio ?? "",
     should_be_active: raw.should_be_active ?? false,
     comunity_charge_id: raw.comunity_charge_id ?? null,
     municipal_manager_id: raw.municipal_manager_id ?? null,
 
-    // CentersDescription — strings
     // TODO: Revisar que esté bien puesto todo esto
+    // CentersDescription — strings
     nombre_dirigente: raw.nombre_dirigente ?? "",
     cargo_dirigente: raw.cargo_dirigente ?? "",
     telefono_contacto: raw.telefono_contacto ?? "",
@@ -172,7 +191,6 @@ function normalizeCenterData(raw: any): CenterData {
 };
 
 export type OperationalStatusUI = "Abierto" | "Cerrado Temporalmente" | "Capacidad Máxima";
-export type OperationalStatusBCK = "abierto" | "cerrado temporalmente" | "capacidad maxima";
 
 // Función para mapear estados del backend al frontend  
 export function mapStatusToBackend(status: OperationalStatusUI): string | undefined {
@@ -185,13 +203,15 @@ export function mapStatusToBackend(status: OperationalStatusUI): string | undefi
 }
 
 // Función para mapear estados del backend al frontend  
-export function mapStatusToFrontend(status?: OperationalStatusBCK): string | undefined {
+export function mapStatusToFrontend(status?: string): OperationalStatusUI | undefined {
+  if (!status) return;
+
   switch (status) {
     case 'abierto': return 'Abierto';
     case 'cerrado temporalmente': return 'Cerrado Temporalmente';
     case 'capacidad maxima': return 'Capacidad Máxima';
-    default: return undefined;
   }
+  return undefined;
 };
 
 // =================================================================
@@ -212,7 +232,7 @@ export async function listCenters(signal?: AbortSignal): Promise<Center[]> {
 }
 
 /**
- * Obtiene los detalles de un único centro por su ID.
+ * Obtiene los detalles de un único centro por su ID. El detalle completo de los centros.
  */
 export async function getOneCenter(centerId: string, signal?: AbortSignal): Promise<CenterData | null> {
   try {
@@ -236,7 +256,7 @@ export async function getActiveActivation(centerId: string, signal?: AbortSignal
     console.error(`Error fetching active activation for center ${centerId}:`, error);
     return null;
   }
-}
+} //Pdría ser un error por el signal
 
 /**
  * NUEVO: Obtiene una lista de solo los centros que están activos.

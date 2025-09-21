@@ -1,12 +1,17 @@
 // src/services/users.service.ts
 import { api } from '@/lib/api';
+import { msgFromError } from '@/lib/errors';
+import axios from 'axios';
 import type {
   User,
   UsersApiResponse,
   UserWithCenters,
   UserCreateDTO,
   UserUpdateDTO,
-  Role 
+  UserActivationResponse,
+  UserPasswordResponse,
+  Role,
+  WorkerUser
 } from '@/types/user'; // Usamos tus tipos exactos
 
 import type {
@@ -44,8 +49,19 @@ export async function getUser(userId: number | string, signal?: AbortSignal): Pr
   try {
     const { data } = await api.get<UserWithCenters>(`/users/${userId}`, { signal });
     return data;
-  } catch (error) {
-    console.error(`Error fetching user ${userId}:`, error);
+  } catch (err: any) {
+    if (
+      axios.isCancel?.(err) ||
+      err?.code === 'ERR_CANCELED' ||
+      err?.message === 'canceled' ||
+      err?.name === 'CanceledError' ||
+      err?.name === 'AbortError'
+    ) {
+      // señal para el caller si decide ignorar cancelaciones
+      throw { aborted: true };
+    }
+    //throw new Error(msgFromError(err, 'Error al obtener el usuario.'));
+    console.error(`Error fetching user ${userId}:`, err);
     return null;
   }
 }
@@ -87,6 +103,28 @@ export async function deleteUser(id: number, signal?: AbortSignal): Promise<void
   } catch (error) {
     console.error(`Error deleting user ${id}:`, error);
     throw error;
+  }
+}
+
+export async function setActive(id: number, is_active: boolean) {
+  try {
+    const { data } = await api.patch<UserActivationResponse>(`/users/${id}/activate`, {
+      is_active,
+    });
+    return data; // { user_id, is_active }
+  } catch (err: any) {
+    throw new Error(msgFromError(err, 'Error al actualizar estado activo del usuario.'));
+  }
+}
+
+export async function setPassword(id: number, password: string) {
+  try {
+    const { data } = await api.patch<UserPasswordResponse>(`/users/${id}/password`, {
+      password,
+    });
+    return data; // { ok: true }
+  } catch (err: any) {
+    throw new Error(msgFromError(err, 'Error al actualizar la contraseña.'));
   }
 }
 
@@ -142,6 +180,16 @@ export async function listActiveUsersByRole(roleId: number, signal?: AbortSignal
     return data?.users ?? [];
   } catch (error) {
     console.error(`Error fetching active users for role ${roleId}:`, error);
+    return [];
+  }
+}
+
+export async function listActiveWorkersByRole(roleId: number, signal?: AbortSignal): Promise<WorkerUser[]> {
+  try {
+    const { data } = await api.get<{ users: WorkerUser[] }>(`/users/active/by-role/${roleId}`, { signal });
+    return data?.users ?? [];
+  } catch (error) {
+    console.error(`Error fetching active workers for role ${roleId}:`, error);
     return [];
   }
 }

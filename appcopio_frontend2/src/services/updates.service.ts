@@ -3,7 +3,7 @@
 //tambien le meti trycatch que sorpresa bruno
 
 import { api } from "@/lib/api";
-import type { UpdateRequest, UpdateStatus, UpdatesApiResponse, WorkerUser, UpdateCreateDTO } from "@/types/update";
+import type { UpdateRequest, UpdateStatus, UpdatesApiResponse, UpdateCreateDTO } from "@/types/update";
 
 /**
  * Obtiene una lista paginada y filtrada de solicitudes de actualización.
@@ -31,18 +31,6 @@ export async function listUpdates(params: {
   }
 }
 
-/**
- * Obtiene una lista de usuarios trabajadores activos según su rol.
- */
-export async function listActiveWorkersByRole(roleId: number, signal?: AbortSignal): Promise<WorkerUser[]> {
-  try {
-    const { data } = await api.get<{ users: WorkerUser[] }>(`/users/active/by-role/${roleId}`, { signal });
-    return data?.users ?? [];
-  } catch (error) {
-    console.error(`Error fetching active workers for role ${roleId}:`, error);
-    return [];
-  }
-}
 
 /**
  * Actualiza una solicitud de actualización (ej: para asignarla o cambiar su estado).

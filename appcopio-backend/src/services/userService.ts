@@ -141,7 +141,7 @@ export async function deleteUserById(db: Db, id: number): Promise<number> {
  */
 export async function getActiveUsersByRole(db: Db, roleId: number) {
     const sql = `
-        SELECT u.user_id, u.rut, u.nombre, r.role_name, COALESCE(a.active_assignments, 0)::int AS active_assignments
+        SELECT u.user_id, u.rut, u.nombre, r.role_id , r.role_name, COALESCE(a.active_assignments, 0)::int AS active_assignments
         FROM users u
         JOIN roles r ON r.role_id = u.role_id
         LEFT JOIN (
