@@ -515,7 +515,7 @@ CREATE TABLE TemplateFields (
     relation_target_core   TEXT,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at         TIMESTAMPTZ,
-    CONSTRAINT tf_slug_lower_chk CHECK (slug = lower(slug))
+    CONSTRAINT tf_slug_lower_chk CHECK (key = lower(key))
 );
 CREATE UNIQUE INDEX template_fields_uq_slug ON TemplateFields(template_id, key);
 
