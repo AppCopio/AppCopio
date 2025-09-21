@@ -48,12 +48,13 @@ const corsOptions: cors.CorsOptions = {
 };
 
 /** CORS antes de las rutas */
+
+
 app.use((req, res, next) => {
   res.header("Vary", "Origin");
   next();
 });
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 /** Rate limit solo en auth */
 app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRoutes);
