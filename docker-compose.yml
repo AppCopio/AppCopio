@@ -27,13 +27,13 @@ services:
 
   frontend:
     image: node:22-bookworm
-    working_dir: /workspace/appcopio-frontend
+    working_dir: /workspace/appcopio_frontend2
     depends_on:
       - backend
     command: bash -lc "npm install && npm run dev -- --host"
     volumes:
       - .:/workspace:cached
-      - frontend_node_modules:/workspace/appcopio-frontend/node_modules
+      - frontend_node_modules:/workspace/appcopio_frontend2/node_modules
     ports:
       - "5173:5173"
 
