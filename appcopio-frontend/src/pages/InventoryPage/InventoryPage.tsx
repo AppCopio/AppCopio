@@ -33,7 +33,7 @@ interface GroupedInventory {
 const SYNC_TAG = 'sync-inventory-updates';
 
 // --- COMPONENTE PRINCIPAL ---
-const InventoryPage: React.FC = async () => {
+const InventoryPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const { user } = useAuth(); // Se obtiene el token de autenticación
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -56,6 +56,8 @@ const InventoryPage: React.FC = async () => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryToDelete, setCategoryToDelete] = useState('');
+  const [sortOrder, setSortOrder] = useState<string>('descendente'); // 'ascendente' o 'descendente'
+
 
   // --- LÓGICA DE PERMISOS ---
   const [assignedCenters, setAssignedCenters] = useState<string[]>([]);
@@ -71,7 +73,6 @@ const InventoryPage: React.FC = async () => {
         const u = await getUser(user.user_id, ctrl.signal);
         setAssignedCenters(u.assignedCenters ?? []);
       } catch (err) {
-        console.error(err);
         setAssignedCenters([]);
       }
     })();
@@ -207,6 +208,35 @@ const InventoryPage: React.FC = async () => {
     };
   }, [centerId, apiUrl]);
 
+  // --- MANEJADORES DE EVENTOS ---
+  // Función para ordenar el inventario por fecha
+  // Función para ordenar el inventario por fecha
+  // Función para ordenar el inventario por fecha
+  const handleSortByDate = (sortOrder: string) => {
+    const sortedInventory = { ...inventory };
+
+    // Ordenamos los ítems dentro de cada categoría
+    for (const category in sortedInventory) {
+      sortedInventory[category] = sortedInventory[category].sort((a, b) => {
+        const dateA = new Date(a.updated_at);
+        const dateB = new Date(b.updated_at);
+
+        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+          console.error(`Fecha inválida: ${a.updated_at} o ${b.updated_at}`);
+          return 0; // No ordenamos si alguna de las fechas es inválida
+        }
+
+        // Orden ascendente (más antiguo primero) o descendente (más reciente primero)
+        return sortOrder === 'ascendente'
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
+      });
+    }
+
+    setInventory(sortedInventory); // Actualizamos el inventario
+  };
+
+  
  // --- MANEJADORES DE EVENTOS ---
 
 const handleAddItemSubmit = async (e: React.FormEvent) => {
@@ -440,7 +470,7 @@ const handleDeleteItem = async () => {
   // --- RENDERIZADO ---
   if (isLoading) return <div className="inventory-container">Cargando inventario...</div>;
   if (error && Object.keys(inventory).length === 0) return <div className="inventory-container error-message">Error: {error}</div>;
-
+  
   return (
     <div className="inventory-container">
       <div className="inventory-header">
@@ -479,7 +509,25 @@ const handleDeleteItem = async () => {
           Limpiar Filtro
         </button>
       </div>
-
+      {/* FILTRO POR FECHA DE ACTUALIZACIÓN */}
+      {/* Ordenar por fecha */}
+      <div className="filter-container" style={{ marginBottom: '20px' }}>
+        <label htmlFor="ordenarPorFecha" style={{ marginRight: '10px' }}>
+          <strong>Ordenar por Fecha de Actualización:</strong>
+        </label>
+        <select
+          id="ordenarPorFecha"
+          value={sortOrder}
+          onChange={(e) => {
+            setSortOrder(e.target.value); // Actualizamos el estado de `sortOrder`
+            handleSortByDate(e.target.value); // Luego ordenamos el inventario
+          }} // Aquí debe llamarse handleSortByDate
+        >
+          <option value="descendente">Más Reciente Primero</option>
+          <option value="ascendente">Más Antiguo Primero</option>
+        </select>
+      </div>
+          
       {/* MODAL PARA AÑADIR ITEM (MODIFICADO) */}
       {isAddModalOpen && (
         <div className="modal-overlay">

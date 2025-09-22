@@ -3,7 +3,21 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchWithAbort } from '../../services/api';
+import { getUser } from '../../services/usersApi'; 
 import './MisCentrosPage.css';
+
+// Función para determinar el estado del centro considerando tanto is_active como operational_status
+const getCenterStatus = (center: Center): string => {
+  if (!center.is_active) {
+    return 'Inactivo';
+  }
+  
+  if (center.operational_status === 'cerrado temporalmente') {
+    return 'Cerrado';
+  }
+  
+  return 'Activo';
+};
 
 // Usamos la misma interfaz que ya tenemos definida en otras partes
 interface Center {
@@ -12,7 +26,7 @@ interface Center {
   address: string;
   type: 'Acopio' | 'Albergue';
   is_active: boolean;
-  operational_status?: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima';
+  operational_status?: 'abierto' | 'cerrado temporalmente' | 'capacidad maxima';
   public_note?: string;
   fullnessPercentage?: number;
 }
@@ -26,8 +40,7 @@ const MisCentrosPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Si no hay usuario, no hacemos nada.
-    if (!user) {
+    if (!user?.user_id) {
       setIsLoading(false);
       return;
     }
@@ -38,18 +51,36 @@ const MisCentrosPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Obtenemos todos los centros
-        const allCenters = await fetchWithAbort<Center[]>(`${apiUrl}/centers`, controller.signal);
-        
-        // Para simplificar por ahora, mostramos todos los centros
-        // TODO: Implementar filtrado por centros asignados al usuario cuando esté disponible en la API
-        setAssignedCenters(allCenters || []);
+        const fullUser = await getUser(user.user_id, controller.signal);
 
-      } catch (err) {
-        if (err instanceof Error && err.name !== 'AbortError') {
-          console.error("Error al cargar detalles de los centros:", err);
-          setError("No se pudieron cargar los datos de los centros.");
+        if (!fullUser.assignedCenters || fullUser.assignedCenters.length === 0) {
+          setAssignedCenters([]);
+          return;
         }
+
+        const allCenters = await fetchWithAbort<Center[]>(
+          `${apiUrl}/centers`,
+          controller.signal
+        );
+
+        const userCenters = (allCenters || []).filter(center =>
+          fullUser.assignedCenters.includes(center.center_id)
+        );
+
+        setAssignedCenters(userCenters);
+
+      } catch (err: any) {
+        if (
+          err?.aborted ||
+          err?.code === "ERR_CANCELED" ||
+          err?.message === "canceled" ||
+          err?.name === "AbortError" ||
+          err?.name === "CanceledError"
+        ) {
+          return;
+        }
+        console.error("Error al cargar detalles de los centros:", err);
+        setError("No se pudieron cargar los datos de los centros asignados.");
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);
@@ -62,7 +93,7 @@ const MisCentrosPage: React.FC = () => {
     return () => {
       controller.abort();
     };
-  }, [user, apiUrl]);
+  }, [user?.user_id, apiUrl]);
 
   if (isLoading) {
     return <div className="mis-centros-container">Cargando tus centros asignados...</div>;
@@ -79,7 +110,7 @@ const MisCentrosPage: React.FC = () => {
       
       {assignedCenters.length === 0 ? (
         <p className="no-centers-message">
-          No hay centros disponibles actualmente.
+          No tienes ningún centro asignado actualmente. Por favor, contacta a un administrador.
         </p>
       ) : (
         <ul className="mis-centros-list">
@@ -87,35 +118,13 @@ const MisCentrosPage: React.FC = () => {
             <li key={center.center_id} className="centro-card">
               <div className="card-header">
                 <h3>{center.name}</h3>
-                <span className={`status-pill ${
-                  (center.operational_status === 'Cerrado Temporalmente' || !center.is_active)
-                    ? 'closed'  // Cerrado (rojo) si está cerrado temporalmente O inactivo
-                    : 'active'  // Activo (verde) en cualquier otro caso
-                }`}>
-                  {(center.operational_status === 'Cerrado Temporalmente' || !center.is_active)
-                    ? 'Cerrado'  
-                    : 'Activo'}
+                <span className={`status-pill ${getCenterStatus(center) === 'Activo' ? 'active' : 'inactive'}`}>
+                  {getCenterStatus(center)}
                 </span>
               </div>
               <div className="card-body">
                 <p><strong>Dirección:</strong> {center.address}</p>
                 <p><strong>Tipo:</strong> {center.type}</p>
-                <p><strong>Estado Operativo:</strong> 
-                  <span className={`operational-status-badge ${
-                    (!center.is_active || center.operational_status === 'Cerrado Temporalmente')
-                      ? 'cerrado-temporalmente'
-                      : center.operational_status 
-                        ? center.operational_status.toLowerCase().replace(' ', '-')
-                        : 'abierto'
-                  }`}>
-                    {(!center.is_active || center.operational_status === 'Cerrado Temporalmente')
-                      ? 'CERRADO TEMPORALMENTE'
-                      : center.operational_status || 'ABIERTO'}
-                  </span>
-                </p>
-                {(center.operational_status === 'Cerrado Temporalmente' || !center.is_active) && center.public_note && (
-                  <p><strong>Nota:</strong> <em>{center.public_note}</em></p>
-                )}
               </div>
               <div className="card-actions">
                 <Link to={`/center/${center.center_id}/inventory`} className="action-button manage-btn">

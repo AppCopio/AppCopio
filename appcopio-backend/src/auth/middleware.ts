@@ -5,21 +5,31 @@ import { verifyAccessToken } from "./tokens";
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const h = req.header("authorization");
   const token = h?.startsWith("Bearer ") ? h.slice(7) : null;
-  if (!token) return res.status(401).json({ error: "Missing token" });
+  if (!token) {
+    res.status(401).json({ error: "Missing token" });
+    return; // Agrega un return vacío para detener la ejecución
+  }
   try {
     const payload = verifyAccessToken(token);
     (req as any).user = payload; 
     next();
   } catch {
-    return res.status(401).json({ error: "Invalid/expired token" });
+    res.status(401).json({ error: "Invalid/expired token" });
+    return; // Agrega un return vacío para detener la ejecución
   }
 }
 
 export function requireRole(...roleIds: number[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     const u = (req as any).user;
-    if (!u) return res.status(401).json({ error: "Unauthorized" });
-    if (!roleIds.includes(u.role_id)) return res.status(403).json({ error: "Forbidden" });
+    if (!u) {
+        res.status(401).json({ error: "Unauthorized" });
+        return; // Agrega un return vacío para detener la ejecución
+    }
+    if (!roleIds.includes(u.role_id)) {
+        res.status(403).json({ error: "Forbidden" });
+        return; // Agrega un return vacío para detener la ejecución
+    }
     next();
   };
 }

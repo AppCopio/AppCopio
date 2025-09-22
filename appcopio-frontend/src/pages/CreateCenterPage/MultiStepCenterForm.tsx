@@ -85,7 +85,7 @@ const MultiStepCenterForm: React.FC = () => {
           alert('Sin conexión. El formulario se guardó y se sincronizará cuando recuperes la red.');
           setIsSaving(false);
           setIsConfirmationOpen(false);
-          navigate('/admin/centros');
+          navigate('/admin/centers');
       }
   };
 

@@ -8,7 +8,7 @@ import rateLimit from "express-rate-limit";
 import pool from "./config/db";
 import authRoutes from "./routes/authRoutes";
 import centerRoutes from "./routes/centerRoutes";
-import productRoutes from "./routes/productRoutes";
+//import productRoutes from "./routes/productRoutes";
 import inventoryRoutes from "./routes/inventoryRoutes";
 import userRouter from "./routes/userRoutes";
 import updateRoutes from "./routes/updateRoutes";
@@ -19,6 +19,7 @@ import familyRoutes from "./routes/familyRoutes";
 import familyMembersRoutes from "./routes/familyMembersRoutes";
 import fibeRoutes from "./routes/fibeRoutes";
 import roleRoutes from "./routes/roleRoutes";
+import {requireAuth} from "./auth/middleware";
 
 dotenv.config();
 
@@ -47,6 +48,8 @@ const corsOptions: cors.CorsOptions = {
 };
 
 /** CORS antes de las rutas */
+
+
 app.use((req, res, next) => {
   res.header("Vary", "Origin");
   next();
@@ -61,8 +64,8 @@ app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
 
-app.use("/api/centers", centerRoutes);
-app.use("/api/products", productRoutes);
+app.use("/api/centers", requireAuth, centerRoutes)
+//app.use("/api/products", productRoutes);
 app.use("/api/updates", updateRoutes);
 app.use("/api/users", userRouter);
 app.use("/api/inventory", inventoryRoutes);

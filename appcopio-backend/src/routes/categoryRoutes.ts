@@ -1,67 +1,78 @@
+// src/routes/categoryRoutes.ts
 import { Router, RequestHandler } from 'express';
-import { QueryResult } from 'pg';
-import pool from '../config/db'; // Usando la ruta correcta a tu BD
+import pool from '../config/db';
+// CAMBIO: Importamos desde el nuevo servicio
+import { getAllCategories, addCategory, deleteCategoryById, categoryHasProducts } from '../services/categoryService';
 
 const router = Router();
 
-// NUEVO: Obtener todas las categorías
-const getAllCategoriesHandler: RequestHandler = async (req, res) => {
+// =================================================================
+// 1. SECCIÓN DE CONTROLADORES (Logic Handlers)
+// =================================================================
+
+const listCategories: RequestHandler = async (req, res) => {
     try {
-        const allCategories = await pool.query("SELECT * FROM Categories ORDER BY name ASC");
-        res.json(allCategories.rows);
+        // CAMBIO: El controlador ahora llama al servicio
+        const categories = await getAllCategories(pool);
+        res.json(categories);
     } catch (err) {
-        console.error('Error al obtener categorías:', err);
-        res.status(500).send('Error del servidor');
+        console.error('Error en listCategories:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
     }
 };
 
-// MODIFICADO: Añadir una categoría
-const addCategoryHandler: RequestHandler = async (req, res) => {
+const createCategory: RequestHandler = async (req, res) => {
     const { name } = req.body;
     if (!name || typeof name !== 'string' || name.trim() === '') {
-        res.status(400).json({ msg: 'El nombre de la categoría es requerido.' });
+        res.status(400).json({ error: 'El nombre de la categoría es requerido.' });
         return;
     }
     try {
-        const newCategory = await pool.query(
-            "INSERT INTO Categories (name) VALUES ($1) RETURNING *",
-            [name.trim()]
-        );
-        res.status(201).json(newCategory.rows[0]);
+        // CAMBIO: El controlador ahora llama al servicio
+        const newCategory = await addCategory(pool, name);
+        res.status(201).json(newCategory);
     } catch (err: any) {
-        if (err.code === '23505') { // Código de error para violación de constraint UNIQUE en PostgreSQL
-            res.status(409).json({ msg: 'La categoría ya existe.' });
-            return;
+        if (err.code === '23505') { // UNIQUE VIOLATION
+            res.status(409).json({ error: 'La categoría ya existe.' });
+        } else {
+            console.error('Error en createCategory:', err);
+            res.status(500).json({ error: 'Error interno del servidor.' });
         }
-        console.error('Error al añadir categoría:', err);
-        res.status(500).send('Error del servidor');
     }
 };
 
-// MODIFICADO: Eliminar una categoría (ahora por ID)
-const deleteCategoryHandler: RequestHandler = async (req, res) => {
-    // El frontend ahora debería enviar el ID de la categoría
-    const { id } = req.params; 
+const deleteCategory: RequestHandler = async (req, res) => {
+    const categoryId = parseInt(req.params.id, 10);
+    if (isNaN(categoryId)) {
+        res.status(400).json({ error: 'El ID de la categoría debe ser un número válido.' });
+        return;
+    }
     try {
-        const productsInCategory: QueryResult = await pool.query(
-            "SELECT COUNT(*) FROM Products WHERE category_id = $1",
-            [id]
-        );
-        if (productsInCategory?.rows?.[0] && parseInt(productsInCategory.rows[0].count, 10) > 0) {
-            res.status(400).json({ msg: 'No se puede eliminar: la categoría tiene productos asociados.' });
+        // CAMBIO: Lógica de negocio en el controlador, acceso a datos en el servicio
+        const hasProducts = await categoryHasProducts(pool, categoryId);
+        if (hasProducts) {
+            res.status(409).json({ error: 'No se puede eliminar: la categoría tiene productos asociados.' });
             return;
         }
-        await pool.query("DELETE FROM Categories WHERE category_id = $1", [id]);
-        res.status(204).send();
+
+        const deletedCount = await deleteCategoryById(pool, categoryId);
+        if (deletedCount === 0) {
+            res.status(404).json({ error: 'La categoría no fue encontrada.' });
+        } else {
+            res.status(204).send();
+        }
     } catch (err) {
-        console.error('Error al eliminar categoría:', err);
-        res.status(500).send('Error del servidor');
+        console.error(`Error en deleteCategory (id: ${categoryId}):`, err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
     }
 };
 
-// Registro de las rutas en el enrutador
-router.get('/', getAllCategoriesHandler);
-router.post('/', addCategoryHandler);
-router.delete('/:id', deleteCategoryHandler); // Ahora espera un ID
+// =================================================================
+// 2. SECCIÓN DE RUTAS (Endpoints)
+// =================================================================
+
+router.get('/', listCategories);
+router.post('/', createCategory);
+router.delete('/:id', deleteCategory);
 
 export default router;

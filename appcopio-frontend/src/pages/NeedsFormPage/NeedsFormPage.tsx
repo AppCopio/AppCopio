@@ -75,15 +75,6 @@ const NeedsFormPage: React.FC = () => {
             <div className="needs-page">
                 <h3>Crear Solicitud de Actualización</h3>
                 <p>Cargando información de la sesión y del centro...</p>
-
-                {/* --- AÑADE ESTE PANEL DE DEPURACIÓN AQUÍ TAMBIÉN --- */}
-                <div style={{ background: '#ffdddd', color: 'black', border: '2px solid red', padding: '10px', marginTop: '20px', fontFamily: 'monospace' }}>
-                    <h3>Panel de Depuración (Estado de Carga)</h3>
-                    <p>isAuthLoading: <strong>{String(isAuthLoading)}</strong></p>
-                    <p>user existe?: <strong>{user ? 'Sí' : 'No'}</strong></p>
-                    <p>centerId: <strong>{centerId || 'undefined'}</strong></p>
-                    <p>isReady (Guardián): <strong>{String(isReady)}</strong></p>
-                </div>
             </div>
         );
     }
@@ -92,15 +83,6 @@ const NeedsFormPage: React.FC = () => {
         <div className="needs-page">
             <h3>Crear Solicitud de Actualización (Centro {centerId})</h3>
             <p className="instructions">Reporta necesidades de recursos o cualquier otra actualización importante.</p>
-
-            {/* --- AÑADE ESTE PANEL DE DEPURACIÓN AQUÍ --- */}
-            <div style={{ background: '#eee', color: 'black', padding: '10px', marginBottom: '20px', fontFamily: 'monospace' }}>
-                <h3>Panel de Depuración en Vivo (Estado Listo)</h3>
-                <p>isAuthLoading: <strong>{String(isAuthLoading)}</strong></p>
-                <p>user existe?: <strong>{user ? 'Sí' : 'No'}</strong></p>
-                <p>centerId: <strong>{centerId || 'undefined'}</strong></p>
-                <p>isReady (Guardián): <strong>{String(isReady)}</strong></p>
-            </div>
 
             <form onSubmit={handleSubmit} className="needs-form">
                 <div className="form-group">

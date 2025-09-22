@@ -12,7 +12,21 @@ Este repositorio está organizado en un formato de "monorepo", lo que significa 
 
 Ambas partes deben estar corriendo simultáneamente para que la aplicación funcione por completo.
 
-## 📋 Paso 0: Prerrequisitos
+## 🛠️ Opción 1: Correr localmente con Docker
+
+Necesitas tener clonado el repositorio en tu computadora y tener instalado y abierto Docker. 
+
+Estando en la carpeta de AppCopio en la terminal, puedes ejecutar el siguiente comando:
+```
+docker compose up -d
+```
+Esto comando creará los volúmenes (si no están) y levantará los contenedores para ejecutar la aplicación. Cuando estén funcionando, solo visita http://localhost:5173/ y podrás acceder a AppCopio :)
+
+**Nota**: si necesitas re-inicializar la base de datos, puedes borrar manualmente los contenedores o ejecutar ``` docker compose down -v ``` para borrarlos antes de levantar los contenedores nuevamente.
+
+## 🛠️ Opción 2: Correr localmente sin contenedores
+
+### 📋 Paso 0: Prerrequisitos
 
 Antes de empezar, asegúrate de tener instalado el siguiente software en tu computador:
 
@@ -22,8 +36,7 @@ Antes de empezar, asegúrate de tener instalado el siguiente software en tu comp
 -   **(Recomendado) pgAdmin 4**: Una herramienta gráfica para gestionar tu base de datos PostgreSQL. Suele venir con el instalador de PostgreSQL.
 -   **Un editor de código**: Recomendamos [Visual Studio Code](https://code.visualstudio.com/).
 
-## 🛠️ Paso 1: Configuración del Backend (`appcopio-backend`)
-
+### 🛠️ Paso 1: Configuración del Backend (`appcopio-backend`)
 
 Luego de tener clonado el repositorio empezaremos por el backend, ya que el frontend depende de él para obtener los datos.
 
@@ -218,7 +231,7 @@ Luego de tener clonado el repositorio empezaremos por el backend, ya que el fron
         ```
     * **IMPORTANTE:** Este archivo es ignorado por Git por seguridad. Cada miembro del equipo debe crear su propio archivo `.env`.
 
-## 🛠️ Paso 2: Configuración del Frontend (`appcopio-frontend`)
+### 🛠️ Paso 2: Configuración del Frontend (`appcopio-frontend`)
 
 Ahora vamos con la parte visual.
 
@@ -241,7 +254,7 @@ Ahora vamos con la parte visual.
         ```
     * Recuerda configurar la facturación y las restricciones HTTP en tu clave para que funcione en `localhost`.
 
-## ▶️ Paso 3: ¡A Levantar el Proyecto!
+### ▶️ Paso 3: ¡A Levantar el Proyecto!
 
 Necesitarás **dos terminales abiertas** para correr la aplicación completa.
 

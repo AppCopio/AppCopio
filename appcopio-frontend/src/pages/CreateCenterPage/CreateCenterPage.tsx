@@ -319,7 +319,7 @@ center_id: '',
                                     <InputLabel>Tipo de Centro</InputLabel>
                                     <Select name="type" value={formData.type} label="Tipo de Centro" onChange={handleChange as any}>
                                         <MenuItem value="albergue">Albergue</MenuItem>
-                                        <MenuItem value="acopio">Acopio</MenuItem>
+                                        <MenuItem value="acopio">Albergue comunitario</MenuItem>
                                     </Select>
                                 </FormControl>
 

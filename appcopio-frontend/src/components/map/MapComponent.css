@@ -32,7 +32,7 @@
 
 /* --- ESTILOS DE ESTADO PARA EL BORDE --- */
 .marker-pin.status-ok {
-  border-color: #28a745; /* Verde - Abierto con capacidad */
+  border-color: #28a745; /* Verde */
 }
 .marker-pin.status-warning {
   border-color: #ffc107; /* Naranja/Amarillo */
@@ -41,20 +41,22 @@
   border-color: #dc3545; /* Rojo */
 }
 .marker-pin.status-inactive {
-  border-color: #6c757d; /* Gris - Inactivo o Cerrado Temporalmente */
+  border-color: #6c757d; /* Gris */
   opacity: 0.6;
   filter: grayscale(80%); /* Efecto para que se vea apagado */
 }
 
-/* Nuevos estados operativos */
+/* Nuevos estados operativos corregidos */
+.marker-pin.status-open {
+  border-color: #28a745; /* Verde - para estado operativo "Abierto" */
+}
 .marker-pin.status-temporarily-closed {
-  border-color: #6c757d; /* Gris - Cerrado Temporalmente */
-  opacity: 0.6;
-  filter: grayscale(80%);
+  border-color: #6c757d; /* Gris - para "Cerrado Temporalmente" */
+  opacity: 0.7;
 }
 .marker-pin.status-full-capacity {
-  border-color: #dc3545; /* Rojo - Capacidad Máxima */
-  background-color: #ffeaa7; /* Fondo naranja claro */
+  border-color: #dc3545; /* Rojo - para "Capacidad Máxima" */
+  background-color: #f8d7da; /* Fondo rojo claro */
 }
 
 

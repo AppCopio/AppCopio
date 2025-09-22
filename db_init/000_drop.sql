@@ -1,0 +1,30 @@
+-- ==========================================================
+-- PASO 1: ELIMINACIÓN SEGURA DE TODAS LAS TABLAS CON CASCADE
+-- Garantiza una base de datos limpia en cada ejecución.
+-- ==========================================================
+DROP TABLE IF EXISTS FamilyGroupMembers CASCADE;
+DROP TABLE IF EXISTS FamilyGroups CASCADE;
+DROP TABLE IF EXISTS Persons CASCADE;
+DROP TABLE IF EXISTS CenterInventoryItems CASCADE;
+DROP TABLE IF EXISTS CentersActivations CASCADE;
+DROP TABLE IF EXISTS UpdateRequests CASCADE;
+DROP TABLE IF EXISTS CenterAssignments CASCADE;
+DROP TABLE IF EXISTS InventoryLog CASCADE;
+DROP TABLE IF EXISTS CentersDescription CASCADE;
+DROP TABLE IF EXISTS Products CASCADE;
+DROP TABLE IF EXISTS Categories CASCADE;
+DROP TABLE IF EXISTS Centers CASCADE;
+DROP TABLE IF EXISTS Users CASCADE;
+DROP TABLE IF EXISTS Roles CASCADE;
+DROP SEQUENCE IF EXISTS centers_seq CASCADE;
+
+DROP TABLE IF EXISTS DatasetRecordCoreRelations CASCADE;
+DROP TABLE IF EXISTS DatasetRecordRelations CASCADE;
+DROP TABLE IF EXISTS DatasetRecordOptionValues CASCADE;
+DROP TABLE IF EXISTS DatasetFieldOptions CASCADE;
+DROP TABLE IF EXISTS DatasetRecords CASCADE;
+DROP TABLE IF EXISTS DatasetFields CASCADE;
+DROP TABLE IF EXISTS Datasets CASCADE;
+DROP TABLE IF EXISTS TemplateFields CASCADE;
+DROP TABLE IF EXISTS Templates CASCADE;
+DROP TABLE IF EXISTS AuditLog CASCADE;

@@ -4,12 +4,44 @@ import { useAuth } from '../../contexts/AuthContext';
 import OperationalStatusControl from '../../components/center/OperationalStatusControl';
 import './CenterDetailsPage.css';
 
+// Función para mapear estados del frontend al backend
+const mapStatusToBackend = (status: 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima'): string => {
+  switch (status) {
+    case 'Abierto':
+      return 'abierto';
+    case 'Cerrado Temporalmente':
+      return 'cerrado temporalmente';
+    case 'Capacidad Máxima':
+      return 'capacidad maxima';
+    default:
+      return status;
+  }
+};
+
+// Función para mapear estados del backend al frontend  
+const mapStatusToFrontend = (status?: string): 'Abierto' | 'Cerrado Temporalmente' | 'Capacidad Máxima' | undefined => {
+  if (!status) return undefined;
+  
+  switch (status) {
+    case 'abierto':
+      return 'Abierto';
+    case 'cerrado temporalmente':
+      return 'Cerrado Temporalmente';
+    case 'capacidad maxima':
+      return 'Capacidad Máxima';
+    default:
+      return undefined;
+  }
+};
+
 import { getUser } from "../../services/usersApi";
 import { fetchWithAbort } from '../../services/api';
 
 import ResponsibleSection from './ResponsibleSection';
 import AssignResponsibleDialog from './AssingResponsibleDialog';
 
+import { useActivation } from "../../contexts/ActivationContext";
+import { Button } from "@mui/material";
 // Importa los componentes de catastro
 import CenterCatastroDetails from './CenterCatastroDetails';
 import './CenterCatastroDetails.css'; // Importa el nuevo CSS
@@ -57,6 +89,10 @@ const CenterDetailsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState<boolean>(false);
 
+  const { activation } = useActivation();
+
+
+
   useEffect(() => {
     const fetchCenterDetails = async () => {
       if (!centerId) return;
@@ -72,7 +108,14 @@ const CenterDetailsPage: React.FC = () => {
           `${apiUrl}/centers/${centerId}`,
           controller.signal
         );
-        setCenter(centerResponse);
+        
+        // Mapear el estado operativo del backend al frontend
+        const mappedCenter = {
+          ...centerResponse,
+          operational_status: mapStatusToFrontend(centerResponse.operational_status as string)
+        };
+        
+        setCenter(mappedCenter);
 
         // 2. Obtener inventario del centro
         const resourcesResponse = await fetchWithAbort<Resource[]>(
@@ -100,19 +143,44 @@ const CenterDetailsPage: React.FC = () => {
     setIsUpdatingOperationalStatus(true);
 
     try {
-      const response = await fetch(`http://localhost:4000/api/centers/${centerId}/operational-status`, {
+      const backendStatus = mapStatusToBackend(newStatus);
+      
+      console.log(`🔍 Intentando cambiar estado del centro ${centerId}:`);
+      console.log(`   - Estado frontend: ${newStatus}`);
+      console.log(`   - Estado backend: ${backendStatus}`);
+      console.log(`   - Nota: ${publicNote || 'Sin nota'}`);
+      
+      const response = await fetch(`${apiUrl}/centers/${centerId}/operational-status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include', // Incluir cookies de autenticación
         body: JSON.stringify({ 
-          operationalStatus: newStatus,
+          operationalStatus: backendStatus,
           publicNote: publicNote || ''
         }),
       });
 
+      console.log(`📝 Response status: ${response.status}`);
+      console.log(`📝 Response headers:`, response.headers);
+
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorText = await response.text();
+        console.log(`❌ Error response text:`, errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText };
+        }
+        
         throw new Error(errorData.message || 'No se pudo actualizar el estado operativo');
       }
+
+      const responseData = await response.json();
+      console.log(`✅ Success response:`, responseData);
 
       setCenter(prev => prev ? { 
         ...prev, 
@@ -122,8 +190,11 @@ const CenterDetailsPage: React.FC = () => {
       
       alert(`Estado operativo actualizado a "${newStatus}" exitosamente`);
     } catch (err) {
-      console.error('Error al actualizar el estado operativo:', err);
-      alert(err instanceof Error ? err.message : 'No se pudo actualizar el estado operativo');
+      console.error('❌ Error al actualizar el estado operativo:', err);
+      console.error('❌ Error stack:', err instanceof Error ? err.stack : 'No stack');
+      
+      const errorMessage = err instanceof Error ? err.message : 'No se pudo actualizar el estado operativo';
+      alert(`Error: ${errorMessage}`);
     } finally {
       setIsUpdatingOperationalStatus(false);
     }
@@ -242,11 +313,19 @@ const CenterDetailsPage: React.FC = () => {
               onSuccess={async () => {
                 closeAssign();
                 try {
-                  const r = await fetch(`http://localhost:4000/api/centers/${centerId}`);
+                  const r = await fetch(`${apiUrl}/centers/${centerId}`);
                   if (r.ok) setCenter(await r.json());
                 } catch {}
               }}
             />
+            {activation && (
+              <Button
+                variant="contained"
+                onClick={() => navigate(`/center/${center.center_id}/fibe`)}
+              >
+                Formulario FIBE
+              </Button>
+            )}
           </div>
         </div>
       </div>
