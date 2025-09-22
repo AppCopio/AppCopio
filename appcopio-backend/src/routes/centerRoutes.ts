@@ -305,22 +305,28 @@ const updateInventoryItem: RequestHandler = async (req, res) => {
 
 const deleteInventoryItem: RequestHandler = async (req, res) => {
     const { centerId, itemId } = req.params;
-    const userId = (req as any).user?.id;
-
+    const userId = (req as any).user?.id; 
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
         const deletedCount = await deleteInventoryItemService(client, centerId, itemId, userId);
-        await client.query('COMMIT');
-        if (deletedCount === 0) {
+    
+        if (deletedCount === 0) {        
+            await client.query('ROLLBACK'); 
             res.status(404).json({ error: 'Ítem no encontrado en el inventario.' });
-        } else {
-            res.status(204).send();
+            return;
         }
-    } catch (error) {
+
+        await client.query('COMMIT');
+        res.status(204).send(); 
+    } catch (error: any) {
         await client.query('ROLLBACK');
-        console.error(`Error en deleteInventoryItem (centerId: ${centerId}):`, error);
-        res.status(500).json({ error: 'Error interno del servidor.' });
+        if (error.status) {
+            res.status(error.status).json({ error: error.message });
+        } else {
+            console.error(`Error en deleteInventoryItem (centerId: ${centerId}):`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
     } finally {
         client.release();
     }
