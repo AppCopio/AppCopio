@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+import React, { useState, useEffect } from 'react';
+import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap} from '@vis.gl/react-google-maps';
 import { useAuth } from '../../contexts/AuthContext';
 import './MapComponent.css';
 
@@ -24,6 +24,7 @@ interface MapComponentProps {
 
 const apiKey = import.meta.env.VITE_Maps_API_KEY;
 const valparaisoCoords = { lat: -33.04, lng: -71.61 };
+
 
 // Función para formatear el estado operativo para mostrar en la UI
 const formatOperationalStatus = (status?: string): string => {
@@ -79,10 +80,95 @@ const getPinStatusClass = (center: Center): string => {
   }
 };
 
+// 🔑 Subcomponente para la capa OMZ
+const OMZLayer: React.FC<{ visible: boolean }> = ({ visible }) => {
+  const map = useMap();
+  useEffect(() => {
+    console.log('OMZLayer mounted. visible:', visible, 'map:', map);
+
+    if (!map || !visible) return;
+    // --- Capa de polígonos ---
+    const zonesLayer = new google.maps.Data();
+
+    zonesLayer.loadGeoJson('/data/omz_zones.json', null, features => {
+      console.log('✅ OMZ cargadas:', features.length);
+      features.forEach((f, i) => {
+        console.log(`Feature ${i}:`, f.getProperty('name'), f.getGeometry()?.getType());
+      });
+    });
+
+    zonesLayer.setStyle(feature => {
+      const fill = feature.getProperty('fill') as string || '#1E90FF';
+      const stroke = feature.getProperty('stroke') as string || '#000';
+      const strokeW = feature.getProperty('stroke-width') as number || 1;
+      const fillO = feature.getProperty('fill-opacity') as number || 0.5;
+
+      console.log('🎨 Aplicando estilo:', { fill, stroke, strokeW, fillO });
+
+      return {
+        fillColor: fill,
+        strokeColor: stroke,
+        strokeWeight: strokeW,
+        fillOpacity: fillO,
+      };
+    });
+
+    zonesLayer.setMap(map);
+
+    // --- Capa de oficinas (puntos) ---
+    const officesLayer = new google.maps.Data();
+    officesLayer.loadGeoJson('/data/omz_offices1.json', null, features => {
+      console.log('✅ Oficinas OMZ cargadas:', features.length);
+    });
+
+    officesLayer.setStyle(feature => {
+      if (feature.getGeometry()?.getType() === "Point") {
+        const iconUrl = feature.getProperty("icon") as string || 
+          "https://maps.gstatic.com/mapfiles/ms2/micons/red-dot.png"; // fallback
+
+        return {
+          icon: {
+            url: iconUrl,
+            scaledSize: new google.maps.Size(32, 32),
+          }
+        };
+      }
+
+      return {
+        fillColor: feature.getProperty("fill") as string || "#1E90FF",
+        strokeColor: feature.getProperty("stroke") as string || "#000",
+        strokeWeight: feature.getProperty("stroke-width") as number || 1,
+        fillOpacity: feature.getProperty("fill-opacity") as number || 0.5,
+      };
+    });
+
+    officesLayer.addListener("click", (event: google.maps.Data.MouseEvent) => {
+      const name = event.feature.getProperty("name");
+      const description = event.feature.getProperty("description") as { value?: string };
+      const desc = description?.value || "";
+      const pos = (event.feature.getGeometry() as google.maps.Data.Point).get();
+
+      new google.maps.InfoWindow({
+        content: `<strong>${name}</strong><br>${desc}`,
+        position: pos,
+      }).open({ map });
+    });
+    officesLayer.setMap(map);
+
+    return () => {
+      zonesLayer.setMap(null);
+      officesLayer.setMap(null);
+    };
+  }, [map, visible]);
+
+  return null;
+};
+
 // Se corrige la firma del componente para que acepte las props correctamente
 const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
   const { isAuthenticated } = useAuth();
   const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
+  const [showOMZ, setShowOMZ] = useState(false); // AÑADI HU OMZ
 
   const centersToDisplay = isAuthenticated
     ? centers
@@ -144,7 +230,16 @@ const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
               </div>
             </InfoWindow>
           )}
+          {/* Capa OMZ (solo si showOMZ es true) */}
+          <OMZLayer visible={showOMZ} />
         </Map>
+
+        {/* Botón para alternar zonas OMZ */}
+        <div className="omz-toggle-btn">
+          <button onClick={() => setShowOMZ(!showOMZ)}>
+            {showOMZ ? 'Ocultar zonas OMZ' : 'Ver zonas OMZ'}
+          </button>
+        </div>
       </div>
     </APIProvider>
   );
