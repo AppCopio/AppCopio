@@ -3,11 +3,11 @@ import { Router, RequestHandler } from "express";
 import pool from "../config/db";
 import type { Db } from "../types/db";
 import type { FormData } from "../types/fibe";
-import { FibePersonData, PersonCreate, Gender } from "../types/person";
+import { FibePersonData, Person, Gender } from "../types/person";
 
 import { createPersonDB } from "../services/personService";
 import { createFamilyGroupInDB } from "../services/familyService";
-import { createFamilyMemberDB, hasActiveMembershipByRutInActivationDB, findActiveHeadFamilyInActivationDB } from "../services/familyMemberService";
+import { createFamilyMemberDB, hasActiveMembershipByRutInActivationDB, findActiveHeadFamilyInActivationByRut } from "../services/familyMemberService";
 
 const router = Router();
 
@@ -31,8 +31,8 @@ async function assertActivationIsOpen(db: Db, activation_id: number): Promise<vo
  * Esto soluciona los errores de tipos incompatibles.
  * @param data Los datos de la persona desde el formulario.
  * @returns Un objeto que cumple con el tipo PersonCreate.
- */
-function toPersonCreate(data: FibePersonData): PersonCreate {
+
+function toPersonCreate(data: FibePersonData): FibePersonData {
     return {
         rut: data.rut,
         nombre: data.nombre,
@@ -44,7 +44,7 @@ function toPersonCreate(data: FibePersonData): PersonCreate {
         edad: data.edad === "" ? null : data.edad as number,
     };
 }
-
+ */
 // =================================================================
 // 2. SECCIÓN DE CONTROLADORES (Logic Handlers)
 // =================================================================
@@ -65,20 +65,19 @@ const processFibeRegistration: RequestHandler = async (req, res) => {
         await assertActivationIsOpen(client, activation_id);
 
         const jefeDeHogarData: FibePersonData = personas[0];
-        
+
+        const existingFamilyHead = await findActiveHeadFamilyInActivationByRut(client, activation_id, jefeDeHogarData.rut);
+        if (existingFamilyHead) {
+            throw { status: 409, message: "Esta persona ya es jefe de otro hogar en esta activación.", detail: { rut: jefeDeHogarData.rut, family_id: existingFamilyHead.family_id } };
+        }
+
         const existingMembership = await hasActiveMembershipByRutInActivationDB(client, activation_id, jefeDeHogarData.rut);
         if (existingMembership) {
             throw { status: 409, message: "El jefe de hogar ya es miembro de otra familia en esta activación.", detail: { rut: jefeDeHogarData.rut, family_id: existingMembership.family_id } };
         }
         
-        // CAMBIO: Usamos el helper de transformación antes de llamar al servicio.
-        const jefePersonId = await createPersonDB(client, toPersonCreate(jefeDeHogarData));
+        const jefePersonId = await createPersonDB(client, jefeDeHogarData);
         
-        const existingFamilyHead = await findActiveHeadFamilyInActivationDB(client, activation_id, jefePersonId);
-        if (existingFamilyHead) {
-            throw { status: 409, message: "Esta persona ya es jefe de otro hogar en esta activación.", detail: { rut: jefeDeHogarData.rut, family_id: existingFamilyHead.family_id } };
-        }
-
         const familyId = await createFamilyGroupInDB(client, {
             activation_id,
             jefe_hogar_person_id: jefePersonId,
@@ -100,8 +99,7 @@ const processFibeRegistration: RequestHandler = async (req, res) => {
                 throw { status: 409, message: `La persona con RUT ${memberData.rut} ya pertenece a otra familia.`, detail: { index: i, rut: memberData.rut, family_id: memberMembership.family_id } };
             }
             
-            // CAMBIO: Usamos el helper de transformación aquí también.
-            const personId = await createPersonDB(client, toPersonCreate(memberData));
+            const personId = await createPersonDB(client, memberData);
             
             const memberId = await createFamilyMemberDB(client, {
                 family_id: familyId,

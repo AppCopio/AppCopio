@@ -1,4 +1,4 @@
-import type { FibePersonData, Person } from "./person";
+import type { FibePersonData } from "./person";
 import type { HouseholdData } from "./family";
 
 export type FormData = {
