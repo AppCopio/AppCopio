@@ -51,7 +51,8 @@ export default function FibePage() {
       // navigate(`/familias/${resp.family_id}`)
     } catch (err: any) {
       console.error("Error FIBE:", err);
-      alert(err?.response?.data?.message || err?.message || "Error registrando FIBE");
+      // TODO: cambiar alerta por alerta sin click o por confirm dialog o similar + volver al formulario, no reiniciar el formulario en blanco
+      alert(err?.response?.data?.error || err?.message || "Error registrando FIBE");
     } finally {
       setIsSubmitting(false);
     }

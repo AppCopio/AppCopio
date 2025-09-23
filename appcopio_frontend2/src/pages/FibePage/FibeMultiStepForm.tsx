@@ -54,8 +54,6 @@ export default function FibeMultiStepForm({ onSubmit, disabled }: Props) {
       if (onSubmit) {
         await onSubmit(data);
       } else {
-        // fallback de debug si aún no conectas el submit real
-        // eslint-disable-next-line no-console
         console.log("SUBMIT =>", data);
       }
     }
