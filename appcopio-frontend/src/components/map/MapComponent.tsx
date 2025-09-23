@@ -83,27 +83,18 @@ const getPinStatusClass = (center: Center): string => {
 // 🔑 Subcomponente para la capa OMZ
 const OMZLayer: React.FC<{ visible: boolean }> = ({ visible }) => {
   const map = useMap();
-  useEffect(() => {
-    console.log('OMZLayer mounted. visible:', visible, 'map:', map);
-
+  useEffect(() => { 
     if (!map || !visible) return;
-    // --- Capa de polígonos ---
+    // --- Capa de polígonos/zonas/colores ---
     const zonesLayer = new google.maps.Data();
 
-    zonesLayer.loadGeoJson('/data/omz_zones.json', null, features => {
-      console.log('✅ OMZ cargadas:', features.length);
-      features.forEach((f, i) => {
-        console.log(`Feature ${i}:`, f.getProperty('name'), f.getGeometry()?.getType());
-      });
-    });
+    zonesLayer.loadGeoJson('/data/omz_zones.json');
 
     zonesLayer.setStyle(feature => {
-      const fill = feature.getProperty('fill') as string || '#1E90FF';
-      const stroke = feature.getProperty('stroke') as string || '#000';
-      const strokeW = feature.getProperty('stroke-width') as number || 1;
-      const fillO = feature.getProperty('fill-opacity') as number || 0.5;
-
-      console.log('🎨 Aplicando estilo:', { fill, stroke, strokeW, fillO });
+      const fill = feature.getProperty('fill') as string || '#1E90FF'; //busca en el .json atributo fill. Si existe, usa el color, si no azul
+      const stroke = feature.getProperty('stroke') as string || '#000'; //busca el color del borde del polígono. Si no lo encuentra usa negro.
+      const strokeW = feature.getProperty('stroke-width') as number || 1; //define el grosor del borde. Si no hay nada en el JSON, le pone 1.
+      const fillO = feature.getProperty('fill-opacity') as number || 0.5; //: define la transparencia del relleno (0 = transparente, 1 = sólido). sino dice = 0.5.
 
       return {
         fillColor: fill,
@@ -115,44 +106,42 @@ const OMZLayer: React.FC<{ visible: boolean }> = ({ visible }) => {
 
     zonesLayer.setMap(map);
 
-    // --- Capa de oficinas (puntos) ---
+    // --- Capa de oficinas ---
     const officesLayer = new google.maps.Data();
-    officesLayer.loadGeoJson('/data/omz_offices1.json', null, features => {
-      console.log('✅ Oficinas OMZ cargadas:', features.length);
-    });
+    officesLayer.loadGeoJson('/data/omz_offices1.json');
 
-    officesLayer.setStyle(feature => {
-      if (feature.getGeometry()?.getType() === "Point") {
-        const iconUrl = feature.getProperty("icon") as string || 
-          "https://maps.gstatic.com/mapfiles/ms2/micons/red-dot.png"; // fallback
+    officesLayer.setStyle((feature): google.maps.Data.StyleOptions => {
+      if (feature.getGeometry()?.getType() === 'Point') {
+        const n = String(feature.getProperty('omz_number'));
+        const iconUrl = `/icons/omz-${n}.png`;
 
         return {
           icon: {
             url: iconUrl,
-            scaledSize: new google.maps.Size(32, 32),
-          }
+            scaledSize: new google.maps.Size(36, 36),
+          },
+          title: `OMZ ${n} - ${feature.getProperty('name')}`,
         };
       }
 
       return {
-        fillColor: feature.getProperty("fill") as string || "#1E90FF",
-        strokeColor: feature.getProperty("stroke") as string || "#000",
-        strokeWeight: feature.getProperty("stroke-width") as number || 1,
-        fillOpacity: feature.getProperty("fill-opacity") as number || 0.5,
+        visible: false // para no dibujar nada si no es un punto
       };
     });
 
-    officesLayer.addListener("click", (event: google.maps.Data.MouseEvent) => {
-      const name = event.feature.getProperty("name");
-      const description = event.feature.getProperty("description") as { value?: string };
-      const desc = description?.value || "";
+    officesLayer.addListener('click', (event: google.maps.Data.MouseEvent) => {
+      const name = event.feature.getProperty('name');
+      const description = event.feature.getProperty('description') as { value?: string };
+      const desc = description?.value || '';
       const pos = (event.feature.getGeometry() as google.maps.Data.Point).get();
+      const n = event.feature.getProperty('omz_number') ?? '';
 
       new google.maps.InfoWindow({
-        content: `<strong>${name}</strong><br>${desc}`,
+        content: `<strong>OMZ ${n} - ${name}</strong><br>${desc}`,
         position: pos,
       }).open({ map });
     });
+
     officesLayer.setMap(map);
 
     return () => {
