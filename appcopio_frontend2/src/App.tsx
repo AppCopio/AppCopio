@@ -32,6 +32,7 @@ import CenterResidentsPage from "@/pages/CenterResidentsPage/CenterResidentsPage
 import CenterEditPage from "@/pages/CenterEditPage/CenterEditPage";
 import MultiStepCenterForm from "@/pages/CreateCenterPage/steps/MultiStepCenterForm";
 import MyUserPage from "@/pages/MyUserPage/MyUserPage";
+import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
 
 export default function App() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
               <Route path={paths.admin.centers.new} element={<MultiStepCenterForm />} />
               <Route path={paths.admin.users} element={<UsersManagementPage />} />
               <Route path={paths.admin.updates} element={<UpdatesPage />} />
+              <Route path={paths.admin.csv} element={<CsvUploadPage />} />
               <Route path={paths.profile} element={<MyUserPage />} />
               <Route path={paths.myCenters} element={<MisCentrosPage />} />
 
