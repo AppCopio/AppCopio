@@ -91,23 +91,7 @@
 }
 .omz-toggle-btn {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
-  z-index: 9999; /* super alto para quedar sobre el mapa */
-}
-
-
-.omz-toggle-btn button {
-  padding: 0.5rem 1rem;
-  background-color: white;
-  color: #2563eb; /* azul Tailwind bg-blue-600 */
-  border-radius: 0.5rem;
-  font-weight: 600;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  border: none;
-  cursor: pointer;
-}
-
-.omz-toggle-btn button:hover {
-  background-color: #f3f4f6;
+  top: 16px;
+  left: 16px;
+  z-index: 10; /* siempre encima del mapa */
 }

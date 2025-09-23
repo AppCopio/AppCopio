@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap} from '@vis.gl/react-google-maps';
 import { useAuth } from '../../contexts/AuthContext';
 import './MapComponent.css';
+import { Button } from "@mui/material";
 
 // Interfaz actualizada para incluir el estado operativo
 interface Center {
@@ -225,9 +226,15 @@ const MapComponent: React.FC<MapComponentProps> = ({ centers }) => {
 
         {/* Botón para alternar zonas OMZ */}
         <div className="omz-toggle-btn">
-          <button onClick={() => setShowOMZ(!showOMZ)}>
+          <Button
+            variant="contained"   //  Esto lo pinta con el color brand
+            color="primary"       //  Garantiza que use el primario
+            size="small"
+            onClick={() => setShowOMZ(!showOMZ)}
+            sx={(t) => t.typography.bodyStrong}
+          >
             {showOMZ ? 'Ocultar zonas OMZ' : 'Ver zonas OMZ'}
-          </button>
+          </Button>
         </div>
       </div>
     </APIProvider>
