@@ -34,5 +34,6 @@ export const paths = {
     residents: (centerId: string | number) => `/center/${centerId}/residents`,
     updates: (centerId: string | number) => `/center/${centerId}/updates`,
     fibe: (centerId: string | number) => `/center/${centerId}/fibe`,
+    datasets: (centerId: string | number) => `/center/${centerId}/datasets`,
   },
 } as const;
