@@ -426,6 +426,7 @@ CREATE TABLE DatasetFieldOptions (
 );
 
 CREATE UNIQUE INDEX dataset_field_options_uq_active ON DatasetFieldOptions(field_id, value) WHERE is_active;  
+CREATE INDEX dfo_by_field_pos_live ON DatasetFieldOptions(field_id, position) WHERE is_active;
 CREATE INDEX dataset_field_options_by_field_pos ON DatasetFieldOptions(field_id, position);
 
 -- Filas / registros de las bases de datos
@@ -433,7 +434,6 @@ CREATE TABLE DatasetRecords (
     record_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     dataset_id    UUID NOT NULL REFERENCES Datasets(dataset_id) ON DELETE CASCADE,
     activation_id INT NOT NULL REFERENCES CentersActivations(activation_id),
-    center_id     VARCHAR(10) NOT NULL REFERENCES Centers(center_id),
     version       INT NOT NULL DEFAULT 1, -- optimistic locking
     data          JSONB NOT NULL DEFAULT '{}'::jsonb,  -- solo los valores atómicos bajo key de la columna
     
@@ -447,9 +447,7 @@ CREATE TABLE DatasetRecords (
 
 CREATE INDEX dataset_records_by_ds_upd ON DatasetRecords(dataset_id, updated_at DESC); 
 CREATE INDEX dataset_records_by_act_upd ON DatasetRecords(activation_id, updated_at DESC);
-
--- Índice GIN para búsquedas por data (exists/contains). Para filtros intensivos crea índices por-campo (expresiones).
-CREATE INDEX dataset_records_data_gin ON DatasetRecords USING gin (data jsonb_path_ops);
+CREATE INDEX dataset_records_data_gin ON DatasetRecords USING gin (data jsonb_path_ops); -- Índice GIN para búsquedas por data (exists/contains).
 
 -- Valores para las filas en campos del tipo select/multi_select
 CREATE TABLE DatasetRecordOptionValues (
@@ -462,6 +460,7 @@ CREATE TABLE DatasetRecordOptionValues (
 );
 CREATE INDEX drov_by_field_option ON DatasetRecordOptionValues(field_id, option_id);
 
+
 -- Valores para las filas en campos del tipo relation (a otros dataset)
 CREATE TABLE DatasetRecordRelations (
     record_id        UUID NOT NULL REFERENCES DatasetRecords(record_id) ON DELETE CASCADE,
@@ -471,7 +470,8 @@ CREATE TABLE DatasetRecordRelations (
     updated_at       TIMESTAMPTZ,
     PRIMARY KEY (record_id, field_id, target_record_id)
 );
-CREATE INDEX drr_by_field_target ON DatasetRecordRelations(field_id, target_record_id); -- útil para backlink
+CREATE INDEX drr_by_field_target ON DatasetRecordRelations(field_id, target_record_id);
+CREATE INDEX drr_by_target ON DatasetRecordRelations(target_record_id);
 
 -- Valores para las filas en campos del tipo relation (a entidades como familia, personas, etc.)
 CREATE TABLE DatasetRecordCoreRelations (
@@ -484,6 +484,7 @@ CREATE TABLE DatasetRecordCoreRelations (
     PRIMARY KEY (record_id, field_id, target_core, target_id)
 );
 CREATE INDEX drcr_by_field_core ON DatasetRecordCoreRelations(field_id, target_core, target_id);
+CREATE INDEX drcr_by_core ON DatasetRecordCoreRelations(target_core, target_id);
 
 -- Plantillas para las bases de datos
 CREATE TABLE Templates (
@@ -510,7 +511,7 @@ CREATE TABLE TemplateFields (
     is_multi          BOOLEAN NOT NULL DEFAULT FALSE,
     position          INTEGER NOT NULL DEFAULT 0,
     settings          JSONB NOT NULL DEFAULT '{}'::jsonb,
-    relation_target_kind TEXT,
+    relation_target_kind TEXT CHECK (relation_target_kind IN ('dynamic','core')),
     relation_target_template_id UUID,
     relation_target_core   TEXT,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -523,7 +524,6 @@ CREATE UNIQUE INDEX template_fields_uq_slug ON TemplateFields(template_id, key);
 CREATE TABLE AuditLog (
     audit_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     activation_id  INT,
-    center_id      VARCHAR(10),
     actor_user_id  INT,
     action         TEXT NOT NULL CHECK (action IN ('insert','update','delete')),
     entity_type    TEXT NOT NULL,      -- p.ej. 'datasets','dataset_fields',...
@@ -532,5 +532,6 @@ CREATE TABLE AuditLog (
     before         JSONB,
     after          JSONB
 );
+
 CREATE INDEX audit_by_activation ON AuditLog(activation_id, at DESC); --listado cronológico de cambios en una activación
 CREATE INDEX audit_by_entity     ON AuditLog(entity_type, entity_id); -- para la historia de un dataset, columna o registro en específico
