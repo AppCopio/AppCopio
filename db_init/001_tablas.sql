@@ -532,3 +532,33 @@ CREATE TABLE AuditLog (
 
 CREATE INDEX audit_by_activation ON AuditLog(activation_id, at DESC); --listado cronológico de cambios en una activación
 CREATE INDEX audit_by_entity     ON AuditLog(entity_type, entity_id); -- para la historia de un dataset, columna o registro en específico
+
+
+CREATE TABLE CenterNotifications (
+    notification_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    center_id         VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    activation_id     INT REFERENCES CentersActivations(activation_id) ON UPDATE CASCADE ON DELETE SET NULL,
+    destinatary       INT REFERENCES Users(user_id) ON DELETE SET NULL,
+
+    title             VARCHAR(120) NOT NULL,
+    message           TEXT NOT NULL,
+    event_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    channel           VARCHAR(16) NOT NULL DEFAULT 'system',  -- Consutlar si quieren otros medios: 'system' | 'email' | 'sms' | 'push' | 'whatsapp' ...
+    status            VARCHAR(16) NOT NULL DEFAULT 'queued',  -- 'queued' | 'sent' | 'failed'
+    sent_at           TIMESTAMPTZ,
+    read_at           TIMESTAMPTZ,
+    error             TEXT,
+
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ,
+
+    CONSTRAINT chk_channel_len CHECK (char_length(channel) > 0),
+    CONSTRAINT chk_status_val CHECK (status IN ('queued','sent','failed'))
+);
+
+-- Índices útiles
+CREATE INDEX idx_centernotif_center_eventat ON CenterNotifications (center_id, event_at DESC);
+CREATE INDEX idx_centernotif_activation     ON CenterNotifications (activation_id);
+CREATE INDEX idx_centernotif_recipient      ON CenterNotifications (destinatary);
+CREATE INDEX idx_centernotif_status_queued  ON CenterNotifications (status) WHERE status = 'queued';

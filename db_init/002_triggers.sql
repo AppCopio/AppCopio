@@ -39,3 +39,6 @@ CREATE TRIGGER bu_dataset_template_updated_at
 BEFORE UPDATE ON Templates
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE TRIGGER trg_centernotif_updated_at
+BEFORE UPDATE ON CenterNotifications
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
