@@ -26,6 +26,7 @@ import fieldRoutes from "./routes/fieldRoutes";
 import recordRoutes from "./routes/recordRoutes";
 import templateRoutes from "./routes/templateRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
+import notificacionRoutes from "./routes/notificacionRoutes"
 
 dotenv.config();
 
@@ -88,6 +89,8 @@ app.use("/api/database-fields", fieldRoutes);
 app.use("/api/database-records", recordRoutes);
 app.use("/api/database-templates", templateRoutes);
 app.use("/api/database-history", auditLogRoutes);
+app.use("/api/notification", notificacionRoutes);
+
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
