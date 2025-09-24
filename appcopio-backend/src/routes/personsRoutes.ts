@@ -1,7 +1,7 @@
 // src/routes/personsRoutes.ts
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
-import { PersonCreate } from '../types/person';
+import { Person, FibePersonData } from '../types/person';
 import { getPersons, getPersonById, createPersonDB, updatePersonById } from '../services/personService';
 
 const router = Router();
@@ -53,10 +53,8 @@ const getPerson: RequestHandler = async (req, res) => {
  * @description Crea una nueva persona.
  */
 const createPerson: RequestHandler = async (req, res) => {
-    // El cuerpo de la petición debe cumplir con la interfaz PersonCreate
-    const personData: PersonCreate = req.body;
+    const personData: FibePersonData = req.body;
 
-    // Aquí irían validaciones más robustas de los datos (ej: con Zod o Joi)
     if (!personData.rut || !personData.nombre || !personData.primer_apellido) {
         res.status(400).json({ error: "Los campos 'rut', 'nombre' y 'primer_apellido' son requeridos." });
         return;
@@ -86,7 +84,7 @@ const updatePerson: RequestHandler = async (req, res) => {
         return;
     }
 
-    const personData: PersonCreate = req.body;
+    const personData: Person = req.body;
     if (!personData.rut || !personData.nombre || !personData.primer_apellido) {
         res.status(400).json({ error: "Los campos 'rut', 'nombre' y 'primer_apellido' son requeridos." });
         return;

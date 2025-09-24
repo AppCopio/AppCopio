@@ -72,16 +72,16 @@ app.get("/api", (req: Request, res: Response) => {
 
 app.use("/api/centers", requireAuth, centerRoutes)
 //app.use("/api/products", productRoutes);
-app.use("/api/updates", updateRoutes);
-app.use("/api/users", userRouter);
-app.use("/api/inventory", inventoryRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/assignments", assignmentRoutes);
-app.use("/api/persons", personsRoutes);
-app.use("/api/family", familyRoutes);
-app.use("/api/family-members", familyMembersRoutes);
-app.use("/api/fibe", fibeRoutes);
-app.use("/api/roles", roleRoutes);
+app.use("/api/updates", requireAuth, updateRoutes);
+app.use("/api/users", requireAuth, userRouter);
+app.use("/api/inventory", requireAuth,inventoryRoutes);
+app.use("/api/categories", requireAuth, categoryRoutes);
+app.use("/api/assignments", requireAuth, assignmentRoutes);
+app.use("/api/persons", requireAuth, personsRoutes);
+app.use("/api/family", requireAuth, familyRoutes);
+app.use("/api/family-members", requireAuth, familyMembersRoutes);
+app.use("/api/fibe", requireAuth, fibeRoutes);
+app.use("/api/roles", requireAuth, roleRoutes);
 
 app.use("/api/database", databaseRoutes);
 app.use("/api/database-fields", fieldRoutes);
