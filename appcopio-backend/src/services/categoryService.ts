@@ -1,5 +1,3 @@
-// src/services/categoryService.ts
-import pool from "../config/db";
 import { Db } from "../types/db";
 
 // Suponiendo que tienes un tipo para Category, si no, puedes crearlo.

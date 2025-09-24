@@ -21,6 +21,12 @@ import fibeRoutes from "./routes/fibeRoutes";
 import roleRoutes from "./routes/roleRoutes";
 import {requireAuth} from "./auth/middleware";
 
+import databaseRoutes from "./routes/databaseRoutes";
+import fieldRoutes from "./routes/fieldRoutes";
+import recordRoutes from "./routes/recordRoutes";
+import templateRoutes from "./routes/templateRoutes";
+import auditLogRoutes from "./routes/auditLogRoutes";
+
 dotenv.config();
 
 const app = express();
@@ -76,6 +82,12 @@ app.use("/api/family", familyRoutes);
 app.use("/api/family-members", familyMembersRoutes);
 app.use("/api/fibe", fibeRoutes);
 app.use("/api/roles", roleRoutes);
+
+app.use("/api/database", databaseRoutes);
+app.use("/api/database-fields", fieldRoutes);
+app.use("/api/database-records", recordRoutes);
+app.use("/api/database-templates", templateRoutes);
+app.use("/api/database-history", auditLogRoutes);
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
