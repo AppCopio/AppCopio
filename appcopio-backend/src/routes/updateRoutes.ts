@@ -55,11 +55,15 @@ const listUpdatesByCenter: RequestHandler = async (req, res) => {
  */
 const createUpdate: RequestHandler = async (req, res) => {
     const { center_id, description, urgency } = req.body;
-    const requested_by = (req as any).user?.id; // Proporcionado por el middleware de autenticación
+    // CAMBIO: Se corrige .id por .user_id para que coincida con el objeto del middleware.
+    const requested_by = (req as any).user?.user_id; 
 
     if (!center_id || !description || !urgency) {
-        res.status(400).json({ error: 'Se requieren: center_id, description y urgency.' });
-        return;
+        return res.status(400).json({ error: 'Se requieren: center_id, description y urgency.' });
+    }
+    // Añadimos una validación para asegurarnos de que el usuario está autenticado
+    if (!requested_by) {
+        return res.status(401).json({ error: 'No se pudo identificar al solicitante. Se requiere autenticación.' });
     }
 
     try {
@@ -71,20 +75,20 @@ const createUpdate: RequestHandler = async (req, res) => {
     }
 };
 
+
 /**
  * @controller PATCH /api/updates/:id
  * @description Actualiza una solicitud (ej. la asigna, cambia su estado).
  */
 const updateRequest: RequestHandler = async (req, res) => {
     const requestId = parseInt(req.params.id, 10);
-    const resolved_by = (req as any).user?.id;
+    // CORRECCIÓN FINAL: Se usa .user_id para que coincida con el objeto del middleware.
+    const resolved_by = (req as any).user?.user_id;
     const { status, assigned_to, resolution_comment } = req.body;
 
     if (isNaN(requestId)) {
         return res.status(400).json({ error: 'El ID de la solicitud debe ser un número válido.' });
     }
-    // LÓGICA ANTIGUA RESTAURADA: El servicio ahora maneja el caso de "no hay campos",
-    // pero mantenemos la validación aquí por si acaso.
     if (!status && !assigned_to && !resolution_comment) {
         return res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
     }
@@ -92,16 +96,11 @@ const updateRequest: RequestHandler = async (req, res) => {
     try {
         const updatedRequest = await updateRequestById(pool, requestId, { ...req.body, resolved_by });
 
-        // El servicio devuelve null si no hay nada que hacer, lo que coincide con la validación de arriba.
         if (!updatedRequest) {
-            // Este caso puede ocurrir si el body está vacío, lo cual es un error del cliente.
-            return res.status(400).json({ error: 'No se proporcionaron campos válidos para actualizar.' });
+            return res.status(404).json({ error: 'Solicitud no encontrada o sin campos válidos para actualizar.' });
         }
-
         res.status(200).json(updatedRequest);
-
     } catch (error: any) {
-        // Si el servicio lanza un error con status (ej: 404), lo usamos.
         if (error.status) {
             return res.status(error.status).json({ error: error.message });
         }
