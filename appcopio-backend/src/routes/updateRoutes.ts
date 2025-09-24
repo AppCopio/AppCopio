@@ -81,22 +81,30 @@ const updateRequest: RequestHandler = async (req, res) => {
     const { status, assigned_to, resolution_comment } = req.body;
 
     if (isNaN(requestId)) {
-        res.status(400).json({ error: 'El ID de la solicitud debe ser un número válido.' });
-        return;
+        return res.status(400).json({ error: 'El ID de la solicitud debe ser un número válido.' });
     }
+    // LÓGICA ANTIGUA RESTAURADA: El servicio ahora maneja el caso de "no hay campos",
+    // pero mantenemos la validación aquí por si acaso.
     if (!status && !assigned_to && !resolution_comment) {
-        res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
-        return;
+        return res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
     }
 
     try {
         const updatedRequest = await updateRequestById(pool, requestId, { ...req.body, resolved_by });
+
+        // El servicio devuelve null si no hay nada que hacer, lo que coincide con la validación de arriba.
         if (!updatedRequest) {
-            res.status(404).json({ error: 'Solicitud no encontrada.' });
-        } else {
-            res.status(200).json(updatedRequest);
+            // Este caso puede ocurrir si el body está vacío, lo cual es un error del cliente.
+            return res.status(400).json({ error: 'No se proporcionaron campos válidos para actualizar.' });
         }
-    } catch (error) {
+
+        res.status(200).json(updatedRequest);
+
+    } catch (error: any) {
+        // Si el servicio lanza un error con status (ej: 404), lo usamos.
+        if (error.status) {
+            return res.status(error.status).json({ error: error.message });
+        }
         console.error(`Error en updateRequest (id: ${requestId}):`, error);
         res.status(500).json({ error: 'Error interno del servidor.' });
     }

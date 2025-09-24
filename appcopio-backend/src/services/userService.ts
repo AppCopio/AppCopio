@@ -35,49 +35,71 @@ export interface UserUpdate {
  */
 export async function getUsers(db: Db, filters: { search?: string; role_id?: number; active?: boolean; page: number; pageSize: number }) {
     const { search, role_id, active, page, pageSize } = filters;
-    const params: any[] = [];
-    const where: string[] = [];
+    const whereParams: any[] = [];
+    const whereConditions: string[] = [];
+    
+    const addWhereVal = (v: any) => {
+        whereParams.push(v);
+        return `$${whereParams.length}`;
+    };
 
     if (search) {
         const like = `%${search}%`;
-        where.push(`(u.rut ILIKE $${params.length + 1} OR u.nombre ILIKE $${params.length + 2} OR u.email ILIKE $${params.length + 3})`);
-        params.push(like, like, like);
+        whereConditions.push(`(u.rut ILIKE ${addWhereVal(like)} OR u.nombre ILIKE ${addWhereVal(like)} OR u.email ILIKE ${addWhereVal(like)} OR u.username ILIKE ${addWhereVal(like)})`);
     }
     if (role_id) {
-        where.push(`u.role_id = $${params.length + 1}`);
-        params.push(role_id);
+        whereConditions.push(`u.role_id = ${addWhereVal(role_id)}`);
     }
     if (active !== undefined) {
-        where.push(`u.is_active = $${params.length + 1}`);
-        params.push(active);
+        whereConditions.push(`u.is_active = ${addWhereVal(active)}`);
     }
 
-    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    // FIX: Se corrige el typo de `>` a `> 0 ?`
+    const whereSql = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
     const offset = (page - 1) * pageSize;
 
-    const listSql = `
-        SELECT u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at, u.nombre, u.is_active, r.role_name
-        FROM users u JOIN roles r ON r.role_id = u.role_id
-        ${whereSql} ORDER BY u.nombre ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    
+    // --- Consultas y Parámetros ---
+
     const countSql = `SELECT COUNT(*)::int AS total FROM users u ${whereSql}`;
+    const countParams = [...whereParams];
+
+    const listSql = `
+        SELECT
+            u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
+            u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
+            r.role_name
+        FROM users u
+        JOIN roles r ON r.role_id = u.role_id
+        ${whereSql}
+        ORDER BY u.nombre ASC
+        LIMIT $${whereParams.length + 1} OFFSET $${whereParams.length + 2}
+    `;
+    const listParams = [...whereParams, pageSize, offset];
     
     const [listResult, countResult] = await Promise.all([
-        db.query(listSql, [...params, pageSize, offset]),
-        db.query(countSql, params.slice(0, params.length)) // count no necesita limit/offset
+        db.query(listSql, listParams),
+        db.query(countSql, countParams)
     ]);
 
     return { users: listResult.rows, total: countResult.rows[0].total };
 }
 
+
 /**
  * Obtiene un usuario por su ID junto con sus centros asignados.
  */
 export async function getUserWithAssignments(db: Db, id: number) {
+    
     const userQuery = `
-        SELECT u.user_id, u.rut, u.username, u.email, u.role_id, u.nombre, u.is_active, r.role_name
-        FROM users u JOIN roles r ON r.role_id = u.role_id
+        SELECT
+            u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
+            u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
+            r.role_name
+        FROM users u
+        JOIN roles r ON r.role_id = u.role_id
         WHERE u.user_id = $1`;
+    
+    
     const assignmentsQuery = `SELECT center_id FROM centerassignments WHERE user_id = $1 AND valid_to IS NULL`;
     
     const [userResult, assignmentsResult] = await Promise.all([
@@ -85,9 +107,14 @@ export async function getUserWithAssignments(db: Db, id: number) {
         db.query(assignmentsQuery, [id])
     ]);
 
-    if (userResult.rowCount === 0) return null;
+    if (userResult.rowCount === 0) {
+        return null;
+    }
     
-    return { ...userResult.rows[0], assignedCenters: assignmentsResult.rows.map(r => r.center_id) };
+    const user = userResult.rows[0];
+    const assignedCenters = assignmentsResult.rows.map(row => row.center_id);
+    
+    return { ...user, assignedCenters };
 }
 
 /**
@@ -140,17 +167,28 @@ export async function deleteUserById(db: Db, id: number): Promise<number> {
  * Obtiene usuarios activos por un rol específico, incluyendo el conteo de sus asignaciones.
  */
 export async function getActiveUsersByRole(db: Db, roleId: number) {
+    
     const sql = `
-        SELECT u.user_id, u.rut, u.nombre, r.role_id , r.role_name, COALESCE(a.active_assignments, 0)::int AS active_assignments
+        SELECT
+            u.user_id, u.rut, u.username, u.email, u.role_id, u.created_at,
+            u.imagen_perfil, u.nombre, u.genero, u.celular, u.is_active, u.es_apoyo_admin,
+            r.role_name,
+            COALESCE(a.active_assignments, 0)::int AS active_assignments
         FROM users u
         JOIN roles r ON r.role_id = u.role_id
         LEFT JOIN (
             SELECT user_id, COUNT(*) AS active_assignments
-            FROM centerassignments WHERE valid_to IS NULL
+            FROM centerassignments
+            WHERE valid_to IS NULL
             GROUP BY user_id
         ) a ON a.user_id = u.user_id
-        WHERE u.is_active = TRUE AND u.role_id = $1
-        ORDER BY u.nombre ASC;`;
+        WHERE u.is_active = TRUE
+          AND u.role_id = $1
+        ORDER BY u.nombre ASC;
+    `;
+    
     const result = await db.query(sql, [roleId]);
-    return { users: result.rows, total: result.rowCount };
+    
+    // el frontend espera un objeto con { users, total }
+    return { users: result.rows, total: result.rowCount ?? 0 };
 }
