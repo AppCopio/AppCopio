@@ -76,12 +76,12 @@ export default function App() {
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
-                  <Route path="datasets" element={<ActivationDatasetsPage />} />
-                  <Route path="datasets/:key" element={<DatasetDetail/>} />
 
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>
                     <Route path="fibe" element={<FibePage />} />
+                    <Route path="datasets" element={<ActivationDatasetsPage />} />
+                    <Route path="datasets/:key" element={<DatasetDetail/>} />
 
                   </Route>
                 </Route>

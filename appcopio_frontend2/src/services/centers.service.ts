@@ -256,12 +256,13 @@ export async function getActiveActivation(centerId: string, opts?: { signal?: Ab
         // evitar que tome la respuesta de caché
         params: { t: Date.now() },
         headers: { 'Cache-Control': 'no-cache' },
-        validateStatus: (s) => (s >= 200 && s < 300) || s === 204,
+        validateStatus: (s) => (s >= 200 && s < 300) || s=== 404|| s === 204,
       }
     );
-    if (res.status === 204) return null;
+    if (res.status === 204 || res.status ===404) return null;
 
     const data = res.data as any;
+
     if (!data || !data.activation_id) return null;
     return data as ActiveActivation;  
   } catch (error) {
