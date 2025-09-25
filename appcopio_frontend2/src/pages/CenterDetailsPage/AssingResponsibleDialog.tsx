@@ -52,7 +52,7 @@ export default function AssignResponsibleDialog({
     if (role === "contacto ciudadano") {
       try {
         setChecking(true);
-        const { assignments } = await getActiveAssignmentsByUserRole(user.user_id, role);
+        const assignments = await getActiveAssignmentsByUserRole(user.user_id, role);
         // Filtra los que NO son el centro actual (si ya es contacto del mismo centro, no tiene impacto)
         const otherCenters = (assignments || []).filter(a => a.center_id !== centerId);
         if (otherCenters.length > 0) {

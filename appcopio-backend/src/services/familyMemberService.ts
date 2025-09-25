@@ -36,9 +36,11 @@ export async function hasActiveMembershipByRutInActivationDB(
         SELECT fg.family_id, fgm.member_id
         FROM Persons p
         JOIN FamilyGroupMembers fgm ON fgm.person_id = p.person_id
-        JOIN FamilyGroups fg ON fg.family_id = fgm.family_id
+        JOIN FamilyGroups fg        ON fg.family_id = fgm.family_id
         WHERE fg.activation_id = $1
-          AND upper(regexp_replace(p.rut, '[^0-9Kk]', '', 'g')) = $2
+        AND fg.status = 'activo'
+        AND fg.departure_date IS NULL
+        AND upper(regexp_replace(p.rut, '[^0-9Kk]', '', 'g')) = $2
         LIMIT 1`;
     const { rows } = await db.query(sql, [activation_id, cleanRut]);
     return rows[0] ?? null;
@@ -50,7 +52,6 @@ export async function hasActiveMembershipByRutInActivationDB(
  * @param activation_id ID de la activación del centro.
  * @param person_id ID de la persona a buscar.
  * @returns El ID de la familia si se encuentra, o null.
- */
 export async function findActiveHeadFamilyInActivationDB(
     db: Db,
     activation_id: number,
@@ -62,5 +63,30 @@ export async function findActiveHeadFamilyInActivationDB(
         WHERE activation_id = $1 AND jefe_hogar_person_id = $2
         LIMIT 1`;
     const { rows } = await db.query(sql, [activation_id, person_id]);
+    return rows[0] ?? null;
+}
+ */
+
+// Busca si un RUT ya es Jefe de Hogar activo en la activación dada
+export async function findActiveHeadFamilyInActivationByRut(
+  db: Db,
+  activation_id: number,
+  rut: string
+): Promise<{ family_id: number } | null> {
+    const cleanRut = normalizeRut(rut);
+    const sql = `
+        SELECT fg.family_id
+        FROM FamilyGroups fg
+        WHERE fg.activation_id = $1
+        AND fg.status = 'activo'
+        AND fg.departure_date IS NULL
+        AND fg.jefe_hogar_person_id IN (
+            SELECT p.person_id
+            FROM Persons p
+            WHERE upper(regexp_replace(p.rut, '[^0-9Kk]', '', 'g')) = $2
+        )
+        LIMIT 1
+    `;
+    const { rows } = await db.query(sql, [activation_id, cleanRut]);
     return rows[0] ?? null;
 }

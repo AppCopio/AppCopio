@@ -10,7 +10,6 @@ export const paths = {
     root: "/admin",
     users: "/admin/users",
     updates: "/admin/updates",
-    csv: "/admin/csv-upload",
     centers: {
       root: "/admin/centers",
       new: "/admin/centers/new",
@@ -35,5 +34,6 @@ export const paths = {
     residents: (centerId: string | number) => `/center/${centerId}/residents`,
     updates: (centerId: string | number) => `/center/${centerId}/updates`,
     fibe: (centerId: string | number) => `/center/${centerId}/fibe`,
+    datasets: (centerId: string | number) => `/center/${centerId}/datasets`,
   },
 } as const;

@@ -165,9 +165,6 @@ CREATE TABLE FamilyGroups (
     jefe_hogar_person_id INT REFERENCES Persons(person_id) ON DELETE SET NULL,
     observaciones TEXT,
     necesidades_basicas INTEGER[14],
-    
-    --Esto es lo nuevo: 
-
     status VARCHAR(20) NOT NULL DEFAULT 'activo' CHECK (status IN ('activo', 'inactivo')),
     departure_date TIMESTAMPTZ,
     departure_reason TEXT,
@@ -181,7 +178,7 @@ CREATE TABLE FamilyGroupMembers (
     member_id SERIAL PRIMARY KEY,
     family_id INT NOT NULL REFERENCES FamilyGroups(family_id) ON DELETE CASCADE,
     person_id INT NOT NULL REFERENCES Persons(person_id) ON DELETE CASCADE,
-    parentesco TEXT NOT NULL,
+    parentesco TEXT NOT NULL, 
     UNIQUE(family_id, person_id)
 );
 

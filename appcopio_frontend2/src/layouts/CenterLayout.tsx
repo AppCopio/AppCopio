@@ -50,6 +50,8 @@ const CenterLayout: React.FC = () => {
     { label: "Crear Solicitud",       to: paths.center.needsNew(id) },
     { label: "Estado de Actualizaciones", to: paths.center.updates(id) },
     { label: "Listado de Personas",   to: paths.center.residents(id) },
+    { label: "Registros de activación",   to: paths.center.datasets(id) },
+
   ];
 
   return (

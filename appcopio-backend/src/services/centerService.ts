@@ -249,15 +249,31 @@ export async function updateInventoryItem(client: PoolClient, centerId: string, 
 }
 
 export async function deleteInventoryItem(client: PoolClient, centerId: string, itemId: string, userId: number): Promise<number> {
-    const itemData = await client.query('SELECT quantity FROM CenterInventoryItems WHERE center_id = $1 AND item_id = $2', [centerId, itemId]);
-    if (itemData.rowCount === 0) return 0;
+    // LÓGICA ANTIGUA RESTAURADA:
+    // 1. Primero, obtenemos la cantidad para poder registrarla en el log.
+    const itemData = await client.query(
+        'SELECT quantity FROM CenterInventoryItems WHERE center_id = $1 AND item_id = $2',
+        [centerId, itemId]
+    );
+
+    // 2. Si no se encuentra el ítem, lanzamos un error para detener la transacción.
+    if (itemData.rowCount === 0) {
+        // Este error será capturado por el controlador, que enviará el 404.
+        throw { status: 404, message: 'Ítem no encontrado en el inventario.' };
+    }
     
+    // 3. Añadimos el registro en InventoryLog ANTES de eliminar.
     await client.query(
-        `INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, created_by, notes) VALUES ($1, $2, 'SUB', $3, $4, 'Eliminación completa del stock')`,
+        `INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, created_by, notes)
+         VALUES ($1, $2, 'SUB', $3, $4, 'Eliminación completa del stock')`,
         [centerId, itemId, itemData.rows[0].quantity, userId]
     );
 
-    const deleteOp = await client.query('DELETE FROM CenterInventoryItems WHERE center_id = $1 AND item_id = $2', [centerId, itemId]);
+    // 4. Finalmente, eliminamos el ítem.
+    const deleteOp = await client.query(
+        'DELETE FROM CenterInventoryItems WHERE center_id = $1 AND item_id = $2',
+        [centerId, itemId]
+    );
     
     return deleteOp.rowCount ?? 0;
 }

@@ -32,7 +32,8 @@ import CenterResidentsPage from "@/pages/CenterResidentsPage/CenterResidentsPage
 import CenterEditPage from "@/pages/CenterEditPage/CenterEditPage";
 import MultiStepCenterForm from "@/pages/CreateCenterPage/steps/MultiStepCenterForm";
 import MyUserPage from "@/pages/MyUserPage/MyUserPage";
-import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
+import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
+import ActivationDatasetsPage, { DatasetDetail} from "./pages/ActivationDatasetsPage/ActivationDatasetsPage";
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
             <Route path={paths.home} element={<HomePage />} />
             <Route path={paths.map} element={<MapPage />} />
             <Route path={paths.login} element={<LoginPage />} />
+            <Route path="/typo" element={<ExampleFrontend />} /> 
           </Route>
 
           {/* 2) Protegidas (roles 1,2,3; incluye es_apoyo_admin) */}
@@ -61,7 +63,6 @@ export default function App() {
               <Route path={paths.admin.centers.new} element={<MultiStepCenterForm />} />
               <Route path={paths.admin.users} element={<UsersManagementPage />} />
               <Route path={paths.admin.updates} element={<UpdatesPage />} />
-              <Route path={paths.admin.csv} element={<CsvUploadPage />} />
               <Route path={paths.profile} element={<MyUserPage />} />
               <Route path={paths.myCenters} element={<MisCentrosPage />} />
 
@@ -75,6 +76,8 @@ export default function App() {
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
+                  <Route path="datasets" element={<ActivationDatasetsPage />} />
+                  <Route path="datasets/:key" element={<DatasetDetail/>} />
 
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>
