@@ -1,8 +1,10 @@
 import * as React from "react";
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
+import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Center } from "@/types/center";
 import "./MapComponent.css";
+import { Button } from "@mui/material";
+
 
 type MapComponentProps = {
   centers: Center[];
@@ -48,9 +50,78 @@ const getPinStatusClass = (center: Center): string => {
   return "status-ok";
 };
 
+// 🔑 Subcomponente para la capa OMZ
+const OMZLayer: React.FC<{ visible: boolean }> = ({ visible }) => {
+  const map = useMap();
+  React.useEffect(() => {
+    if (!map || !visible) return;
+    const zonesLayer = new google.maps.Data();
+    zonesLayer.loadGeoJson('/data/omz_zones.json');
+    
+    zonesLayer.setStyle(feature => {
+      const fill = feature.getProperty('fill') as string || '#1E90FF';
+      const stroke = feature.getProperty('stroke') as string || '#000';
+      const strokeW = feature.getProperty('stroke-width') as number || 1;
+      const fillO = feature.getProperty('fill-opacity') as number || 0.5;
+
+      return {
+        fillColor: fill,
+        strokeColor: stroke,
+        strokeWeight: strokeW,
+        fillOpacity: fillO,
+      };
+    });
+
+    zonesLayer.setMap(map);
+
+    const officesLayer = new google.maps.Data();
+    officesLayer.loadGeoJson('/data/omz_offices1.json');
+
+    officesLayer.setStyle((feature) => {
+      if (feature.getGeometry()?.getType() === 'Point') {
+        const n = String(feature.getProperty('omz_number'));
+        const iconUrl = `/icons/omz-${n}.png`;
+
+        return {
+          icon: {
+            url: iconUrl,
+            scaledSize: new google.maps.Size(36, 36),
+          },
+          title: `OMZ ${n} - ${feature.getProperty('name')}`,
+        };
+      }
+
+      return { visible: false };
+    });
+
+    officesLayer.addListener('click', (event: google.maps.Data.MouseEvent) => {
+      const name = event.feature.getProperty('name');
+      const description = event.feature.getProperty('description') as { value?: string };
+      const desc = description?.value || '';
+      const pos = (event.feature.getGeometry() as google.maps.Data.Point).get();
+      const n = event.feature.getProperty('omz_number') ?? '';
+
+      new google.maps.InfoWindow({
+        content: `<strong>OMZ ${n} - ${name}</strong><br>${desc}`,
+        position: pos,
+      }).open({ map });
+    });
+
+    officesLayer.setMap(map);
+
+    return () => {
+      zonesLayer.setMap(null);
+      officesLayer.setMap(null);
+    };
+  }, [map, visible]);
+
+  return null;
+};
+
 export default function MapComponent({ centers }: MapComponentProps) {
   const { isAuthenticated } = useAuth();
   const [selectedCenterId, setSelectedCenterId] = React.useState<string | null>(null);
+  const [showOMZ, setShowOMZ] = React.useState(false); // Estado para controlar la visibilidad de la capa OMZ
 
   // Públicos solo ven activos
   const centersToDisplay = React.useMemo(
@@ -139,7 +210,21 @@ export default function MapComponent({ centers }: MapComponentProps) {
               </div>
             </InfoWindow>
           )}
+          {/* Capa OMZ (solo si showOMZ es true) */}
+          <OMZLayer visible={showOMZ} />
         </Map>
+        {/* Botón para alternar zonas OMZ */}
+        <div className="omz-toggle-btn">
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            onClick={() => setShowOMZ(!showOMZ)}
+            sx={(t) => t.typography.bodyStrong}
+          >
+            {showOMZ ? "Ocultar zonas OMZ" : "Ver zonas OMZ"}
+          </Button>
+        </div>
       </div>
     </APIProvider>
   );
