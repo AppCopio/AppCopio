@@ -1,7 +1,8 @@
 import { Router, RequestHandler } from "express";
+import pool from "../config/db";
 import {
-  createNotification,
-  updateStatus,
+  createNotification as createNotificationService,
+  updateStatus as updateStatusService,
   markSent,
   markRead,
   listByUser,
@@ -34,7 +35,7 @@ const createNotification: RequestHandler = async (req, res, next) => {
       return res.status(400).json({ error: "center_id, title y message son obligatorios" });
     }
 
-    const row = await createNotification({
+    const row = await createNotificationService(pool, {
       center_id,
       activation_id,
       destinatary,
@@ -54,14 +55,14 @@ const createNotification: RequestHandler = async (req, res, next) => {
 // PATCH /notifications/:id/status  (actualizar estado)
 // body: { status: 'queued'|'sent'|'failed', error?: string }
 // ---------------------------------------------
-const actualizarEstado : RequestHandler = async (req, res, next) => {
+const updateStatus : RequestHandler = async (req, res, next) => {
   try {
     const id = req.params.id;
     const { status, error = null } = req.body || {};
     if (!id || !status || !allowedStatus.has(status)) {
       return res.status(400).json({ error: "Parámetros inválidos (status debe ser 'queued'|'sent'|'failed')." });
     }
-    const row = await updateStatus(id, status as NotificationStatus, error);
+    const row = await updateStatusService(pool, id, status as NotificationStatus, error);
     return res.json({ data: row });
   } catch (err) {
     if ((err as Error).message === "NOT_FOUND") {
@@ -75,11 +76,11 @@ const actualizarEstado : RequestHandler = async (req, res, next) => {
 // PATCH /notifications/:id/mark-sent  (set sent_at y status='sent')
 // body opcional: { sent_at: ISO }
 // ---------------------------------------------
-const marcarLeido : RequestHandler = async (req, res, next) => {
+const markMessageAsSent : RequestHandler = async (req, res, next) => {
   try {
     const id = req.params.id;
     const { sent_at = null } = req.body || {};
-    const row = await markSent(id, sent_at);
+    const row = await markSent(pool, id, sent_at);
     return res.json({ data: row });
   } catch (err) {
     if ((err as Error).message === "NOT_FOUND") {
@@ -93,11 +94,11 @@ const marcarLeido : RequestHandler = async (req, res, next) => {
 // PATCH /notifications/:id/mark-read  (set read_at)
 // body opcional: { read_at: ISO }
 // ---------------------------------------------
-const marcarEnviado : RequestHandler = async (req, res, next) => {
+const markMessageAsRead : RequestHandler = async (req, res, next) => {
   try {
     const id = req.params.id;
     const { read_at = null } = req.body || {};
-    const row = await markRead(id, read_at);
+    const row = await markRead(pool, id, read_at);
     return res.json({ data: row });
   } catch (err) {
     if ((err as Error).message === "NOT_FOUND") {
@@ -112,7 +113,7 @@ const marcarEnviado : RequestHandler = async (req, res, next) => {
 // ---------------------------------------------
 const getById: RequestHandler = async (req, res, next) => {
   try {
-    const row = await getNotificationById(req.params.id);
+    const row = await getNotificationById(pool, req.params.id);
     if (!row) return res.status(404).json({ error: "Notificación no encontrada" });
     return res.json({ data: row });
   } catch (err) {
@@ -129,7 +130,7 @@ const getByUser: RequestHandler = async (req, res, next) => {
     const userId = Number(req.params.userId);
     if (!Number.isFinite(userId)) return res.status(400).json({ error: "userId inválido" });
 
-    const rows = await listByUser(userId);
+    const rows = await listByUser(pool, userId);
     return res.json({ data: rows });
   } catch (err) {
     next(err);
@@ -143,7 +144,7 @@ const getByUser: RequestHandler = async (req, res, next) => {
 const getByCenter: RequestHandler = async (req, res, next) => {
   try {
     const centerId = req.params.centerId;
-    const rows = await listByCenter(centerId);
+    const rows = await listByCenter(pool, centerId);
     return res.json({ data: rows });    
   } catch (err) {
     next(err);
@@ -152,9 +153,9 @@ const getByCenter: RequestHandler = async (req, res, next) => {
 
 // Mount
 router.post("/notifications", createNotification);
-router.patch("/notifications/:id/status", actualizarEstado);
-router.patch("/notifications/:id/mark-sent", marcarEnviado);
-router.patch("/notifications/:id/mark-read", marcarLeido);
+router.patch("/notifications/:id/status", updateStatus);
+router.patch("/notifications/:id/mark-sent", markMessageAsSent);
+router.patch("/notifications/:id/mark-read", markMessageAsRead);
 
 router.get("/notifications/:id", getById);
 router.get("/notifications/by-user/:userId", getByUser);

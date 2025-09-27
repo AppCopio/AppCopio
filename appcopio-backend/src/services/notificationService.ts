@@ -1,8 +1,12 @@
-import pool from "../config/db";
 import { Db } from "../types/db";
-import type { CenterNotification, NotificationStatus, CreateNotificationInput, ListOpts } from "../types/notification";
+import type {
+  CenterNotification,
+  NotificationStatus,
+  CreateNotificationInput,
+  ListOpts
+} from "../types/notification";
 
-export async function createNotification(input: CreateNotificationInput): Promise<CenterNotification> {
+export async function createNotification(db: Db, input: CreateNotificationInput): Promise<CenterNotification> {
   const {
     center_id,
     activation_id = null,
@@ -19,7 +23,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
     VALUES ($1, $2, $3, $4, $5, COALESCE($6, now()), $7)
     RETURNING *;
   `;
-  const { rows } = await pool.query(q, [
+  const { rows } = await db.query(q, [
     center_id,
     activation_id,
     destinatary,
@@ -31,7 +35,12 @@ export async function createNotification(input: CreateNotificationInput): Promis
   return rows[0];
 }
 
-export async function updateStatus (notification_id: string, status: NotificationStatus, error?: string | null) : Promise<CenterNotification> {
+export async function updateStatus(
+  db: Db,
+  notification_id: string,
+  status: NotificationStatus,
+  error?: string | null
+): Promise<CenterNotification> {
   // Nota: el CHECK de la tabla valida los valores
   const q = `
     UPDATE "CenterNotifications"
@@ -41,12 +50,16 @@ export async function updateStatus (notification_id: string, status: Notificatio
      WHERE notification_id = $1
      RETURNING *;
   `;
-  const { rows } = await pool.query(q, [notification_id, status, error ?? null]);
+  const { rows } = await db.query(q, [notification_id, status, error ?? null]);
   if (!rows[0]) throw new Error("NOT_FOUND");
   return rows[0];
 }
 
-export async function markSent(notification_id: string, sent_at?: Date | string): Promise<CenterNotification> {
+export async function markSent(
+  db: Db,
+  notification_id: string,
+  sent_at?: Date | string
+): Promise<CenterNotification> {
   const q = `
     UPDATE "CenterNotifications"
        SET status = 'sent',
@@ -55,12 +68,16 @@ export async function markSent(notification_id: string, sent_at?: Date | string)
      WHERE notification_id = $1
      RETURNING *;
   `;
-  const { rows } = await pool.query(q, [notification_id, sent_at ?? null]);
+  const { rows } = await db.query(q, [notification_id, sent_at ?? null]);
   if (!rows[0]) throw new Error("NOT_FOUND");
   return rows[0];
 }
 
-export async function markRead(notification_id: string, read_at?: Date | string): Promise<CenterNotification> {
+export async function markRead(
+  db: Db,
+  notification_id: string,
+  read_at?: Date | string
+): Promise<CenterNotification> {
   const q = `
     UPDATE "CenterNotifications"
        SET read_at = COALESCE($2, now()),
@@ -68,37 +85,46 @@ export async function markRead(notification_id: string, read_at?: Date | string)
      WHERE notification_id = $1
      RETURNING *;
   `;
-  const { rows } = await pool.query(q, [notification_id, read_at ?? null]);
+  const { rows } = await db.query(q, [notification_id, read_at ?? null]);
   if (!rows[0]) throw new Error("NOT_FOUND");
   return rows[0];
 }
 
-
-
-export async function listByUser(user_id: number, opts: ListOpts = {}): Promise<CenterNotification[]> {
+export async function listByUser(
+  db: Db,
+  user_id: number,
+  opts: ListOpts = {}
+): Promise<CenterNotification[]> {
   const q = `
     SELECT *
       FROM "CenterNotifications"
      WHERE destinatary = $1
      ORDER BY created_at DESC, event_at DESC;
   `;
-  const { rows } = await pool.query(q, [user_id]);
+  const { rows } = await db.query(q, [user_id]);
   return rows;
 }
 
-export async function listByCenter(center_id: string, opts: ListOpts = {}): Promise<CenterNotification[]> {
+export async function listByCenter(
+  db: Db,
+  center_id: string,
+  opts: ListOpts = {}
+): Promise<CenterNotification[]> {
   const q = `
     SELECT *
       FROM "CenterNotifications"
      WHERE center_id = $1
      ORDER BY created_at DESC, event_at DESC;
   `;
-  const { rows } = await pool.query(q, [center_id]);
+  const { rows } = await db.query(q, [center_id]);
   return rows;
 }
 
-export async function getNotificationById(notification_id: string): Promise<CenterNotification | null> {
+export async function getNotificationById(
+  db: Db,
+  notification_id: string
+): Promise<CenterNotification | null> {
   const q = `SELECT * FROM "CenterNotifications" WHERE notification_id = $1;`;
-  const { rows } = await pool.query(q, [notification_id]);
+  const { rows } = await db.query(q, [notification_id]);
   return rows[0] ?? null;
 }
