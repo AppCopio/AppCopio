@@ -3,7 +3,6 @@ import pool from "../config/db";
 import {
   createNotification as createNotificationService,
   updateStatus as updateStatusService,
-  markSent,
   markRead,
   listByUser,
   listByCenter,
@@ -58,29 +57,17 @@ const createNotification: RequestHandler = async (req, res, next) => {
 const updateStatus : RequestHandler = async (req, res, next) => {
   try {
     const id = req.params.id;
-    const { status, error = null } = req.body || {};
+    const { status, error = null, sent_at = null } = req.body || {}; // <-- leer sent_at del body
     if (!id || !status || !allowedStatus.has(status)) {
       return res.status(400).json({ error: "Parámetros inválidos (status debe ser 'queued'|'sent'|'failed')." });
     }
-    const row = await updateStatusService(pool, id, status as NotificationStatus, error);
-    return res.json({ data: row });
-  } catch (err) {
-    if ((err as Error).message === "NOT_FOUND") {
-      return res.status(404).json({ error: "Notificación no encontrada" });
-    }
-    next(err);
-  }
-};
-
-// ---------------------------------------------
-// PATCH /notifications/:id/mark-sent  (set sent_at y status='sent')
-// body opcional: { sent_at: ISO }
-// ---------------------------------------------
-const markMessageAsSent : RequestHandler = async (req, res, next) => {
-  try {
-    const id = req.params.id;
-    const { sent_at = null } = req.body || {};
-    const row = await markSent(pool, id, sent_at);
+    const row = await updateStatusService(
+      pool,
+      id,
+      status as NotificationStatus,
+      error,
+      status === 'sent' ? sent_at : null
+    );
     return res.json({ data: row });
   } catch (err) {
     if ((err as Error).message === "NOT_FOUND") {
@@ -152,13 +139,12 @@ const getByCenter: RequestHandler = async (req, res, next) => {
 };
 
 // Mount
-router.post("/notifications", createNotification);
-router.patch("/notifications/:id/status", updateStatus);
-router.patch("/notifications/:id/mark-sent", markMessageAsSent);
-router.patch("/notifications/:id/mark-read", markMessageAsRead);
+router.post("/", createNotification);
+router.patch("/:id/status", updateStatus);
+router.patch("/:id/mark-read", markMessageAsRead);
 
-router.get("/notifications/:id", getById);
-router.get("/notifications/by-user/:userId", getByUser);
-router.get("/notifications/by-center/:centerId", getByCenter);
+router.get("/:id", getById);
+router.get("/by-user/:userId", getByUser);
+router.get("/by-center/:centerId", getByCenter);
 
 export default router;

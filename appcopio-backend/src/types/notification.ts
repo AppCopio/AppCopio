@@ -1,6 +1,6 @@
 export type NotificationStatus = 'queued' | 'sent' | 'failed';
 
-export interface CenterNotification {
+export type CenterNotification = {
   notification_id: string;
   center_id: string;
   activation_id: number | null;
