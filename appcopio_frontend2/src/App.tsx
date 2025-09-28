@@ -34,6 +34,7 @@ import MultiStepCenterForm from "@/pages/CreateCenterPage/steps/MultiStepCenterF
 import MyUserPage from "@/pages/MyUserPage/MyUserPage";
 import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
 import ActivationDatasetsPage, { DatasetDetail} from "./pages/ActivationDatasetsPage/ActivationDatasetsPage";
+import ActivationRecordsPage from "./pages/Databases/ActivationRecordsPage";
 
 export default function App() {
   return (
@@ -78,6 +79,7 @@ export default function App() {
                   <Route path="updates" element={<UpdatesPage />} />
                   <Route path="datasets" element={<ActivationDatasetsPage />} />
                   <Route path="datasets/:key" element={<DatasetDetail/>} />
+                  <Route path="activations/:activationId/records" element={<ActivationRecordsPage/>} />
 
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>
