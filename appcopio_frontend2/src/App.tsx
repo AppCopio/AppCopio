@@ -82,7 +82,6 @@ export default function App() {
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>
                     <Route path="fibe" element={<FibePage />} />
-
                   </Route>
                 </Route>
               </Route>

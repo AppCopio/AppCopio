@@ -203,13 +203,13 @@ const CenterResidentsPage: React.FC = () => {
           getCenterCapacity(centerId),
           listResidentGroups(centerId),
           listPeopleByCenter(centerId, filters),
-          listActiveCenters(centerId),
+          listActiveCenters(),
         ]);
         if (cancel) return;
 
-        setCenterCapacity(cap.capacity ?? 0);
-        setCurrentCapacity(cap.current_capacity ?? 0);
-        setAvailableCapacity(cap.available_capacity ?? 0);
+        setCenterCapacity(cap && cap.capacity != null ? cap.capacity : 0);
+        setCurrentCapacity(cap && cap.current_capacity != null ? cap.current_capacity : 0);
+        setAvailableCapacity(cap && cap.available_capacity != null ? cap.available_capacity : 0);
 
         setGroups(Array.isArray(grps) ? grps : []);
         setPeople(Array.isArray(ppl) ? ppl : []);
@@ -246,9 +246,9 @@ const CenterResidentsPage: React.FC = () => {
     if (centerId) {
       try {
         const [cap, grps] = await Promise.all([getCenterCapacity(centerId), listResidentGroups(centerId)]);
-        setCenterCapacity(cap.capacity ?? 0);
-        setCurrentCapacity(cap.current_capacity ?? 0);
-        setAvailableCapacity(cap.available_capacity ?? 0);
+        setCenterCapacity(cap && cap.capacity != null ? cap.capacity : 0);
+        setCurrentCapacity(cap && cap.current_capacity != null ? cap.current_capacity : 0);
+        setAvailableCapacity(cap && cap.available_capacity != null ? cap.available_capacity : 0);
         setGroups(grps);
       } catch {
         /* noop */
@@ -270,7 +270,7 @@ const CenterResidentsPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await registerFamilyDeparture({
-        family_id: residentToExit.family_id,
+        familyId: residentToExit.family_id,
         departure_reason: exitReason as DepartureReason,
         destination_activation_id: exitReason === "traslado" ? destinationActivationId : null,
         departure_date: exitDate,
