@@ -31,35 +31,123 @@ export async function createFieldDB(db: Db, args: any) : Promise<DatasetField> {
 }
 
 // Se le pasa en Payload los campos a actualizar junto a su nuevo valor
-export async function updateFieldDB(db: Db, field_id: string, payload: any) : Promise<DatasetField> {
+export async function updateFieldDB(
+  db: Db,
+  field_id: string,
+  payload: Record<string, any>
+): Promise<DatasetField | null> {
   const sets: string[] = [];
   const vals: any[] = [];
   let i = 1;
+
   const up = (col: string, val: any, cast?: string) => {
-    sets.push(`${col} = $${i}${cast ? `::${cast}` : ""}`); vals.push(val); i++;
+    sets.push(`${col} = $${i}${cast ?? ""}`);
+    vals.push(val);
+    i++;
   };
 
-  for (const k of ["name","key","type","position","is_active","required","unique_field","is_multi","relation_target_kind","relation_target_dataset_id","relation_target_core"]) {
-    if (payload[k] !== undefined) {
-      up(k, payload[k]);
-    }
-  }
-  if (payload.config !== undefined) up("config", JSON.stringify(payload.config ?? {}), "jsonb");
+  if (payload.name !== undefined) up("name", payload.name);
+  if (payload.key !== undefined) up("key", payload.key);
+  if (payload.type !== undefined) up("type", payload.type);
+  if (payload.required !== undefined) up("required", payload.required);
+  if (payload.unique_field !== undefined) up("unique_field", payload.unique_field);
+  if (payload.config !== undefined) up("config", JSON.stringify(payload.config ?? {}), "::jsonb");
+  if (payload.is_active !== undefined) up("is_active", payload.is_active);
+  if (payload.is_multi !== undefined) up("is_multi", payload.is_multi);
+  if (payload.relation_target_kind !== undefined) up("relation_target_kind", payload.relation_target_kind);
+  if (payload.relation_target_dataset_id !== undefined) up("relation_target_dataset_id", payload.relation_target_dataset_id);
+  if (payload.relation_target_core !== undefined) up("relation_target_core", payload.relation_target_core);
+  if (payload.deleted_at !== undefined) up("deleted_at", payload.deleted_at);
 
   if (sets.length === 0) {
-    const { rows } = await db.query(`SELECT * FROM DatasetFields WHERE field_id = $1`, [field_id]);
-    return rows[0] ?? null;
+    return await getFieldByIdDB(db, field_id);
   }
+
+  vals.push(field_id);
 
   const sql = `
     UPDATE DatasetFields
-    SET ${sets.join(", ")}, updated_at = now()
-    WHERE field_id = $${i}
-    RETURNING *`;
-  vals.push(field_id);
+       SET ${sets.join(", ")}
+     WHERE field_id = $${i}
+     RETURNING field_id, dataset_id, name, key, type, required, unique_field,
+               config, position, is_active, is_multi,
+               relation_target_kind, relation_target_dataset_id, relation_target_core,
+               created_at, updated_at, deleted_at
+  `;
 
   const { rows } = await db.query(sql, vals);
   return rows[0] ?? null;
+}
+
+
+export async function getFieldByIdDB(db: Db, field_id: string) {
+  const { rows } = await db.query(
+    `SELECT field_id, dataset_id, name, key, type, required, unique_field,
+            config, position, is_active, relation_target_kind,
+            relation_target_dataset_id, relation_target_core,
+            created_at, updated_at, deleted_at
+     FROM DatasetFields
+     WHERE field_id = $1`,
+    [field_id]
+  );
+  return rows[0] ?? null;
+}
+
+export async function moveFieldPositionDB(db: Db, field_id: string, toPosition: number) {
+  // Lock del campo a mover
+  const qField = await db.query(
+    `SELECT field_id, dataset_id, position, is_active, deleted_at
+     FROM DatasetFields
+     WHERE field_id = $1
+     FOR UPDATE`,
+    [field_id]
+  );
+  const f = qField.rows[0];
+  if (!f) throw new Error("FIELD_NOT_FOUND");
+  if (!f.is_active || f.deleted_at) throw new Error("FIELD_NOT_MOVABLE");
+
+  // Rango válido: [1 .. max]
+  const qMax = await db.query(
+    `SELECT COALESCE(MAX(position), 0) AS max_pos
+       FROM DatasetFields
+      WHERE dataset_id = $1 AND is_active = TRUE AND deleted_at IS NULL`,
+    [f.dataset_id]
+  );
+ let maxPos = Number(qMax.rows[0]?.max_pos ?? 0) || 1;
+  const from = Number(f.position);
+  const to = Math.max(1, Math.min(Number(toPosition), maxPos));
+
+  if (to === from) return;
+
+  if (to < from) {
+    // desplaza hacia abajo (abre hueco arriba)
+    await db.query(
+      `UPDATE DatasetFields
+          SET position = position + 1
+        WHERE dataset_id = $1
+          AND is_active = TRUE AND deleted_at IS NULL
+          AND position >= $2 AND position < $3`,
+      [f.dataset_id, to, from]
+    );
+  } else {
+    // to > from: desplaza hacia arriba (cierra hueco abajo)
+    await db.query(
+      `UPDATE DatasetFields
+          SET position = position - 1
+        WHERE dataset_id = $1
+          AND is_active = TRUE AND deleted_at IS NULL
+          AND position <= $2 AND position > $3`,
+      [f.dataset_id, to, from]
+    );
+  }
+
+  // fija la posición del campo movido
+  await db.query(
+    `UPDATE DatasetFields
+        SET position = $2
+      WHERE field_id = $1`,
+    [field_id, to]
+  );
 }
 
 export async function softDeleteFieldDB(db: Db, field_id: string) : Promise<UUID> {

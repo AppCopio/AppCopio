@@ -31,7 +31,7 @@ export async function getRecordDB(db: Db, record_id: string) : Promise<DatasetRe
   return rows[0] ?? null;
 }
 
-export async function createRecordDB(db: Db, args: {
+export async function createRecordDB(db: Db, userId: number, args: {
   dataset_id: string; activation_id: number; data: any;
   select_values: Record<string, string | string[]>;
   relations_dynamic: Array<{ field_id: string; target_record_id: string }>;
@@ -39,11 +39,11 @@ export async function createRecordDB(db: Db, args: {
 })  : Promise<DatasetRecord>{
   // 1) Inserta registro base
   const insertRec = `
-    INSERT INTO DatasetRecords (dataset_id, activation_id, data)
-    VALUES ($1, $2, $3::jsonb)
-    RETURNING record_id, dataset_id, activation_id, version, data, created_at`;
+    INSERT INTO DatasetRecords (dataset_id, activation_id, data, created_by)
+    VALUES ($1, $2, $3::jsonb, $4)
+    RETURNING record_id, dataset_id, activation_id, version, data, created_by, created_at`;
   const { rows } = await db.query(insertRec, [
-    args.dataset_id, args.activation_id, JSON.stringify(args.data ?? {})
+    args.dataset_id, args.activation_id, JSON.stringify(args.data ?? {}), userId
   ]);
   const rec = rows[0];
 
@@ -80,7 +80,7 @@ export async function createRecordDB(db: Db, args: {
   return rec;
 }
 
-export async function updateRecordDB(db: Db, args: {
+export async function updateRecordDB(db: Db, userId: number, args: {
   record_id: string; version: number;
   data?: any | null;
   select_values?: Record<string, string | string[]> | null;
@@ -98,14 +98,14 @@ export async function updateRecordDB(db: Db, args: {
   if (args.data !== null && args.data !== undefined) {
     await db.query(
       `UPDATE DatasetRecords
-       SET data = $1::jsonb, version = version + 1, updated_at = now()
+       SET data = $1::jsonb, version = version + 1, updated_by = $3
        WHERE record_id = $2`,
-      [JSON.stringify(args.data ?? {}), args.record_id]
+      [JSON.stringify(args.data ?? {}), args.record_id, userId]
     );
   } else {
     await db.query(
-      `UPDATE DatasetRecords SET version = version + 1, updated_at = now() WHERE record_id = $1`,
-      [args.record_id]
+      `UPDATE DatasetRecords SET version = version + 1, updated_by = $2 WHERE record_id = $1`,
+      [args.record_id, userId]
     );
   }
 

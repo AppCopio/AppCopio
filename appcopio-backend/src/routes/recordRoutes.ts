@@ -4,7 +4,8 @@ import {
   createRecordDB, getRecordDB, listRecordsDB, updateRecordDB, softDeleteRecordDB
 } from "../services/recordService";
 
-import { DatasetRecord, UUID } from "../types/dataset";
+import { requireUser } from "../auth/requireUser";
+import { requireAuth } from '../auth/middleware';
 
 const router = Router();
 
@@ -52,6 +53,8 @@ const getRecord: RequestHandler = async (req, res) => {
 
 const createRecord: RequestHandler = async (req, res) => {
   const { dataset_id, activation_id, data, select_values, relations_dynamic, relations_core } = req.body ?? {};
+  const userId = requireUser(req).user_id;
+
   if (!dataset_id || !activation_id || !isObject(data)) {
     res.status(400).json({ error: "Requiere dataset_id, activation_id y data (objeto)." });
     return;
@@ -60,7 +63,7 @@ const createRecord: RequestHandler = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const record = await createRecordDB(client, {
+    const record = await createRecordDB(client, userId,{
       dataset_id, activation_id: Number(activation_id), data: data ?? {},
       select_values: select_values ?? {},                 // { field_id: [option_id, ...] } o { field_id: option_id }
       relations_dynamic: relations_dynamic ?? [],         // [ { field_id, target_record_id } ... ]
@@ -81,6 +84,7 @@ const createRecord: RequestHandler = async (req, res) => {
 
 const updateRecord: RequestHandler = async (req, res) => {
   const record_id = req.params.id;
+  const userId = requireUser(req).user_id;
   if (!record_id) { res.status(400).json({ error: "Falta record id." }); return; }
   const { version, data, select_values, relations_dynamic, relations_core } = req.body ?? {};
   if (!Number.isInteger(version)) {
@@ -91,7 +95,7 @@ const updateRecord: RequestHandler = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const row = await updateRecordDB(client, {
+    const row = await updateRecordDB(client, userId,{
       record_id, version, data: data ?? null,
       select_values: select_values ?? null,
       relations_dynamic: relations_dynamic ?? null,
@@ -129,8 +133,8 @@ const deleteRecord: RequestHandler = async (req, res) => {
 // =============================
 router.get("/", listRecords);
 router.get("/:id", getRecord);
-router.post("/", createRecord);
-router.patch("/:id", updateRecord);
+router.post("/", requireAuth, createRecord);
+router.patch("/:id", requireAuth, updateRecord);
 router.delete("/:id", deleteRecord);
 
 export default router;

@@ -379,6 +379,7 @@ CREATE TABLE DatasetFields (
     relation_target_dataset_id UUID, -- si es dynamic, a qué dataset apunta
     relation_target_core   TEXT, -- nombre lógico de la tabla SQL ('persons','family_groups')
     
+    
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ,
     deleted_at     TIMESTAMPTZ,
@@ -404,7 +405,7 @@ CREATE TABLE DatasetFields (
 );
 
 CREATE UNIQUE INDEX dataset_fields_uq_active_key ON DatasetFields (dataset_id, key) WHERE is_active; -- Unicidad de key entre campos activos de una misma base de datos
-
+CREATE UNIQUE INDEX dataset_fields_uq_live_pos ON DatasetFields(dataset_id, position) WHERE is_active = TRUE AND deleted_at IS NULL;
 CREATE INDEX dataset_fields_by_dataset_pos ON DatasetFields(dataset_id, position); -- orden de las columnas en la UI rápido
 CREATE INDEX dataset_fields_rel_target_ds  ON DatasetFields(relation_target_dataset_id); -- listar qué campos apuntan a cierto dataset
 

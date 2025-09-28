@@ -83,11 +83,11 @@ app.use("/api/family-members", requireAuth, familyMembersRoutes);
 app.use("/api/fibe", requireAuth, fibeRoutes);
 app.use("/api/roles", requireAuth, roleRoutes);
 
-app.use("/api/database", databaseRoutes);
-app.use("/api/database-fields", fieldRoutes);
-app.use("/api/database-records", recordRoutes);
-app.use("/api/database-templates", templateRoutes);
-app.use("/api/database-history", auditLogRoutes);
+app.use("/api/database", requireAuth, databaseRoutes);
+app.use("/api/database-fields", requireAuth, fieldRoutes);
+app.use("/api/database-records", requireAuth, recordRoutes);
+app.use("/api/database-templates", requireAuth, templateRoutes);
+app.use("/api/database-history", requireAuth, auditLogRoutes);
 app.use("/api/notification", notificacionRoutes);
 
 

@@ -5,7 +5,9 @@ import {
   listTemplatesDB, getTemplateDB, createTemplateDB, updateTemplateDB,
   listTemplateFieldsDB, createTemplateFieldDB, updateTemplateFieldDB, deleteTemplateFieldDB
 } from "../services/templateService";
-import type { Template, TemplateField } from "../types/dataset";
+
+import { requireUser } from "../auth/requireUser";
+import { requireAuth } from '../auth/middleware';
 
 const router = Router();
 
@@ -38,9 +40,10 @@ const getTemplate: RequestHandler = async (req, res) => {
 
 const createTemplate: RequestHandler = async (req, res) => {
   const { name, description, is_public } = req.body ?? {};
+  const userId = requireUser(req).user_id;
   if (!name) { res.status(400).json({ error: "Falta name." }); return; }
   try {
-    const row = await createTemplateDB(pool, { name, description: description ?? null, is_public: !!is_public });
+    const row = await createTemplateDB(pool, userId, { name, description: description ?? null, is_public: !!is_public });
     res.status(201).json(row);
   } catch (e: any) {
     console.error("createTemplate error:", e);
@@ -130,8 +133,8 @@ const deleteTemplateField: RequestHandler = async (req, res) => {
 // =============================
 router.get("/", listTemplates);
 router.get("/:id", getTemplate);
-router.post("/", createTemplate);
-router.patch("/:id", updateTemplate);
+router.post("/", requireAuth, createTemplate);
+router.patch("/:id", requireAuth, updateTemplate);
 
 router.get("/fields/list", listTemplateFields);
 router.post("/fields", createTemplateField);
