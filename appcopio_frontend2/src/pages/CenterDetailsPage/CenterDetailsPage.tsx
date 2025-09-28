@@ -171,6 +171,15 @@ const CenterDetailsPage: React.FC = () => {
                   <div className="public-note-display">{center.public_note}</div>
                 </div>
               )}
+              {/* Aquí añadimos las zonas OMZ y la oficina asignada */}
+              <div className="info-item">
+                <label>Oficina Municipal:</label>
+                <span>{"----"}</span> {/* Reemplaza esto por el nombre de la oficina cuando esté disponible */}
+              </div>
+              <div className="info-item">
+                <label>Zona OMZ:</label>
+                <span>{"-----"}</span> {/* Reemplaza esto por la zona OMZ cuando esté disponible */}
+              </div>
             </div>
 
             {(user?.role_name === "Encargado" || user?.role_name === "Trabajador Municipal" || user?.role_name === "Contacto Ciudadano") &&

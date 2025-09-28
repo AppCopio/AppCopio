@@ -223,6 +223,8 @@ const CenterManagementPage: React.FC = () => {
                 {typeof center.fullnessPercentage === "number" && (
                   <p className="fullness-info">Abastecimiento: {center.fullnessPercentage.toFixed(1)}%</p>
                 )}
+                 {/* Aquí añadimos la zona OMZ */}
+                 <span className="zone-info">ZONA OMZ: ----</span>
               </div>
               <div className="center-actions">
                 <Link
