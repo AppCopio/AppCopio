@@ -70,12 +70,11 @@ app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRout
 app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
-
-app.use("/api/centers", requireAuth, centerRoutes)
+app.use("/api/centers", centerRoutes)
 //app.use("/api/products", productRoutes);
 app.use("/api/updates", requireAuth, updateRoutes);
 app.use("/api/users", requireAuth, userRouter);
-app.use("/api/inventory", requireAuth,inventoryRoutes);
+app.use("/api/inventory", requireAuth, inventoryRoutes);
 app.use("/api/categories", requireAuth, categoryRoutes);
 app.use("/api/assignments", requireAuth, assignmentRoutes);
 app.use("/api/persons", requireAuth, personsRoutes);
@@ -84,11 +83,11 @@ app.use("/api/family-members", requireAuth, familyMembersRoutes);
 app.use("/api/fibe", requireAuth, fibeRoutes);
 app.use("/api/roles", requireAuth, roleRoutes);
 
-app.use("/api/database", databaseRoutes);
-app.use("/api/database-fields", fieldRoutes);
-app.use("/api/database-records", recordRoutes);
-app.use("/api/database-templates", templateRoutes);
-app.use("/api/database-history", auditLogRoutes);
+app.use("/api/database", requireAuth, databaseRoutes);
+app.use("/api/database-fields", requireAuth, fieldRoutes);
+app.use("/api/database-records", requireAuth, recordRoutes);
+app.use("/api/database-templates", requireAuth, templateRoutes);
+app.use("/api/database-history", requireAuth, auditLogRoutes);
 app.use("/api/notification", notificacionRoutes);
 
 

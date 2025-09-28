@@ -74,7 +74,12 @@ export default function UpdatesPage() {
     (async () => {
       try {
         const data = await listActiveUsersByRole(ROLE_ID_TMO, controller.signal);
-        setWorkers(data);
+        setWorkers(
+          (data ?? []).map((u) => ({
+            ...u,
+            nombre: u.nombre ?? "",
+          }))
+        );
       } catch {
         /* silencioso como antes */
       }

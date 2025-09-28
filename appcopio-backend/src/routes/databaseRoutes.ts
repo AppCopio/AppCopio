@@ -3,6 +3,10 @@ import pool from "../config/db";
 import { createDatasetDB, getDatasetByIdDB, listDatasetsDB, updateDatasetDB, softDeleteDatasetDB, getDatasetSnapshot } from "../services/databaseService";
 import type { Dataset, UUID } from "../types/dataset";
 
+import { requireUser } from "../auth/requireUser";
+import { requireAuth } from '../auth/middleware';
+
+
 const router = Router();
 
 // Helpers locales (no compartidos)
@@ -47,6 +51,7 @@ const getDataset: RequestHandler = async (req, res) => {
 
 const createDataset: RequestHandler = async (req, res) => {
   const { activation_id, center_id, name, key, config } = req.body ?? {};
+  const userId = requireUser(req).user_id;
   if (!activation_id || !center_id || !name || !key) {
     res.status(400).json({ error: "Requiere activation_id, center_id, name, key." });
     return;
@@ -56,7 +61,7 @@ const createDataset: RequestHandler = async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    const dataset = await createDatasetDB(client, {
+    const dataset = await createDatasetDB(client, userId, {
       activation_id: Number(activation_id),
       center_id: String(center_id),
       name: String(name),
@@ -82,10 +87,11 @@ const createDataset: RequestHandler = async (req, res) => {
 const updateDataset: RequestHandler = async (req, res) => {
   const id = req.params.id;
   const { name, config, deleted_at } = req.body ?? {};
+  const userId = requireUser(req).user_id;
   if (!id) { res.status(400).json({ error: "Falta id." }); return; }
 
   try {
-    const row = await updateDatasetDB(pool, id, { name, config, deleted_at });
+    const row = await updateDatasetDB(pool, userId, id, { name, config, deleted_at });
     if (!row) { res.status(404).json({ error: "Dataset no encontrado." }); return; }
     res.json(row);
   } catch (e: any) {
@@ -173,7 +179,7 @@ export const getSnapshot: RequestHandler = async (req, res) => {
 // =============================
 router.get("/", listDatasets);
 router.get("/:id", getDataset);
-router.post("/", createDataset);
+router.post("/", requireAuth, createDataset);
 router.patch("/:id", updateDataset);
 router.delete("/:id", deleteDataset);
 router.get("/:id/general-view", getSnapshot);

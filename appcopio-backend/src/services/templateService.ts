@@ -19,12 +19,12 @@ export async function getTemplateDB(db: Db, template_id: string) : Promise<Templ
   return rows[0] ?? null;
 }
 
-export async function createTemplateDB(db: Db, args: { name: string; description: string | null; is_public: boolean; }) : Promise<Template> {
+export async function createTemplateDB(db: Db, userId: number, args: { name: string; description: string | null; is_public: boolean; }) : Promise<Template> {
   const { rows } = await db.query(
-    `INSERT INTO Templates (name, description, is_public)
-     VALUES ($1,$2,$3)
-     RETURNING template_id, name, description, is_public, created_at`,
-    [args.name, args.description, args.is_public]
+    `INSERT INTO Templates (name, description, is_public, created_by)
+     VALUES ($1, $2, $3, $4)
+     RETURNING template_id, name, description, is_public, created_by, created_at`,
+    [args.name, args.description, args.is_public, userId]
   );
   return rows[0];
 }

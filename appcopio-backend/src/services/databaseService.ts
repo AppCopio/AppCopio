@@ -22,20 +22,20 @@ export async function getDatasetByIdDB(db: Db, dataset_id: string) : Promise<Dat
   return rows[0] ?? null;
 }
 
-export async function createDatasetDB(db: Db, args: {
+export async function createDatasetDB(db: Db, userId: number, args: {
   activation_id: number; center_id: string; name: string; key: string; config?: any;
 }) : Promise<Dataset>{
   const sql = `
-    INSERT INTO Datasets (activation_id, center_id, name, key, config)
-    VALUES ($1, $2, $3, $4, COALESCE($5, '{}'::jsonb))
+    INSERT INTO Datasets (activation_id, center_id, name, key, config, created_by)
+    VALUES ($1, $2, $3, $4, COALESCE($5, '{}'::jsonb), $6)
     RETURNING dataset_id, activation_id, center_id, name, key, config, created_at`;
   const { rows } = await db.query(sql, [
-    args.activation_id, args.center_id, args.name, args.key, args.config ?? {}
+    args.activation_id, args.center_id, args.name, args.key, args.config ?? {}, userId
   ]);
   return rows[0];
 }
 
-export async function updateDatasetDB(db: Db, dataset_id: string, 
+export async function updateDatasetDB(db: Db, userId: number, dataset_id: string, 
   args: { name?: string; config?: any; deleted_at?: string | null; }) : Promise<Dataset | null> {
   const sets: string[] = [];
   const vals: any[] = [];
@@ -44,8 +44,12 @@ export async function updateDatasetDB(db: Db, dataset_id: string,
   if (args.name !== undefined) { sets.push(`name = $${i++}`); vals.push(args.name); }
   if (args.config !== undefined) { sets.push(`config = $${i++}::jsonb`); vals.push(JSON.stringify(args.config ?? {})); }
   if (args.deleted_at !== undefined) { sets.push(`deleted_at = $${i++}`); vals.push(args.deleted_at); }
+  sets.push(`updated_by = $${i++}`);
+  vals.push(userId);
+  sets.push(`updated_at = now()`);
+
   if (sets.length === 0) {
-    return await getDatasetByIdDB(db, dataset_id); // ✅ evita SET vacío
+    return await getDatasetByIdDB(db, dataset_id); 
   }
   const sql = `
     UPDATE Datasets
