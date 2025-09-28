@@ -35,7 +35,7 @@ export default function MisCentrosPage() {
       try {
         // 1) Usuario con sus centros asignados
         const fullUser = await getUser(user.user_id, controller.signal);
-        const assignedIds = new Set((fullUser.assignedCenters || []).map(String));
+  const assignedIds = new Set(((fullUser?.assignedCenters ?? []) as (string | number)[]).map(String));
 
         if (assignedIds.size === 0) {
           setAssignedCenters([]);

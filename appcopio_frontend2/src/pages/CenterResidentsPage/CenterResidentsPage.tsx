@@ -262,9 +262,11 @@ const exportToPDF = async () => {
         ]);
         if (cancel) return;
 
-        setCenterCapacity(cap.capacity ?? 0);
-        setCurrentCapacity(cap.current_capacity ?? 0);
-        setAvailableCapacity(cap.available_capacity ?? 0);
+        if (cap) {
+          setCenterCapacity(cap.capacity ?? 0);
+          setCurrentCapacity(cap.current_capacity ?? 0);
+          setAvailableCapacity(cap.available_capacity ?? 0);
+        }
 
         setGroups(Array.isArray(grps) ? grps : []);
         setPeople(Array.isArray(ppl) ? ppl : []);
@@ -301,9 +303,11 @@ const exportToPDF = async () => {
     if (centerId) {
       try {
         const [cap, grps] = await Promise.all([getCenterCapacity(centerId), listResidentGroups(centerId)]);
-        setCenterCapacity(cap.capacity ?? 0);
-        setCurrentCapacity(cap.current_capacity ?? 0);
-        setAvailableCapacity(cap.available_capacity ?? 0);
+        if (cap) {
+          setCenterCapacity(cap.capacity ?? 0);
+          setCurrentCapacity(cap.current_capacity ?? 0);
+          setAvailableCapacity(cap.available_capacity ?? 0);
+        }
         setGroups(grps);
       } catch {
         /* noop */
@@ -325,7 +329,7 @@ const exportToPDF = async () => {
     setIsSubmitting(true);
     try {
       await registerFamilyDeparture({
-        family_id: residentToExit.family_id,
+        familyId: residentToExit.family_id,
         departure_reason: exitReason as DepartureReason,
         destination_activation_id: exitReason === "traslado" ? destinationActivationId : null,
         departure_date: exitDate,

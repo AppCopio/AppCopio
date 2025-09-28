@@ -70,7 +70,7 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
       ]);
 
       const userAssignedCenters = new Set<string>(
-        (userData.assignedCenters || []).map((id) => String(id))
+        ((userData?.assignedCenters ?? []) as (string | number)[]).map((id) => String(id))
       );
 
       setSelectedCenters(userAssignedCenters);
@@ -183,10 +183,7 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
     } finally {
       setIsLoading(false);
     }
-
-    return () => {
-      controller.abort();
-    };
+    // No retorna nada
 
   }, [selectedCenters, initialAssignments, user.user_id, user.role_name, onSave, onClose]);
 

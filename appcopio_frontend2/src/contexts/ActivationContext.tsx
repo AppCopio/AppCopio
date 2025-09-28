@@ -17,7 +17,7 @@ export function ActivationProvider({ centerId, children }: { centerId: string | 
   const load = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const act = await getActiveActivation(centerId, { signal });
+  const act = await getActiveActivation(String(centerId), { signal });
       setActivation(act);
     } finally {
       setLoading(false);

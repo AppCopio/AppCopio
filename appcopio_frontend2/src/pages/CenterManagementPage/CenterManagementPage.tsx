@@ -93,7 +93,7 @@ const CenterManagementPage: React.FC = () => {
       setCenters((prev) => prev.map((c) => (c.center_id === id ? { ...c, is_active: newStatus } : c)));
 
       try {
-        await updateCenterStatus(id, newStatus, user?.user_id);
+  await updateCenterStatus(id, newStatus, user?.user_id ?? 0);
       } catch (err: any) {
         // Revertir si falla
         setCenters(snapshot);

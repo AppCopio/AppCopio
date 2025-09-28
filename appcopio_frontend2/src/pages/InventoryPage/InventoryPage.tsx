@@ -66,7 +66,7 @@ export default function InventoryPage() {
     (async () => {
       try {
         const u = await getUser(user.user_id, ctrl.signal);
-        setAssignedCenters((u.assignedCenters ?? []).map(String));
+  setAssignedCenters(((u?.assignedCenters ?? []) as (string | number)[]).map(String));
       } catch {
         setAssignedCenters([]);
       }
