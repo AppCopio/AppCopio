@@ -33,7 +33,10 @@ import CenterEditPage from "@/pages/CenterEditPage/CenterEditPage";
 import MultiStepCenterForm from "@/pages/CreateCenterPage/steps/MultiStepCenterForm";
 import MyUserPage from "@/pages/MyUserPage/MyUserPage";
 import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
-import ActivationDatasetsPage, { DatasetDetail} from "./pages/ActivationDatasetsPage/ActivationDatasetsPage";
+//import NotificationsPage from './pages/NotificationsPage/NotificationsPage'; // Importa la nueva página
+import { ActivationProvider } from "@/contexts/ActivationContext";
+import DatabasesPage from "@/pages/Databases/DatabasesPage";
+import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
 
 export default function App() {
   return (
@@ -65,6 +68,7 @@ export default function App() {
               <Route path={paths.admin.updates} element={<UpdatesPage />} />
               <Route path={paths.profile} element={<MyUserPage />} />
               <Route path={paths.myCenters} element={<MisCentrosPage />} />
+              {/*<Route path={paths.notifications} element={<NotificationsPage />} />*/}
 
               {/* center/:centerId con hijos relativos + providers/guards */}
               <Route path={paths.center.pattern} element={<CenterLayout />}>
@@ -80,8 +84,8 @@ export default function App() {
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>
                     <Route path="fibe" element={<FibePage />} />
-                    <Route path="datasets" element={<ActivationDatasetsPage />} />
-                    <Route path="datasets/:key" element={<DatasetDetail/>} />
+                    <Route path="databases" element={<DatabasesPage />} />
+                    <Route path="databases/:id" element={<DatabaseDetailPage/>} />
 
                   </Route>
                 </Route>

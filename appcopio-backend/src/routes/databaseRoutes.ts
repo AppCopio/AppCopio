@@ -1,7 +1,10 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
 import { createDatasetDB, getDatasetByIdDB, listDatasetsDB, updateDatasetDB, softDeleteDatasetDB, getDatasetSnapshot } from "../services/databaseService";
-import type { Dataset, UUID } from "../types/dataset";
+import type { Dataset, UUID, TemplateField } from "../types/dataset";
+import { listTemplateFieldsDB } from '../services/templateService'; 
+import { createFieldDB } from '../services/fieldService';
+import type { Db } from '../types/db';
 
 const router = Router();
 
@@ -11,6 +14,65 @@ function parseIntParam(v: any): number | null {
   return Number.isInteger(n) ? n : null;
 }
 
+async function createDatasetAndFields(client: Db, args: {
+    activation_id: number; center_id: string; name: string; key: string; config: any;
+}, templateKey: string | null) {
+    // 1. Crear el Dataset base
+    const dataset = await createDatasetDB(client, args);
+    const datasetId = dataset.dataset_id;
+
+    // 2. Si se selecciona una plantilla, crear los campos
+    if (templateKey && templateKey !== 'blank') {
+        
+        // 🚨 TODO: REEMPLAZAR CON LA LÓGICA PARA OBTENER EL TEMPLATE_ID (UUID) a partir del templateKey (slug)
+        // Por ahora, usamos un placeholder.
+        const templateId = "f47ac10b-58cc-4372-a567-0e02b2c3d479"; 
+        
+        if (!templateId) {
+            throw { code: "TEMPLATE_NOT_FOUND", message: `La plantilla con key "${templateKey}" no tiene un ID asociado.` };
+        }
+        
+        // **UTILIZAMOS EL templateService.ts para obtener los campos**
+        const templateFields: TemplateField[] = await listTemplateFieldsDB(client, templateId);
+
+        if (templateFields.length === 0) {
+            throw { code: "TEMPLATE_EMPTY", message: `La plantilla no tiene campos definidos.` };
+        }
+        
+        // 3. Crear cada campo en el nuevo Dataset
+        for (const fieldTemplate of templateFields) {
+            await createFieldDB(client, {
+                dataset_id: datasetId,
+                name: fieldTemplate.name,
+                key: fieldTemplate.key,
+                type: fieldTemplate.field_type,
+                required: fieldTemplate.is_required,
+                is_multi: fieldTemplate.is_multi,
+                position: fieldTemplate.position,
+                config: fieldTemplate.settings,
+                relation_target_kind: fieldTemplate.relation_target_kind,
+                relation_target_dataset_id: fieldTemplate.relation_target_template_id, // *Ajuste aquí para usar template_id como destino inicial*
+                relation_target_core: fieldTemplate.relation_target_core,
+                is_active: true,
+            });
+        }
+    }
+    
+    // Si no es plantilla, o es plantilla "blank", creamos un campo de ejemplo
+    if (templateKey === 'blank' || !templateKey) {
+        await createFieldDB(client, {
+            dataset_id: datasetId,
+            name: "Título/Nombre",
+            key: "rec_title", //lo cambié debido a que me tiraba error con que lakey ya estaba en uso.
+            type: "text",
+            required: true,
+            is_active: true,
+            position: 0
+        });
+    }
+
+    return dataset;
+}
 // =============================
 // Controllers
 // =============================
@@ -46,23 +108,40 @@ const getDataset: RequestHandler = async (req, res) => {
 };
 
 const createDataset: RequestHandler = async (req, res) => {
-  const { activation_id, center_id, name, key, config } = req.body ?? {};
+  // Extrae template_key para usarlo en el chequeo
+  const { activation_id, center_id, name, key, config, template_key: req_template_key } = req.body ?? {};
+  
   if (!activation_id || !center_id || !name || !key) {
     res.status(400).json({ error: "Requiere activation_id, center_id, name, key." });
     return;
   }
+  
+  const templateKey = req_template_key || null;
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    if (templateKey && templateKey !== 'blank') {
+        const existingDatasets = await listDatasetsDB(client, Number(activation_id));
+        // Compara con la nueva propiedad 'template_key' que se expone
+        const templateAlreadyUsed = existingDatasets.some(d => d.template_key === templateKey); 
 
-    const dataset = await createDatasetDB(client, {
+        if (templateAlreadyUsed) {
+            throw { code: "TEMPLATE_USED", message: `La plantilla "${name}" ya fue utilizada en esta activación.` };
+        }
+    }
+    const newConfig = { 
+        ...(config ?? {}), 
+        ...(templateKey ? { template_key: templateKey } : {}) 
+    };
+
+    const dataset = await createDatasetAndFields(client, {
       activation_id: Number(activation_id),
       center_id: String(center_id),
       name: String(name),
       key: String(key),
-      config: config ?? {},
-    });
+      config: newConfig,
+    }, templateKey);
 
     await client.query("COMMIT");
     res.status(201).json(dataset);
@@ -71,7 +150,9 @@ const createDataset: RequestHandler = async (req, res) => {
     console.error("createDataset error:", e);
     if (e.code === "23505") {
       res.status(409).json({ error: "Ya existe un dataset con esa key en la activación." });
-    } else {
+    }else if (e.code === "TEMPLATE_USED") {
+        res.status(409).json({ error: e.message }); // "Base de datos ya inicializada: nombre de la base de datos"
+    }else {
       res.status(500).json({ error: "Error al crear dataset." });
     }
   } finally {

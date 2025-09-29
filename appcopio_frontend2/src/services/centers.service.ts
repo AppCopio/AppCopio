@@ -265,8 +265,9 @@ export async function getActiveActivation(centerId: string, opts?: { signal?: Ab
 
     if (!data || !data.activation_id) return null;
     return data as ActiveActivation;  
-  } catch (error) {
-    console.error(`Error fetching active activation for center ${centerId}:`, error);
+  } catch (e: any) {
+    if (e?.code === "ERR_CANCELED") return null;
+    console.error(`Error fetching active activation for center ${centerId}:`, e);
     return null;
   }
 } //Pdría ser un error por el signal

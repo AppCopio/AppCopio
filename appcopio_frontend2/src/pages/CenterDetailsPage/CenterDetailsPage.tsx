@@ -1,11 +1,11 @@
 // src/pages/CenterDetailsPage/CenterDetailsPage.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import OperationalStatusControl from "@/components/center/OperationalStatusControl";
 import "./CenterDetailsPage.css";
 
-import type { Center } from "@/types/center";
+import type { CenterData, Center } from "@/types/center";
 import {
   getOneCenter,
   mapStatusToFrontend,
@@ -13,6 +13,7 @@ import {
   OperationalStatusUI,
 } from "@/services/centers.service";
 import { listCenterInventory } from "@/services/inventory.service";
+import { listNotificationsByCenter, createNotification, CenterNotification } from "@/services/notifications.service";
 
 import ResponsibleSection from "./ResponsibleSection";
 import AssignResponsibleDialog from "./AssingResponsibleDialog";
@@ -41,14 +42,25 @@ const CenterDetailsPage: React.FC = () => {
   const { user } = useAuth();
   const { activation } = useActivation();
 
-  const [center, setCenter] = useState<(Center & { public_note?: string }) | null>(null);
+  const [center, setCenter] = useState<CenterData | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [notifications, setNotifications] = useState<CenterNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState(false);
 
   const [assignRole, setAssignRole] = useState<AssignRole | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!centerId) return;
+    try {
+      const notifs = await listNotificationsByCenter(centerId);
+      setNotifications(notifs);
+    } catch (e) {
+      console.error("Error fetching notifications:", e);
+    }
+  }, [centerId]);
 
   useEffect(() => {
     if (!centerId) return;
@@ -62,14 +74,15 @@ const CenterDetailsPage: React.FC = () => {
           listCenterInventory(centerId),
         ]);
         if (!alive) return;
-
+        
         const mapped = {
           ...(c as any),
           operational_status: mapStatusToFrontend((c as any).operational_status),
         } as Center & { public_note?: string; operational_status?: OperationalStatusUI };
 
-        setCenter(mapped);
+        setCenter(mapped as CenterData);
         setResources(inv);
+        await fetchNotifications();
       } catch (e: any) {
         setError(e?.response?.data?.message || e?.message || "No se pudieron cargar los detalles del centro.");
       } finally {
@@ -77,7 +90,7 @@ const CenterDetailsPage: React.FC = () => {
       }
     })();
     return () => { alive = false; };
-  }, [centerId]);
+  }, [centerId, fetchNotifications]);
 
   const groupedResources = useMemo(() => {
     return resources.reduce((acc, r) => {
@@ -114,6 +127,25 @@ const CenterDetailsPage: React.FC = () => {
       alert(e?.response?.data?.message || e?.message || "No se pudo actualizar el estado operativo");
     } finally {
       setIsUpdatingOperationalStatus(false);
+    }
+  };
+  
+  const handleSendTestNotification = async () => {
+    if (!centerId || !center?.comunity_charge_id) {
+      alert("El centro no tiene un encargado asociado para recibir la notificación.");
+      return;
+    }
+    try {
+      await createNotification({
+        center_id: centerId,
+        title: "Prueba de Notificación",
+        message: `Esto es una notificación de prueba para el centro ${center.name}.`,
+        destinatary_id: center.comunity_charge_id,
+      });
+      alert("Notificación de prueba enviada con éxito.");
+      await fetchNotifications();
+    } catch (e: any) {
+      alert(`Error al enviar la notificación: ${e?.message}`);
     }
   };
 
@@ -178,7 +210,7 @@ const CenterDetailsPage: React.FC = () => {
                 <OperationalStatusControl
                   centerId={centerId!}
                   currentStatus={mapStatusToFrontend(center.operational_status) ?? "Abierto"}
-                  currentNote={center.public_note}
+                  currentNote={center.public_note ?? undefined}
                   onStatusChange={handleOperationalStatusChange}
                   isUpdating={isUpdatingOperationalStatus}
                 />
@@ -218,8 +250,8 @@ const CenterDetailsPage: React.FC = () => {
           <h3>Responsable</h3>
           <div className="responsible-info">
             <ResponsibleSection
-              municipalId={(center as any).municipal_manager_id}
-              comunityId={(center as any).comunity_charge_id}
+              municipalId={center.municipal_manager_id}
+              comunityId={center.comunity_charge_id}
               onAssignMunicipal={() => openAssign("trabajador municipal")}
               onAssignCommunity={() => openAssign("contacto ciudadano")}
             />
@@ -244,7 +276,43 @@ const CenterDetailsPage: React.FC = () => {
                 Formulario FIBE
               </Button>
             )}
+            
+            {center?.comunity_charge_id && (
+              <Button variant="outlined" onClick={handleSendTestNotification} style={{ marginTop: '20px' }}>
+                Enviar Notificación de Prueba
+              </Button>
+            )}
+
           </div>
+        </div>
+
+        {/* Sección de Historial de Notificaciones */}
+        <div className="resources-section">
+          <h3>Historial de Notificaciones</h3>
+          {notifications.length === 0 ? (
+            <div className="no-resources"><p>No hay notificaciones enviadas para este centro.</p></div>
+          ) : (
+            <div className="resources-grid">
+              {notifications.map(notif => (
+                <div key={notif.notification_id} className="resource-category">
+                  <h4>{notif.title}</h4>
+                  <div className="resource-items">
+                    <div className="resource-item">
+                      <span className="resource-name">{notif.message}</span>
+                    </div>
+                    <div className="resource-item">
+                      <span className="resource-name">Fecha:</span>
+                      <span className="resource-quantity">{new Date(notif.event_at).toLocaleString()}</span>
+                    </div>
+                    <div className="resource-item">
+                      <span className="resource-name">Destinatario:</span>
+                      <span className="resource-quantity">{notif.destinatary_name ?? 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

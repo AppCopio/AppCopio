@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { UUID } from "@/types/dataset";
+import type { UUID } from "@/types/database";
 
 // Tipos rápidos
 export type DatasetField = {

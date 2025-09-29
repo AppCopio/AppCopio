@@ -2,7 +2,7 @@ export type UUID = string;
 
 export type DatasetTemplateKey = "blank" | "personas_albergadas" |"familias_integradas" | "personas_ingresadas" | "registro_p_persona" | "red_apoyo" | "ayudas_entregadas" | "reubicaciones";
 
-export type DatasetSummary = {
+export type DatabaseSummary = {
   dataset_id: UUID;
   activation_id: number;
   center_id: string;
