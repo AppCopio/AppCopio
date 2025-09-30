@@ -73,22 +73,24 @@ app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
 app.use("/api/centers", centerRoutes)
-app.use("/api/updates", updateRoutes);
-app.use("/api/users", userRouter);
-app.use("/api/inventory", inventoryRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/assignments", assignmentRoutes);
-app.use("/api/persons", personsRoutes);
-app.use("/api/family", familyRoutes);
-app.use("/api/family-members", familyMembersRoutes);
-app.use("/api/fibe", fibeRoutes);
-app.use("/api/roles", roleRoutes);
 
-app.use("/api/database", databaseRoutes);
-app.use("/api/database-fields", fieldRoutes);
-app.use("/api/database-records", recordRoutes);
-app.use("/api/database-templates", templateRoutes);
-app.use("/api/database-history", auditLogRoutes);
+app.use("/api/updates", requireAuth, updateRoutes);
+app.use("/api/users", requireAuth, userRouter);
+app.use("/api/inventory", requireAuth, inventoryRoutes);
+app.use("/api/categories", requireAuth, categoryRoutes);
+app.use("/api/assignments", requireAuth, assignmentRoutes);
+app.use("/api/persons", requireAuth, personsRoutes);
+app.use("/api/family", requireAuth, familyRoutes);
+app.use("/api/family-members", requireAuth, familyMembersRoutes);
+app.use("/api/fibe", requireAuth, fibeRoutes);
+app.use("/api/roles", requireAuth, roleRoutes);
+
+app.use("/api/database", requireAuth, databaseRoutes);
+app.use("/api/database-fields", requireAuth, fieldRoutes);
+app.use("/api/database-records", requireAuth, recordRoutes);
+app.use("/api/database-templates", requireAuth, templateRoutes);
+app.use("/api/database-history", requireAuth, auditLogRoutes);
+//app.use("/api/notification", notificacionRoutes);
 
 
 

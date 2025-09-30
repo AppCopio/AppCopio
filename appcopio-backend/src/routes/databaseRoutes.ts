@@ -6,6 +6,10 @@ import { listTemplateFieldsDB } from '../services/templateService';
 import { createFieldDB } from '../services/fieldService';
 import type { Db } from '../types/db';
 
+import { requireUser } from "../auth/requireUser";
+import { requireAuth } from '../auth/middleware';
+
+
 const router = Router();
 
 // Helpers locales (no compartidos)
@@ -16,9 +20,9 @@ function parseIntParam(v: any): number | null {
 
 async function createDatasetAndFields(client: Db, args: {
     activation_id: number; center_id: string; name: string; key: string; config: any;
-}) {
+}, userId: number) {
     // 1. Crear el Dataset base
-    const dataset = await createDatasetDB(client, args);
+    const dataset = await createDatasetDB(client, userId, args);
     const datasetId = dataset.dataset_id;
     
     // 2. Crear el campo de ejemplo 'Título/Nombre' para el dataset vacío
@@ -71,7 +75,8 @@ const getDataset: RequestHandler = async (req, res) => {
 const createDataset: RequestHandler = async (req, res) => {
   // Extrae template_key para usarlo en el chequeo
   const { activation_id, center_id, name, key, config, template_key: req_template_key } = req.body ?? {};
-  
+  const userId = requireUser(req).user_id;
+
   if (!activation_id || !center_id || !name || !key) {
     res.status(400).json({ error: "Requiere activation_id, center_id, name, key." });
     return;
@@ -86,7 +91,6 @@ const createDataset: RequestHandler = async (req, res) => {
         const existingDatasets = await listDatasetsDB(client, Number(activation_id));
         // Compara con la nueva propiedad 'template_key' que se expone
         const templateAlreadyUsed = existingDatasets.some(d => d.template_key === templateKey); 
-
         if (templateAlreadyUsed) {
             throw { code: "TEMPLATE_USED", message: `La plantilla "${name}" ya fue utilizada en esta activación.` };
         }
@@ -102,7 +106,7 @@ const createDataset: RequestHandler = async (req, res) => {
         name: String(name),
         key: String(key),
         config: newConfig,
-    });
+    }, userId);
 
     await client.query("COMMIT");
     res.status(201).json(dataset);
@@ -124,10 +128,11 @@ const createDataset: RequestHandler = async (req, res) => {
 const updateDataset: RequestHandler = async (req, res) => {
   const id = req.params.id;
   const { name, config, deleted_at } = req.body ?? {};
+  const userId = requireUser(req).user_id;
   if (!id) { res.status(400).json({ error: "Falta id." }); return; }
 
   try {
-    const row = await updateDatasetDB(pool, id, { name, config, deleted_at });
+    const row = await updateDatasetDB(pool, userId, id, { name, config, deleted_at });
     if (!row) { res.status(404).json({ error: "Dataset no encontrado." }); return; }
     res.json(row);
   } catch (e: any) {
@@ -212,6 +217,7 @@ export const getSnapshot: RequestHandler = async (req, res) => {
 const applyTemplateToDataset: RequestHandler = async (req, res) => {
     const datasetId = req.params.id;
     const { template_key } = req.body ?? {};
+    const userId = requireUser(req).user_id;
     
     if (!datasetId || !template_key || template_key === 'blank') {
         res.status(400).json({ error: "Requiere dataset_id y template_key (que no sea 'blank')." });
@@ -264,7 +270,7 @@ const applyTemplateToDataset: RequestHandler = async (req, res) => {
         }
         
         // 3. Actualizar el dataset para marcar que se usó esta plantilla
-        await updateDatasetDB(client, datasetId, { config: { template_key: template_key } });
+        await updateDatasetDB(client, userId, datasetId, { config: { template_key: template_key } });
 
         await client.query("COMMIT");
         res.status(200).json({ message: "Plantilla aplicada exitosamente.", dataset_id: datasetId });
@@ -287,7 +293,7 @@ const applyTemplateToDataset: RequestHandler = async (req, res) => {
 // =============================
 router.get("/", listDatasets);
 router.get("/:id", getDataset);
-router.post("/", createDataset);
+router.post("/", requireAuth, createDataset);
 router.patch("/:id", updateDataset);
 router.delete("/:id", deleteDataset);
 router.get("/:id/general-view", getSnapshot);

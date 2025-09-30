@@ -86,7 +86,6 @@ export default function App() {
                     <Route path="fibe" element={<FibePage />} />
                     <Route path="databases" element={<DatabasesPage />} />
                     <Route path="databases/:id" element={<DatabaseDetailPage/>} />
-
                   </Route>
                 </Route>
               </Route>

@@ -93,7 +93,11 @@ const CenterManagementPage: React.FC = () => {
       setCenters((prev) => prev.map((c) => (c.center_id === id ? { ...c, is_active: newStatus } : c)));
 
       try {
-        await updateCenterStatus(id, newStatus, user?.user_id);
+        if (typeof user?.user_id === "number") {
+          await updateCenterStatus(id, newStatus, user.user_id);
+        } else {
+          throw new Error("No se pudo obtener el ID de usuario para actualizar el estado del centro.");
+        }
       } catch (err: any) {
         // Revertir si falla
         setCenters(snapshot);
