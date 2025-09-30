@@ -40,4 +40,8 @@ export const databasesService = {
     const r = await api.get(`/database/${encodeURIComponent(id)}/general-view`);
     return r.data?.data ?? r.data;
   },
+  async updateDataset(datasetId: string, body: { name?: string; config?: Record<string, unknown>; }) {
+    const r = await api.patch(`/database/${encodeURIComponent(datasetId)}`, body);
+    return r.data?.data ?? r.data;
+},
 };

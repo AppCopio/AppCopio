@@ -4,6 +4,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import listEndpoints from "express-list-endpoints";
+
 
 import pool from "./config/db";
 import authRoutes from "./routes/authRoutes";
@@ -70,19 +72,17 @@ app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRout
 app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
-
-app.use("/api/centers", requireAuth, centerRoutes)
-//app.use("/api/products", productRoutes);
-app.use("/api/updates", requireAuth, updateRoutes);
-app.use("/api/users", requireAuth, userRouter);
-app.use("/api/inventory", requireAuth,inventoryRoutes);
-app.use("/api/categories", requireAuth, categoryRoutes);
-app.use("/api/assignments", requireAuth, assignmentRoutes);
-app.use("/api/persons", requireAuth, personsRoutes);
-app.use("/api/family", requireAuth, familyRoutes);
-app.use("/api/family-members", requireAuth, familyMembersRoutes);
-app.use("/api/fibe", requireAuth, fibeRoutes);
-app.use("/api/roles", requireAuth, roleRoutes);
+app.use("/api/centers", centerRoutes)
+app.use("/api/updates", updateRoutes);
+app.use("/api/users", userRouter);
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/assignments", assignmentRoutes);
+app.use("/api/persons", personsRoutes);
+app.use("/api/family", familyRoutes);
+app.use("/api/family-members", familyMembersRoutes);
+app.use("/api/fibe", fibeRoutes);
+app.use("/api/roles", roleRoutes);
 
 app.use("/api/database", databaseRoutes);
 app.use("/api/database-fields", fieldRoutes);
@@ -109,4 +109,8 @@ app.listen(port, () => {
       console.error("Error al conectar con la BD al iniciar:", err);
     }
   });
+});
+
+app.get("/__routes", (_req, res) => {
+  res.json(listEndpoints(app));
 });

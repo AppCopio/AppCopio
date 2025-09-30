@@ -8,6 +8,9 @@ import TableRowsOutlined from "@mui/icons-material/TableRowsOutlined";
 import { useActivation } from "@/contexts/ActivationContext";
 import { databasesService } from "@/services/databases.service";
 import type { DatabaseSummary } from "@/types/database";
+import { templatesService } from "@/services/template.service"; 
+import { fieldsService } from "@/services/fields.service";
+import { TEMPLATES, TemplateItem } from "@/types/template";
 
 export default function DatabasesPage() {
   const { centerId = "" } = useParams<{ centerId: string }>();
@@ -15,13 +18,13 @@ export default function DatabasesPage() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<DatabaseSummary[]>([]);
+  const [items, setItems] = useState<any[]>([]); // Usamos 'any' para simplificar el tipo en la corrección
   const [openNew, setOpenNew] = useState(false);
 
  useEffect(() => {
     let mounted = true;
     (async () => {
-        if (!activation?.activation_id) return;   // espera la activación
+        if (!activation?.activation_id) return;
         try {
         setLoading(true);
         const data = await databasesService.listByActivation(activation.activation_id);
@@ -91,10 +94,6 @@ function Grid({ items, onOpen, onDelete }: { items: DatabaseSummary[]; onOpen: (
     <Box sx={{ display: "grid", gap: 2.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(2,1fr)", md:"repeat(3,1fr)", lg:"repeat(4,1fr)" } }}>
       {items.map(it => (
         <Card key={it.dataset_id} variant="outlined" sx={{ borderRadius: 3 }}>
-          {/* OLD: <CardActionArea onClick={() => onOpen(it)}>
-            FIX: Use a Box with custom styles to emulate CardActionArea.
-            This way, the parent is a <div>, not a <button>.
-          */}
           <Box 
             onClick={() => onOpen(it)}
             sx={{
@@ -150,16 +149,6 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   );
 }
 
-const TEMPLATES = [
-  { key: "blank", name: "En blanco" },
-  { key: "familias_integradas", name: "Familias integradas" },
-  { key: "personas_ingresadas", name: "Personas ingresadas" },
-  { key: "registro_p_persona", name: "Registro diario por persona" },
-  { key: "red_apoyo", name: "Red de apoyo" },
-  { key: "ayudas_entregadas", name: "Entregas de recursos" },
-  { key: "reubicaciones", name: "Reubicaciones" },
-];
-
 function CreateDialog({
   open, onClose, centerId, existingNames, usedTemplateKeys, onCreated
 }: {
@@ -168,12 +157,17 @@ function CreateDialog({
   centerId: string;
   existingNames: string[];
   usedTemplateKeys: string[];
-  onCreated: (d: DatabaseSummary) => void;
+  onCreated: (d: any) => void; // Usamos 'any' para simplificar el tipo en la corrección
 }) {
   const [name, setName] = useState("");
   const [template, setTemplate] = useState<string>("blank");
   const [submitting, setSubmitting] = useState(false);
   const {activation } = useActivation();
+
+const selectedTemplate = useMemo(() => {
+    return (TEMPLATES as TemplateItem[]).find(t => t.key === template);
+  }, [template]);
+
 
   const nameError = useMemo(() => {
     const trimmed = name.trim();
@@ -191,9 +185,57 @@ function CreateDialog({
     if (nameError || isTemplateUsed) return;
     try {
       setSubmitting(true);
-      const created = await databasesService.create({activation_id: activation!.activation_id,center_id: centerId,name, key: slugify(name),
-      config: { template_key: template !== "blank" ? template : undefined }
-    });
+      const uniqueKey = slugify(name) + "-" + Date.now();
+      
+      // 1. Crear la base de datos (se omite el campo 'config' con template_key)
+      const created = await databasesService.create({
+        activation_id: activation!.activation_id,
+        center_id: centerId,
+        name,
+        key: uniqueKey,
+      });
+
+      const datasetId = created.dataset_id;
+      
+      // 2. Aplicar la plantilla: Obtener campos y crearlos uno a uno
+      if (template !== "blank") {
+          const fieldsToAdd = await templatesService.getTemplateFields(template);
+          
+          for (const fieldTemplate of fieldsToAdd) {
+              await fieldsService.create({
+                  dataset_id: datasetId,
+                  
+                  // Propiedades principales (nombre del DTO de FE)
+                  name: fieldTemplate.name,
+                  key: fieldTemplate.key,
+                  field_type: fieldTemplate.field_type, 
+                  position: fieldTemplate.position,
+                  is_required: fieldTemplate.is_required,
+                  is_multi: fieldTemplate.is_multi,
+                  
+                  // Mapeo de relación (relation_target_template_id es correcto para template_field)
+                  relation_target_kind: fieldTemplate.relation_target_kind,
+                  relation_target_template_id: fieldTemplate.relation_target_template_id, 
+                  relation_target_core: fieldTemplate.relation_target_core,
+                  
+                  is_active: true,
+                  
+                  // === CORRECCIONES DE ALIAS PARA EL BACKEND ===
+                  // ALIAS 1: Mapear 'field_type' a 'type' (requerido por la consulta SQL del BE)
+                  type: fieldTemplate.field_type,
+                  
+                  // ALIAS 2: Mapear 'settings' a 'config' (requerido por la consulta SQL del BE)
+                  settings: fieldTemplate.settings, 
+                  config: fieldTemplate.settings, 
+              });
+          }
+          
+          
+          // Opcional: Actualizar la configuración del dataset para registrar la plantilla usada
+          await databasesService.updateDataset(datasetId, { config: { template_key: template } });
+      }
+
+      // 3. Notificar éxito y navegar
       onCreated(created);
     } catch (e: any) {
       alert(e?.response?.data?.message || e?.message || "No se pudo crear la base");
@@ -206,31 +248,49 @@ function CreateDialog({
     if (submitting) return;
     setName(""); setTemplate("blank"); onClose();
   };
-
+// ... (cuerpo del componente Dialog)
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-      <DialogTitle>Nueva base de datos</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <FormControl fullWidth>
-            <TextField label="Nombre" value={name} onChange={(e)=>setName(e.target.value)} error={!!nameError} helperText={nameError || "El nombre debe ser único en la activación"} autoFocus disabled={submitting} />
-          </FormControl>
-          <FormControl fullWidth>
-            <InputLabel id="tpl">Plantilla</InputLabel>
-            <Select labelId="tpl" label="Plantilla" value={template} onChange={(e)=>setTemplate(String(e.target.value))} disabled={submitting}>
-              {TEMPLATES.map(t => {
-                const disabled = t.key !== "blank" && usedTemplateKeys?.includes(t.key);
-                return <MenuItem key={t.key} value={t.key} disabled={disabled}>{t.name}{disabled ? " — ya usada" : ""}</MenuItem>;
-              })}
-            </Select>
-            <FormHelperText>{isTemplateUsed ? "Esta plantilla ya fue usada en este centro" : "Puedes empezar de cero o con una plantilla."}</FormHelperText>
-          </FormControl>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button variant="text" onClick={handleClose} disabled={submitting}>Cancelar</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={!!nameError || isTemplateUsed || submitting}>Crear</Button>
-      </DialogActions>
+        <DialogTitle>Nueva base de datos</DialogTitle>
+        <DialogContent>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+                <FormControl fullWidth>
+                    <TextField label="Nombre" value={name} onChange={(e)=>setName(e.target.value)} error={!!nameError} helperText={nameError || "El nombre debe ser único en la activación"} autoFocus disabled={submitting} />
+                </FormControl>
+                
+                <FormControl fullWidth>
+                    <InputLabel id="tpl">Plantilla</InputLabel>
+                    <Select labelId="tpl" label="Plantilla" value={template} onChange={(e)=>setTemplate(String(e.target.value))} disabled={submitting}>
+                    {TEMPLATES.map(t => {
+                        const disabled = t.key !== "blank" && usedTemplateKeys?.includes(t.key);
+                        return (
+                        <MenuItem key={t.key} value={t.key} disabled={disabled}>
+                            {t.name}{disabled ? " — ya usada" : ""}
+                        </MenuItem>
+                        );
+                    })}
+                    </Select>
+                    <FormHelperText>{isTemplateUsed ? "Esta plantilla ya fue usada en este centro" : selectedTemplate?.description}</FormHelperText>
+                </FormControl>
+                
+                {/* Muestra las columnas de vista previa */}
+                {selectedTemplate?.previewColumns && selectedTemplate.previewColumns.length > 0 && (
+                    <Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>Columnas de vista previa:</Typography>
+                        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                            {selectedTemplate.previewColumns.map(col => (
+                                <Chip key={col} label={col} size="small" variant="outlined" />
+                            ))}
+                        </Stack>
+                    </Box>
+                )}
+
+            </Stack>
+        </DialogContent>
+        <DialogActions>
+            <Button variant="text" onClick={handleClose} disabled={submitting}>Cancelar</Button>
+            <Button variant="contained" onClick={handleSubmit} disabled={!!nameError || isTemplateUsed || submitting}>Crear</Button>
+        </DialogActions>
     </Dialog>
   );
 }

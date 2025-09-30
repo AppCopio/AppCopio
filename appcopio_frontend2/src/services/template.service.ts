@@ -1,22 +1,27 @@
 import { api } from "@/lib/api";
-import type { DatabaseField } from "@/types/field";
-
-export type DatasetTemplate = {
-  template_key: string;
-  name: string;
-  description?: string;
-  fields: Array<Pick<DatabaseField, "name"|"key"|"type"|"position"|"is_required"|"config">>;
-};
+import type { DatasetTemplateKey } from "@/types/database";
+import { TEMPLATES } from "@/types/template";
 
 export const templatesService = {
   async list() {
     const r = await api.get(`/datasets/templates`);
-    return (r.data?.data ?? r.data) as DatasetTemplate[];
+    return (r.data?.data ?? r.data) as any[];
   },
-
-  // Si tu BE tiene: POST /datasets/:datasetId/apply-template
+  //este ya no va
   async applyToDataset(datasetId: string, template_key: string) {
-    const r = await api.post(`/datasets/${encodeURIComponent(datasetId)}/apply-template`, { template_key });
+    // Se corrige la ruta para que coincida con la ruta POST /api/database/:id/apply-template
+    const r = await api.post(`/database/${encodeURIComponent(datasetId)}/apply-template`, { config: { template_key: template_key } });
     return r.data?.data ?? r.data;
   },
+  async getTemplateFields(template_key: string): Promise<any[]> {
+      if (template_key === 'blank') return [];
+      
+      // Busca el objeto completo de la plantilla en la matriz
+      const templateItem = TEMPLATES.find(t => t.key === template_key);
+      
+      // Devuelve directamente el array de campos 'fields' del objeto encontrado
+      return templateItem?.fields || [];
+    }
 };
+
+

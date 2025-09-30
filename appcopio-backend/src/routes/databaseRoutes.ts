@@ -16,61 +16,22 @@ function parseIntParam(v: any): number | null {
 
 async function createDatasetAndFields(client: Db, args: {
     activation_id: number; center_id: string; name: string; key: string; config: any;
-}, templateKey: string | null) {
+}) {
     // 1. Crear el Dataset base
     const dataset = await createDatasetDB(client, args);
     const datasetId = dataset.dataset_id;
-
-    // 2. Si se selecciona una plantilla, crear los campos
-    if (templateKey && templateKey !== 'blank') {
-        
-        // 🚨 TODO: REEMPLAZAR CON LA LÓGICA PARA OBTENER EL TEMPLATE_ID (UUID) a partir del templateKey (slug)
-        // Por ahora, usamos un placeholder.
-        const templateId = "f47ac10b-58cc-4372-a567-0e02b2c3d479"; 
-        
-        if (!templateId) {
-            throw { code: "TEMPLATE_NOT_FOUND", message: `La plantilla con key "${templateKey}" no tiene un ID asociado.` };
-        }
-        
-        // **UTILIZAMOS EL templateService.ts para obtener los campos**
-        const templateFields: TemplateField[] = await listTemplateFieldsDB(client, templateId);
-
-        if (templateFields.length === 0) {
-            throw { code: "TEMPLATE_EMPTY", message: `La plantilla no tiene campos definidos.` };
-        }
-        
-        // 3. Crear cada campo en el nuevo Dataset
-        for (const fieldTemplate of templateFields) {
-            await createFieldDB(client, {
-                dataset_id: datasetId,
-                name: fieldTemplate.name,
-                key: fieldTemplate.key,
-                type: fieldTemplate.field_type,
-                required: fieldTemplate.is_required,
-                is_multi: fieldTemplate.is_multi,
-                position: fieldTemplate.position,
-                config: fieldTemplate.settings,
-                relation_target_kind: fieldTemplate.relation_target_kind,
-                relation_target_dataset_id: fieldTemplate.relation_target_template_id, // *Ajuste aquí para usar template_id como destino inicial*
-                relation_target_core: fieldTemplate.relation_target_core,
-                is_active: true,
-            });
-        }
-    }
     
-    // Si no es plantilla, o es plantilla "blank", creamos un campo de ejemplo
-    if (templateKey === 'blank' || !templateKey) {
-        await createFieldDB(client, {
-            dataset_id: datasetId,
-            name: "Título/Nombre",
-            key: "rec_title", //lo cambié debido a que me tiraba error con que lakey ya estaba en uso.
-            type: "text",
-            required: true,
-            is_active: true,
-            position: 0
-        });
-    }
-
+    // 2. Crear el campo de ejemplo 'Título/Nombre' para el dataset vacío
+    await createFieldDB(client, {
+        dataset_id: datasetId,
+        name: "Título/Nombre",
+        key: "rec_title",
+        type: "text",
+        required: true,
+        is_active: true,
+        position: 0
+    });
+    
     return dataset;
 }
 // =============================
@@ -136,12 +97,12 @@ const createDataset: RequestHandler = async (req, res) => {
     };
 
     const dataset = await createDatasetAndFields(client, {
-      activation_id: Number(activation_id),
-      center_id: String(center_id),
-      name: String(name),
-      key: String(key),
-      config: newConfig,
-    }, templateKey);
+        activation_id: Number(activation_id),
+        center_id: String(center_id),
+        name: String(name),
+        key: String(key),
+        config: newConfig,
+    });
 
     await client.query("COMMIT");
     res.status(201).json(dataset);
@@ -248,6 +209,78 @@ export const getSnapshot: RequestHandler = async (req, res) => {
   }
 };
 
+const applyTemplateToDataset: RequestHandler = async (req, res) => {
+    const datasetId = req.params.id;
+    const { template_key } = req.body ?? {};
+    
+    if (!datasetId || !template_key || template_key === 'blank') {
+        res.status(400).json({ error: "Requiere dataset_id y template_key (que no sea 'blank')." });
+        return;
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        
+        // 1. Verificar si ya tiene campos (se asume que solo se aplica una vez)
+        // Nota: Si solo tiene el campo 'Título/Nombre' (posición 0), se permite.
+        const existingFields = await listTemplateFieldsDB(client, datasetId);
+        // Si hay más de un campo o si el único campo no es el predeterminado.
+        if (existingFields.length > 1) { 
+             throw { code: "FIELDS_EXIST", message: "La base de datos ya tiene campos; no se puede aplicar la plantilla." };
+        }
+        
+        // 🚨 Es CRÍTICO que la lógica para obtener templateId a partir de template_key sea robusta.
+        // Aquí se usa el ID placeholder (f47...) que debe ser reemplazado por la lógica de tu BE.
+        // Usamos el mismo ID hardcodeado de tu código anterior como ejemplo de "ID de la plantilla".
+        const templateId = "f47ac10b-58cc-4372-a567-0e02b2c3d479"; 
+        
+        if (!templateId) {
+            throw { code: "TEMPLATE_NOT_FOUND", message: `La plantilla con key "${template_key}" no tiene un ID asociado.` };
+        }
+        
+        // 2. Obtener y crear los campos de la plantilla
+        const templateFields: TemplateField[] = await listTemplateFieldsDB(client, templateId);
+
+        if (templateFields.length === 0) {
+            throw { code: "TEMPLATE_EMPTY", message: `La plantilla no tiene campos definidos.` };
+        }
+        
+        for (const fieldTemplate of templateFields) {
+            await createFieldDB(client, {
+                dataset_id: datasetId,
+                name: fieldTemplate.name,
+                key: fieldTemplate.key,
+                type: fieldTemplate.field_type,
+                required: fieldTemplate.is_required,
+                is_multi: fieldTemplate.is_multi,
+                position: fieldTemplate.position,
+                config: fieldTemplate.settings,
+                relation_target_kind: fieldTemplate.relation_target_kind,
+                relation_target_dataset_id: fieldTemplate.relation_target_template_id,
+                relation_target_core: fieldTemplate.relation_target_core,
+                is_active: true,
+            });
+        }
+        
+        // 3. Actualizar el dataset para marcar que se usó esta plantilla
+        await updateDatasetDB(client, datasetId, { config: { template_key: template_key } });
+
+        await client.query("COMMIT");
+        res.status(200).json({ message: "Plantilla aplicada exitosamente.", dataset_id: datasetId });
+    } catch (e: any) {
+        await client.query("ROLLBACK");
+        console.error("applyTemplateToDataset error:", e);
+        if (e.code === "FIELDS_EXIST") {
+            res.status(409).json({ error: e.message });
+        } else {
+            res.status(500).json({ error: "Error al aplicar la plantilla." });
+        }
+    } finally {
+        client.release();
+    }
+};
+
 
 // =============================
 // Routes
@@ -258,5 +291,7 @@ router.post("/", createDataset);
 router.patch("/:id", updateDataset);
 router.delete("/:id", deleteDataset);
 router.get("/:id/general-view", getSnapshot);
+
+router.post("/:id/apply-template", applyTemplateToDataset);
 
 export default router;

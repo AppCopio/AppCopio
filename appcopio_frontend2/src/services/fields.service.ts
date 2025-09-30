@@ -17,8 +17,18 @@ export const fieldsService = {
   create(payload: {
     dataset_id: string; name: string; key: string;
     field_type: "text"|"number"|"bool"|"date"|"time"|"datetime"|"select"|"multi_select"|"relation";
-    is_required?: boolean; is_multi?: boolean; position?: number; settings?: any;
-    relation_target_kind?: string; relation_target_template_id?: string; relation_target_core?: string;
+    is_required?: boolean; 
+    is_multi?: boolean; 
+    position?: number; 
+    settings?: any;
+    config?: any;
+
+    is_active?:boolean;
+    type?: string;
+
+    relation_target_kind?: string; 
+    relation_target_template_id?: string; 
+    relation_target_core?: string;
   }) {
     return api.post(`/database-fields`, payload).then(r => r.data?.data ?? r.data);
   },
