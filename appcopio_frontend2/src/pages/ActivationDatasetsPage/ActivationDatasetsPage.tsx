@@ -34,7 +34,10 @@ import AddRounded from "@mui/icons-material/AddRounded";
 import DeleteOutline from "@mui/icons-material/DeleteOutline";
 import TableRowsOutlined from "@mui/icons-material/TableRowsOutlined";
 import ContentCopyOutlined from "@mui/icons-material/ContentCopyOutlined";
-import { useActivation } from "@/contexts/ActivationContext"
+import { useActivation } from "@/contexts/ActivationContext";
+import { datasetsService } from "@/services/datasets.service";
+import type { DatasetSummary, DatasetTemplateKey } from "@/types/dataset";
+import { msgFromError } from "@/lib/errors";
 
 /*
   Activation Datasets — Notion-like page
@@ -55,20 +58,6 @@ import { useActivation } from "@/contexts/ActivationContext"
 */
 
 // ——— Types (align with your backend later) ———
-export type DatasetSummary = {
-  dataset_id: string;
-  activation_id: number;
-  center_id: string;
-  name: string;      // unique per activation
-  key: string;       // slug per activation
-  record_count: number;
-  created_at: string;
-  updated_at: string;
-
-  template_key?: DatasetTemplateKey
-};
-
-export type DatasetTemplateKey = "blank" | "personas_albergadas" |"familias_integradas" | "personas_ingresadas" | "registro_p_persona" | "red_apoyo" | "ayudas_entregadas" | "reubicaciones";
 
 export type DatasetTemplate = {
   key: DatasetTemplateKey;
@@ -77,7 +66,6 @@ export type DatasetTemplate = {
   // optionally, a starter schema preview the UI can show
   previewColumns?: string[];
 };
-
 
 // ——— Templates visible in the UI ———
 const TEMPLATES: DatasetTemplate[] = [
@@ -144,52 +132,7 @@ function datasetDataKey(activationId: number, datasetKey: string) {
 }
 // ——— Mock Service (replace with real API) ———
 const MockService = {
-  async listByActivation(activationId: number): Promise<DatasetSummary[]> {
-    await delay(400);
-    const seed = window.localStorage.getItem(`datasets_${activationId}`);
-    return seed ? JSON.parse(seed) : [];
-  },
-  async create(
-    activationId: number,
-    payload: { name: string; template: DatasetTemplateKey }
-  ): Promise<DatasetSummary> {
-    await delay(600);
-    const list = await this.listByActivation(activationId);
-    if (list.some((d) => d.name.trim().toLowerCase() === payload.name.trim().toLowerCase())) {
-      throw new Error("El nombre ya existe para esta activación.");
-    }
-    const templateAlreadyUsed = payload.template !== 'blank' &&
-        list.some((d) => d.template_key === payload.template);
-    if (templateAlreadyUsed) {
-        throw new Error("Esta plantilla ya fue usada en este centro.");
-    }
-    const now = new Date().toISOString();
-    const key = slugify(payload.name);
-    const newItem: DatasetSummary = {
-      dataset_id: cryptoRandomId(),
-      activation_id: activationId,
-      center_id: "C000",
-      name: payload.name.trim(),
-      key,
-      record_count: 0,
-      created_at: now,
-      updated_at: now,
-      template_key: payload.template,
-    };
-    const updated = [newItem, ...list].sort((a, b) => a.name.localeCompare(b.name, "es"));
-    window.localStorage.setItem(`datasets_${activationId}`, JSON.stringify(updated));
-    return newItem;
-  },
-  async remove(activationId: number, datasetId: string) {
-    await delay(400);
-    const list = await this.listByActivation(activationId);
-    const updated = list.filter((d) => d.dataset_id !== datasetId);
-    window.localStorage.setItem(`datasets_${activationId}`, JSON.stringify(updated));
-  },
-  async getByKey(activationId: number, key: string): Promise<DatasetSummary | null> {
-    const list = await this.listByActivation(activationId);
-    return list.find(d => d.key === key) ?? null;
-  },
+
 
   async getOrInitDatasetData(
     activationId: number,
@@ -303,9 +246,11 @@ export default function ActivationDatasetsPage() {
     (async () => {
       try {
         setLoading(true);
-        const data = await MockService.listByActivation(activationId);
+        const data = await datasetsService.listByActivation(activationId);
         if (mounted) setItems(data);
-      } finally {
+        } catch (e) {
+        console.error(e);
+        } finally {
         if (mounted) setLoading(false);
       }
     })();
@@ -316,7 +261,7 @@ export default function ActivationDatasetsPage() {
 
   const onDelete = async (datasetId: string) => {
     if (!window.confirm("¿Eliminar esta base de datos? Esta acción no se puede deshacer.")) return;
-    await MockService.remove(activationId, datasetId);
+    await datasetsService.remove(datasetId);
     setItems((prev) => prev.filter((d) => d.dataset_id !== datasetId));
   };
 
@@ -354,7 +299,7 @@ export default function ActivationDatasetsPage() {
       <CreateDatasetDialog
         open={openNew}
         onClose={() => setOpenNew(false)}
-        activationId={activationId}
+        activationId={activationId!}
         existingNames={items.map((i) => i.name)}
         usedTemplateKeys={[...new Set(items.map(i => i.template_key).filter(Boolean))] as DatasetTemplateKey[]}
         onCreated={(created) => {
@@ -490,7 +435,10 @@ function CreateDatasetDialog({
     if (nameError || isTemplateUsed) return;
     try {
         setSubmitting(true);
-        const created = await MockService.create(activationId, { name, template });
+        const created = await datasetsService.create(activationId, { name, template });
+      //hayq eu revisar si el backend recibe template. 
+      /*Si tu API ya devuelve template_key en cada DatasetSummary, tu UI mostrará y bloqueará plantillas repetidas (tal como tienes).
+      Si no lo devuelve aún, el combo seguirá operativo; cuando backend lo agregue, la UI tomará ese dato y el bloqueo quedará firme. */
         onCreated(created);
     } catch (e: any) {
         alert(e?.message || "No se pudo crear la base de datos");
@@ -591,7 +539,7 @@ export function DatasetDetail() {
       if (!activationId || !key) return;
       try {
         setLoading(true);
-        const summary = await MockService.getByKey(activationId, key);
+        const summary = await datasetsService.getByKey(activationId, key);
         if (!summary) {
           setDs(null);
           setData({ columns: [], rows: [] });
