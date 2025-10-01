@@ -5,7 +5,6 @@ import {
   Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, Select, MenuItem, FormHelperText
 } from "@mui/material";
 import DeleteOutline from "@mui/icons-material/DeleteOutline";
-import EditOutlined from "@mui/icons-material/EditOutlined";
 import { useActivation } from "@/contexts/ActivationContext";
 import { databasesService } from "@/services/databases.service";
 import { fieldsService } from "@/services/fields.service";
@@ -13,7 +12,7 @@ import { recordsService } from "@/services/records.service";
 import type { DatabaseField, FieldType } from "@/types/field";
 import type { DatabaseRecord } from "@/types/record";
 import axios from "axios";
-
+import CellEditor from "@/components/databases/CellEditor";
 
 // =======================================================
 // UTILS
@@ -21,23 +20,22 @@ import axios from "axios";
 
 const getNextPosition = (currentFields: DatabaseField[]): number => {
     if (currentFields.length === 0) {
-        // FIX: Si el array de campos cargados está vacío, asumimos que el campo por defecto (posición 0)
-        // ya existe en la BD (debido a la lógica del backend), y la próxima posición segura es 1.
-        return 1; 
+        // Si no hay campos, empezamos en 10 (igual que las plantillas)
+        return 10; 
     }
-    // Si hay campos, calculamos la posición máxima. Usamos 0 como fallback, no -1.
+    // Calcular la posición máxima actual y sumar 10
     const positions = currentFields.map(f => (f.position ? Number(f.position) : 0));
-    return Math.max(...positions) + 1;
+    const maxPosition = Math.max(...positions);
+    return maxPosition + 10;
 };
 
 /** Tipos de campo disponibles para el modal. */
 const AVAILABLE_FIELD_TYPES = [
-    { key: "text", name: "Texto simple", icon: "T", desc: "Texto corto o largo." },
-    { key: "number", name: "Número", icon: "123", desc: "Moneda, edad, cantidad." },
-    { key: "bool", name: "Interruptor (Sí/No)", icon: "✓", desc: "Sí/No, Activo/Inactivo." },
-    { key: "date", name: "Fecha", icon: "📅", desc: "Fecha (sin hora)." },
-    { key: "select", name: "Selección única", icon: "▼", desc: "Elige una opción de una lista." },
-    // Asegúrate de que 'field_type' en fields.service.ts tenga todos estos tipos.
+    { key: "text", name: "Texto simple", icon: "T", desc: "Texto corto o largo.", placeholder: "Ej: Juan Pérez" },
+    { key: "number", name: "Número", icon: "123", desc: "Moneda, edad, cantidad.", placeholder: "Ej: 25" },
+    { key: "bool", name: "Interruptor (Sí/No)", icon: "✓", desc: "Sí/No, Activo/Inactivo.", placeholder: "" },
+    { key: "date", name: "Fecha", icon: "📅", desc: "Fecha (sin hora).", placeholder: "" },
+    { key: "select", name: "Selección única", icon: "▼", desc: "Elige una opción de una lista.", placeholder: "Seleccionar..." },
 ];
 
 function slugify(s: string) { 
@@ -59,6 +57,8 @@ export default function DatabaseDetailPage() {
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState(AVAILABLE_FIELD_TYPES[0].key);
+  const [selectOptions, setSelectOptions] = useState<string[]>([]);
+  const [currentOption, setCurrentOption] = useState("");
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -68,16 +68,16 @@ export default function DatabaseDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const [summary, cols, recs] = await Promise.all([
-            databasesService.getById(id,ctrl.signal),
-            fieldsService.list(id).then(r => Array.isArray(r) ? r : []), // <-- FIX: El service ya debe devolver el array
-            recordsService.list(id).then(r => Array.isArray(r) ? r : []),
+        const [summary, cols, recsResponse] = await Promise.all([
+            databasesService.getById(id, ctrl.signal),
+            fieldsService.list(id).then(r => Array.isArray(r) ? r : []),
+            recordsService.list(id),
         ]);
         if (alive) {
           setDb(summary);
-          // Ordenar los campos por posición
           setFields((cols || []).sort((a, b) => a.position - b.position));
-          setRecords(recs || []);
+          // FIX: recordsService.list devuelve { items: [], total: 0 }
+          setRecords(recsResponse?.items || []);
         }
       } catch (e: any) {
         if (axios.isCancel(e)) return;
@@ -91,8 +91,6 @@ export default function DatabaseDetailPage() {
     return () => { alive = false; ctrl.abort(); };
   }, [id, activation?.activation_id]);
 
-
-//REVISAR
   const addColumn = async () => {
     const colName = newFieldName.trim();
     if (!colName || !newFieldType) {
@@ -100,37 +98,44 @@ export default function DatabaseDetailPage() {
         return;
     }
     
+    // Validar que si es tipo select tenga opciones
+    if (newFieldType === "select" && selectOptions.length === 0) {
+        alert("Debes agregar al menos una opción para el campo de selección.");
+        return;
+    }
+    
     const nextPosition = getNextPosition(fields);
 
     try {
+      // Preparar la configuración según el tipo de campo
+      const fieldConfig = newFieldType === "select" || newFieldType === "multi_select"
+        ? { options: selectOptions }
+        : {};
+
       const newField = await fieldsService.create({
         dataset_id: db.dataset_id,
         name: colName,
         key: slugify(colName) + Date.now(),
-        
         field_type: newFieldType, 
-        position: nextPosition, // <--- ¡POSICIÓN ROBUSTA!
-        
+        position: nextPosition,
         is_required: false,
         is_active: true,
-        is_multi: false,
-        config: {},
-        
-        // Propiedades de relación
+        is_multi: newFieldType === "multi_select",
+        config: fieldConfig,
+        settings: fieldConfig, // Alias para backend
         relation_target_kind: undefined,
         relation_target_dataset_id: undefined,
         relation_target_core: undefined,
-        
-        // Alias para backend validation (depende de tu backend)
         ...( { type: newFieldType } as any ),
       });
 
-      // 2. Actualizar el estado local de los campos y ordenar
       setFields(prev => [...prev, newField].sort((a, b) => a.position - b.position));
       
-      // 3. Limpiar y cerrar modal
+      // Limpiar el formulario
       setNewFieldName("");
       setNewFieldType("text");
+      setSelectOptions([]);
+      setCurrentOption("");
       setIsFieldModalOpen(false);
       
     } catch (e: any) {
@@ -142,16 +147,17 @@ export default function DatabaseDetailPage() {
       }
     }
   };
+
   const delCol = async (field_id: string) => {
     if (!confirm("¿Está seguro de eliminar esta columna? Se perderán todos los datos asociados.")) return;
     try {
         await fieldsService.remove(field_id);
         setFields(prev => prev.filter(f => f.field_id !== field_id));
-        // Nota: En un sistema real, esto debería disparar una recarga de los registros si el campo se usaba.
     } catch (e: any) {
         alert("Error al eliminar la columna: " + (e?.response?.data?.error || e?.message));
     }
   };
+
   const addRow = async () => {
     try {
       const rec = await recordsService.create(db.dataset_id, activation!.activation_id, {});
@@ -172,96 +178,86 @@ export default function DatabaseDetailPage() {
   };
 
   const changeCell = async (recordId: string, fieldKey: string, value: any) => {
-    // 1. Encontrar el registro actual para obtener la versión
     const currentRecord = records.find(r => r.record_id === recordId);
-
     if (!currentRecord) {
-        // Esto solo ocurre si la lista 'records' está desincronizada, pero es la validación
+        console.error("Error: Registro no encontrado", recordId);
         alert("Error de sincronización: Registro no encontrado.");
         return;
     }
 
-    // 2. Optimistic Update (UI): Usamos la versión ANTES del cambio
+    // Optimistic Update
     setRecords(prev => prev.map(r => r.record_id === recordId ? { 
         ...r, 
         data: { ...r.data, [fieldKey]: value },
-        // IMPORTANTE: Incrementamos la versión local para que el próximo PATCH use la versión correcta
         version: r.version + 1 
     } : r));
 
-    // 3. Persistencia en el backend
     try {
+        console.log("Actualizando celda:", { recordId, fieldKey, value, version: currentRecord.version });
+        
         await recordsService.patch(recordId, { 
             dataset_id: db.dataset_id, 
             data: { [fieldKey]: value },
-            version: currentRecord.version // <<-- CRÍTICO: Enviamos la versión ORIGINAL (para validación)
+            version: currentRecord.version
         });
+        
+        console.log("Celda actualizada correctamente");
     } catch (e: any) {
-        // En caso de error, el servidor devuelve 409 (Conflicto) o 400 (Error de Versión)
         console.error("Error al guardar celda:", e);
-        alert(e?.response?.data?.error || "Error al guardar la celda. Recargue la página.");
-        // Un sistema completo haría un rollback aquí
+        console.error("Respuesta del servidor:", e?.response?.data);
+        
+        // Rollback: restaurar el valor original
+        setRecords(prev => prev.map(r => r.record_id === recordId ? currentRecord : r));
+        
+        const errorMsg = e?.response?.data?.error || e?.response?.data?.message || "Error al guardar la celda. Recargue la página.";
+        alert(errorMsg);
     }
   };
-  /*
-  const changeColumnName = async (field: DatabaseField, newName: string) => {
-    if (newName.trim() === field.name) return;
-    try {
-      const updatedField = await fieldsService.update(field.field_id, { name: newName });
-      setFields(prev => prev.map(f => f.field_id === field.field_id ? updatedField : f));
-    } catch (e: any) {
-      alert("Error al actualizar la columna: " + (e?.response?.data?.error || e?.message));
-    }
-  };*/
+
   const editColName = async (field_id: string, newName: string) => {
     if (!newName.trim()) return;
     const oldField = fields.find(f => f.field_id === field_id);
     if (!oldField || oldField.name === newName) return;
 
-    // Optimistic update
     setFields(prev => prev.map(f => f.field_id === field_id ? { ...f, name: newName } : f));
 
     try {
         await fieldsService.update(field_id, { name: newName });
     } catch (e) {
         alert("Error al renombrar columna.");
-        // Rollback manual en caso de error
         setFields(prev => prev.map(f => f.field_id === field_id ? oldField : f));
     }
   }; 
+
   if (actLoading || loading) return <LinearProgress />;
   if (error) return <Typography color="error" sx={{m:4}}>{error}</Typography>;
   if (!db) return <Typography sx={{m:4}}>Base de datos no encontrada.</Typography>;
 
   return (
     <Container sx={{ py: 4 }}>
-      {/* Barra superior */}
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h4" gutterBottom>
           Base de Datos: {db.name}
         </Typography>
         <Stack direction="row" gap={1}>
-            {/* Nuevo botón que abre el modal */}
-            <Button variant="outlined" onClick={() => {
+            <Button variant="outlineGray" onClick={() => {
                 setNewFieldName("");
                 setNewFieldType("text");
                 setIsFieldModalOpen(true);
             }}>
                 Agregar columna
             </Button> 
-            <Button variant="contained" onClick={addRow}>
+            <Button variant="brand" onClick={addRow}>
                 Agregar fila
             </Button>
         </Stack>
       </Stack>
 
-      {/* Tabla */}
       <Box sx={{ mt: 3, overflowX: "auto" }}>
         <Box component="table" sx={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
           <Box component="thead">
             <Box component="tr">
               <Box component="th" sx={{ p: 1, width: 48, bgcolor: "action.hover" }}>#</Box>
-              {/* Encabezados de Columna */}
               {fields.map(f => (
                 <Box key={f.field_id} component="th" sx={{ textAlign:"left", p:1, bgcolor:"action.hover", minWidth: 180 }}>
                     <Stack direction="row" alignItems="center" gap={0.5}>
@@ -294,12 +290,10 @@ export default function DatabaseDetailPage() {
                 <Box component="td" sx={{ p:1, color:"text.secondary", width:48 }}>{idx+1}</Box>
                 {fields.map((f) => (
                   <Box key={`${r.record_id}-${f.field_id}`} component="td" sx={{ p:1, minWidth: 180 }}>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      value={r.data?.[f.key] ?? ""}
-                      onChange={(e)=>changeCell(r.record_id, f.key, e.target.value)}
-                      // TODO: Renderizar el componente de entrada correcto según f.type
+                    <CellEditor 
+                      record={r} 
+                      field={f} 
+                      onUpdate={changeCell}
                     />
                   </Box>
                 ))}
@@ -321,9 +315,6 @@ export default function DatabaseDetailPage() {
         )}
       </Box>
 
-      {/* ======================================= */}
-      {/* Modal de Creación de Columna (Dialog) */}
-      {/* ======================================= */}
       <Dialog open={isFieldModalOpen} onClose={() => setIsFieldModalOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>Nueva Columna</DialogTitle>
         <DialogContent>
@@ -340,7 +331,14 @@ export default function DatabaseDetailPage() {
               <Select 
                 value={newFieldType} 
                 label="Tipo de Campo" 
-                onChange={(e) => setNewFieldType(e.target.value as FieldType)}
+                onChange={(e) => {
+                  setNewFieldType(e.target.value as FieldType);
+                  // Limpiar opciones si cambia el tipo
+                  if (e.target.value !== "select" && e.target.value !== "multi_select") {
+                    setSelectOptions([]);
+                    setCurrentOption("");
+                  }
+                }}
               >
                 {AVAILABLE_FIELD_TYPES.map(t => (
                   <MenuItem key={t.key} value={t.key} title={t.desc}>
@@ -353,11 +351,96 @@ export default function DatabaseDetailPage() {
               </Select>
               <FormHelperText>Elige el tipo de datos que almacenará esta columna.</FormHelperText>
             </FormControl>
+
+            {/* Campo para agregar opciones si es tipo select */}
+            {(newFieldType === "select" || newFieldType === "multi_select") && (
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  Opciones de selección:
+                </Typography>
+                
+                {/* Lista de opciones agregadas */}
+                {selectOptions.length > 0 && (
+                  <Stack spacing={0.5} sx={{ mb: 1 }}>
+                    {selectOptions.map((opt, idx) => (
+                      <Box key={idx} sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        p: 0.5,
+                        bgcolor: 'action.hover',
+                        borderRadius: 1
+                      }}>
+                        <Typography variant="body2" sx={{ flex: 1 }}>{opt}</Typography>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => setSelectOptions(prev => prev.filter((_, i) => i !== idx))}
+                        >
+                          <DeleteOutline fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Stack>
+                )}
+
+                {/* Input para agregar nueva opción */}
+                <Stack direction="row" spacing={1}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    placeholder="Escribe una opción..."
+                    value={currentOption}
+                    onChange={(e) => setCurrentOption(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && currentOption.trim()) {
+                        e.preventDefault();
+                        setSelectOptions(prev => [...prev, currentOption.trim()]);
+                        setCurrentOption("");
+                      }
+                    }}
+                  />
+                  <Button 
+                    variant="softGray"
+                    size="small"
+                    onClick={() => {
+                      if (currentOption.trim()) {
+                        setSelectOptions(prev => [...prev, currentOption.trim()]);
+                        setCurrentOption("");
+                      }
+                    }}
+                    disabled={!currentOption.trim()}
+                  >
+                    Agregar
+                  </Button>
+                </Stack>
+                <FormHelperText>
+                  Presiona Enter o click en "Agregar" para añadir cada opción
+                </FormHelperText>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="text" onClick={() => setIsFieldModalOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={addColumn} disabled={!newFieldName.trim() || !newFieldType}>Crear</Button>
+          <Button variant="textBare" onClick={() => {
+            setNewFieldName("");
+            setNewFieldType("text");
+            setSelectOptions([]);
+            setCurrentOption("");
+            setIsFieldModalOpen(false);
+          }}>
+            Cancelar
+          </Button>
+          <Button 
+            variant="brand" 
+            onClick={addColumn} 
+            disabled={
+              !newFieldName.trim() || 
+              !newFieldType || 
+              ((newFieldType === "select" || newFieldType === "multi_select") && selectOptions.length === 0)
+            }
+          >
+            Crear
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>

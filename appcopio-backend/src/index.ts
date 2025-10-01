@@ -28,7 +28,7 @@ import fieldRoutes from "./routes/fieldRoutes";
 import recordRoutes from "./routes/recordRoutes";
 import templateRoutes from "./routes/templateRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
-
+import notificationRoutes from "./routes/notificacionRoutes";
 
 dotenv.config();
 
@@ -90,7 +90,7 @@ app.use("/api/database-fields", requireAuth, fieldRoutes);
 app.use("/api/database-records", requireAuth, recordRoutes);
 app.use("/api/database-templates", requireAuth, templateRoutes);
 app.use("/api/database-history", requireAuth, auditLogRoutes);
-//app.use("/api/notification", notificacionRoutes);
+app.use("/api/notification", notificationRoutes);
 
 
 

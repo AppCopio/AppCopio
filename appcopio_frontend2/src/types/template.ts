@@ -15,7 +15,7 @@ export const TEMPLATES: TemplateItem[] = [
         key: "blank",
         name: "Base de datos en blanco",
         description: "Comienza sin columnas predefinidas. Podrás agregarlas luego.",
-        fields: [],
+        fields: [], // Sin campos predefinidos
     }, 
     {
         key: "personas_albergadas",
@@ -110,6 +110,4 @@ export const TEMPLATES: TemplateItem[] = [
             { name: "Acción", key: "accion", field_type: "text", position: 40, is_required: false, settings: {} }, 
         ],
     },
-
 ];
-

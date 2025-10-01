@@ -38,6 +38,7 @@ import { ActivationProvider } from "@/contexts/ActivationContext";
 import DatabasesPage from "@/pages/Databases/DatabasesPage";
 import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
 
+
 export default function App() {
   return (
     <div className="App">

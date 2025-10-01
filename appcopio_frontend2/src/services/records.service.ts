@@ -16,7 +16,22 @@ export const recordsService = {
     });
   },
   create(dataset_id: string, activation_id: number, data: Record<string, any> = {}) {
-    return api.post(`/database-records`, { dataset_id, activation_id, data }).then(r => r.data?.data ?? r.data);
+    return api.post(`/database-records`, { 
+      dataset_id, 
+      activation_id, 
+      data,
+      // Inicializar campos auxiliares vacíos para evitar errores
+      select_values: {},
+      relations_dynamic: [],
+      relations_core: []
+    }).then(r => {
+      const record = r.data?.data ?? r.data;
+      // CRÍTICO: Asegurar que el registro tenga version = 1
+      if (!record.version) {
+        record.version = 1;
+      }
+      return record;
+    });
   },
   patch(record_id: string, body: { 
       dataset_id: string; 

@@ -15,22 +15,37 @@ export const fieldsService = {
     });
   },
   create(payload: {
-    dataset_id: string; name: string; key: string;
-    field_type: "text"|"number"|"bool"|"date"|"time"|"datetime"|"select"|"multi_select"|"relation";
+    dataset_id: string; 
+    name: string; 
+    key: string;
+    field_type?: "text"|"number"|"bool"|"date"|"time"|"datetime"|"select"|"multi_select"|"relation";
+    type?: string; // Alias para backend
     is_required?: boolean; 
     is_multi?: boolean; 
     position?: number; 
     settings?: any;
     config?: any;
-
-    is_active?:boolean;
-    type?: string;
-
+    is_active?: boolean;
     relation_target_kind?: string; 
     relation_target_template_id?: string; 
+    relation_target_dataset_id?: string;
     relation_target_core?: string;
   }) {
-    return api.post(`/database-fields`, payload).then(r => r.data?.data ?? r.data);
+    const fieldType = payload.field_type || payload.type || 'text';
+    
+    const normalizedPayload = {
+      ...payload,
+      type: fieldType,           // Backend espera 'type'
+      field_type: fieldType,     // Mantener para compatibilidad
+      is_required: payload.is_required ?? false,
+      is_multi: payload.is_multi ?? false,
+      position: payload.position ?? 0,
+      is_active: payload.is_active ?? true,
+      config: payload.config ?? payload.settings ?? {},
+      settings: payload.settings ?? payload.config ?? {},
+    };
+    return api.post(`/database-fields`, normalizedPayload)
+      .then(r => mapField(r.data?.data ?? r.data));
   },
   update(field_id: string, body: any) {
     return api.patch(`/database-fields/${encodeURIComponent(field_id)}`, body).then(r => r.data?.data ?? r.data);

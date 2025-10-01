@@ -18,10 +18,10 @@ export default function DatabasesPage() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<any[]>([]); // Usamos 'any' para simplificar el tipo en la corrección
+  const [items, setItems] = useState<any[]>([]);
   const [openNew, setOpenNew] = useState(false);
 
- useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     (async () => {
         if (!activation?.activation_id) return;
@@ -58,7 +58,7 @@ export default function DatabasesPage() {
           <Typography variant="h4">Bases de datos por activación</Typography>
           <Typography variant="body2" color="text.secondary">Registra asistencia, entregas, reubicaciones y más.</Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddRounded />} onClick={() => setOpenNew(true)}>
+        <Button variant="brand" startIcon={<AddRounded />} onClick={() => setOpenNew(true)}>
           Nueva base de datos
         </Button>
       </Stack>
@@ -97,10 +97,10 @@ function Grid({ items, onOpen, onDelete }: { items: DatabaseSummary[]; onOpen: (
           <Box 
             onClick={() => onOpen(it)}
             sx={{
-              p: 2, // Padding for content
+              p: 2,
               cursor: 'pointer',
               '&:hover': {
-                bgcolor: 'action.hover', // Hover state from Mui
+                bgcolor: 'action.hover',
               },
             }}
           >
@@ -113,7 +113,6 @@ function Grid({ items, onOpen, onDelete }: { items: DatabaseSummary[]; onOpen: (
               <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
                 <Tooltip title="Duplicar (próximamente)">
                 <span>
-                  {/* These IconButtons are now safely nested */}
                   <IconButton size="small" disabled onClick={(e) => e.stopPropagation()}> 
                     <ContentCopyOutlined fontSize="small" />
                   </IconButton>
@@ -123,7 +122,7 @@ function Grid({ items, onOpen, onDelete }: { items: DatabaseSummary[]; onOpen: (
                 <IconButton 
                   size="small" 
                   onClick={(e)=>{ 
-                    e.stopPropagation(); // Still critical to prevent Box onClick
+                    e.stopPropagation();
                     onDelete(it.dataset_id);
                   }}>
                   <DeleteOutline fontSize="small"/>
@@ -144,7 +143,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       <TableRowsOutlined sx={{ fontSize: 40, opacity: 0.5 }} />
       <Typography variant="h6" sx={{ mt: 1 }}>Aún no hay bases de datos</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Crea una base nueva desde una plantilla o en blanco.</Typography>
-      <Button variant="contained" startIcon={<AddRounded />} sx={{ mt: 2 }} onClick={onCreate}>Nueva base de datos</Button>
+      <Button variant="brand" startIcon={<AddRounded />} sx={{ mt: 2 }} onClick={onCreate}>Nueva base de datos</Button>
     </Box>
   );
 }
@@ -157,17 +156,16 @@ function CreateDialog({
   centerId: string;
   existingNames: string[];
   usedTemplateKeys: string[];
-  onCreated: (d: any) => void; // Usamos 'any' para simplificar el tipo en la corrección
+  onCreated: (d: any) => void;
 }) {
   const [name, setName] = useState("");
   const [template, setTemplate] = useState<string>("blank");
   const [submitting, setSubmitting] = useState(false);
   const {activation } = useActivation();
 
-const selectedTemplate = useMemo(() => {
+  const selectedTemplate = useMemo(() => {
     return (TEMPLATES as TemplateItem[]).find(t => t.key === template);
   }, [template]);
-
 
   const nameError = useMemo(() => {
     const trimmed = name.trim();
@@ -177,17 +175,19 @@ const selectedTemplate = useMemo(() => {
   }, [name, existingNames]);
 
   const isTemplateUsed = template !== "blank" && usedTemplateKeys?.includes(template); 
+  
   function slugify(s: string) {
-  return s.normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase().trim()
-    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
-}
+    return s.normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+  }
+  
   const handleSubmit = async () => {
     if (nameError || isTemplateUsed) return;
     try {
       setSubmitting(true);
       const uniqueKey = slugify(name) + "-" + Date.now();
       
-      // 1. Crear la base de datos (se omite el campo 'config' con template_key)
+      // 1. Crear la base de datos
       const created = await databasesService.create({
         activation_id: activation!.activation_id,
         center_id: centerId,
@@ -197,45 +197,58 @@ const selectedTemplate = useMemo(() => {
 
       const datasetId = created.dataset_id;
       
-      // 2. Aplicar la plantilla: Obtener campos y crearlos uno a uno
+      // 2. ELIMINAR la columna automática "titulo/nombre" que crea el backend
+      try {
+        const existingFields = await fieldsService.list(datasetId);
+        console.log("Campos existentes después de crear DB:", existingFields);
+        
+        // Buscar y eliminar cualquier campo con posición 0 o nombre "titulo"/"nombre"
+        const defaultField = existingFields.find(f => 
+          f.position === 0 || 
+          f.key === "titulo" || 
+          f.key === "nombre" ||
+          f.name.toLowerCase() === "titulo" ||
+          f.name.toLowerCase() === "nombre"
+        );
+        
+        if (defaultField) {
+          console.log("Eliminando columna automática:", defaultField);
+          await fieldsService.remove(defaultField.field_id);
+        }
+      } catch (e) {
+        console.warn("No se pudo eliminar la columna automática:", e);
+      }
+      
+      // 3. Si se seleccionó una plantilla (no blank), crear SOLO los campos de esa plantilla
       if (template !== "blank") {
           const fieldsToAdd = await templatesService.getTemplateFields(template);
           
+          // IMPORTANTE: Solo creamos los campos que están definidos en la plantilla
+          // NO agregamos ninguna columna adicional automática
           for (const fieldTemplate of fieldsToAdd) {
               await fieldsService.create({
                   dataset_id: datasetId,
-                  
-                  // Propiedades principales (nombre del DTO de FE)
                   name: fieldTemplate.name,
                   key: fieldTemplate.key,
                   field_type: fieldTemplate.field_type, 
                   position: fieldTemplate.position,
                   is_required: fieldTemplate.is_required,
                   is_multi: fieldTemplate.is_multi,
-                  
-                  // Mapeo de relación (relation_target_template_id es correcto para template_field)
                   relation_target_kind: fieldTemplate.relation_target_kind,
                   relation_target_template_id: fieldTemplate.relation_target_template_id, 
                   relation_target_core: fieldTemplate.relation_target_core,
-                  
                   is_active: true,
-                  
-                  // === CORRECCIONES DE ALIAS PARA EL BACKEND ===
-                  // ALIAS 1: Mapear 'field_type' a 'type' (requerido por la consulta SQL del BE)
                   type: fieldTemplate.field_type,
-                  
-                  // ALIAS 2: Mapear 'settings' a 'config' (requerido por la consulta SQL del BE)
                   settings: fieldTemplate.settings, 
                   config: fieldTemplate.settings, 
               });
           }
           
-          
           // Opcional: Actualizar la configuración del dataset para registrar la plantilla usada
           await databasesService.updateDataset(datasetId, { config: { template_key: template } });
       }
 
-      // 3. Notificar éxito y navegar
+      // 4. Notificar éxito y navegar
       onCreated(created);
     } catch (e: any) {
       alert(e?.response?.data?.message || e?.message || "No se pudo crear la base");
@@ -248,7 +261,7 @@ const selectedTemplate = useMemo(() => {
     if (submitting) return;
     setName(""); setTemplate("blank"); onClose();
   };
-// ... (cuerpo del componente Dialog)
+
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>Nueva base de datos</DialogTitle>
@@ -273,7 +286,6 @@ const selectedTemplate = useMemo(() => {
                     <FormHelperText>{isTemplateUsed ? "Esta plantilla ya fue usada en este centro" : selectedTemplate?.description}</FormHelperText>
                 </FormControl>
                 
-                {/* Muestra las columnas de vista previa */}
                 {selectedTemplate?.previewColumns && selectedTemplate.previewColumns.length > 0 && (
                     <Box>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>Columnas de vista previa:</Typography>
@@ -288,8 +300,8 @@ const selectedTemplate = useMemo(() => {
             </Stack>
         </DialogContent>
         <DialogActions>
-            <Button variant="text" onClick={handleClose} disabled={submitting}>Cancelar</Button>
-            <Button variant="contained" onClick={handleSubmit} disabled={!!nameError || isTemplateUsed || submitting}>Crear</Button>
+            <Button variant="textBare" onClick={handleClose} disabled={submitting}>Cancelar</Button>
+            <Button variant="brand" onClick={handleSubmit} disabled={!!nameError || isTemplateUsed || submitting}>Crear</Button>
         </DialogActions>
     </Dialog>
   );
