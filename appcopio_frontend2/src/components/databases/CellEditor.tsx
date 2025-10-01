@@ -3,6 +3,7 @@ import CheckCircleOutline from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlined from "@mui/icons-material/CancelOutlined";
 import type { DatabaseField } from "@/types/field";
 import type { DatabaseRecord } from "@/types/record";
+import RelationSelector from "@/components/databases/RelationSelector";
 
 // Tipos de campo disponibles con sus configuraciones de placeholder
 const FIELD_TYPE_CONFIG = {
@@ -143,7 +144,7 @@ export default function CellEditor({ record, field, onUpdate }: CellEditorProps)
   // CAMPOS DE SELECCIÓN (Select con opciones)
   // ============================================
   if (field.type === "select") {
-    const options = field.config?.options || [];
+    const options = field.config?.options  || [];
     
     return (
       <TextField
@@ -194,25 +195,35 @@ export default function CellEditor({ record, field, onUpdate }: CellEditorProps)
   }
 
   // ============================================
-  // CAMPOS DE RELACIÓN
+  // CAMPOS DE RELACIÓN (a tablas CORE)
   // ============================================
   if (field.type === "relation") {
-    // TODO: Implementar selector de relaciones
-    // Por ahora lo manejamos como texto
+    const targetCore = field.config?.relation_target_core ;
+    
+    if (!targetCore) {
+      return (
+        <TextField
+          type="text"
+          size="small"
+          fullWidth
+          value={currentValue ?? ""}
+          disabled
+          placeholder="Configuración de relación incompleta"
+          sx={{
+            "& input::placeholder": {
+              color: 'error.main',
+              opacity: 0.6
+            }
+          }}
+        />
+      );
+    }
+
     return (
-      <TextField
-        type="text"
-        size="small"
-        fullWidth
-        value={currentValue ?? ""}
-        onChange={(e) => onUpdate(record.record_id, field.key, e.target.value)}
-        placeholder={fieldConfig.placeholder}
-        sx={{
-          "& input::placeholder": {
-            color: 'text.secondary',
-            opacity: 0.6
-          }
-        }}
+      <RelationSelector
+        targetCore={targetCore as 'persons' | 'family_groups' | 'products'}
+        value={currentValue as number | null}
+        onChange={(val) => onUpdate(record.record_id, field.key, val)}
       />
     );
   }

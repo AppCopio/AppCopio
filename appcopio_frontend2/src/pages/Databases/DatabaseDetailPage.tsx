@@ -36,6 +36,14 @@ const AVAILABLE_FIELD_TYPES = [
     { key: "bool", name: "Interruptor (Sí/No)", icon: "✓", desc: "Sí/No, Activo/Inactivo.", placeholder: "" },
     { key: "date", name: "Fecha", icon: "📅", desc: "Fecha (sin hora).", placeholder: "" },
     { key: "select", name: "Selección única", icon: "▼", desc: "Elige una opción de una lista.", placeholder: "Seleccionar..." },
+    { key: "relation", name: "Relación", icon: "🔗", desc: "Relaciona con otra entidad (Personas, Familias).", placeholder: "" },
+];
+
+/** Entidades CORE disponibles para relacionar */
+const CORE_ENTITIES = [
+    { key: "persons", name: "Personas", desc: "Relacionar con personas registradas" },
+    { key: "family_groups", name: "Grupos Familiares", desc: "Relacionar con familias" },
+    // { key: "products", name: "Productos", desc: "Relacionar con inventario" }, // Descomentar cuando sea necesario
 ];
 
 function slugify(s: string) { 
@@ -59,6 +67,7 @@ export default function DatabaseDetailPage() {
   const [newFieldType, setNewFieldType] = useState(AVAILABLE_FIELD_TYPES[0].key);
   const [selectOptions, setSelectOptions] = useState<string[]>([]);
   const [currentOption, setCurrentOption] = useState("");
+  const [relationTargetCore, setRelationTargetCore] = useState<string>("");
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -68,16 +77,37 @@ export default function DatabaseDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const [summary, cols, recsResponse] = await Promise.all([
-            databasesService.getById(id, ctrl.signal),
-            fieldsService.list(id).then(r => Array.isArray(r) ? r : []),
-            recordsService.list(id),
-        ]);
+        // Usar el endpoint "general-view" que trae TODO (incluyendo relaciones)
+        const snapshot = await databasesService.getSnapshot(id);
+        
         if (alive) {
-          setDb(summary);
-          setFields((cols || []).sort((a, b) => a.position - b.position));
-          // FIX: recordsService.list devuelve { items: [], total: 0 }
-          setRecords(recsResponse?.items || []);
+          setDb(snapshot.dataset);
+          setFields(snapshot.columns.sort((a: DatabaseField, b:DatabaseField ) => a.position - b.position));
+          
+          // Convertir los registros del snapshot a nuestro formato
+          // El snapshot ya incluye las relaciones en cada record.cells
+          const enrichedRecords = snapshot.records.map((rec:any ) => {
+            // Reconstruir el objeto data con los valores de las celdas
+            const reconstructedData: Record<string, any> = {};
+            snapshot.columns.forEach((col: DatabaseField, idx: number) => {
+              const cellValue = rec.cells[idx];
+              
+              // Para relaciones CORE, extraer solo el target_id
+              if (col.type === 'relation' && Array.isArray(cellValue) && cellValue.length > 0) {
+                // Las relaciones CORE vienen como [{ target_core, target_id }]
+                reconstructedData[col.key] = cellValue[0]?.target_id ?? null;
+              } else {
+                reconstructedData[col.key] = cellValue;
+              }
+            });
+            
+            return {
+              ...rec,
+              data: reconstructedData
+            };
+          });
+          
+          setRecords(enrichedRecords);
         }
       } catch (e: any) {
         if (axios.isCancel(e)) return;
@@ -103,14 +133,30 @@ export default function DatabaseDetailPage() {
         alert("Debes agregar al menos una opción para el campo de selección.");
         return;
     }
+
+    // Validar que si es tipo relation tenga entidad core seleccionada
+    if (newFieldType === "relation" && !relationTargetCore) {
+        alert("Debes seleccionar una entidad para relacionar.");
+        return;
+    }
     
     const nextPosition = getNextPosition(fields);
 
     try {
       // Preparar la configuración según el tipo de campo
-      const fieldConfig = newFieldType === "select" || newFieldType === "multi_select"
-        ? { options: selectOptions }
-        : {};
+      let fieldConfig: any = {};
+      let relationConfig: any = {};
+
+      if (newFieldType === "select" || newFieldType === "multi_select") {
+        fieldConfig = { options: selectOptions };
+      } else if (newFieldType === "relation") {
+        relationConfig = {
+          relation_target_kind: "core",
+          relation_target_core: relationTargetCore,
+          relation_target_dataset_id: undefined,
+        };
+        fieldConfig = { relation_target_core: relationTargetCore };
+      }
 
       const newField = await fieldsService.create({
         dataset_id: db.dataset_id,
@@ -123,9 +169,7 @@ export default function DatabaseDetailPage() {
         is_multi: newFieldType === "multi_select",
         config: fieldConfig,
         settings: fieldConfig, // Alias para backend
-        relation_target_kind: undefined,
-        relation_target_dataset_id: undefined,
-        relation_target_core: undefined,
+        ...relationConfig,
         ...( { type: newFieldType } as any ),
       });
 
@@ -136,6 +180,7 @@ export default function DatabaseDetailPage() {
       setNewFieldType("text");
       setSelectOptions([]);
       setCurrentOption("");
+      setRelationTargetCore("");
       setIsFieldModalOpen(false);
       
     } catch (e: any) {
@@ -185,6 +230,11 @@ export default function DatabaseDetailPage() {
         return;
     }
 
+    // Encontrar el campo para determinar si es una relación
+    const field = fields.find(f => f.key === fieldKey);
+    console.log("📝 Campo encontrado:", field);
+    console.log("💾 Guardando valor:", { recordId, fieldKey, value, fieldType: field?.type });
+
     // Optimistic Update
     setRecords(prev => prev.map(r => r.record_id === recordId ? { 
         ...r, 
@@ -193,18 +243,25 @@ export default function DatabaseDetailPage() {
     } : r));
 
     try {
-        console.log("Actualizando celda:", { recordId, fieldKey, value, version: currentRecord.version });
+        console.log("🚀 Enviando actualización:", { 
+          recordId, 
+          fieldKey, 
+          value, 
+          version: currentRecord.version,
+          hasFields: !!fields.length 
+        });
         
         await recordsService.patch(recordId, { 
             dataset_id: db.dataset_id, 
             data: { [fieldKey]: value },
-            version: currentRecord.version
+            version: currentRecord.version,
+            fields: fields // <- IMPORTANTE: Pasar los campos para detectar relaciones
         });
         
-        console.log("Celda actualizada correctamente");
+        console.log("✅ Celda actualizada correctamente");
     } catch (e: any) {
-        console.error("Error al guardar celda:", e);
-        console.error("Respuesta del servidor:", e?.response?.data);
+        console.error("❌ Error al guardar celda:", e);
+        console.error("📄 Respuesta del servidor:", e?.response?.data);
         
         // Rollback: restaurar el valor original
         setRecords(prev => prev.map(r => r.record_id === recordId ? currentRecord : r));
@@ -240,9 +297,18 @@ export default function DatabaseDetailPage() {
           Base de Datos: {db.name}
         </Typography>
         <Stack direction="row" gap={1}>
+            <Button 
+              variant="textBare" 
+              onClick={() => window.location.reload()}
+            >
+              🔄 Recargar
+            </Button>
             <Button variant="outlineGray" onClick={() => {
                 setNewFieldName("");
                 setNewFieldType("text");
+                setSelectOptions([]);
+                setCurrentOption("");
+                setRelationTargetCore("");
                 setIsFieldModalOpen(true);
             }}>
                 Agregar columna
@@ -418,6 +484,27 @@ export default function DatabaseDetailPage() {
                 </FormHelperText>
               </Box>
             )}
+
+            {/* Campo para seleccionar entidad CORE si es tipo relation */}
+            {newFieldType === "relation" && (
+              <FormControl fullWidth>
+                <InputLabel>Relacionar con</InputLabel>
+                <Select
+                  value={relationTargetCore}
+                  label="Relacionar con"
+                  onChange={(e) => setRelationTargetCore(e.target.value)}
+                >
+                  {CORE_ENTITIES.map(entity => (
+                    <MenuItem key={entity.key} value={entity.key}>
+                      {entity.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  Selecciona la entidad con la que deseas relacionar este campo
+                </FormHelperText>
+              </FormControl>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -436,7 +523,8 @@ export default function DatabaseDetailPage() {
             disabled={
               !newFieldName.trim() || 
               !newFieldType || 
-              ((newFieldType === "select" || newFieldType === "multi_select") && selectOptions.length === 0)
+              ((newFieldType === "select" || newFieldType === "multi_select") && selectOptions.length === 0) ||
+              (newFieldType === "relation" && !relationTargetCore)
             }
           >
             Crear

@@ -35,13 +35,14 @@ export const databasesService = {
     await api.delete(`/database/${encodeURIComponent(id)}`);
   },
 
-  // GET /api/database/:id/general-view (si quieres usar snapshot)
+  // GET /api/database/:id/general-view (snapshot completo con relaciones)
   async getSnapshot(id: string) {
     const r = await api.get(`/database/${encodeURIComponent(id)}/general-view`);
     return r.data?.data ?? r.data;
   },
+  
   async updateDataset(datasetId: string, body: { name?: string; config?: Record<string, unknown>; }) {
     const r = await api.patch(`/database/${encodeURIComponent(datasetId)}`, body);
     return r.data?.data ?? r.data;
-},
+  },
 };
