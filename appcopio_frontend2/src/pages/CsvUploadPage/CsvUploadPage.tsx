@@ -19,7 +19,6 @@ import {
   DialogTitle,
   DialogActions,
   CircularProgress,
-  Divider,
 } from '@mui/material';
 import {
   Download as DownloadIcon,
@@ -28,7 +27,6 @@ import {
   Send as SendIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-
 import CSVUploader from '@/components/common/CSVUploader';
 import CSVDataTable from '@/components/common/CSVDataTable';
 import { CSVParseResult } from '@/utils/csvParser';
@@ -38,18 +36,10 @@ import {
   getCSVParseOptions,
   uploadCSVData,
   validateCSVData,
-  downloadCSVTemplate,
   CSVUploadResponse,
+  downloadStaticTemplate,
 } from '@/services/csv.service';
-import { downloadCSV } from '@/utils/csvParser';
 import './CsvUploadPage.css';
-
-const steps = [
-  'Seleccionar Módulo',
-  'Subir Archivo',
-  'Revisar Datos',
-  'Confirmar Importación'
-];
 
 export default function CsvUploadPage() {
   const [activeStep, setActiveStep] = useState(0);
@@ -76,16 +66,10 @@ export default function CsvUploadPage() {
     }
   }, []);
 
-  const handleDownloadTemplate = async () => {
-    if (!selectedModule) return;
-
-    try {
-      const template = await downloadCSVTemplate(selectedModule);
-      downloadCSV(template, `plantilla_${selectedModule}.csv`);
-    } catch (error) {
-      console.error('Error downloading template:', error);
-    }
-  };
+const handleDownloadTemplate = useCallback(() => {
+  if (!selectedModule) return;
+  downloadStaticTemplate(selectedModule);
+}, [selectedModule]);
 
   const handleValidate = async () => {
     if (!selectedModule || !parseResult) return;

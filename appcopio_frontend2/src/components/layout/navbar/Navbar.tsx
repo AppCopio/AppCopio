@@ -54,6 +54,8 @@ export default function Navbar() {
             <li><NavLink to={paths.admin.centers.root} className={({ isActive }) => (isActive ? "active-link" : "")}>Gestión Centros</NavLink></li>
             <li><NavLink to={paths.admin.users}   className={({ isActive }) => (isActive ? "active-link" : "")}>Gestión Usuarios</NavLink></li>
             <li><NavLink to={paths.admin.updates} className={({ isActive }) => (isActive ? "active-link" : "")}>Actualizaciones</NavLink></li>
+            <li><NavLink to={paths.admin.csv} className={({ isActive }) => (isActive ? "active-link" : "")}>Carga CSV</NavLink></li>
+
           </>
         )}
 

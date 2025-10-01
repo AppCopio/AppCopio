@@ -34,6 +34,8 @@ import MultiStepCenterForm from "@/pages/CreateCenterPage/steps/MultiStepCenterF
 import MyUserPage from "@/pages/MyUserPage/MyUserPage";
 import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
 import ActivationDatasetsPage, { DatasetDetail} from "./pages/ActivationDatasetsPage/ActivationDatasetsPage";
+import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
+
 
 export default function App() {
   return (
@@ -45,6 +47,7 @@ export default function App() {
             <Route path={paths.home} element={<HomePage />} />
             <Route path={paths.map} element={<MapPage />} />
             <Route path={paths.login} element={<LoginPage />} />
+            <Route path={paths.admin.csv} element={<CsvUploadPage />} />
             <Route path="/typo" element={<ExampleFrontend />} /> 
           </Route>
 

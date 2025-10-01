@@ -71,14 +71,13 @@ export interface CSVTemplateInfo {
  */
 export async function uploadCSVData(
   request: CSVUploadRequest,
-  signal?: AbortSignal
 ): Promise<CSVUploadResponse> {
   try {
     const { data } = await api.post<CSVUploadResponse>(
       '/csv/upload',
       request,
-      { signal }
     );
+    console.log(data);
     return data;
   } catch (error) {
     console.error('Error uploading CSV data:', error);
@@ -86,46 +85,23 @@ export async function uploadCSVData(
   }
 }
 
-/**
- * Obtiene información sobre las plantillas CSV disponibles
- */
-export async function getCSVTemplates(
-  signal?: AbortSignal
-): Promise<CSVTemplateInfo[]> {
-  try {
-    const { data } = await api.get<CSVTemplateInfo[]>(
-      '/csv/templates',
-      { signal }
-    );
-    return data;
-  } catch (error) {
-    console.error('Error fetching CSV templates:', error);
-    return [];
-  }
-}
+const TEMPLATE_PUBLIC_PATH: Record<CSVUploadModule, string> = {
+  users: "/csv-templates/users.csv",
+  centers: '',
+  inventory: '',
+  residents: '',
+  assignments: '',
+  updates: ''
+};
 
-/**
- * Descarga una plantilla CSV de ejemplo para un módulo específico
- */
-export async function downloadCSVTemplate(
-  module: CSVUploadModule,
-  signal?: AbortSignal
-): Promise<string> {
-  try {
-    const { data } = await api.get<string>(
-      `/csv/templates/${module}/download`,
-      { 
-        signal,
-        headers: {
-          'Accept': 'text/csv'
-        }
-      }
-    );
-    return data;
-  } catch (error) {
-    console.error(`Error downloading CSV template for ${module}:`, error);
-    throw error;
-  }
+export function downloadStaticTemplate(module: CSVUploadModule) {
+  const href = TEMPLATE_PUBLIC_PATH[module];
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = href.split("/").pop() || `${module}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 /**
@@ -143,7 +119,7 @@ export async function validateCSVData(
       }
     };
 
-    return await uploadCSVData(validationRequest, signal);
+    return await uploadCSVData(validationRequest);
   } catch (error) {
     console.error('Error validating CSV data:', error);
     throw error;

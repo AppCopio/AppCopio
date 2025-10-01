@@ -10,6 +10,8 @@ export const paths = {
     root: "/admin",
     users: "/admin/users",
     updates: "/admin/updates",
+    csv: "/admin/csv-upload",
+
     centers: {
       root: "/admin/centers",
       new: "/admin/centers/new",

@@ -20,6 +20,7 @@ import familyMembersRoutes from "./routes/familyMembersRoutes";
 import fibeRoutes from "./routes/fibeRoutes";
 import roleRoutes from "./routes/roleRoutes";
 import {requireAuth} from "./auth/middleware";
+import csvRoutes from "./routes/csvRoutes";
 
 dotenv.config();
 
@@ -75,6 +76,7 @@ app.use("/api/family", requireAuth, familyRoutes);
 app.use("/api/family-members", requireAuth, familyMembersRoutes);
 app.use("/api/fibe", requireAuth, fibeRoutes);
 app.use("/api/roles", requireAuth, roleRoutes);
+app.use("/api/csv/upload", requireAuth, csvRoutes);
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
