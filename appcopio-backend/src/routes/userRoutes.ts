@@ -123,13 +123,13 @@ const listByRole: RequestHandler = async (req, res) => {
 };
 
 
-// =================================================================
+// =================================================================    
 // 2. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
 
 router.get("/", listUsers);
 router.post("/", createNewUser);
-router.get("/active/by-role/:roleId", listByRole); // CAMBIO: Ruta más semántica
+router.get("/active/by-role/:roleId",  listByRole); // CAMBIO: Ruta más semántica
 router.get("/:id", getUser);
 router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);

@@ -55,11 +55,15 @@ const listUpdatesByCenter: RequestHandler = async (req, res) => {
  */
 const createUpdate: RequestHandler = async (req, res) => {
     const { center_id, description, urgency } = req.body;
-    const requested_by = (req as any).user?.id; // Proporcionado por el middleware de autenticación
+    // CAMBIO: Se corrige .id por .user_id para que coincida con el objeto del middleware.
+    const requested_by = (req as any).user?.user_id; 
 
     if (!center_id || !description || !urgency) {
-        res.status(400).json({ error: 'Se requieren: center_id, description y urgency.' });
-        return;
+        return res.status(400).json({ error: 'Se requieren: center_id, description y urgency.' });
+    }
+    // Añadimos una validación para asegurarnos de que el usuario está autenticado
+    if (!requested_by) {
+        return res.status(401).json({ error: 'No se pudo identificar al solicitante. Se requiere autenticación.' });
     }
 
     try {
@@ -71,32 +75,35 @@ const createUpdate: RequestHandler = async (req, res) => {
     }
 };
 
+
 /**
  * @controller PATCH /api/updates/:id
  * @description Actualiza una solicitud (ej. la asigna, cambia su estado).
  */
 const updateRequest: RequestHandler = async (req, res) => {
     const requestId = parseInt(req.params.id, 10);
-    const resolved_by = (req as any).user?.id;
+    // CORRECCIÓN FINAL: Se usa .user_id para que coincida con el objeto del middleware.
+    const resolved_by = (req as any).user?.user_id;
     const { status, assigned_to, resolution_comment } = req.body;
 
     if (isNaN(requestId)) {
-        res.status(400).json({ error: 'El ID de la solicitud debe ser un número válido.' });
-        return;
+        return res.status(400).json({ error: 'El ID de la solicitud debe ser un número válido.' });
     }
     if (!status && !assigned_to && !resolution_comment) {
-        res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
-        return;
+        return res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
     }
 
     try {
         const updatedRequest = await updateRequestById(pool, requestId, { ...req.body, resolved_by });
+
         if (!updatedRequest) {
-            res.status(404).json({ error: 'Solicitud no encontrada.' });
-        } else {
-            res.status(200).json(updatedRequest);
+            return res.status(404).json({ error: 'Solicitud no encontrada o sin campos válidos para actualizar.' });
         }
-    } catch (error) {
+        res.status(200).json(updatedRequest);
+    } catch (error: any) {
+        if (error.status) {
+            return res.status(error.status).json({ error: error.message });
+        }
         console.error(`Error en updateRequest (id: ${requestId}):`, error);
         res.status(500).json({ error: 'Error interno del servidor.' });
     }

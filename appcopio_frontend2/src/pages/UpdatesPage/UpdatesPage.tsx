@@ -3,9 +3,9 @@ import { useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 import { listUpdates, patchUpdateRequest} from "@/services/updates.service";
-import { listActiveUsersByRole, listActiveWorkersByRole} from "@/services/users.service";
+import { listActiveUsersByRole} from "@/services/users.service";
 import type { UpdateRequest, UpdateStatus } from "@/types/update";
-import type { WorkerUser } from "@/types/user";
+import type {User as WorkerUser } from "@/types/user";
 import "./UpdatesPage.css";
 
 // IDs de roles (ajusta si cambian)
@@ -68,24 +68,26 @@ export default function UpdatesPage() {
   }, [loadRequests]);
 
   // ---- Carga de trabajadores (solo admin) ----
+  
   React.useEffect(() => {
     if (!isAdmin) return;
     const controller = new AbortController();
-    (async () => {
-      try {
-        const data = await listActiveUsersByRole(ROLE_ID_TMO, controller.signal);
-        setWorkers(
-          (data ?? []).map((u) => ({
-            ...u,
-            nombre: u.nombre ?? "",
-          }))
-        );
-      } catch {
-        /* silencioso como antes */
-      }
-    })();
+    const fetchWorkers = async () => {
+        try {
+            
+            const workerData = await listActiveUsersByRole(ROLE_ID_TMO, controller.signal);
+            setWorkers(workerData);
+        } catch (err) {
+           
+            console.error("Error fetching active workers:", err);
+            setError("No se pudo cargar la lista de trabajadores.");
+        }
+    };
+    fetchWorkers();
     return () => controller.abort();
-  }, [isAdmin]);
+}, [isAdmin]);
+
+
 
   // ---- Modal helpers ----
   const openManageModal = (req: UpdateRequest) => {
