@@ -3,7 +3,7 @@ import type { Dataset, DatasetInfo, DatasetField, DatasetRecord, CellValue, UUID
 
 export async function listDatasetsDB(db: Db,  activation_id: number) : Promise<Dataset[]> {
   const sql = `
-    SELECT dataset_id, activation_id, center_id, name, key, config, config->>'template_key' AS template_key, schema_snapshot,
+    SELECT dataset_id, activation_id, center_id, name, key, config, schema_snapshot,
            created_by, updated_by, created_at, updated_at, deleted_at
     FROM Datasets
     WHERE activation_id = $1 AND deleted_at IS NULL
@@ -14,7 +14,7 @@ export async function listDatasetsDB(db: Db,  activation_id: number) : Promise<D
 
 export async function getDatasetByIdDB(db: Db, dataset_id: string) : Promise<Dataset | null> {
   const sql = `
-    SELECT dataset_id, activation_id, center_id, name, key, config, config->>'template_key' AS template_key,  schema_snapshot,
+    SELECT dataset_id, activation_id, center_id, name, key, config, schema_snapshot,
            created_by, updated_by, created_at, updated_at, deleted_at
     FROM Datasets
     WHERE dataset_id = $1`;
@@ -28,7 +28,7 @@ export async function createDatasetDB(db: Db, userId: number, args: {
   const sql = `
     INSERT INTO Datasets (activation_id, center_id, name, key, config, created_by)
     VALUES ($1, $2, $3, $4, COALESCE($5, '{}'::jsonb), $6)
-    RETURNING dataset_id, activation_id, center_id, name, key, config,config->>'template_key' AS template_key, created_at`;
+    RETURNING dataset_id, activation_id, center_id, name, key, config, created_at`;
   const { rows } = await db.query(sql, [
     args.activation_id, args.center_id, args.name, args.key, args.config ?? {}, userId
   ]);

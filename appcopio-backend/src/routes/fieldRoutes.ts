@@ -65,7 +65,7 @@ const updateField: RequestHandler = async (req, res) => {
       await moveFieldPositionDB(client, field_id, toPosition);
       delete payload.position; // ya lo aplicamos por el servicio de mover
     }
-    const row = await updateFieldDB(client, field_id, payload);
+    const row = await updateFieldDB(pool, field_id, payload);
     await client.query("COMMIT");
     if (!row) { res.status(404).json({ error: "Campo no encontrado." }); return; }
     res.json(row);

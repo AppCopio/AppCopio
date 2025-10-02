@@ -36,7 +36,7 @@ export type Dataset = {
     key: string;
     config: Record<string, unknown>;
     schema_snapshot: Record<string, unknown> | null;
-    template_key?: string | null;
+
     created_by: number | null;
     updated_by: number | null;
     created_at: ISODateString;

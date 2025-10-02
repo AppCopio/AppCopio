@@ -71,9 +71,6 @@ export default function Navbar() {
         <li>
           <NavLink to={paths.map} className={({ isActive }) => (isActive ? "active-link" : "")}>Mapa</NavLink>
         </li>
-        <li>
-          <NavLink to={paths.notifications} className={({ isActive }) => (isActive ? "active-link" : "")}>Buzón</NavLink>
-        </li>
 
         {isAdminOrSupport(user) && (
           <>

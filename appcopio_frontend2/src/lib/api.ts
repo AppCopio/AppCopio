@@ -26,8 +26,3 @@ export const apiNoRetry = axios.create({
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' }
 });
-//Verificar para que es.
-api.interceptors.response.use(
-  r => r,
-  e => Promise.reject(e)
-);

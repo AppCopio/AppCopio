@@ -24,6 +24,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-appcopio-backend/package-lock.json
-appcopio-backend/package.json
-appcopio-backend/package.json
