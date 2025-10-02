@@ -19,6 +19,7 @@ import familyRoutes from "./routes/familyRoutes";
 import familyMembersRoutes from "./routes/familyMembersRoutes";
 import fibeRoutes from "./routes/fibeRoutes";
 import roleRoutes from "./routes/roleRoutes";
+import zoneRoutes from "./routes/zoneRoutes";
 import {requireAuth} from "./auth/middleware";
 
 import databaseRoutes from "./routes/databaseRoutes";
@@ -34,8 +35,11 @@ const port = process.env.PORT || 4000;
 
 app.set("trust proxy", 1);
 
+
 app.use(express.json());
 app.use(cookieParser());
+
+app.use('/api/zones', zoneRoutes);
 
 /** Orígenes permitidos */
 const allowedOrigins = [

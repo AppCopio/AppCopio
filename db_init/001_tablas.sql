@@ -557,6 +557,19 @@ CREATE TABLE CenterNotifications (
     CONSTRAINT chk_status_val CHECK (status IN ('queued','sent','failed'))
 );
 
+CREATE TABLE municipal_zones (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL, -- Ej: 'OMZ', 'OMZ_OFFICE'
+  geojson JSONB NOT NULL,
+  icon TEXT,
+  color TEXT,
+  fill TEXT,
+  stroke TEXT,
+  metadata JSONB
+);
+
+
 -- Índices útiles
 CREATE INDEX idx_centernotif_center_eventat ON CenterNotifications (center_id, event_at DESC);
 CREATE INDEX idx_centernotif_activation     ON CenterNotifications (activation_id);
