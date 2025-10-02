@@ -13,6 +13,8 @@ import type { DatabaseField, FieldType } from "@/types/field";
 import type { DatabaseRecord } from "@/types/record";
 import axios from "axios";
 import CellEditor from "@/components/databases/CellEditor";
+import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
+import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
 
 // =======================================================
 // UTILS
@@ -194,14 +196,81 @@ export default function DatabaseDetailPage() {
   };
 
   const delCol = async (field_id: string) => {
-    if (!confirm("¿Está seguro de eliminar esta columna? Se perderán todos los datos asociados.")) return;
-    try {
-        await fieldsService.remove(field_id);
-        setFields(prev => prev.filter(f => f.field_id !== field_id));
-    } catch (e: any) {
-        alert("Error al eliminar la columna: " + (e?.response?.data?.error || e?.message));
+  // Buscar el campo a eliminar
+  const field = fields.find(f => f.field_id === field_id);
+  
+  if (!field) {
+    alert("No se encontró la columna a eliminar.");
+    return;
+  }
+  
+  // ✅ VALIDACIÓN 1: Verificar si es columna obligatoria
+  if (field.is_required) {
+    alert("❌ No se puede eliminar una columna obligatoria.\n\nLas columnas marcadas como obligatorias no pueden ser eliminadas para mantener la integridad de los datos.");
+    return;
+  }
+  
+  // ✅ VALIDACIÓN 2: Verificar si la columna tiene datos
+  const hasData = records.some(r => {
+    const value = r.data[field.key];
+    return value !== undefined && value !== null && value !== "";
+  });
+  
+  // Contar registros con datos en esta columna
+  const recordsWithData = records.filter(r => {
+    const value = r.data[field.key];
+    return value !== undefined && value !== null && value !== "";
+  }).length;
+  
+  // ✅ CONFIRMACIÓN: Mensaje diferente según si tiene datos o no
+  let confirmMsg = "";
+  
+  if (hasData) {
+    confirmMsg = `⚠️ ADVERTENCIA: Esta columna contiene datos\n\n` +
+      `Columna: "${field.name}"\n` +
+      `Registros con datos: ${recordsWithData} de ${records.length}\n\n` +
+      `Si eliminas esta columna, se perderán TODOS los datos asociados de forma permanente.\n\n` +
+      `¿Estás seguro de que deseas continuar?`;
+  } else {
+    confirmMsg = `¿Eliminar la columna "${field.name}"?\n\n` +
+      `Esta columna está vacía (no contiene datos en ningún registro).\n\n` +
+      `¿Deseas eliminarla?`;
+  }
+  
+  // Solicitar confirmación
+  if (!window.confirm(confirmMsg)) {
+    return;
+  }
+  
+  // Si la columna tiene datos, solicitar una segunda confirmación
+  if (hasData) {
+    const doubleConfirm = window.confirm(
+      `⚠️ ÚLTIMA CONFIRMACIÓN\n\n` +
+      `Estás a punto de eliminar la columna "${field.name}" y ${recordsWithData} registro(s) con datos.\n\n` +
+      `Esta acción NO se puede deshacer.\n\n` +
+      `Escribe "ELIMINAR" mentalmente y confirma para proceder.`
+    );
+    
+    if (!doubleConfirm) {
+      return;
     }
-  };
+  }
+  
+  // Proceder con la eliminación
+  try {
+    await fieldsService.remove(field_id);
+    setFields(prev => prev.filter(f => f.field_id !== field_id));
+    
+    // Notificación de éxito
+    if (hasData) {
+      alert(`✅ Columna "${field.name}" eliminada exitosamente.\n\nSe eliminaron los datos de ${recordsWithData} registro(s).`);
+    }
+  } catch (e: any) {
+    const errorMsg = e?.response?.data?.error || e?.message || "Error desconocido";
+    alert(`❌ Error al eliminar la columna:\n\n${errorMsg}\n\nPor favor, intenta nuevamente o contacta al administrador.`);
+    console.error("Error al eliminar columna:", e);
+  }
+};
 
   const addRow = async () => {
     try {
@@ -285,6 +354,32 @@ export default function DatabaseDetailPage() {
         setFields(prev => prev.map(f => f.field_id === field_id ? oldField : f));
     }
   }; 
+  const reorderColumn = async (field_id: string, direction: 'up' | 'down') => {
+  const currentIndex = fields.findIndex(f => f.field_id === field_id);
+  
+  if (currentIndex === -1) return;
+  
+  // Determinar el índice destino
+  const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  
+  // Validar que no se salga de los límites
+  if (targetIndex < 0 || targetIndex >= fields.length) return;
+  
+  // Obtener la posición del campo destino
+  const targetPosition = fields[targetIndex].position;
+  
+  try {
+    // Actualizar la posición en el backend
+    await fieldsService.update(field_id, { position: targetPosition });
+    
+    // Recargar los campos desde el servidor para obtener el orden actualizado
+    const updatedFields = await fieldsService.list(db.dataset_id);
+    setFields(updatedFields.sort((a, b) => a.position - b.position));
+  } catch (e: any) {
+    console.error("Error al reordenar columna:", e);
+    alert("Error al reordenar la columna: " + (e?.response?.data?.error || e?.message));
+  }
+};
 
   if (actLoading || loading) return <LinearProgress />;
   if (error) return <Typography color="error" sx={{m:4}}>{error}</Typography>;
@@ -324,27 +419,64 @@ export default function DatabaseDetailPage() {
           <Box component="thead">
             <Box component="tr">
               <Box component="th" sx={{ p: 1, width: 48, bgcolor: "action.hover" }}>#</Box>
-              {fields.map(f => (
+              {fields.map((f, index) => (
                 <Box key={f.field_id} component="th" sx={{ textAlign:"left", p:1, bgcolor:"action.hover", minWidth: 180 }}>
-                    <Stack direction="row" alignItems="center" gap={0.5}>
-                        <TextField
-                            size="small"
-                            variant="standard"
-                            fullWidth
-                            value={f.name}
-                            onChange={(e) => editColName(f.field_id, e.target.value)}
-                            onBlur={(e) => editColName(f.field_id, e.target.value)}
-                            sx={{
-                                ".MuiInput-underline:before": { borderBottom: 'none' },
-                                ".MuiInput-underline:after": { borderBottom: 'none' },
+                  <Stack direction="row" alignItems="center" gap={0.5}>
+                    {/* Botones de reordenar */}
+                    <Stack direction="column" sx={{ mr: 0.5 }}>
+                      <Tooltip title="Mover columna a la izquierda">
+                        <span>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => reorderColumn(f.field_id, 'up')}
+                            disabled={index === 0}
+                            sx={{ 
+                              p: 0.25,
+                              '&.Mui-disabled': { opacity: 0.3 }
                             }}
-                        />
-                        <Tooltip title="Eliminar columna">
-                          <IconButton size="small" onClick={() => delCol(f.field_id)}>
-                            <DeleteOutline fontSize="small" />
+                          >
+                            <ArrowUpwardRounded sx={{ fontSize: 16 }} />
                           </IconButton>
-                        </Tooltip>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Mover columna a la derecha">
+                        <span>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => reorderColumn(f.field_id, 'down')}
+                            disabled={index === fields.length - 1}
+                            sx={{ 
+                              p: 0.25,
+                              '&.Mui-disabled': { opacity: 0.3 }
+                            }}
+                          >
+                            <ArrowDownwardRounded sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Stack>
+                    
+                    {/* TextField para renombrar */}
+                    <TextField
+                      size="small"
+                      variant="standard"
+                      fullWidth
+                      value={f.name}
+                      onChange={(e) => editColName(f.field_id, e.target.value)}
+                      onBlur={(e) => editColName(f.field_id, e.target.value)}
+                      sx={{
+                        ".MuiInput-underline:before": { borderBottom: 'none' },
+                        ".MuiInput-underline:after": { borderBottom: 'none' },
+                      }}
+                    />
+                    
+                    {/* Botón de eliminar */}
+                    <Tooltip title="Eliminar columna">
+                      <IconButton size="small" onClick={() => delCol(f.field_id)}>
+                        <DeleteOutline fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
                 </Box>
               ))}
               <Box component="th" sx={{ p:1, bgcolor:"action.hover", width: 56 }} />

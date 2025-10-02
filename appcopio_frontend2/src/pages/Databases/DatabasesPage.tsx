@@ -283,7 +283,12 @@ function CreateDialog({
                         );
                     })}
                     </Select>
-                    <FormHelperText>{isTemplateUsed ? "Esta plantilla ya fue usada en este centro" : selectedTemplate?.description}</FormHelperText>
+                  <FormHelperText>
+                      {isTemplateUsed 
+                          ? `Base de datos ya inicializada: ${selectedTemplate?.name}` 
+                          : selectedTemplate?.description
+                      }
+                  </FormHelperText>                
                 </FormControl>
                 
                 {selectedTemplate?.previewColumns && selectedTemplate.previewColumns.length > 0 && (
