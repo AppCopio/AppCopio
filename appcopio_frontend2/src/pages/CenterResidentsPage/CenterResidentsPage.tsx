@@ -258,7 +258,7 @@ const exportToPDF = async () => {
           getCenterCapacity(centerId),
           listResidentGroups(centerId),
           listPeopleByCenter(centerId, filters),
-          listActiveCenters(centerId),
+          listActiveCenters(),
         ]);
         if (cancel) return;
 

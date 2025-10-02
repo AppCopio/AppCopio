@@ -69,12 +69,11 @@ app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRout
 app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
-
-app.use("/api/centers", requireAuth, centerRoutes)
+app.use("/api/centers", centerRoutes)
 //app.use("/api/products", productRoutes);
 app.use("/api/updates", requireAuth, updateRoutes);
 app.use("/api/users", requireAuth, userRouter);
-app.use("/api/inventory", requireAuth,inventoryRoutes);
+app.use("/api/inventory", requireAuth, inventoryRoutes);
 app.use("/api/categories", requireAuth, categoryRoutes);
 app.use("/api/assignments", requireAuth, assignmentRoutes);
 app.use("/api/persons", requireAuth, personsRoutes);
