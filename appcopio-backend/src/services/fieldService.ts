@@ -94,7 +94,7 @@ export async function getFieldByIdDB(db: Db, field_id: string) {
 }
 
 export async function moveFieldPositionDB(db: Db, field_id: string, toPosition: number) {
-  // Lock del campo a mover
+  // 1. Lock del campo a mover
   const qField = await db.query(
     `SELECT field_id, dataset_id, position, is_active, deleted_at
      FROM DatasetFields
@@ -102,50 +102,71 @@ export async function moveFieldPositionDB(db: Db, field_id: string, toPosition: 
      FOR UPDATE`,
     [field_id]
   );
+  
   const f = qField.rows[0];
   if (!f) throw new Error("FIELD_NOT_FOUND");
   if (!f.is_active || f.deleted_at) throw new Error("FIELD_NOT_MOVABLE");
 
-  // Rango válido: [1 .. max]
+  const from = Number(f.position);
+  const dataset_id = f.dataset_id;
+
+  // 2. Obtener el rango válido de posiciones
   const qMax = await db.query(
     `SELECT COALESCE(MAX(position), 0) AS max_pos
-       FROM DatasetFields
-      WHERE dataset_id = $1 AND is_active = TRUE AND deleted_at IS NULL`,
-    [f.dataset_id]
+     FROM DatasetFields
+     WHERE dataset_id = $1 AND is_active = TRUE AND deleted_at IS NULL`,
+    [dataset_id]
   );
- let maxPos = Number(qMax.rows[0]?.max_pos ?? 0) || 1;
-  const from = Number(f.position);
+  
+  const maxPos = Number(qMax.rows[0]?.max_pos ?? 0) || 1;
   const to = Math.max(1, Math.min(Number(toPosition), maxPos));
 
+  // Si la posición no cambia, no hacer nada
   if (to === from) return;
 
+  // 🔧 PASO CRÍTICO: Mover el campo a una posición temporal NEGATIVA
+  // Esto lo saca del rango de posiciones activas y evita conflictos
+  await db.query(
+    `UPDATE DatasetFields
+     SET position = -1
+     WHERE field_id = $1`,
+    [field_id]
+  );
+
+  // 3. Ajustar las posiciones de los otros campos
   if (to < from) {
-    // desplaza hacia abajo (abre hueco arriba)
+    // Moviendo hacia la izquierda: desplazar campos hacia la derecha
+    // para abrir espacio en la posición destino
     await db.query(
       `UPDATE DatasetFields
-          SET position = position + 1
-        WHERE dataset_id = $1
-          AND is_active = TRUE AND deleted_at IS NULL
-          AND position >= $2 AND position < $3`,
-      [f.dataset_id, to, from]
+       SET position = position + 1
+       WHERE dataset_id = $1
+         AND is_active = TRUE 
+         AND deleted_at IS NULL
+         AND position >= $2 
+         AND position < $3`,
+      [dataset_id, to, from]
     );
   } else {
-    // to > from: desplaza hacia arriba (cierra hueco abajo)
+    // Moviendo hacia la derecha: desplazar campos hacia la izquierda
+    // para cerrar el hueco dejado por el campo movido
     await db.query(
       `UPDATE DatasetFields
-          SET position = position - 1
-        WHERE dataset_id = $1
-          AND is_active = TRUE AND deleted_at IS NULL
-          AND position <= $2 AND position > $3`,
-      [f.dataset_id, to, from]
+       SET position = position - 1
+       WHERE dataset_id = $1
+         AND is_active = TRUE 
+         AND deleted_at IS NULL
+         AND position <= $2 
+         AND position > $3`,
+      [dataset_id, to, from]
     );
   }
 
-  // fija la posición del campo movido
+  // 4. Finalmente, mover el campo a su posición definitiva
   await db.query(
     `UPDATE DatasetFields
-        SET position = $2
-      WHERE field_id = $1`,
+     SET position = $2
+     WHERE field_id = $1`,
     [field_id, to]
   );
 }
