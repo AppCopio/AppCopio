@@ -560,7 +560,7 @@ CREATE TABLE CenterNotifications (
 CREATE TABLE municipal_zones (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
-  type TEXT NOT NULL, -- Ej: 'OMZ', 'OMZ_OFFICE'
+  type TEXT NOT NULL, --  'OMZ' para sectores, 'OMZ_OFFICE' para oficinas :)
   geojson JSONB NOT NULL,
   icon TEXT,
   color TEXT,

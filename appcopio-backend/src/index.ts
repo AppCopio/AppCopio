@@ -39,7 +39,6 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-app.use('/api/zones', zoneRoutes);
 
 /** Orígenes permitidos */
 const allowedOrigins = [
@@ -58,13 +57,13 @@ const corsOptions: cors.CorsOptions = {
 };
 
 /** CORS antes de las rutas */
-
-
 app.use((req, res, next) => {
   res.header("Vary", "Origin");
   next();
 });
 app.use(cors(corsOptions));
+
+
 
 /** Rate limit solo en auth */
 app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRoutes);
@@ -85,6 +84,7 @@ app.use("/api/family", requireAuth, familyRoutes);
 app.use("/api/family-members", requireAuth, familyMembersRoutes);
 app.use("/api/fibe", requireAuth, fibeRoutes);
 app.use("/api/roles", requireAuth, roleRoutes);
+app.use("/api/zones", requireAuth, zoneRoutes); 
 
 app.use("/api/database", databaseRoutes);
 app.use("/api/database-fields", fieldRoutes);
