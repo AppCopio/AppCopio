@@ -1,0 +1,2 @@
+center_id,rut,nombre,primer_apellido,segundo_apellido,edad,genero,nacionalidad,estudia,trabaja,discapacidad,parentesco
+"CNT001","12345678-9","Ana","Martinez","Lopez",34,"F","Chilena",false,true,false,"Jefe de hogar"

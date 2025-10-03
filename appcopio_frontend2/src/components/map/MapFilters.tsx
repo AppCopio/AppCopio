@@ -116,9 +116,9 @@ export default function MapFilters({
             className="clear-filters-btn"
             onClick={clearFilters}
             disabled={!hasActiveFilters}
-            title="Mostrar todos los estados operativos"
+            title="Limpiar todos los filtros aplicados"
           >
-            Mostrar Todos
+            Limpiar Filtros
           </button>
         </div>
 

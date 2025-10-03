@@ -87,11 +87,11 @@ export async function uploadCSVData(
 
 const TEMPLATE_PUBLIC_PATH: Record<CSVUploadModule, string> = {
   users: "/csv-templates/users.csv",
-  centers: '',
-  inventory: '',
-  residents: '',
-  assignments: '',
-  updates: ''
+  centers: "/csv-templates/centers.csv",
+  inventory: "/csv-templates/inventory.csv",
+  residents: "/csv-templates/residents.csv",
+  assignments: "/csv-templates/assignments.csv",
+  updates: "/csv-templates/updates.csv"
 };
 
 export function downloadStaticTemplate(module: CSVUploadModule) {

@@ -26,6 +26,8 @@ import {
   Visibility as PreviewIcon,
   Send as SendIcon,
   Refresh as RefreshIcon,
+  ArrowBack as ArrowBackIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import CSVUploader from '@/components/common/CSVUploader';
 import CSVDataTable from '@/components/common/CSVDataTable';
@@ -42,6 +44,14 @@ import {
 import './CsvUploadPage.css';
 
 export default function CsvUploadPage() {
+  // Definición de los pasos del stepper
+  const steps = [
+    'Seleccionar Módulo',
+    'Cargar Archivo CSV',
+    'Validar Datos',
+    'Confirmar Importación'
+  ];
+
   const [activeStep, setActiveStep] = useState(0);
   const [selectedModule, setSelectedModule] = useState<CSVUploadModule | null>(null);
   const [parseResult, setParseResult] = useState<CSVParseResult | null>(null);
@@ -123,17 +133,51 @@ const handleDownloadTemplate = useCallback(() => {
     setValidationResult(null);
   };
 
+  const handleBack = () => {
+    if (activeStep > 0) {
+      setActiveStep(activeStep - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (activeStep < steps.length - 1) {
+      setActiveStep(activeStep + 1);
+    }
+  };
+
   const selectedConfig = selectedModule ? CSV_MODULE_CONFIGS[selectedModule] : null;
 
   return (
     <Container maxWidth="xl" className="csv-upload-page">
       <div className="csv-upload-header">
-        <Typography variant="h4" component="h1" gutterBottom>
-          Importar Datos CSV
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Carga información masiva desde archivos CSV para diferentes módulos del sistema
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Importar Datos CSV
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Carga información masiva desde archivos CSV para diferentes módulos del sistema
+            </Typography>
+          </Box>
+          {selectedModule && activeStep > 0 && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Chip 
+                label={`Módulo: ${selectedConfig?.displayName}`}
+                color="primary"
+                variant="outlined"
+                size="medium"
+              />
+              <Button
+                startIcon={<RefreshIcon />}
+                onClick={handleReset}
+                variant="outlined"
+                color="primary"
+              >
+                Cambiar Módulo
+              </Button>
+            </Box>
+          )}
+        </Box>
       </div>
 
       <Stepper activeStep={activeStep} orientation="vertical">
@@ -154,9 +198,14 @@ const handleDownloadTemplate = useCallback(() => {
                       onClick={() => handleModuleSelect(module)}
                     >
                       <CardContent>
-                        <Typography variant="h6" component="h3">
-                          {config.displayName}
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="h6" component="h3">
+                            {config.displayName}
+                          </Typography>
+                          {selectedModule === module && (
+                            <CheckCircleIcon color="primary" fontSize="small" />
+                          )}
+                        </Box>
                         <Typography variant="body2" color="text.secondary" paragraph>
                           {config.description}
                         </Typography>
@@ -204,13 +253,17 @@ const handleDownloadTemplate = useCallback(() => {
                   >
                     Descargar Plantilla
                   </Button>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, mb: 2, justifyContent: 'space-between', alignItems: 'center' }}>
                   <Button
-                    startIcon={<RefreshIcon />}
-                    onClick={handleReset}
+                    startIcon={<ArrowBackIcon />}
+                    onClick={handleBack}
                     variant="outlined"
                     size="small"
+                    className="back-button"
                   >
-                    Cambiar Módulo
+                    Volver a Módulos
                   </Button>
                 </Box>
 
@@ -268,7 +321,16 @@ const handleDownloadTemplate = useCallback(() => {
                   </Alert>
                 )}
 
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Button
+                    startIcon={<ArrowBackIcon />}
+                    onClick={handleBack}
+                    variant="outlined"
+                    size="small"
+                    className="back-button"
+                  >
+                    Cambiar Archivo
+                  </Button>
                   <Button
                     variant="contained"
                     startIcon={<UploadIcon />}
