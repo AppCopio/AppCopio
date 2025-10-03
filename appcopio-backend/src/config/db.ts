@@ -14,7 +14,7 @@ const connectionString = process.env.DATABASE_URL || ''; // Render
 const sslConfig = { require: true, rejectUnauthorized: false } as const;
 
 // Si existe DATABASE_URL => úsala (Render). Si no, usa las DB_* (local).
-export const pool = connectionString
+const pool = connectionString
   ? new Pool({
       connectionString,
       ssl: sslConfig,

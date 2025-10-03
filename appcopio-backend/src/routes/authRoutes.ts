@@ -39,13 +39,16 @@ const getClientIp = (req: Parameters<RequestHandler>[0]) =>
 // POST /api/auth/login
 const loginHandler: RequestHandler = async (req, res): Promise<void> => {
   try {
+    console.log('🔍 Login attempt:', req.body);
     // Validación equivalente a "se requieren usuario y contraseña"
     const parsed = LoginSchema.safeParse(req.body);
     if (!parsed.success) {
+      console.log('❌ Validation failed:', parsed.error);
       res.status(400).json({ message: "Se requieren usuario y contraseña." });
       return;
     }
     const { username, password } = parsed.data;
+    console.log('✅ Validation passed for user:', username);
 
     // Trae datos del usuario y el nombre del rol (equivale al role query del handler viejo)
     const qUser = `
@@ -58,9 +61,10 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
     const { rows } = await pool.query(qUser, [username]);
     const user = rows[0];
 
+    console.log('🔍 User query result:', user);
 
     if (!user || !user.is_active) {
-    
+      console.log('❌ User not found or inactive');
       res.status(401).json({ message: "Credenciales inválidas." });
       return;
     }

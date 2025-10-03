@@ -58,7 +58,9 @@ app.use((req, res, next) => {
 app.use(cors(corsOptions));
 
 /** Rate limit solo en auth */
-app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), authRoutes);
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+app.use("/api/auth", limiter);
+app.use("/api/auth", authRoutes);
 
 /** Rutas */
 app.get("/api", (req: Request, res: Response) => {

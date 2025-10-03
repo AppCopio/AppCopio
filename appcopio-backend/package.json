@@ -22,6 +22,7 @@
     "@types/node": "^22.15.24",
     "@types/pg": "^8.15.2",
     "@vis.gl/react-google-maps": "^1.5.3",
+    "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
