@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllZones, getZoneById } from '../services/zoneService';
+import { getAllZones, getZoneById, getOmzZoneForCenter } from '../services/zoneService';
 
 const router = express.Router();
 
@@ -24,3 +24,13 @@ router.get('/:id', async (req, res) => {
 });
 
 export default router;
+
+// Nuevo endpoint: obtener zona OMZ para un centro
+router.get('/omz-for-center/:id', async (req, res) => {
+  try {
+    const result = await getOmzZoneForCenter(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener zona OMZ para el centro' });
+  }
+});
