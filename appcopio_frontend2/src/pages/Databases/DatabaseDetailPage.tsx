@@ -13,11 +13,8 @@ import type { DatabaseField, FieldType } from "@/types/field";
 import type { DatabaseRecord } from "@/types/record";
 import axios from "axios";
 import CellEditor from "@/components/databases/CellEditor";
-import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
-import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
-import KeyboardArrowLeftRounded from "@mui/icons-material/KeyboardArrowLeftRounded";
-import KeyboardArrowRightRounded from "@mui/icons-material/KeyboardArrowRightRounded";
 import DragIndicatorRounded from "@mui/icons-material/DragIndicatorRounded";
+
 
 
 // =======================================================
@@ -59,6 +56,9 @@ function slugify(s: string) {
       .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 }
 
+
+
+
 // =======================================================
 // COMPONENTE PRINCIPAL
 // =======================================================
@@ -76,6 +76,9 @@ export default function DatabaseDetailPage() {
   const [selectOptions, setSelectOptions] = useState<string[]>([]);
   const [currentOption, setCurrentOption] = useState("");
   const [relationTargetCore, setRelationTargetCore] = useState<string>("");
+  //Para los drop de columnas
+  const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null);
+  const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -386,6 +389,79 @@ export default function DatabaseDetailPage() {
     alert("Error al reordenar la columna: " + (e?.response?.data?.error || e?.message));
   }
 };
+const handleDragStart = (e: React.DragEvent, fieldId: string) => {
+  setDraggedFieldId(fieldId);
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/html', fieldId);
+  
+  // Opcional: Cambiar el cursor
+  if (e.currentTarget instanceof HTMLElement) {
+    e.currentTarget.style.opacity = '0.5';
+  }
+};
+
+const handleDragEnd = (e: React.DragEvent) => {
+  setDraggedFieldId(null);
+  setDragOverFieldId(null);
+  
+  // Restaurar opacidad
+  if (e.currentTarget instanceof HTMLElement) {
+    e.currentTarget.style.opacity = '1';
+  }
+};
+
+const handleDragOver = (e: React.DragEvent, fieldId: string) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  
+  if (draggedFieldId && draggedFieldId !== fieldId) {
+    setDragOverFieldId(fieldId);
+  }
+};
+
+const handleDragLeave = (e: React.DragEvent) => {
+  e.preventDefault();
+  setDragOverFieldId(null);
+};
+
+const handleDrop = async (e: React.DragEvent, targetFieldId: string) => {
+  e.preventDefault();
+  
+  if (!draggedFieldId || draggedFieldId === targetFieldId) {
+    setDraggedFieldId(null);
+    setDragOverFieldId(null);
+    return;
+  }
+
+  // Encontrar índices
+  const draggedIndex = fields.findIndex(f => f.field_id === draggedFieldId);
+  const targetIndex = fields.findIndex(f => f.field_id === targetFieldId);
+
+  if (draggedIndex === -1 || targetIndex === -1) {
+    setDraggedFieldId(null);
+    setDragOverFieldId(null);
+    return;
+  }
+
+  try {
+    // Obtener la posición del campo destino
+    const targetPosition = fields[targetIndex].position;
+    
+    // Actualizar en el backend
+    await fieldsService.update(draggedFieldId, { position: targetPosition });
+    
+    // Recargar campos
+    const updatedFields = await fieldsService.list(db.dataset_id);
+    setFields(updatedFields.sort((a, b) => a.position - b.position));
+    
+  } catch (e: any) {
+    console.error("Error al reordenar columna:", e);
+    alert("Error al reordenar la columna: " + (e?.response?.data?.error || e?.message));
+  } finally {
+    setDraggedFieldId(null);
+    setDragOverFieldId(null);
+  }
+};
 
   if (actLoading || loading) return <LinearProgress />;
   if (error) return <Typography color="error" sx={{m:4}}>{error}</Typography>;
@@ -426,96 +502,81 @@ export default function DatabaseDetailPage() {
             <Box component="tr">
               <Box component="th" sx={{ p: 1, width: 48, bgcolor: "action.hover" }}>#</Box>
               {fields.map((f, index) => (
-                <Box key={f.field_id} component="th" sx={{ textAlign:"left", p:1, bgcolor:"action.hover", minWidth: 180 }}>
+                <Box 
+                  key={f.field_id} 
+                  component="th" 
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, f.field_id)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e) => handleDragOver(e, f.field_id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, f.field_id)}
+                  sx={{ 
+                    textAlign:"left", 
+                    p:1, 
+                    bgcolor: dragOverFieldId === f.field_id 
+                      ? "primary.light" 
+                      : draggedFieldId === f.field_id 
+                        ? "action.selected"
+                        : "action.hover",
+                    minWidth: 180,
+                    cursor: draggedFieldId === f.field_id ? 'grabbing' : 'grab',
+                    transition: 'background-color 0.2s, opacity 0.2s',
+                    opacity: draggedFieldId === f.field_id ? 0.5 : 1,
+                    borderLeft: dragOverFieldId === f.field_id ? '3px solid' : 'none',
+                    borderColor: 'primary.main',
+                    userSelect: 'none',
+                  }}
+                >
                   <Stack direction="row" alignItems="center" gap={0.5}>
                     
-                    {/* Indicador visual de que se puede reordenar */}
+                    {/* Indicador visual de drag */}
                     <DragIndicatorRounded 
                       sx={{ 
                         fontSize: 18, 
-                        color: "text.disabled",
-                        cursor: "grab"
+                        color: draggedFieldId === f.field_id ? "primary.main" : "text.disabled",
+                        cursor: 'grab',
+                        '&:active': {
+                          cursor: 'grabbing'
+                        }
                       }} 
                     />
-                    
-                    {/* Botones de reordenar con íconos de flecha horizontal */}
-                    <Stack direction="row" spacing={0.25} sx={{ mr: 0.5 }}>
-                      <Tooltip 
-                        title={
-                          index === 0 
-                            ? "Esta es la primera columna" 
-                            : `Mover "${f.name}" una posición a la izquierda`
-                        }
-                        placement="top"
-                      >
-                        <span>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => reorderColumn(f.field_id, 'up')}
-                            disabled={index === 0}
-                            sx={{ 
-                              p: 0.5,
-                              bgcolor: index === 0 ? 'transparent' : 'action.hover',
-                              '&:hover': {
-                                bgcolor: index === 0 ? 'transparent' : 'primary.light',
-                              },
-                              '&.Mui-disabled': { 
-                                opacity: 0.2 
-                              }
-                            }}
-                          >
-                            <KeyboardArrowLeftRounded sx={{ fontSize: 20 }} />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                      
-                      <Tooltip 
-                        title={
-                          index === fields.length - 1 
-                            ? "Esta es la última columna" 
-                            : `Mover "${f.name}" una posición a la derecha`
-                        }
-                        placement="top"
-                      >
-                        <span>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => reorderColumn(f.field_id, 'down')}
-                            disabled={index === fields.length - 1}
-                            sx={{ 
-                              p: 0.5,
-                              bgcolor: index === fields.length - 1 ? 'transparent' : 'action.hover',
-                              '&:hover': {
-                                bgcolor: index === fields.length - 1 ? 'transparent' : 'primary.light',
-                              },
-                              '&.Mui-disabled': { 
-                                opacity: 0.2 
-                              }
-                            }}
-                          >
-                            <KeyboardArrowRightRounded sx={{ fontSize: 20 }} />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </Stack>
-                    
+                                  
                     {/* TextField para renombrar */}
                     <TextField
-                      size="small"
-                      variant="standard"
-                      fullWidth
-                      value={f.name}
-                      onChange={(e) => editColName(f.field_id, e.target.value)}
-                      onBlur={(e) => editColName(f.field_id, e.target.value)}
-                      sx={{
-                        ".MuiInput-underline:before": { borderBottom: 'none' },
-                        ".MuiInput-underline:after": { borderBottom: 'none' },
-                      }}
-                    />
+                    size="small"
+                    variant="standard"
+                    fullWidth
+                    value={f.name}
+                    onChange={(e) => editColName(f.field_id, e.target.value)}
+                    onBlur={(e) => editColName(f.field_id, e.target.value)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    sx={{
+                      ".MuiInput-input": {
+                        padding: '4px 0',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,  // ← Hace el texto más visible
+                        cursor: 'text',
+                      },
+                      ".MuiInput-underline:before": { 
+                        borderBottom: '1px solid transparent'
+                      },
+                      ".MuiInput-underline:hover:before": { 
+                        borderBottom: '1px solid rgba(0, 0, 0, 0.42)'  // ← Borde al hover
+                      },
+                      ".MuiInput-underline:after": { 
+                        borderBottom: '2px solid'  // ← Borde al editar
+                      },
+                    }}
+                  />
                     
                     {/* Botón de eliminar */}
                     <Tooltip title={`Eliminar columna "${f.name}"`} placement="top">
-                      <IconButton size="small" onClick={() => delCol(f.field_id)}>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => delCol(f.field_id)}
+                        onMouseDown={(e) => e.stopPropagation()} // Evitar drag cuando elimina
+                      >
                         <DeleteOutline fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -524,7 +585,7 @@ export default function DatabaseDetailPage() {
               ))}
               <Box component="th" sx={{ p:1, bgcolor:"action.hover", width: 56 }} />
             </Box>
-</Box>
+          </Box>
           <Box component="tbody">
             {records.map((r, idx) => (
               <Box key={r.record_id} component="tr" sx={{ borderBottom:1, borderColor:"divider" }}>

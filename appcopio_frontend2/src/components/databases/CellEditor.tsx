@@ -217,9 +217,9 @@ export default function CellEditor({ record, field, onUpdate }: CellEditorProps)
 
     return (
       <RelationSelector
-        targetCore={targetCore as 'persons' | 'family_groups' | 'products'}
-        value={currentValue as number | null}
-        onChange={(val) => onUpdate(record.record_id, field.key, val)}
+        targetCore={targetCore as 'persons' | 'family_groups' | 'products'}  // ← Correcto
+        value={currentValue as number | null}  // ← Tipo específico
+        onChange={(newValue) => onUpdate(record.record_id, field.key, newValue)}  // ← Misma firma
       />
     );
   }
