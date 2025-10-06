@@ -157,3 +157,27 @@ export type AuditLog = {
     after: Record<string, unknown> | null;
 }
 
+
+
+export type FieldUsageCounts = {
+  atomic_values: number;         // valores en DatasetRecords.data (text/number/bool/date/time/datetime)
+  option_values: number;         // filas en DatasetRecordOptionValues (select / multi_select)
+  dynamic_relations: number;     // filas en DatasetRecordRelations (relation -> dynamic)
+  core_relations: number;        // filas en DatasetRecordCoreRelations (relation -> core)
+  total: number;
+};
+
+export type DeleteFieldResult =
+  | { status: 'blocked_required'; field_id: string; message: string }
+  | { status: 'needs_confirmation'; field_id: string; usage: FieldUsageCounts; message: string }
+  | { status: 'deleted'; field_id: string };
+
+export type FieldMeta = {
+  field_id: string;
+  dataset_id: string;
+  key: string;
+  type:
+    | 'text' | 'number' | 'bool' | 'date' | 'time' | 'datetime'
+    | 'select' | 'multi_select' | 'relation';
+  relation_target_kind: 'dynamic' | 'core' | null;
+};
