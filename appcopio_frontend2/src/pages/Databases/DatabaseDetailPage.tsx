@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { 
   Box, Button, Container, IconButton, LinearProgress, Stack, TextField, Tooltip, Typography,
-  Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, Select, MenuItem, FormHelperText
+  Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Checkbox, InputLabel, Select, MenuItem, FormHelperText
 } from "@mui/material";
 import DeleteOutline from "@mui/icons-material/DeleteOutline";
 import { useActivation } from "@/contexts/ActivationContext";
@@ -79,6 +79,7 @@ export default function DatabaseDetailPage() {
   //Para los drop de columnas
   const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null);
   const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
+  const [newFieldRequired, setNewFieldRequired] = useState(false);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -175,7 +176,7 @@ export default function DatabaseDetailPage() {
         key: slugify(colName) + Date.now(),
         field_type: newFieldType, 
         position: nextPosition,
-        is_required: false,
+        is_required: newFieldRequired,
         is_active: true,
         is_multi: newFieldType === "multi_select", // ✅ Importante para multi_select
         config: fieldConfig,
@@ -187,6 +188,7 @@ export default function DatabaseDetailPage() {
       setFields(prev => [...prev, newField].sort((a, b) => a.position - b.position));
       
       // Limpiar el formulario
+      setNewFieldRequired(false);
       setNewFieldName("");
       setNewFieldType("text");
       setSelectOptions([]);
@@ -741,6 +743,18 @@ const handleDrop = async (e: React.DragEvent, targetFieldId: string) => {
                 </FormHelperText>
               </FormControl>
             )}
+            <FormControlLabel
+            control={
+              <Checkbox
+                checked={newFieldRequired}
+                onChange={(e) => setNewFieldRequired(e.target.checked)}
+              />
+            }
+            label="Obligatoria (requerida)"
+          />
+          <FormHelperText>
+            Si está activa, no podrá eliminarse y no aceptará valores vacíos.
+          </FormHelperText>
           </Stack>
         </DialogContent>
         <DialogActions>

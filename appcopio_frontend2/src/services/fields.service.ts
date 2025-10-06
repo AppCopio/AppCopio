@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import type { DatabaseField } from "@/types/field";
 
-const mapField = (f: any): DatabaseField => ({ ...f, dataset_id: f.dataset_id ?? f.database_id });
+const mapField = (f: any): DatabaseField => ({ ...f, dataset_id: f.dataset_id ?? f.database_id, is_required: f.is_required ?? f.required });
 
 export const fieldsService = {
   list(dataset_id: string) {
@@ -37,6 +37,7 @@ export const fieldsService = {
       ...payload,
       type: fieldType,           // Backend espera 'type'
       field_type: fieldType,     // Mantener para compatibilidad
+      required: payload.is_required ?? false,
       is_required: payload.is_required ?? false,
       is_multi: payload.is_multi ?? false,
       position: payload.position ?? 0,
@@ -48,7 +49,13 @@ export const fieldsService = {
       .then(r => mapField(r.data?.data ?? r.data));
   },
   update(field_id: string, body: any) {
-    return api.patch(`/database-fields/${encodeURIComponent(field_id)}`, body).then(r => r.data?.data ?? r.data);
+    // 🔧 Si viene is_required, también enviar required para el backend
+    const normalizedBody = { ...body };
+    if (body.is_required !== undefined) {
+      normalizedBody.required = body.is_required;
+    }
+    return api.patch(`/database-fields/${encodeURIComponent(field_id)}`, normalizedBody)
+      .then(r => mapField(r.data?.data ?? r.data));
   },
   remove(field_id: string) {
     return api.delete(`/database-fields/${encodeURIComponent(field_id)}`).then(()=>{});

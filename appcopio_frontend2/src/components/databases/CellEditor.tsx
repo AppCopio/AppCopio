@@ -147,16 +147,17 @@ export default function CellEditor({ record, field, onUpdate }: CellEditorProps)
         select
         size="small"
         fullWidth
-        value={currentValue ?? ""}
+        required={field.is_required === true}
+        value={currentValue ?? (field.is_required ? (options[0] ?? "") : "")}
         onChange={(e) => onUpdate(record.record_id, field.key, e.target.value)}
         placeholder={fieldConfig.placeholder}
-        SelectProps={{
-          native: false,
-        }}
+        SelectProps={{ native: false }}
       >
-        <MenuItem value="">
-          <em>Ninguno</em>
-        </MenuItem>
+        {field.is_required ? null : (
+          <MenuItem value="">
+            <em>Ninguno</em>
+          </MenuItem>
+        )}
         {options.map((option: string, idx: number) => (
           <MenuItem key={idx} value={option}>
             {option}
