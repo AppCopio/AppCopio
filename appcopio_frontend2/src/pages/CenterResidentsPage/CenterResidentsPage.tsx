@@ -258,7 +258,7 @@ const exportToPDF = async () => {
           getCenterCapacity(centerId),
           listResidentGroups(centerId),
           listPeopleByCenter(centerId, filters),
-          listActiveCenters(centerId),
+          listActiveCenters(),
         ]);
         if (cancel) return;
 
@@ -317,6 +317,7 @@ const exportToPDF = async () => {
 
   const handleExitSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("ID de activación destino:", destinationActivationId);
     if (!residentToExit || !residentToExit.family_id || !exitReason || !exitDate) {
       window.alert("Debe completar todos los campos necesarios.");
       return;

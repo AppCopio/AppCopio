@@ -157,6 +157,7 @@ CREATE TABLE CentersActivations (
 -- CREATE INDEX IF NOT EXISTS idx_centersactivations_active
 --   ON "CentersActivations"(center_id)
 --   WHERE ended_at IS NULL;
+-- Para rastrear a una famiiia , usar jefe_hogar_person_id , ya que al mover una familia(dejar inactiva la actual, y crear la replica) de un centro a otro el family_id aumenta (PK serial)
 
 -- Registro de grupos familiares ingresados en X centro activado
 CREATE TABLE FamilyGroups (

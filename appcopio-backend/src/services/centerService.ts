@@ -140,13 +140,14 @@ export async function updateOperationalStatus(db: Db, id: string, status: string
     return result.rowCount > 0 ? result.rows[0] : null;
 }
 
-export async function getActiveCenters(db: Db) {
-    const result = await db.query(`
-        SELECT ca.activation_id, ca.center_id, c.name AS center_name
-        FROM CentersActivations ca JOIN Centers c ON ca.center_id = c.center_id
-        WHERE ca.ended_at IS NULL`);
-    return result.rows;
-}
+    export async function getActiveCenters(db: Db) {
+        const result = await db.query(`
+            SELECT ca.activation_id, ca.center_id, c.name AS center_name
+            FROM CentersActivations ca
+            JOIN Centers c ON ca.center_id = c.center_id
+            WHERE ca.ended_at IS NULL;`);
+        return result.rows;
+    }
 
 export async function getActiveActivation(db: Db, centerId: string): Promise<ActiveActivationRow | null> {
     
