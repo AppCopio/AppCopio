@@ -1,4 +1,8 @@
-import { Box, Button, TextField, Checkbox, FormControlLabel, MenuItem } from "@mui/material";
+import { useState } from "react";
+import { 
+  Box, Button, TextField, Checkbox, FormControlLabel, MenuItem, 
+  Select, Chip, Stack, FormControl, InputLabel, OutlinedInput
+} from "@mui/material";
 import CheckCircleOutline from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlined from "@mui/icons-material/CancelOutlined";
 import type { DatabaseField } from "@/types/field";
@@ -24,14 +28,6 @@ interface CellEditorProps {
   onUpdate: (recordId: string, fieldKey: string, value: any) => void;
 }
 
-/**
- * Componente para editar celdas de una base de datos flexible.
- * Renderiza el control apropiado según el tipo de campo:
- * - Boolean: Botones Sí/No
- * - Date: Selector de fecha (date picker)
- * - Number: Input numérico con placeholder
- * - Text: Input de texto con placeholder
- */
 export default function CellEditor({ record, field, onUpdate }: CellEditorProps) {
   const currentValue = record.data?.[field.key];
   const fieldConfig = FIELD_TYPE_CONFIG[field.type] || FIELD_TYPE_CONFIG.text;

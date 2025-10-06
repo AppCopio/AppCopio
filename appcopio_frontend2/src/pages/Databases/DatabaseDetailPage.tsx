@@ -15,6 +15,10 @@ import axios from "axios";
 import CellEditor from "@/components/databases/CellEditor";
 import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
 import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
+import KeyboardArrowLeftRounded from "@mui/icons-material/KeyboardArrowLeftRounded";
+import KeyboardArrowRightRounded from "@mui/icons-material/KeyboardArrowRightRounded";
+import DragIndicatorRounded from "@mui/icons-material/DragIndicatorRounded";
+
 
 // =======================================================
 // UTILS
@@ -37,10 +41,12 @@ const AVAILABLE_FIELD_TYPES = [
     { key: "number", name: "Número", icon: "123", desc: "Moneda, edad, cantidad.", placeholder: "Ej: 25" },
     { key: "bool", name: "Interruptor (Sí/No)", icon: "✓", desc: "Sí/No, Activo/Inactivo.", placeholder: "" },
     { key: "date", name: "Fecha", icon: "📅", desc: "Fecha (sin hora).", placeholder: "" },
+    { key: "time", name: "Hora", icon: "🕐", desc: "Hora del día (HH:MM).", placeholder: "" },
+    { key: "datetime", name: "Fecha y Hora", icon: "📅🕐", desc: "Fecha con hora específica.", placeholder: "" },
     { key: "select", name: "Selección única", icon: "▼", desc: "Elige una opción de una lista.", placeholder: "Seleccionar..." },
+    { key: "multi_select", name: "Selección múltiple", icon: "☑", desc: "Elige múltiples opciones de una lista.", placeholder: "Seleccionar..." },
     { key: "relation", name: "Relación", icon: "🔗", desc: "Relaciona con otra entidad (Personas, Familias).", placeholder: "" },
 ];
-
 /** Entidades CORE disponibles para relacionar */
 const CORE_ENTITIES = [
     { key: "persons", name: "Personas", desc: "Relacionar con personas registradas" },
@@ -123,15 +129,15 @@ export default function DatabaseDetailPage() {
     return () => { alive = false; ctrl.abort(); };
   }, [id, activation?.activation_id]);
 
-  const addColumn = async () => {
+ const addColumn = async () => {
     const colName = newFieldName.trim();
     if (!colName || !newFieldType) {
         alert("El nombre y tipo de la columna son obligatorios.");
         return;
     }
     
-    // Validar que si es tipo select tenga opciones
-    if (newFieldType === "select" && selectOptions.length === 0) {
+    // ✅ Validar que si es tipo select O multi_select tenga opciones
+    if ((newFieldType === "select" || newFieldType === "multi_select") && selectOptions.length === 0) {
         alert("Debes agregar al menos una opción para el campo de selección.");
         return;
     }
@@ -168,9 +174,9 @@ export default function DatabaseDetailPage() {
         position: nextPosition,
         is_required: false,
         is_active: true,
-        is_multi: newFieldType === "multi_select",
+        is_multi: newFieldType === "multi_select", // ✅ Importante para multi_select
         config: fieldConfig,
-        settings: fieldConfig, // Alias para backend
+        settings: fieldConfig,
         ...relationConfig,
         ...( { type: newFieldType } as any ),
       });
@@ -193,7 +199,7 @@ export default function DatabaseDetailPage() {
         alert("Error al crear la columna. Verifica la consola.");
       }
     }
-  };
+};
 
   const delCol = async (field_id: string) => {
   // Buscar el campo a eliminar
@@ -422,35 +428,72 @@ export default function DatabaseDetailPage() {
               {fields.map((f, index) => (
                 <Box key={f.field_id} component="th" sx={{ textAlign:"left", p:1, bgcolor:"action.hover", minWidth: 180 }}>
                   <Stack direction="row" alignItems="center" gap={0.5}>
-                    {/* Botones de reordenar */}
-                    <Stack direction="column" sx={{ mr: 0.5 }}>
-                      <Tooltip title="Mover columna a la izquierda">
+                    
+                    {/* Indicador visual de que se puede reordenar */}
+                    <DragIndicatorRounded 
+                      sx={{ 
+                        fontSize: 18, 
+                        color: "text.disabled",
+                        cursor: "grab"
+                      }} 
+                    />
+                    
+                    {/* Botones de reordenar con íconos de flecha horizontal */}
+                    <Stack direction="row" spacing={0.25} sx={{ mr: 0.5 }}>
+                      <Tooltip 
+                        title={
+                          index === 0 
+                            ? "Esta es la primera columna" 
+                            : `Mover "${f.name}" una posición a la izquierda`
+                        }
+                        placement="top"
+                      >
                         <span>
                           <IconButton 
                             size="small" 
                             onClick={() => reorderColumn(f.field_id, 'up')}
                             disabled={index === 0}
                             sx={{ 
-                              p: 0.25,
-                              '&.Mui-disabled': { opacity: 0.3 }
+                              p: 0.5,
+                              bgcolor: index === 0 ? 'transparent' : 'action.hover',
+                              '&:hover': {
+                                bgcolor: index === 0 ? 'transparent' : 'primary.light',
+                              },
+                              '&.Mui-disabled': { 
+                                opacity: 0.2 
+                              }
                             }}
                           >
-                            <ArrowUpwardRounded sx={{ fontSize: 16 }} />
+                            <KeyboardArrowLeftRounded sx={{ fontSize: 20 }} />
                           </IconButton>
                         </span>
                       </Tooltip>
-                      <Tooltip title="Mover columna a la derecha">
+                      
+                      <Tooltip 
+                        title={
+                          index === fields.length - 1 
+                            ? "Esta es la última columna" 
+                            : `Mover "${f.name}" una posición a la derecha`
+                        }
+                        placement="top"
+                      >
                         <span>
                           <IconButton 
                             size="small" 
                             onClick={() => reorderColumn(f.field_id, 'down')}
                             disabled={index === fields.length - 1}
                             sx={{ 
-                              p: 0.25,
-                              '&.Mui-disabled': { opacity: 0.3 }
+                              p: 0.5,
+                              bgcolor: index === fields.length - 1 ? 'transparent' : 'action.hover',
+                              '&:hover': {
+                                bgcolor: index === fields.length - 1 ? 'transparent' : 'primary.light',
+                              },
+                              '&.Mui-disabled': { 
+                                opacity: 0.2 
+                              }
                             }}
                           >
-                            <ArrowDownwardRounded sx={{ fontSize: 16 }} />
+                            <KeyboardArrowRightRounded sx={{ fontSize: 20 }} />
                           </IconButton>
                         </span>
                       </Tooltip>
@@ -471,7 +514,7 @@ export default function DatabaseDetailPage() {
                     />
                     
                     {/* Botón de eliminar */}
-                    <Tooltip title="Eliminar columna">
+                    <Tooltip title={`Eliminar columna "${f.name}"`} placement="top">
                       <IconButton size="small" onClick={() => delCol(f.field_id)}>
                         <DeleteOutline fontSize="small" />
                       </IconButton>
@@ -481,7 +524,7 @@ export default function DatabaseDetailPage() {
               ))}
               <Box component="th" sx={{ p:1, bgcolor:"action.hover", width: 56 }} />
             </Box>
-          </Box>
+</Box>
           <Box component="tbody">
             {records.map((r, idx) => (
               <Box key={r.record_id} component="tr" sx={{ borderBottom:1, borderColor:"divider" }}>

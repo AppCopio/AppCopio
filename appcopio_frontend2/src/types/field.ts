@@ -1,7 +1,12 @@
 export type FieldType =
-  | "text" | "number" | "bool"
-  | "date" | "time" | "datetime"
-  | "select" | "multi_select"
+  | "text" 
+  | "number" 
+  | "bool"
+  | "date" 
+  | "time"      
+  | "datetime"  
+  | "select" 
+  | "multi_select"  
   | "relation";
 
 export type DatabaseField = {
