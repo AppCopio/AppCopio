@@ -11,6 +11,7 @@ import type { DatabaseSummary } from "@/types/database";
 import { templatesService } from "@/services/template.service"; 
 import { fieldsService } from "@/services/fields.service";
 import { TEMPLATES, TemplateItem } from "@/types/template";
+import { ListSubheader } from "@mui/material";
 
 export default function DatabasesPage() {
   const { centerId = "" } = useParams<{ centerId: string }>();
@@ -274,21 +275,54 @@ function CreateDialog({
                 <FormControl fullWidth>
                     <InputLabel id="tpl">Plantilla</InputLabel>
                     <Select labelId="tpl" label="Plantilla" value={template} onChange={(e)=>setTemplate(String(e.target.value))} disabled={submitting}>
-                    {TEMPLATES.map(t => {
-                        const disabled = t.key !== "blank" && usedTemplateKeys?.includes(t.key);
-                        return (
-                        <MenuItem key={t.key} value={t.key} disabled={disabled}>
-                            {t.name}{disabled ? " — ya usada" : ""}
+                      {/* Plantilla en blanco siempre disponible */}
+                      <MenuItem value="blank">Base de datos en blanco</MenuItem>
+                      {/* Plantillas disponibles */}
+                      <ListSubheader 
+                        sx={{ 
+                          bgcolor: 'grey.200', color: 'text.primary',
+                          fontWeight: 600,
+                          lineHeight: '36px'
+                        }}
+                      >
+                        Plantillas disponibles
+                      </ListSubheader>
+                      {TEMPLATES.filter(t => t.key !== "blank" && !usedTemplateKeys?.includes(t.key)).map(t => (
+                        <MenuItem key={t.key} value={t.key}>
+                          {t.name}
                         </MenuItem>
-                        );
-                    })}
+                      ))}
+                      
+                      {/* Subheader para ya usadas */}
+                      {usedTemplateKeys && usedTemplateKeys.length > 0 && (
+                        <ListSubheader 
+                          sx={{ 
+                            bgcolor: 'grey.200', color: 'text.primary',
+                            fontWeight: 600,
+                            lineHeight: '36px'
+                          }}
+                        >
+                          Ya inicializadas
+                        </ListSubheader>
+                      )}
+                      {TEMPLATES.filter(t => usedTemplateKeys?.includes(t.key)).map(t => (
+                        <MenuItem key={t.key} value={t.key} disabled>
+                          {t.name}
+                        </MenuItem>
+                      ))}
                     </Select>
-                  <FormHelperText>
-                      {isTemplateUsed 
-                          ? `Base de datos ya inicializada: ${selectedTemplate?.name}` 
-                          : selectedTemplate?.description
-                      }
-                  </FormHelperText>                
+                  <FormHelperText 
+                    sx={{ 
+                      color: isTemplateUsed ? 'error.main' : 'text.secondary',
+                      fontWeight: isTemplateUsed ? 600 : 400,
+                      fontSize: isTemplateUsed ? '0.875rem' : '0.75rem',
+                    }}
+                  >
+                    {isTemplateUsed 
+                      ? `⚠️ Base de datos ya inicializada: ${selectedTemplate?.name}` 
+                      : selectedTemplate?.description
+                    }
+                  </FormHelperText>              
                 </FormControl>
                 
                 {selectedTemplate?.previewColumns && selectedTemplate.previewColumns.length > 0 && (
