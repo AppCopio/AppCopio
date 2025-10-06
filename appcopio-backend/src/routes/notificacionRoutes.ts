@@ -1,5 +1,6 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
+import { sendEmail } from "../services/emailService";
 import {
   createNotification as createNotificationService,
   updateStatus as updateStatusService,
@@ -19,11 +20,10 @@ const allowedStatus = new Set(['queued', 'sent', 'failed']);
 // ---------------------------------------------
 const createNotification: RequestHandler = async (req, res, next) => {
   try {
-    // requireUser asegura autenticación; opcional: verificar permisos del rol
     const {
       center_id,
       activation_id = null,
-      destinatary = null,
+      destinatary = null,           
       title,
       message,
       event_at = null,

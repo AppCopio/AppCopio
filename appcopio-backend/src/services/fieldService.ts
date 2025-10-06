@@ -1,6 +1,6 @@
 // src/services/fieldsService.ts
 import type { Db } from "../types/db";
-import { Dataset, DatasetField, DatasetFieldOption, UUID } from "../types/dataset";
+import { DatasetField, DatasetFieldOption, UUID, FieldUsageCounts, FieldMeta, DeleteFieldResult } from "../types/dataset";
 
 export async function listFieldsByDatasetDB(db: Db, dataset_id: string) : Promise<DatasetField[]> {
   const sql = `
@@ -124,8 +124,7 @@ export async function moveFieldPositionDB(db: Db, field_id: string, toPosition: 
   // Si la posición no cambia, no hacer nada
   if (to === from) return;
 
-  // 🔧 PASO CRÍTICO: Mover el campo a una posición temporal NEGATIVA
-  // Esto lo saca del rango de posiciones activas y evita conflictos
+  // mover el campo a una posición temporal negativa
   await db.query(
     `UPDATE DatasetFields
      SET position = -1
@@ -136,7 +135,6 @@ export async function moveFieldPositionDB(db: Db, field_id: string, toPosition: 
   // 3. Ajustar las posiciones de los otros campos
   if (to < from) {
     // Moviendo hacia la izquierda: desplazar campos hacia la derecha
-    // para abrir espacio en la posición destino
     await db.query(
       `UPDATE DatasetFields
        SET position = position + 1
@@ -149,7 +147,6 @@ export async function moveFieldPositionDB(db: Db, field_id: string, toPosition: 
     );
   } else {
     // Moviendo hacia la derecha: desplazar campos hacia la izquierda
-    // para cerrar el hueco dejado por el campo movido
     await db.query(
       `UPDATE DatasetFields
        SET position = position - 1
@@ -162,7 +159,6 @@ export async function moveFieldPositionDB(db: Db, field_id: string, toPosition: 
     );
   }
 
-  // 4. Finalmente, mover el campo a su posición definitiva
   await db.query(
     `UPDATE DatasetFields
      SET position = $2
@@ -171,14 +167,129 @@ export async function moveFieldPositionDB(db: Db, field_id: string, toPosition: 
   );
 }
 
-export async function softDeleteFieldDB(db: Db, field_id: string) : Promise<UUID> {
-  const sql = `
+export async function softDeleteFieldDB( db: Db, field_id: string, confirm: boolean = false) : Promise<DeleteFieldResult> {
+  const getFieldSql = `
+    SELECT field_id, dataset_id, key, type, required, relation_target_kind
+    FROM DatasetFields
+    WHERE field_id = $1 AND deleted_at IS NULL
+    FOR UPDATE
+  `;
+  const { rows: fieldRows } = await db.query(getFieldSql, [field_id]);
+  const field = fieldRows[0];
+  // si no existe o ya fue borrado
+  if (!field) {
+    return { status: 'deleted', field_id };
+  }
+
+  if (field.required) {
+    return {
+      status: 'blocked_required',
+      field_id,
+      message: 'No se puede eliminar la columna porque es obligatoria (required = TRUE).',
+    };
+  }
+
+  // calcular si tiene algún dato asociado
+  const usage = await getFieldUsageCounts(db, {
+    field_id,
+    dataset_id: field.dataset_id,
+    key: field.key,
+    type: field.type,
+    relation_target_kind: field.relation_target_kind as 'dynamic' | 'core' | null,
+  });
+
+  if (usage.total > 0 && !confirm) {
+    return {
+      status: 'needs_confirmation',
+      field_id,
+      usage,
+      message:
+        'Esta columna tiene datos asociados. Confirma la eliminación para proceder.',
+    };
+  }
+
+  // ejecutar el borrado suave
+  const sqlDelete = `
     UPDATE DatasetFields
     SET deleted_at = now(), is_active = FALSE, updated_at = now()
     WHERE field_id = $1 AND deleted_at IS NULL
-    RETURNING field_id`;
-  const { rows } = await db.query(sql, [field_id]);
-  return rows[0]?.field_id ?? null;
+    RETURNING field_id
+  `;
+  const { rows } = await db.query(sqlDelete, [field_id]);
+  const deleted = rows[0]?.field_id ?? null;
+
+  return { status: 'deleted', field_id: deleted ?? field_id };
+}
+
+async function getFieldUsageCounts(db: Db, meta: FieldMeta): Promise<FieldUsageCounts> {
+  const counts: FieldUsageCounts = {
+    atomic_values: 0,
+    option_values: 0,
+    dynamic_relations: 0,
+    core_relations: 0,
+    total: 0,
+  };
+
+  // tipos atómicos (en el jsonb)
+  if (['text','number','bool','date','time','datetime'].includes(meta.type)) {
+    const sqlAtomic = `
+      SELECT COUNT(*)::bigint AS c
+      FROM DatasetRecords
+      WHERE dataset_id = $1
+        AND deleted_at IS NULL
+        AND data ? $2
+    `;
+    const { rows } = await db.query(sqlAtomic, [meta.dataset_id, meta.key]);
+    counts.atomic_values = Number(rows[0]?.c ?? 0);
+  }
+
+  // select / multi_select
+  if (['select','multi_select'].includes(meta.type)) {
+    const sqlOptions = `
+      SELECT COUNT(*)::bigint AS c
+      FROM DatasetRecordOptionValues
+      WHERE field_id = $1
+    `;
+    const { rows } = await db.query(sqlOptions, [meta.field_id]);
+    counts.option_values = Number(rows[0]?.c ?? 0);
+  }
+
+  // relation
+  if (meta.type === 'relation') {
+    if (meta.relation_target_kind === 'dynamic') {
+      const sqlDyn = `
+        SELECT COUNT(*)::bigint AS c
+        FROM DatasetRecordRelations
+        WHERE field_id = $1
+      `;
+      const { rows } = await db.query(sqlDyn, [meta.field_id]);
+      counts.dynamic_relations = Number(rows[0]?.c ?? 0);
+    } else if (meta.relation_target_kind === 'core') {
+      const sqlCore = `
+        SELECT COUNT(*)::bigint AS c
+        FROM DatasetRecordCoreRelations
+        WHERE field_id = $1
+      `;
+      const { rows } = await db.query(sqlCore, [meta.field_id]);
+      counts.core_relations = Number(rows[0]?.c ?? 0);
+    } else {
+      // Si no está seteado el target_kind aún, revisamos ambas por seguridad
+      const [dyn, core] = await Promise.all([
+        db.query(`SELECT COUNT(*)::bigint AS c FROM DatasetRecordRelations WHERE field_id = $1`, [meta.field_id]),
+        db.query(`SELECT COUNT(*)::bigint AS c FROM DatasetRecordCoreRelations WHERE field_id = $1`, [meta.field_id]),
+      ]);
+      counts.dynamic_relations = Number(dyn.rows[0]?.c ?? 0);
+      counts.core_relations = Number(core.rows[0]?.c ?? 0);
+    }
+  }
+
+  counts.total =
+    counts.atomic_values +
+    counts.option_values +
+    counts.dynamic_relations +
+    counts.core_relations;
+
+  return counts;
 }
 
 // Options
