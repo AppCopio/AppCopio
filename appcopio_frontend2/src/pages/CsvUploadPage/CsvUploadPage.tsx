@@ -1,5 +1,5 @@
 // src/pages/CsvUploadPage/CsvUploadPage.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Container,
   Typography,
@@ -18,54 +18,52 @@ import {
   DialogContent,
   DialogTitle,
   DialogActions,
-  CircularProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Download as DownloadIcon,
   Upload as UploadIcon,
-  Visibility as PreviewIcon,
-  Send as SendIcon,
   Refresh as RefreshIcon,
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
-} from '@mui/icons-material';
-import CSVUploader from '@/components/common/CSVUploader';
-import CSVDataTable from '@/components/common/CSVDataTable';
-import { CSVParseResult } from '@/utils/csvParser';
+  Visibility as PreviewIcon,
+} from "@mui/icons-material";
+import CSVUploader from "@/components/common/CSVUploader";
+import CSVDataTable from "@/components/common/CSVDataTable";
+import { CSVParseResult } from "@/utils/csvParser";
+import { CSVUploadResponse, CSVUploadModule } from "@/types/csv";
 import {
-  CSVUploadModule,
   CSV_MODULE_CONFIGS,
   getCSVParseOptions,
   uploadCSVData,
-  validateCSVData,
-  CSVUploadResponse,
   downloadStaticTemplate,
-} from '@/services/csv.service';
-import './CsvUploadPage.css';
+} from "@/services/csv.service";
+import "./CsvUploadPage.css";
 
 export default function CsvUploadPage() {
   // Definición de los pasos del stepper
   const steps = [
-    'Seleccionar Módulo',
-    'Cargar Archivo CSV',
-    'Validar Datos',
-    'Confirmar Importación'
+    "Seleccionar Módulo",
+    "Cargar Archivo CSV",
+    "Validar Datos",
+    "Confirmar Importación",
   ];
 
   const [activeStep, setActiveStep] = useState(0);
-  const [selectedModule, setSelectedModule] = useState<CSVUploadModule | null>(null);
+  const [selectedModule, setSelectedModule] = useState<CSVUploadModule | null>(
+    null
+  );
   const [parseResult, setParseResult] = useState<CSVParseResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<CSVUploadResponse | null>(null);
+  const [uploadResult, setUploadResult] = useState<CSVUploadResponse | null>(
+    null
+  );
   const [showPreview, setShowPreview] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
-  const [validationResult, setValidationResult] = useState<CSVUploadResponse | null>(null);
+    useState<CSVUploadResponse | null>(null);
 
   const handleModuleSelect = (module: CSVUploadModule) => {
     setSelectedModule(module);
     setParseResult(null);
     setUploadResult(null);
-    setValidationResult(null);
     setActiveStep(1);
   };
 
@@ -76,29 +74,10 @@ export default function CsvUploadPage() {
     }
   }, []);
 
-const handleDownloadTemplate = useCallback(() => {
-  if (!selectedModule) return;
-  downloadStaticTemplate(selectedModule);
-}, [selectedModule]);
-
-  const handleValidate = async () => {
-    if (!selectedModule || !parseResult) return;
-
-    setIsValidating(true);
-    setValidationResult(null);
-
-    try {
-      const result = await validateCSVData({
-        module: selectedModule,
-        data: parseResult.data
-      });
-      setValidationResult(result);
-    } catch (error) {
-      console.error('Error validating data:', error);
-    } finally {
-      setIsValidating(false);
-    }
-  };
+  const handleDownloadTemplate = useCallback(() => {
+    if (!selectedModule) return;
+    downloadStaticTemplate(selectedModule);
+  }, [selectedModule]);
 
   const handleUpload = async () => {
     if (!selectedModule || !parseResult) return;
@@ -112,13 +91,13 @@ const handleDownloadTemplate = useCallback(() => {
         data: parseResult.data,
         options: {
           updateExisting: true,
-          ignoreErrors: false
-        }
+          ignoreErrors: false,
+        },
       });
       setUploadResult(result);
       setActiveStep(3);
     } catch (error) {
-      console.error('Error uploading data:', error);
+      console.error("Error uploading data:", error);
       // Manejar error de upload
     } finally {
       setIsUploading(false);
@@ -130,7 +109,6 @@ const handleDownloadTemplate = useCallback(() => {
     setSelectedModule(null);
     setParseResult(null);
     setUploadResult(null);
-    setValidationResult(null);
   };
 
   const handleBack = () => {
@@ -145,23 +123,33 @@ const handleDownloadTemplate = useCallback(() => {
     }
   };
 
-  const selectedConfig = selectedModule ? CSV_MODULE_CONFIGS[selectedModule] : null;
+  const selectedConfig = selectedModule
+    ? CSV_MODULE_CONFIGS[selectedModule]
+    : null;
 
   return (
     <Container maxWidth="xl" className="csv-upload-page">
       <div className="csv-upload-header">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 2,
+          }}
+        >
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
               Importar Datos CSV
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Carga información masiva desde archivos CSV para diferentes módulos del sistema
+              Carga información masiva desde archivos CSV para diferentes
+              módulos del sistema
             </Typography>
           </Box>
           {selectedModule && activeStep > 0 && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Chip 
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Chip
                 label={`Módulo: ${selectedConfig?.displayName}`}
                 color="primary"
                 variant="outlined"
@@ -189,47 +177,70 @@ const handleDownloadTemplate = useCallback(() => {
               Elige el tipo de datos que deseas importar
             </Typography>
             <Grid container spacing={2}>
-              {(Object.keys(CSV_MODULE_CONFIGS) as CSVUploadModule[]).map((module) => {
-                const config = CSV_MODULE_CONFIGS[module];
-                return (
-                  <Grid size={{ xs: 12, md: 6, lg: 4 }} key={module}>
-                    <Card 
-                      className={`module-card ${selectedModule === module ? 'selected' : ''}`}
-                      onClick={() => handleModuleSelect(module)}
-                    >
-                      <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                          <Typography variant="h6" component="h3">
-                            {config.displayName}
-                          </Typography>
-                          {selectedModule === module && (
-                            <CheckCircleIcon color="primary" fontSize="small" />
-                          )}
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" paragraph>
-                          {config.description}
-                        </Typography>
-                        <div className="required-columns">
-                          <Typography variant="caption" display="block">
-                            Columnas requeridas:
-                          </Typography>
-                          <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {config.requiredColumns.map((column) => (
-                              <Chip
-                                key={column}
-                                label={column}
-                                size="small"
-                                variant="outlined"
+              {(Object.keys(CSV_MODULE_CONFIGS) as CSVUploadModule[]).map(
+                (module) => {
+                  const config = CSV_MODULE_CONFIGS[module];
+                  return (
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }} key={module}>
+                      <Card
+                        className={`module-card ${selectedModule === module ? "selected" : ""}`}
+                        onClick={() => handleModuleSelect(module)}
+                      >
+                        <CardContent>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                              mb: 1,
+                            }}
+                          >
+                            <Typography variant="h6" component="h3">
+                              {config.displayName}
+                            </Typography>
+                            {selectedModule === module && (
+                              <CheckCircleIcon
                                 color="primary"
+                                fontSize="small"
                               />
-                            ))}
+                            )}
                           </Box>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })}
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            paragraph
+                          >
+                            {config.description}
+                          </Typography>
+                          <div className="required-columns">
+                            <Typography variant="caption" display="block">
+                              Columnas requeridas:
+                            </Typography>
+                            <Box
+                              sx={{
+                                mt: 0.5,
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 0.5,
+                              }}
+                            >
+                              {config.requiredColumns.map((column) => (
+                                <Chip
+                                  key={column}
+                                  label={column}
+                                  size="small"
+                                  variant="outlined"
+                                  color="primary"
+                                />
+                              ))}
+                            </Box>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  );
+                }
+              )}
             </Grid>
           </StepContent>
         </Step>
@@ -241,10 +252,11 @@ const handleDownloadTemplate = useCallback(() => {
             {selectedConfig && (
               <Box sx={{ mb: 2 }}>
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  Módulo seleccionado: <strong>{selectedConfig.displayName}</strong>
+                  Módulo seleccionado:{" "}
+                  <strong>{selectedConfig.displayName}</strong>
                 </Alert>
-                
-                <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+
+                <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
                   <Button
                     startIcon={<DownloadIcon />}
                     onClick={handleDownloadTemplate}
@@ -255,7 +267,15 @@ const handleDownloadTemplate = useCallback(() => {
                   </Button>
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 1, mb: 2, justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    mb: 2,
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Button
                     startIcon={<ArrowBackIcon />}
                     onClick={handleBack}
@@ -270,8 +290,17 @@ const handleDownloadTemplate = useCallback(() => {
                 <CSVUploader
                   onDataParsed={handleDataParsed}
                   parseOptions={{
-                    ...getCSVParseOptions(selectedModule!),
-                    requiredColumns: [...getCSVParseOptions(selectedModule!).requiredColumns || []]
+                    ...{
+                      ...getCSVParseOptions(selectedModule!),
+                      skipEmptyLines:
+                        getCSVParseOptions(selectedModule!).skipEmptyLines === "greedy"
+                          ? true
+                          : !!getCSVParseOptions(selectedModule!).skipEmptyLines,
+                    },
+                    requiredColumns: [
+                      ...(getCSVParseOptions(selectedModule!).requiredColumns ||
+                        []),
+                    ],
                   }}
                   helperText="Sube tu archivo CSV con los datos del módulo seleccionado"
                 />
@@ -294,32 +323,7 @@ const handleDownloadTemplate = useCallback(() => {
                   >
                     Ver Datos Completos
                   </Button>
-                  <Button
-                    startIcon={<SendIcon />}
-                    onClick={handleValidate}
-                    variant="outlined"
-                    disabled={isValidating}
-                  >
-                    {isValidating ? 'Validando...' : 'Validar en Servidor'}
-                  </Button>
                 </Box>
-
-                {isValidating && <CircularProgress size={24} />}
-
-                {validationResult && (
-                  <Alert severity={validationResult.success ? 'success' : 'error'} sx={{ mb: 2 }}>
-                    <Typography variant="body2">
-                      {validationResult.message}
-                    </Typography>
-                    {validationResult.results && (
-                      <Box sx={{ mt: 1 }}>
-                        <Typography variant="caption" display="block">
-                          Filas procesables: {validationResult.results.processedRows} de {validationResult.results.totalRows}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Alert>
-                )}
 
                 <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'space-between', alignItems: 'center' }}>
                   <Button
@@ -338,7 +342,9 @@ const handleDownloadTemplate = useCallback(() => {
                     disabled={isUploading || parseResult.validRows === 0}
                     color="primary"
                   >
-                    {isUploading ? 'Importando...' : `Importar ${parseResult.validRows} filas`}
+                    {isUploading
+                      ? "Importando..."
+                      : `Importar ${parseResult.validRows} filas`}
                   </Button>
                 </Box>
               </Box>
@@ -352,8 +358,8 @@ const handleDownloadTemplate = useCallback(() => {
           <StepContent>
             {uploadResult && (
               <Box>
-                <Alert 
-                  severity={uploadResult.success ? 'success' : 'error'} 
+                <Alert
+                  severity={uploadResult.success ? "success" : "error"}
                   sx={{ mb: 2 }}
                 >
                   {uploadResult.message}
@@ -432,9 +438,7 @@ const handleDownloadTemplate = useCallback(() => {
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle>
-          Vista Completa de Datos
-        </DialogTitle>
+        <DialogTitle>Vista Completa de Datos</DialogTitle>
         <DialogContent>
           {parseResult && (
             <CSVDataTable
@@ -445,9 +449,7 @@ const handleDownloadTemplate = useCallback(() => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowPreview(false)}>
-            Cerrar
-          </Button>
+          <Button onClick={() => setShowPreview(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </Container>
