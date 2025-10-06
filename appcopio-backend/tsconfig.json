@@ -29,7 +29,6 @@
     "skipLibCheck": true, /* Evita que TS revise los archivos de declaración (.d.ts) de las librerías, acelera la compilación */
     "types": ["node"]
   },
-  "ts-node": { "files": true },
   /* ----- Includes y Excludes ----- */
   "include": ["src/**/*"], /* Le decimos a TS que compile todo lo que está dentro de 'src' */
   "exclude": ["node_modules"] /* Le decimos que ignore la carpeta de node_modules y archivos de prueba */

@@ -74,11 +74,11 @@ export default function UpdatesPage() {
     const controller = new AbortController();
     const fetchWorkers = async () => {
         try {
-            
+            // Llama a la única función correcta y validada
             const workerData = await listActiveUsersByRole(ROLE_ID_TMO, controller.signal);
             setWorkers(workerData);
         } catch (err) {
-           
+            // AHORA: Si hay un error, se notifica y se actualiza el estado
             console.error("Error fetching active workers:", err);
             setError("No se pudo cargar la lista de trabajadores.");
         }

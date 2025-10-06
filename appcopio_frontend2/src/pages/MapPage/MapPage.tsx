@@ -3,7 +3,6 @@ import MapComponent from "@/components/map/MapComponent";
 import { listCenters } from "@/services/centers.service";
 import type { Center } from "@/types/center";
 import { msgFromError } from "@/lib/errors";
-import "./MapPage.css";
 
 // Mantiene la misma UI/CSS (clases y estructura)
 export default function MapPage() {

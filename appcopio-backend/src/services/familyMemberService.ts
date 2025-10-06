@@ -52,6 +52,7 @@ export async function hasActiveMembershipByRutInActivationDB(
  * @param activation_id ID de la activación del centro.
  * @param person_id ID de la persona a buscar.
  * @returns El ID de la familia si se encuentra, o null.
+
 export async function findActiveHeadFamilyInActivationDB(
     db: Db,
     activation_id: number,

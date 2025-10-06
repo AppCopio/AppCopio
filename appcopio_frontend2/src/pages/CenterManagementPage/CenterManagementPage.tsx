@@ -6,7 +6,6 @@ import "./CenterManagementPage.css";
 
 import { Center } from "@/types/center";
 import { listCenters, updateCenterStatus, deleteCenter } from "@/services/centers.service";
-import { getOmzZoneForCenter } from "@/services/zones.service";
 
 const StatusSwitch: React.FC<{
   center: Center;
@@ -33,7 +32,6 @@ const CenterManagementPage: React.FC = () => {
   // Estados del componente
   const [centers, setCenters] = useState<Center[]>([]);
   const [filteredCenters, setFilteredCenters] = useState<Center[]>([]);
-  const [omzZones, setOmzZones] = useState<Record<string, string | null>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,16 +50,6 @@ const CenterManagementPage: React.FC = () => {
     try {
       const data = await listCenters();
       setCenters(data);
-
-      // Para cada centro, obtener la zona OMZ
-      const zones: Record<string, string | null> = {};
-      await Promise.all(
-        data.map(async (center: Center) => {
-          const zone = await getOmzZoneForCenter(center.center_id);
-          zones[center.center_id] = zone;
-        })
-      );
-      setOmzZones(zones);
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || "No se pudieron cargar los centros.");
     } finally {
@@ -235,10 +223,8 @@ const CenterManagementPage: React.FC = () => {
                 {typeof center.fullnessPercentage === "number" && (
                   <p className="fullness-info">Abastecimiento: {center.fullnessPercentage.toFixed(1)}%</p>
                 )}
-                {/* Mostrar la zona OMZ */}
-                <span className="zone-info">
-                  ZONA OMZ: {omzZones[center.center_id] ? omzZones[center.center_id] : "No asignada"}
-                </span>
+                 {/* Aquí añadimos la zona OMZ */}
+                 <span className="zone-info">ZONA OMZ: ----</span>
               </div>
               <div className="center-actions">
                 <Link

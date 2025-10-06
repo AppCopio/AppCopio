@@ -14,8 +14,6 @@ import {
 } from "@/services/centers.service";
 import { listCenterInventory } from "@/services/inventory.service";
 
-import { getOmzZoneForCenter } from "@/services/zones.service";
-
 import ResponsibleSection from "./ResponsibleSection";
 import AssignResponsibleDialog from "./AssingResponsibleDialog";
 import { useActivation } from "@/contexts/ActivationContext";
@@ -52,9 +50,6 @@ const CenterDetailsPage: React.FC = () => {
   const [assignRole, setAssignRole] = useState<AssignRole | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
 
-  // OMZ zone state
-  const [omzZone, setOmzZone] = useState<string | null>(null);
-
   useEffect(() => {
     if (!centerId) return;
     let alive = true;
@@ -75,10 +70,6 @@ const CenterDetailsPage: React.FC = () => {
 
         setCenter(mapped);
         setResources(inv);
-
-        // Obtener zona OMZ como string
-        const omz = await getOmzZoneForCenter(centerId);
-        setOmzZone(omz);
       } catch (e: any) {
         setError(e?.response?.data?.message || e?.message || "No se pudieron cargar los detalles del centro.");
       } finally {
@@ -187,7 +178,7 @@ const CenterDetailsPage: React.FC = () => {
               </div>
               <div className="info-item">
                 <label>Zona OMZ:</label>
-                <span>{omzZone ? omzZone : "No asignada"}</span>
+                <span>{"-----"}</span> {/* Reemplaza esto por la zona OMZ cuando esté disponible */}
               </div>
             </div>
 

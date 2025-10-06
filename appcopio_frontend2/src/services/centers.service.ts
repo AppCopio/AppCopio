@@ -223,7 +223,7 @@ export function mapStatusToFrontend(status?: string): OperationalStatusUI | unde
  */
 export async function listCenters(signal?: AbortSignal): Promise<Center[]> {
   try {
-    const { data } = await api.get<any[]>("/centers");
+    const { data } = await api.get<any[]>("/centers", { signal });
     return Array.isArray(data) ? data.map(normalizeCenter) : [];
   } catch (error) {
     console.error("Error fetching centers:", error);

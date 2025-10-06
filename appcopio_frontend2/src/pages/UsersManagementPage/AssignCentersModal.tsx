@@ -183,6 +183,7 @@ const AssignCentersModal: React.FC<Props> = ({ user, onClose, onSave }) => {
     } finally {
       setIsLoading(false);
     }
+    // No retorna nada
 
   }, [selectedCenters, initialAssignments, user.user_id, user.role_name, onSave, onClose]);
 

@@ -1,7 +1,7 @@
 // src/routes/centerRoutes.ts
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
-import { requireUser } from "../auth/requireUser";
+
 
 // CAMBIO: Importamos TODAS las funciones necesarias desde nuestro servicio, incluyendo las de inventario.
 import {
@@ -22,7 +22,6 @@ import {
 } from '../services/centerService';
 
 import { getCenterGroups } from '../services/familyService';
-import { requireAuth } from '../auth/middleware';
 
 
 const router = Router();
@@ -118,7 +117,7 @@ const deleteCenter: RequestHandler = async (req, res) => {
 
 const setActivationStatus: RequestHandler = async (req, res) => {
     const { isActive } = req.body;
-    const userId = requireUser(req).user_id;
+    const userId = (req as any).user?.user_id;
     if (typeof isActive !== 'boolean') {
         res.status(400).json({ error: 'Se requiere el campo "isActive" (boolean).' });
         return;
@@ -338,26 +337,26 @@ const deleteInventoryItem: RequestHandler = async (req, res) => {
 // =================================================================
 
 // --- Rutas Principales de Centros (CRUD) ---
-router.get('/',  listCenters);
-router.post('/', requireAuth, createCenter);
-router.get('/:id', requireAuth, getCenter);
-router.put('/:id', requireAuth, updateCenter);
-router.delete('/:id', requireAuth, deleteCenter);
+router.get('/', listCenters);
+router.post('/', createCenter);
+router.get('/:id', getCenter);
+router.put('/:id', updateCenter);
+router.delete('/:id', deleteCenter);
 
 // --- Rutas de Estado y Activación ---
-router.patch('/:id/status', requireAuth, setActivationStatus);
-router.patch('/:id/operational-status', requireAuth, setOperationalStatus);
-router.get('/status/active', requireAuth, listActiveCenters);
-router.get('/:id/activation', requireAuth, getCenterActiveActivation);
+router.patch('/:id/status', setActivationStatus);
+router.patch('/:id/operational-status', setOperationalStatus);
+router.get('/status/active', listActiveCenters);
+router.get('/:id/activation', getCenterActiveActivation);
 
 // --- Rutas de Datos Específicos del Centro ---
-router.get('/:centerId/capacity', requireAuth, getCapacity);
-router.get('/:centerId/people', requireAuth, listPeople);
-router.get('/:centerID/residents', requireAuth, listGroups)
+router.get('/:centerId/capacity', getCapacity);
+router.get('/:centerId/people', listPeople);
+router.get('/:centerID/residents',listGroups)
 // --- Rutas de Inventario ---
-router.get('/:centerId/inventory', requireAuth, getInventory);
-router.post('/:centerId/inventory', requireAuth, addInventoryItem);
-router.put('/:centerId/inventory/:itemId', requireAuth, updateInventoryItem);
-router.delete('/:centerId/inventory/:itemId', requireAuth, deleteInventoryItem);
+router.get('/:centerId/inventory', getInventory);
+router.post('/:centerId/inventory', addInventoryItem);
+router.put('/:centerId/inventory/:itemId', updateInventoryItem);
+router.delete('/:centerId/inventory/:itemId', deleteInventoryItem);
 
 export default router;
