@@ -93,11 +93,7 @@ const CenterManagementPage: React.FC = () => {
       setCenters((prev) => prev.map((c) => (c.center_id === id ? { ...c, is_active: newStatus } : c)));
 
       try {
-        if (typeof user?.user_id === "number") {
-          await updateCenterStatus(id, newStatus, user.user_id);
-        } else {
-          throw new Error("No se pudo obtener el ID de usuario para actualizar el estado del centro.");
-        }
+  await updateCenterStatus(id, newStatus, user?.user_id ?? 0);
       } catch (err: any) {
         // Revertir si falla
         setCenters(snapshot);
@@ -227,6 +223,8 @@ const CenterManagementPage: React.FC = () => {
                 {typeof center.fullnessPercentage === "number" && (
                   <p className="fullness-info">Abastecimiento: {center.fullnessPercentage.toFixed(1)}%</p>
                 )}
+                 {/* Aquí añadimos la zona OMZ */}
+                 <span className="zone-info">ZONA OMZ: ----</span>
               </div>
               <div className="center-actions">
                 <Link

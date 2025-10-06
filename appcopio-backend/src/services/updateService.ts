@@ -21,7 +21,8 @@ const baseSelectQuery = `
     SELECT 
         ur.request_id, ur.center_id, ur.description, ur.status, ur.urgency,
         ur.registered_at, ur.resolution_comment, c.name AS center_name,
-        requester.nombre AS requested_by_name, assignee.nombre AS assigned_to_name
+        requester.nombre AS requested_by_name,
+        assignee.nombre AS assigned_to_name
     FROM UpdateRequests ur
     JOIN Centers c ON ur.center_id = c.center_id
     LEFT JOIN Users requester ON ur.requested_by = requester.user_id
@@ -46,6 +47,7 @@ export async function getUpdateRequests(db: Db, filters: { status: string; page:
     const dataQuery = `${baseSelectQuery} ${whereClause} ORDER BY ur.registered_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
     queryParams.push(limit, offset);
 
+   
     const countQuery = `SELECT COUNT(*) FROM UpdateRequests ur ${whereClause}`;
     const countParams = centerId ? [status, centerId] : [status];
 
@@ -59,6 +61,7 @@ export async function getUpdateRequests(db: Db, filters: { status: string; page:
         total: Number(countResult.rows[0].count)
     };
 }
+
 
 /**
  * Crea una nueva solicitud de actualización.
@@ -82,33 +85,47 @@ export async function updateRequestById(db: Db, id: number, data: UpdateRequestU
     const queryParts: string[] = [];
     let paramIndex = 1;
 
-    if (status !== undefined) {
+    // LÓGICA ANTIGUA RESTAURADA: Se usa la comprobación de "truthiness" (ej: if (status))
+    if (status) {
         queryParts.push(`status = $${paramIndex++}`);
         fields.push(status);
     }
-    if (assigned_to !== undefined) {
+    if (assigned_to) {
         queryParts.push(`assigned_to = $${paramIndex++}`);
         fields.push(assigned_to);
     }
-    if (resolution_comment !== undefined) {
+    if (resolution_comment) {
         queryParts.push(`resolution_comment = $${paramIndex++}`);
         fields.push(resolution_comment);
     }
+    
+    // LÓGICA ANTIGUA RESTAURADA:
     if (status && ['approved', 'rejected', 'canceled'].includes(status)) {
-        queryParts.push(`resolved_at = NOW()`, `resolved_by = $${paramIndex++}`);
+        // Se usa CURRENT_TIMESTAMP para ser idéntico al original
+        queryParts.push(`resolved_at = CURRENT_TIMESTAMP`); 
+        queryParts.push(`resolved_by = $${paramIndex++}`);
         fields.push(resolved_by);
     }
 
     if (queryParts.length === 0) {
-        return null; // O lanzar un error si se prefiere
+        // Devolvemos null si no hay nada que actualizar, el controlador lo interpretará.
+        return null;
     }
 
+    fields.push(id); // El ID siempre es el último parámetro
     const query = `UPDATE UpdateRequests SET ${queryParts.join(', ')} WHERE request_id = $${paramIndex} RETURNING *`;
-    fields.push(id);
-
+    
     const result = await db.query(query, fields);
-    return result.rowCount > 0 ? result.rows[0] : null;
-}
+    
+    // Si la consulta se ejecutó pero no afectó a ninguna fila, significa que el ID no se encontró.
+    if (result.rowCount === 0) {
+        throw { status: 404, message: 'Solicitud no encontrada.' };
+    }
+
+    return result.rows[0];
+}  
+
+
 
 /**
  * Elimina una solicitud de actualización por su ID.

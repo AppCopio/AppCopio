@@ -132,7 +132,7 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
             try {
               const full = await getUser(user.user_id, controller.signal);
               if (!mounted) return;
-              const assigned = (full && full.assignedCenters ? full.assignedCenters : []).map(String);
+              const assigned = ((full?.assignedCenters ?? []) as (string | number)[]).map(String);
               setCenterId(assigned[0] ?? "");
             } catch (e: any) {
               if (e?.aborted) return; // cancelación
@@ -242,8 +242,8 @@ export default function UserUpsertModal({ mode, user, onClose, onSaved }: Props)
         await updateUser(user.user_id, payload);
 
         // Reconciliar asignación de centro
-        const full = await getUser(user.user_id);
-        const currentAssigned: string[] = full && full.assignedCenters ? full.assignedCenters.map(String) : [];
+  const full = await getUser(user.user_id);
+  const currentAssigned: string[] = ((full?.assignedCenters ?? []) as (string | number)[]).map(String);
 
         if (needsCenter) {
           if (centerId) {

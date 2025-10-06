@@ -210,6 +210,14 @@
   font-weight: 500;
 }
 
+.omz-toggle-btn {
+  position: absolute;
+  top: 80px; /* Ajusta la distancia desde el borde superior */
+  left: 20px; /* Ajusta la distancia desde el borde izquierdo */
+  z-index: 999; /* Asegura que el botón esté sobre otros elementos */
+  padding: 10px;
+}
+
 /* ========== RESPONSIVIDAD ========== */
 
 @media (max-width: 768px) {
