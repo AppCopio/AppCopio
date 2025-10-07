@@ -1,11 +1,11 @@
 // src/pages/CenterDetailsPage/CenterDetailsPage.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import OperationalStatusControl from "@/components/center/OperationalStatusControl";
 import "./CenterDetailsPage.css";
 
-import type { Center } from "@/types/center";
+import type { CenterData, Center } from "@/types/center";
 import {
   getOneCenter,
   mapStatusToFrontend,
@@ -15,6 +15,12 @@ import {
 import { listCenterInventory } from "@/services/inventory.service";
 
 import { getOmzZoneForCenter } from "@/services/zones.service";
+import { 
+  listNotificationsByCenter, 
+  createNotification,
+  CenterNotification 
+} from '@/services/notifications.service';
+import NotificationsHistory from '@/components/notification/NotificationsHistory';
 
 import ResponsibleSection from "./ResponsibleSection";
 import AssignResponsibleDialog from "./AssingResponsibleDialog";
@@ -43,8 +49,10 @@ const CenterDetailsPage: React.FC = () => {
   const { user } = useAuth();
   const { activation } = useActivation();
 
-  const [center, setCenter] = useState<(Center & { public_note?: string }) | null>(null);
+  const [center, setCenter] = useState<CenterData | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [notifications, setNotifications] = useState<CenterNotification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState(false);
@@ -54,6 +62,26 @@ const CenterDetailsPage: React.FC = () => {
 
   // OMZ zone state
   const [omzZone, setOmzZone] = useState<string | null>(null);
+
+    // Función para cargar las notificaciones
+  const fetchNotifications = useCallback(async () => {
+    if (!centerId) return;
+    
+    setLoadingNotifications(true);
+    try {
+      const data = await listNotificationsByCenter(centerId);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error al cargar notificaciones:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [centerId]);
+
+  // Cargar notificaciones cuando el componente se monta
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   useEffect(() => {
     if (!centerId) return;
@@ -67,18 +95,19 @@ const CenterDetailsPage: React.FC = () => {
           listCenterInventory(centerId),
         ]);
         if (!alive) return;
-
+        
         const mapped = {
           ...(c as any),
           operational_status: mapStatusToFrontend((c as any).operational_status),
         } as Center & { public_note?: string; operational_status?: OperationalStatusUI };
 
-        setCenter(mapped);
+        setCenter(mapped as CenterData);
         setResources(inv);
 
         // Obtener zona OMZ como string
         const omz = await getOmzZoneForCenter(centerId);
         setOmzZone(omz);
+        await fetchNotifications();
       } catch (e: any) {
         setError(e?.response?.data?.message || e?.message || "No se pudieron cargar los detalles del centro.");
       } finally {
@@ -86,7 +115,7 @@ const CenterDetailsPage: React.FC = () => {
       }
     })();
     return () => { alive = false; };
-  }, [centerId]);
+  }, [centerId, fetchNotifications]);
 
   const groupedResources = useMemo(() => {
     return resources.reduce((acc, r) => {
@@ -125,6 +154,7 @@ const CenterDetailsPage: React.FC = () => {
       setIsUpdatingOperationalStatus(false);
     }
   };
+  
 
   const openAssign = (role: AssignRole) => { setAssignRole(role); setAssignOpen(true); };
   const closeAssign = () => setAssignOpen(false);
@@ -138,6 +168,26 @@ const CenterDetailsPage: React.FC = () => {
       </div>
     );
   }
+  const handleSendTestNotification = async () => {
+    if (!centerId || !center?.comunity_charge_id) {
+      alert('El centro no tiene un encargado asociado para recibir la notificación.');
+      return;
+    }
+    
+    try {
+      await createNotification({
+        center_id: centerId,
+        title: 'Prueba de Notificación',
+        message: `Esto es una notificación de prueba para el centro ${center.name}.`,
+        destinatary_id: center.comunity_charge_id,
+      });
+      
+      alert('Notificación de prueba enviada con éxito.');
+      await fetchNotifications(); // Recargar el historial
+    } catch (error: any) {
+      alert(`Error al enviar la notificación: ${error?.message}`);
+    }
+  };
 
   return (
     <div className="center-details-container">
@@ -180,11 +230,6 @@ const CenterDetailsPage: React.FC = () => {
                   <div className="public-note-display">{center.public_note}</div>
                 </div>
               )}
-              {/* Aquí añadimos las zonas OMZ y la oficina asignada */}
-              <div className="info-item">
-                <label>Oficina Municipal:</label>
-                <span>{"----"}</span> {/* Reemplaza esto por el nombre de la oficina cuando esté disponible */}
-              </div>
               <div className="info-item">
                 <label>Zona OMZ:</label>
                 <span>{omzZone ? omzZone : "No asignada"}</span>
@@ -196,7 +241,7 @@ const CenterDetailsPage: React.FC = () => {
                 <OperationalStatusControl
                   centerId={centerId!}
                   currentStatus={mapStatusToFrontend(center.operational_status) ?? "Abierto"}
-                  currentNote={center.public_note}
+                  currentNote={center.public_note ?? undefined}
                   onStatusChange={handleOperationalStatusChange}
                   isUpdating={isUpdatingOperationalStatus}
                 />
@@ -209,35 +254,20 @@ const CenterDetailsPage: React.FC = () => {
         {/* @ts-ignore - backend trae props del catastro fuera de Center UI */}
         <CenterCatastroDetails centerData={center as any} />
 
-        <div className="resources-section">
-          <h3>Recursos Disponibles</h3>
-          {Object.keys(groupedResources).length === 0 ? (
-            <div className="no-resources"><p>No hay recursos registrados en este centro.</p></div>
-          ) : (
-            <div className="resources-grid">
-              {Object.entries(groupedResources).map(([category, items]) => (
-                <div key={category} className="resource-category">
-                  <h4>{category}</h4>
-                  <div className="resource-items">
-                    {items.map((item) => (
-                      <div key={item.item_id} className="resource-item">
-                        <span className="resource-name">{item.name}</span>
-                        <span className="resource-quantity">{item.quantity}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="notifications-section">
+          <NotificationsHistory
+            notifications={notifications}
+            loading={loadingNotifications}
+            onRefresh={fetchNotifications}
+          />
         </div>
 
         <div className="responsible-section">
           <h3>Responsable</h3>
           <div className="responsible-info">
             <ResponsibleSection
-              municipalId={(center as any).municipal_manager_id}
-              comunityId={(center as any).comunity_charge_id}
+              municipalId={center.municipal_manager_id}
+              comunityId={center.comunity_charge_id}
               onAssignMunicipal={() => openAssign("trabajador municipal")}
               onAssignCommunity={() => openAssign("contacto ciudadano")}
             />
@@ -262,9 +292,37 @@ const CenterDetailsPage: React.FC = () => {
                 Formulario FIBE
               </Button>
             )}
-          </div>
+                      </div>
         </div>
+
+        {/* Sección de Historial de Notificaciones */}
+        <div className="notifications-section">
+        <NotificationsHistory
+          notifications={notifications}
+          loading={loadingNotifications}
+          onRefresh={fetchNotifications}
+        />
       </div>
+
+      {/* Botón de prueba (opcional, solo para desarrollo) */}
+      {center?.comunity_charge_id && (
+        <button 
+          onClick={handleSendTestNotification}
+          style={{
+            marginTop: '20px',
+            padding: '10px 20px',
+            background: '#0066cc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 500
+          }}
+        >
+          Enviar Notificación de Prueba
+        </button>
+      )}
+    </div>
     </div>
   );
 };

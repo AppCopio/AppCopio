@@ -4,6 +4,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import listEndpoints from "express-list-endpoints";
+
 
 import pool from "./config/db";
 import authRoutes from "./routes/authRoutes";
@@ -27,6 +29,7 @@ import fieldRoutes from "./routes/fieldRoutes";
 import recordRoutes from "./routes/recordRoutes";
 import templateRoutes from "./routes/templateRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
+import notificationRoutes from "./routes/notificacionRoutes";
 
 dotenv.config();
 
@@ -73,7 +76,7 @@ app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
 app.use("/api/centers", centerRoutes)
-//app.use("/api/products", productRoutes);
+
 app.use("/api/updates", requireAuth, updateRoutes);
 app.use("/api/users", requireAuth, userRouter);
 app.use("/api/inventory", requireAuth, inventoryRoutes);
@@ -86,11 +89,14 @@ app.use("/api/fibe", requireAuth, fibeRoutes);
 app.use("/api/roles", requireAuth, roleRoutes);
 app.use("/api/zones", requireAuth, zoneRoutes); 
 
-app.use("/api/database", databaseRoutes);
-app.use("/api/database-fields", fieldRoutes);
-app.use("/api/database-records", recordRoutes);
-app.use("/api/database-templates", templateRoutes);
-app.use("/api/database-history", auditLogRoutes);
+app.use("/api/database", requireAuth, databaseRoutes);
+app.use("/api/database-fields", requireAuth, fieldRoutes);
+app.use("/api/database-records", requireAuth, recordRoutes);
+app.use("/api/database-templates", requireAuth, templateRoutes);
+app.use("/api/database-history", requireAuth, auditLogRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
@@ -109,4 +115,8 @@ app.listen(port, () => {
       console.error("Error al conectar con la BD al iniciar:", err);
     }
   });
+});
+
+app.get("/__routes", (_req, res) => {
+  res.json(listEndpoints(app));
 });

@@ -2,10 +2,10 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
 import {
-  listFieldsByDatasetDB, createFieldDB, updateFieldDB, softDeleteFieldDB,
+  listFieldsByDatasetDB, createFieldDB, updateFieldDB, moveFieldPositionDB, softDeleteFieldDB,
   listOptionsByFieldDB, createOptionDB, updateOptionDB, softDeleteOptionDB
 } from "../services/fieldService";
-import { DatasetField, DatasetFieldOption, UUID } from "../types/dataset";
+import { DatasetFieldOption } from "../types/dataset";
 
 const router = Router();
 
@@ -55,16 +55,29 @@ const updateField: RequestHandler = async (req, res) => {
   const field_id = req.params.id;
   if (!field_id) { res.status(400).json({ error: "Falta field_id." }); return; }
 
-  const payload = req.body ?? {};
+  const payload = (req.body ?? {}) as Record<string, any>;
+  const toPosition = Number.isInteger(payload.position) ? Number(payload.position) : null;
+  
+  const client = await pool.connect();
   try {
-    const row = await updateFieldDB(pool, field_id, payload);
+    await client.query("BEGIN");
+    if (toPosition !== null) {
+      await moveFieldPositionDB(client, field_id, toPosition);
+      delete payload.position; // ya lo aplicamos por el servicio de mover
+    }
+    const row = await updateFieldDB(client, field_id, payload);
+    await client.query("COMMIT");
     if (!row) { res.status(404).json({ error: "Campo no encontrado." }); return; }
     res.json(row);
   } catch (e: any) {
+    await client.query("ROLLBACK");
     console.error("updateField error:", e);
     if (e.code === "23505") res.status(409).json({ error: "Conflicto de unicidad (key activa)." });
     else if (e.code === "23514") res.status(400).json({ error: "Violación de CHECK (coherencia/formatos)." });
     else res.status(500).json({ error: "Error al actualizar campo." });
+  }
+   finally {
+    client.release();
   }
 };
 
