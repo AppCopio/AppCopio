@@ -80,17 +80,79 @@ const updateField: RequestHandler = async (req, res) => {
     client.release();
   }
 };
-
+//delete
 const deleteField: RequestHandler = async (req, res) => {
   const field_id = req.params.id;
-  if (!field_id) { res.status(400).json({ error: "Falta field_id." }); return; }
+  
+  if (!field_id) { 
+    res.status(400).json({ error: "Falta field_id." }); 
+    return; 
+  }
+  //el confirm es para la segunda validación
+  const confirm = req.query.confirm === 'true' || req.query.confirm === '1';
+
   try {
-    const ok = await softDeleteFieldDB(pool, field_id);
-    if (!ok) { res.status(404).json({ error: "Campo no encontrado." }); return; }
-    res.json({ message: "Campo eliminado (soft-delete).", field_id });
+    console.log("🗑️ Intentando eliminar campo:", field_id, "confirm:", confirm);
+    
+    // Llamar a softDeleteFieldDB con el parámetro confirm
+    const result = await softDeleteFieldDB(pool, field_id, confirm);
+    
+    console.log("📊 Resultado de softDeleteFieldDB:", result);
+
+    // Manejar cada estado posible
+    if (result.status === 'blocked_required') {
+      // ❌ Columna obligatoria - NO se puede eliminar
+      console.log("❌ Bloqueado: Columna obligatoria");
+      res.status(403).json({ 
+        error: result.message || 'No se puede eliminar una columna obligatoria.',
+        status: 'blocked_required',
+        field_id: result.field_id
+      });
+      return;
+    }
+
+    if (result.status === 'needs_confirmation') {
+      // ⚠️ Tiene datos - necesita confirmación (por ahora bloqueamos)
+      console.log("⚠️ Necesita confirmación: Columna tiene datos");
+      res.status(409).json({ 
+        error: result.message || 'La columna contiene datos.',
+        status: 'needs_confirmation',
+        field_id: result.field_id,
+        usage: result.usage
+      });
+      return;
+    }
+
+    if (result.status === 'deleted') {
+      // ✅ Eliminado exitosamente
+      if (!result.field_id) {
+        console.log("❌ Campo no encontrado");
+        res.status(404).json({ error: "Campo no encontrado." });
+        return;
+      }
+      
+      console.log("✅ Campo eliminado exitosamente:", result.field_id);
+      res.json({ 
+        message: "Campo eliminado (soft-delete).", 
+        field_id: result.field_id,
+        status: 'deleted'
+      });
+      return;
+    }
+
+    // Estado inesperado
+    console.error("⚠️ Estado inesperado:", result);
+    res.status(500).json({ 
+      error: "Estado inesperado al eliminar campo.",
+      debug: result
+    });
+
   } catch (e: any) {
-    console.error("deleteField error:", e);
-    res.status(500).json({ error: "Error al eliminar campo." });
+    console.error("💥 Error crítico al eliminar campo:", e);
+    res.status(500).json({ 
+      error: "Error interno al eliminar campo.",
+      details: e?.message || "Error desconocido"
+    });
   }
 };
 
