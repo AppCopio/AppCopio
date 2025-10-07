@@ -52,7 +52,7 @@ export const TEMPLATES: TemplateItem[] = [
             { name: "Número de folio", key: "numero_folio", field_type: "text", position: 10, is_required: true, settings: {} },
             { name: "Nombre", key: "nombre", field_type: "text", position: 20, is_required: true, settings: {} },
             { name: "Edad", key: "edad", field_type: "number", position: 30, is_required: false, settings: {} },
-            { name: "Rut", key: "rut", field_type: "text", position: 40, is_required: false, settings: {} },
+            { name: "Rut", key: "rut", field_type: "text", position: 40, is_required: true, settings: {} },
             { name: "Observaciones", key: "observaciones", field_type: "text", position: 50, is_required: false, settings: {} },
             { name: "Contactos", key: "contactos", field_type: "text", position: 60, is_required: false, settings: {} }, 
         ],
