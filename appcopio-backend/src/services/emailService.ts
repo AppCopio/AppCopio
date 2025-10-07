@@ -1,5 +1,21 @@
 import nodemailer from "nodemailer";
+import type { SendEmailInput } from "../types/email";
+import { Db } from "../types/db";
 
+export async function getUserEmailById(db: Db, user_id: string): Promise<string | null> {
+  const sql = `
+    SELECT email, is_active
+    FROM users
+    WHERE user_id = $1
+    LIMIT 1
+  `;
+  const { rows } = await db.query(sql, [user_id]);
+  if (!rows[0]) return null;
+  if (rows[0].is_active !== true) return null; 
+  return rows[0].email || null;
+}
+
+// Envío de email 
 const {
   SMTP_HOST,
   SMTP_PORT,
@@ -8,10 +24,6 @@ const {
   SMTP_PASS,
   SMTP_FROM,
 } = process.env;
-
-if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
-  console.warn("[email] Variables SMTP faltantes. Revisa .env");
-}
 
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
@@ -23,19 +35,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export type SendEmailInput = {
-  to: string;
-  subject: string;
-  text?: string;
-  html?: string;
-  replyTo?: string;
-};
-
 export async function sendEmail(input: SendEmailInput) {
-  const from = SMTP_FROM || `AppCopio <${SMTP_USER}>`;
+  const from = SMTP_FROM;;
   const { to, subject, text, html, replyTo } = input;
 
-  // Validación mínima sin librerías (opcional pero útil)
   if (!to || !subject || (!text && !html)) {
     throw new Error("Faltan campos: 'to', 'subject' y 'text' o 'html'.");
   }
@@ -45,7 +48,7 @@ export async function sendEmail(input: SendEmailInput) {
     to,
     subject,
     text,
-    html: html || (text ? `<pre>${escapeHtml(text)}</pre>` : undefined),
+    html: html,
     replyTo,
   });
 
@@ -55,11 +58,6 @@ export async function sendEmail(input: SendEmailInput) {
   };
 }
 
-function escapeHtml(str: string) {
-  return str
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+export async function textEmail(input: string) {
+
 }

@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
-import { sendEmail } from "../services/emailService";
+import { sendEmail, getUserEmailById } from "../services/emailService";
 import {
   createNotification as createNotificationService,
   updateStatus as updateStatusService,
@@ -19,6 +19,7 @@ const allowedStatus = new Set(['queued', 'sent', 'failed']);
 // POST /notifications  (crear/enviar notificación)
 // ---------------------------------------------
 const createNotification: RequestHandler = async (req, res, next) => {
+  const client = await pool.connect();
   try {
     const {
       center_id,
@@ -31,10 +32,12 @@ const createNotification: RequestHandler = async (req, res, next) => {
     } = req.body || {};
 
     if (!center_id || !title || !message) {
+      client.release();
       return res.status(400).json({ error: "center_id, title y message son obligatorios" });
     }
 
-    const row = await createNotificationService(pool, {
+    await client.query("BEGIN");
+    const row = await createNotificationService(client, {
       center_id,
       activation_id,
       destinatary,
@@ -44,8 +47,34 @@ const createNotification: RequestHandler = async (req, res, next) => {
       channel,
     });
 
-    return res.status(201).json({ data: row });
+    // Enviar email
+    const toEmail = await getUserEmailById(client, destinatary);
+    let emailStatus: "sent" | "skipped" | "failed" = "skipped";
+    let emailError: string | undefined;
+    if (toEmail) {
+      try {
+        await sendEmail({
+          to: toEmail,
+          subject: title,
+          text: message,
+          html: ""
+        });
+        emailStatus = "sent";
+      } catch (e: any) {
+        emailStatus = "failed";
+        emailError = e?.message || String(e);
+        console.error("[notifications] email send failed:", emailError);
+      }
+    }
+    
+    await client.query("COMMIT");
+    client.release();
+    return res.status(201).json({ 
+      data: row, 
+      email: emailStatus === "failed" ? { status: emailStatus, error: emailError } : { status: emailStatus } });
   } catch (err) {
+    await client.query("ROLLBACK");
+    client.release();
     next(err);
   }
 };
