@@ -195,43 +195,96 @@ const updateFamily: RequestHandler = async (req, res) => {
  * @description Registra la salida de un grupo familiar de un centro.
  */
 const departFamilyGroup: RequestHandler = async (req, res) => {
-    const familyId = parseInt(req.params.familyId, 10);
-    if (isNaN(familyId)) {
-        res.status(400).json({ error: "El ID de la familia debe ser un número válido." });
-        return;
+  const familyId = parseInt(req.params.familyId, 10);
+  if (isNaN(familyId)) {
+    res.status(400).json({ error: "El ID de la familia debe ser un número válido." });
+    return;
+  }
+
+  const { departure_reason, destination_activation_id } = req.body;
+  if (!departure_reason) {
+    res.status(400).json({ error: "El motivo de la salida es obligatorio." });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    if (departure_reason === "traslado" && destination_activation_id) {
+      // 1. Obtener el activation_id actual de la familia
+      const current = await client.query(
+        `SELECT activation_id FROM FamilyGroups WHERE family_id = $1`,
+        [familyId]
+      );
+
+      if (current.rowCount === 0) {
+        res.status(400).json({ error: "Grupo Familiar NO Encontrado." });
+      }
+
+      const currentActivationId = current.rows[0].activation_id;
+
+      //  Restricción: no permitir traslado al mismo centro
+      if (currentActivationId === destination_activation_id) {
+        res.status(400).json({ error: "No se puede trasladar al mismo centro." });
+      }
+
+      // 2. Marcar la estadía actual como inactiva
+      await client.query(
+        `UPDATE FamilyGroups
+         SET status = 'inactivo',
+             departure_date = NOW(),
+             departure_reason = $1,
+             destination_activation_id = $2
+         WHERE family_id = $3`,
+        [departure_reason, destination_activation_id, familyId]
+      );
+
+      // 3. Crear nueva estadía en el centro destino
+      const insertResult = await client.query(
+        `INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones, necesidades_basicas, status)
+         SELECT $1, jefe_hogar_person_id, observaciones, necesidades_basicas, 'activo'
+         FROM FamilyGroups
+         WHERE family_id = $2
+         RETURNING family_id`,
+        [destination_activation_id, familyId]
+      );
+
+      const newFamilyId = insertResult.rows[0].family_id;
+
+      // 4. Copiar miembros de la familia
+      await client.query(
+        `INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco)
+         SELECT $1, person_id, parentesco
+         FROM FamilyGroupMembers
+         WHERE family_id = $2`,
+        [newFamilyId, familyId]
+      );
+    } else {
+      // Caso normal: salida definitiva (no traslado)
+      const updateResult = await client.query(
+        `UPDATE FamilyGroups
+         SET status = 'inactivo',
+             departure_date = NOW(),
+             departure_reason = $1
+         WHERE family_id = $2`,
+        [departure_reason, familyId]
+      );
+
+      if (updateResult.rowCount === 0) {
+         res.status(400).json({ error: "Grupo familiar no encontrado para inactivarlo." });
+      }
     }
 
-    const { departure_reason } = req.body;
-    if (!departure_reason) {
-        res.status(400).json({ error: 'El motivo de la salida es obligatorio.' });
-        return;
-    }
-    
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        // Actualizar el estado del grupo a 'inactivo'
-        const updateResult = await client.query(
-            `UPDATE FamilyGroups 
-             SET status = 'inactivo', departure_date = NOW(), departure_reason = $1
-             WHERE family_id = $2`,
-            [departure_reason, familyId]
-        );
-
-        if (updateResult.rowCount === 0) {
-            throw new Error('Grupo familiar no encontrado.');
-        }
-
-        await client.query('COMMIT');
-        res.status(200).json({ message: 'Salida del grupo familiar registrada con éxito.' });
-    } catch (error: any) {
-        await client.query('ROLLBACK');
-        console.error(`Error en departFamilyGroup (id: ${familyId}):`, error);
-        res.status(500).json({ error: error.message || 'Error interno del servidor.' });
-    } finally {
-        client.release();
-    }
+    await client.query("COMMIT");
+    res.status(200).json({ message: "Salida del grupo familiar registrada con éxito." });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error(`Error en departFamilyGroup (id: ${familyId}):`, error);
+    res.status(500).json({ error: error.message || "Error interno del servidor." });
+  } finally {
+    client.release();
+  }
 };
 
 

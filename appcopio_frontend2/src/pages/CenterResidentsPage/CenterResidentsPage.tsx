@@ -22,6 +22,19 @@ import {
   registerFamilyDeparture,
 } from "@/services/residents.service";
 
+
+const toISODate = (s?: string) => {
+  if (!s) return "";
+  const iso = s.includes(" ") ? s.replace(" ", "T") : s;  // "YYYY-MM-DDTHH:mm:ssZ"
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+};
+
+const formatCL = (s?: string) => {
+  if (!s) return "";
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CL", { timeZone: "UTC" });
+};
 const CenterResidentsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
   const navigate = useNavigate();
@@ -269,7 +282,14 @@ const exportToPDF = async () => {
         }
 
         setGroups(Array.isArray(grps) ? grps : []);
-        setPeople(Array.isArray(ppl) ? ppl : []);
+        const raw = Array.isArray(ppl) ? ppl : [];
+        const normalized = raw.map((p: any) => ({
+          ...p,
+          // toma la primera disponible y deja "YYYY-MM-DD"
+          fecha_ingreso: toISODate(p.fecha_ingreso ?? p.fechaIngreso ?? p.created_at ?? p.createdAt),
+          fecha_salida:  toISODate(p.fecha_salida  ?? p.fechaSalida),
+        }));
+        setPeople(normalized);
         setActiveCenters(Array.isArray(actives) ? actives : []);
       } catch (e: any) {
         if (!cancel) setError(e?.response?.data?.message || e?.message || "Error al cargar los datos.");
@@ -355,8 +375,8 @@ const exportToPDF = async () => {
       return (
         (filters.nombre ? person.nombre.toLowerCase().includes(filters.nombre.toLowerCase()) : true) &&
         (filters.rut ? person.rut.includes(filters.rut) : true) &&
-        (filters.fechaIngreso ? (person.fecha_ingreso || "").includes(filters.fechaIngreso) : true) &&
-        (filters.fechaSalida ? (person.fecha_salida || "").includes(filters.fechaSalida) : true) &&
+        (filters.fechaIngreso ? (person.fecha_ingreso || "") === filters.fechaIngreso : true) &&
+        (filters.fechaSalida  ? (person.fecha_salida  || "") === filters.fechaSalida  : true) &&
         (filters.edad ? String(person.edad).includes(String(filters.edad)) : true) &&
         (filters.genero ? person.genero.toLowerCase().includes(filters.genero.toLowerCase()) : true)
       );
@@ -532,8 +552,8 @@ const exportToPDF = async () => {
                   <tr key={person.rut}>
                     <td>{`${person.nombre} ${person.primer_apellido} ${person.segundo_apellido || ""}`.trim()}</td>
                     <td>{person.rut}</td>
-                    <td>{person.fecha_ingreso}</td>
-                    <td>{person.fecha_salida}</td>
+                    <td>{formatCL(person.fecha_ingreso)}</td>
+                    <td>{formatCL(person.fecha_salida)}</td>
                     <td>{person.edad}</td>
                     <td>{person.genero}</td>
                     <td>{person.primer_apellido}</td>

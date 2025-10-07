@@ -8,6 +8,13 @@ import { Center } from "@/types/center";
 import { listCenters, updateCenterStatus, deleteCenter } from "@/services/centers.service";
 import { getOmzZoneForCenter } from "@/services/zones.service";
 
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { listPeopleByCenter } from "@/services/residents.service";
+import { listCenterInventory } from "@/services/inventory.service";
+import { listUpdates } from "@/services/updates.service";
+
+
 const StatusSwitch: React.FC<{
   center: Center;
   onToggle: (id: string) => void;
@@ -153,6 +160,183 @@ const CenterManagementPage: React.FC = () => {
     setTypeFilter("todos");
     setLocationFilter("");
   };
+  const handleExportCenter = async (center: Center) => {
+      // 1. Datos del centro
+      const centerData = [
+        {
+          ID: center.center_id,
+          Nombre: center.name,
+          Dirección: center.address,
+          Tipo: center.type,
+          Activo: center.is_active ? "Sí" : "No",
+          Porcentaje: typeof center.fullnessPercentage === "number"
+            ? `${center.fullnessPercentage.toFixed(1)}%`
+            : "N/A"
+        }
+      ];
+  
+      const wb = XLSX.utils.book_new();
+      const centerSheet = XLSX.utils.json_to_sheet(centerData);
+      XLSX.utils.book_append_sheet(wb, centerSheet, "Centro");
+  
+      // 2. Personas del centro
+      try {
+        const people = await listPeopleByCenter(center.center_id);
+        console.log("Personas obtenidas:", people);
+  
+        const peopleFormatted = people.map((p) => ({
+          RUT: p.rut ?? "",
+          Nombre: p.nombre ?? "",
+          Edad: p.edad ?? "",
+          Género: p.genero ?? "",
+          "Fecha de Ingreso": p.fecha_ingreso ?? "",
+          "Fecha de Salida": p.fecha_salida ?? "",
+          "Primer Apellido": p.primer_apellido ?? "",
+          "Segundo Apellido": p.segundo_apellido ?? "",
+          Nacionalidad: p.nacionalidad ?? "",
+          Estudia: p.estudia ? "Sí" : "No",
+          Trabaja: p.trabaja ? "Sí" : "No",
+          "Perdió Trabajo": p.perdida_trabajo ? "Sí" : "No",
+          Rubro: p.rubro ?? "",
+          Discapacidad: p.discapacidad ? "Sí" : "No",
+          Dependencia: p.dependencia ? "Sí" : "No",
+        }));
+  
+        const peopleSheet =
+          peopleFormatted.length > 0
+            ? XLSX.utils.json_to_sheet(peopleFormatted)
+            : XLSX.utils.json_to_sheet([
+                {
+                  RUT: "",
+                  Nombre: "",
+                  Edad: "",
+                  Género: "",
+                  "Fecha de Ingreso": "",
+                  "Fecha de Salida": "",
+                  "Primer Apellido": "",
+                  "Segundo Apellido": "",
+                  Nacionalidad: "",
+                  Estudia: "",
+                  Trabaja: "",
+                  "Perdió Trabajo": "",
+                  Rubro: "",
+                  Discapacidad: "",
+                  Dependencia: "",
+                },
+              ]); // hoja vacía con columnas
+  
+        XLSX.utils.book_append_sheet(wb, peopleSheet, "Personas");
+      } catch (error) {
+        console.error("Error al cargar personas del centro", error);
+        window.alert("No se pudieron incluir las personas del centro en el Excel.");
+      }
+  
+      // 3. Inventario
+      const inventory = await listCenterInventory(center.center_id);
+      const inventorySheetData = inventory.map((item) => ({
+        Categoría: item.category || "Sin categoría",
+        Nombre: item.name,
+        Cantidad: item.quantity,
+        Unidad: item.unit || "-",
+        "Última Actualización": new Date(item.updated_at).toLocaleString(),
+        "Actualizado Por": item.updated_by_user || "Sistema",
+      }));
+      const inventorySheet = XLSX.utils.json_to_sheet(inventorySheetData);
+      XLSX.utils.book_append_sheet(wb, inventorySheet, "Inventario");
+  
+      // 2.7) Actualizaciones del centro (todas las categorías)
+      try {
+        // helper para traer TODO sin depender de la paginación de la vista
+        const fetchAllUpdatesForCenter = async (centerId: string) => {
+          const STATUSES: Array<"pending"|"approved"|"rejected"|"canceled"> = [
+            "pending","approved","rejected","canceled"
+          ];
+          const all: any[] = [];
+          // si tu API soporta status=all, cambia a una sola llamada con limit alto
+          const LIMIT = 500; // sube si esperas más
+          for (const status of STATUSES) {
+            let page = 1;
+            // bucle de páginas por estado
+            // tu listUpdates acepta: { status, page, limit, centerId, signal? }
+            // si acepta centerId como string | undefined, pásalo como String(center.center_id)
+            // si tu backend no necesita status para "todas", puedes omitir el for y usar status: undefined
+            // mantengo por compatibilidad con lo que mostraste.
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+              const resp = await listUpdates({
+                status,
+                page,
+                limit: LIMIT,
+                centerId: String(center.center_id)
+              } as any);
+              const items = resp?.requests ?? [];
+              all.push(...items);
+              if (items.length < LIMIT) break; // última página de ese status
+              page++;
+            }
+          }
+          // opcional: ordenar por fecha descendente
+          all.sort((a,b) => new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime());
+          return all;
+        };
+        const updates = await fetchAllUpdatesForCenter(String(center.center_id));
+  
+        const updatesSheetData = (updates.length ? updates : [{
+          registered_at: "",
+          center_name: "",
+          requested_by_name: "",
+          description: "",
+          urgency: "",
+          status: "",
+          assigned_to_name: "",
+          resolution_comment: ""
+        }]).map((u: any) => ({
+          "Fecha": u.registered_at ? new Date(u.registered_at).toLocaleString() : "",
+          "Centro": u.center_name ?? "",
+          "Solicitado por": u.requested_by_name ?? "",
+          "Descripción": u.description ?? "",
+          "Urgencia": u.urgency ?? "",
+          "Estado": u.status ?? "",
+          "Asignado a": u.assigned_to_name ?? "Sin asignar",
+          "Comentario de resolución": u.resolution_comment ?? ""
+        }));
+  
+        const updatesSheet = XLSX.utils.json_to_sheet(updatesSheetData);
+  
+        // (opcional) ajustar ancho de columnas
+        const colWidths = [
+          { wch: 20 }, // Fecha
+          { wch: 28 }, // Centro
+          { wch: 24 }, // Solicitado por
+          { wch: 60 }, // Descripción
+          { wch: 10 }, // Urgencia
+          { wch: 12 }, // Estado
+          { wch: 24 }, // Asignado a
+          { wch: 40 }, // Comentario
+        ];
+        (updatesSheet as any)["!cols"] = colWidths;
+  
+        XLSX.utils.book_append_sheet(wb, updatesSheet, "Actualizaciones");
+      } catch (e) {
+        console.error("Error al cargar actualizaciones del centro", e);
+        const updatesSheet = XLSX.utils.json_to_sheet([{
+          "Fecha": "", "Centro": "", "Solicitado por": "", "Descripción": "",
+          "Urgencia": "", "Estado": "", "Asignado a": "", "Comentario de resolución": ""
+        }]);
+        XLSX.utils.book_append_sheet(wb, updatesSheet, "Actualizaciones");
+      }
+      
+  
+      // 4. Hojas vacías
+      const emptySheet = XLSX.utils.aoa_to_sheet([[]]);
+      XLSX.utils.book_append_sheet(wb, emptySheet, "Encargados");
+      XLSX.utils.book_append_sheet(wb, emptySheet, "Donaciones");
+  
+      // 5. Exportar
+      const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([buffer], { type: "application/octet-stream" });
+      saveAs(blob, `Centro_${center.center_id}.xlsx`);
+    };
 
   if (isLoading || isAuthLoading) {
     return <div className="center-management-container">Cargando...</div>;
@@ -241,6 +425,16 @@ const CenterManagementPage: React.FC = () => {
                 </span>
               </div>
               <div className="center-actions">
+                {user?.es_apoyo_admin === true && (
+                  <button
+                    onClick={() => handleExportCenter(center)}
+                    className="inventory-btn"
+                    title="Descargar Excel de este centro"
+                    disabled={isAuthLoading}
+                  >
+                    Exportar Excel
+                  </button>
+                )}
                 <Link
                   to={`/center/${center.center_id}/inventory`}
                   className={`inventory-btn ${isAuthLoading ? "disabled-link" : ""}`}
