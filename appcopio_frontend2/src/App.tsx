@@ -33,7 +33,7 @@ import CenterEditPage from "@/pages/CenterEditPage/CenterEditPage";
 import MultiStepCenterForm from "@/pages/CreateCenterPage/steps/MultiStepCenterForm";
 import MyUserPage from "@/pages/MyUserPage/MyUserPage";
 import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
-//import NotificationsPage from './pages/NotificationsPage/NotificationsPage'; // Importa la nueva página
+import NotificationsPage from './pages/NotificationsPage/NotificationsPage'; // Importa la nueva página
 import { ActivationProvider } from "@/contexts/ActivationContext";
 import DatabasesPage from "@/pages/Databases/DatabasesPage";
 import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
@@ -69,7 +69,7 @@ export default function App() {
               <Route path={paths.admin.updates} element={<UpdatesPage />} />
               <Route path={paths.profile} element={<MyUserPage />} />
               <Route path={paths.myCenters} element={<MisCentrosPage />} />
-              {/*<Route path={paths.notifications} element={<NotificationsPage />} />*/}
+              <Route path={paths.notifications} element={<NotificationsPage />} />
 
               {/* center/:centerId con hijos relativos + providers/guards */}
               <Route path={paths.center.pattern} element={<CenterLayout />}>

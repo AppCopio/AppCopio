@@ -90,12 +90,15 @@ export default function DatabaseDetailPage() {
       setError(null);
       try {
         // Usar el endpoint "general-view" que trae TODO (incluyendo relaciones)
+        const normalizeField = (f: any) => ({
+          ...f,
+          is_required: f.is_required ?? f.required ?? false,
+        });
         const snapshot = await databasesService.getSnapshot(id);
         
         if (alive) {
           setDb(snapshot.dataset);
-          setFields(snapshot.columns.sort((a: DatabaseField, b:DatabaseField ) => a.position - b.position));
-          
+          setFields(snapshot.columns.map(normalizeField).sort((a: any, b: any) => a.position - b.position));          
           // Convertir los registros del snapshot a nuestro formato
           // El snapshot ya incluye las relaciones en cada record.cells
           const enrichedRecords = snapshot.records.map((rec:any ) => {
@@ -175,7 +178,9 @@ export default function DatabaseDetailPage() {
         name: colName,
         key: slugify(colName) + Date.now(),
         field_type: newFieldType, 
+        type: newFieldType, 
         position: nextPosition,
+        required: newFieldRequired,
         is_required: newFieldRequired,
         is_active: true,
         is_multi: newFieldType === "multi_select", // ✅ Importante para multi_select
@@ -216,8 +221,9 @@ export default function DatabaseDetailPage() {
   }
   
   // ✅ VALIDACIÓN 1: Verificar si es columna obligatoria
-  if (field.is_required) {
-    alert("❌ No se puede eliminar una columna obligatoria.\n\nLas columnas marcadas como obligatorias no pueden ser eliminadas para mantener la integridad de los datos.");
+  const isRequired = (field as any).is_required ?? (field as any).required ?? false;
+  if (isRequired) {
+    alert("❌ No se puede eliminar una columna obligatoria.\n\nLas columnas marcadas como requeridas no pueden ser eliminadas para mantener la integridad de los datos.");
     return;
   }
   
@@ -270,7 +276,14 @@ export default function DatabaseDetailPage() {
   // Proceder con la eliminación
   try {
     await fieldsService.remove(field_id);
-    setFields(prev => prev.filter(f => f.field_id !== field_id));
+    const refreshed = await fieldsService.list(db!.dataset_id);
+    const stillExists = refreshed.some(f => f.field_id === field_id);
+
+    if (stillExists) {
+      alert("❌ El backend rechazó la eliminación (probablemente la columna es obligatoria o hay una restricción). No se realizaron cambios.");
+      return;
+    }
+    setFields(refreshed.sort((a, b) => a.position - b.position));
     
     // Notificación de éxito
     if (hasData) {

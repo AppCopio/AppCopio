@@ -13,7 +13,12 @@ import {
   OperationalStatusUI,
 } from "@/services/centers.service";
 import { listCenterInventory } from "@/services/inventory.service";
-import { listNotificationsByCenter, createNotification, CenterNotification } from "@/services/notifications.service";
+import { 
+  listNotificationsByCenter, 
+  createNotification,
+  CenterNotification 
+} from '@/services/notifications.service';
+import NotificationsHistory from '@/components/notification/NotificationsHistory';
 
 import ResponsibleSection from "./ResponsibleSection";
 import AssignResponsibleDialog from "./AssingResponsibleDialog";
@@ -45,6 +50,7 @@ const CenterDetailsPage: React.FC = () => {
   const [center, setCenter] = useState<CenterData | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [notifications, setNotifications] = useState<CenterNotification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState(false);
@@ -52,15 +58,25 @@ const CenterDetailsPage: React.FC = () => {
   const [assignRole, setAssignRole] = useState<AssignRole | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
 
+    // Función para cargar las notificaciones
   const fetchNotifications = useCallback(async () => {
     if (!centerId) return;
+    
+    setLoadingNotifications(true);
     try {
-      const notifs = await listNotificationsByCenter(centerId);
-      setNotifications(notifs);
-    } catch (e) {
-      console.error("Error fetching notifications:", e);
+      const data = await listNotificationsByCenter(centerId);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error al cargar notificaciones:', error);
+    } finally {
+      setLoadingNotifications(false);
     }
   }, [centerId]);
+
+  // Cargar notificaciones cuando el componente se monta
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   useEffect(() => {
     if (!centerId) return;
@@ -130,24 +146,6 @@ const CenterDetailsPage: React.FC = () => {
     }
   };
   
-  const handleSendTestNotification = async () => {
-    if (!centerId || !center?.comunity_charge_id) {
-      alert("El centro no tiene un encargado asociado para recibir la notificación.");
-      return;
-    }
-    try {
-      await createNotification({
-        center_id: centerId,
-        title: "Prueba de Notificación",
-        message: `Esto es una notificación de prueba para el centro ${center.name}.`,
-        destinatary_id: center.comunity_charge_id,
-      });
-      alert("Notificación de prueba enviada con éxito.");
-      await fetchNotifications();
-    } catch (e: any) {
-      alert(`Error al enviar la notificación: ${e?.message}`);
-    }
-  };
 
   const openAssign = (role: AssignRole) => { setAssignRole(role); setAssignOpen(true); };
   const closeAssign = () => setAssignOpen(false);
@@ -161,6 +159,26 @@ const CenterDetailsPage: React.FC = () => {
       </div>
     );
   }
+  const handleSendTestNotification = async () => {
+    if (!centerId || !center?.comunity_charge_id) {
+      alert('El centro no tiene un encargado asociado para recibir la notificación.');
+      return;
+    }
+    
+    try {
+      await createNotification({
+        center_id: centerId,
+        title: 'Prueba de Notificación',
+        message: `Esto es una notificación de prueba para el centro ${center.name}.`,
+        destinatary_id: center.comunity_charge_id,
+      });
+      
+      alert('Notificación de prueba enviada con éxito.');
+      await fetchNotifications(); // Recargar el historial
+    } catch (error: any) {
+      alert(`Error al enviar la notificación: ${error?.message}`);
+    }
+  };
 
   return (
     <div className="center-details-container">
@@ -232,27 +250,12 @@ const CenterDetailsPage: React.FC = () => {
         {/* @ts-ignore - backend trae props del catastro fuera de Center UI */}
         <CenterCatastroDetails centerData={center as any} />
 
-        <div className="resources-section">
-          <h3>Recursos Disponibles</h3>
-          {Object.keys(groupedResources).length === 0 ? (
-            <div className="no-resources"><p>No hay recursos registrados en este centro.</p></div>
-          ) : (
-            <div className="resources-grid">
-              {Object.entries(groupedResources).map(([category, items]) => (
-                <div key={category} className="resource-category">
-                  <h4>{category}</h4>
-                  <div className="resource-items">
-                    {items.map((item) => (
-                      <div key={item.item_id} className="resource-item">
-                        <span className="resource-name">{item.name}</span>
-                        <span className="resource-quantity">{item.quantity}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="notifications-section">
+          <NotificationsHistory
+            notifications={notifications}
+            loading={loadingNotifications}
+            onRefresh={fetchNotifications}
+          />
         </div>
 
         <div className="responsible-section">
@@ -285,45 +288,37 @@ const CenterDetailsPage: React.FC = () => {
                 Formulario FIBE
               </Button>
             )}
-            
-            {center?.comunity_charge_id && (
-              <Button variant="outlined" onClick={handleSendTestNotification} style={{ marginTop: '20px' }}>
-                Enviar Notificación de Prueba
-              </Button>
-            )}
-
-          </div>
+                      </div>
         </div>
 
         {/* Sección de Historial de Notificaciones */}
-        <div className="resources-section">
-          <h3>Historial de Notificaciones</h3>
-          {notifications.length === 0 ? (
-            <div className="no-resources"><p>No hay notificaciones enviadas para este centro.</p></div>
-          ) : (
-            <div className="resources-grid">
-              {notifications.map(notif => (
-                <div key={notif.notification_id} className="resource-category">
-                  <h4>{notif.title}</h4>
-                  <div className="resource-items">
-                    <div className="resource-item">
-                      <span className="resource-name">{notif.message}</span>
-                    </div>
-                    <div className="resource-item">
-                      <span className="resource-name">Fecha:</span>
-                      <span className="resource-quantity">{new Date(notif.event_at).toLocaleString()}</span>
-                    </div>
-                    <div className="resource-item">
-                      <span className="resource-name">Destinatario:</span>
-                      <span className="resource-quantity">{notif.destinatary_name ?? 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="notifications-section">
+        <NotificationsHistory
+          notifications={notifications}
+          loading={loadingNotifications}
+          onRefresh={fetchNotifications}
+        />
       </div>
+
+      {/* Botón de prueba (opcional, solo para desarrollo) */}
+      {center?.comunity_charge_id && (
+        <button 
+          onClick={handleSendTestNotification}
+          style={{
+            marginTop: '20px',
+            padding: '10px 20px',
+            background: '#0066cc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 500
+          }}
+        >
+          Enviar Notificación de Prueba
+        </button>
+      )}
+    </div>
     </div>
   );
 };

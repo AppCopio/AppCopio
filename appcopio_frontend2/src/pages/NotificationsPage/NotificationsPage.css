@@ -1,68 +1,350 @@
-.notifications-container {
-    padding: 20px;
-    max-width: 800px;
-    margin: auto;
-    font-family: Arial, sans-serif;
+/* appcopio_frontend2/src/pages/NotificationsPage/NotificationsPage.css */
+
+.notifications-page-container {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-.notifications-container h1 {
-    color: #333;
-    text-align: center;
-    margin-bottom: 20px;
+/* Header */
+.inbox-header {
+  background: white;
+  padding: 32px;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.header-title svg {
+  color: #0066cc;
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.unread-badge {
+  background: #ef4444;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-btn {
+  padding: 10px 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  color: #666;
+}
+
+.filter-btn:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+
+.filter-btn.active {
+  background: #0066cc;
+  color: white;
+  border-color: #0066cc;
+}
+
+.refresh-btn {
+  padding: 10px 20px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: #e0e0e0;
+}
+
+/* Notifications List */
 .notifications-list {
-    list-style-type: none;
-    padding: 0;
+  background: white;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  overflow: hidden;
 }
 
-.notification-item {
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.notification-card {
+  display: flex;
+  gap: 16px;
+  padding: 20px 32px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.notification-card:last-child {
+  border-bottom: none;
+}
+
+.notification-card:hover {
+  background: #fafafa;
+}
+
+.notification-card.selected {
+  background: #f0f7ff;
+}
+
+.notification-card.unread {
+  background: #fffbf0;
+}
+
+.notification-card.unread:hover {
+  background: #fff8e6;
+}
+
+.notification-indicator {
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.unread-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .notification-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 8px;
 }
 
-.notification-header h3 {
-    margin: 0;
-    color: #0056b3;
+.notification-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
 .notification-date {
-    font-size: 0.9em;
-    color: #666;
+  color: #999;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .notification-message {
-    color: #444;
-    line-height: 1.5;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 12px 0;
 }
 
 .notification-footer {
-    text-align: right;
-    margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.notification-footer a {
-    color: #007bff;
-    text-decoration: none;
-    font-size: 0.9em;
+.center-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
 }
 
-.notification-footer a:hover {
-    text-decoration: underline;
+.center-label {
+  color: #999;
 }
 
-.notifications-container p.error-message {
-    color: #d9534f;
-    text-align: center;
+.center-name {
+  color: #0066cc;
+  font-weight: 600;
+}
+
+.go-to-center-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #0066cc;
+  background: white;
+  color: #0066cc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.go-to-center-btn:hover {
+  background: #0066cc;
+  color: white;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 80px 40px;
+  background: white;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.empty-state svg {
+  color: #ccc;
+  margin-bottom: 24px;
+}
+
+.empty-state h2 {
+  margin: 0 0 8px 0;
+  color: #666;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #999;
+  font-size: 14px;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 80px 40px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.spinner {
+  border: 3px solid #f0f0f0;
+  border-top: 3px solid #0066cc;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 24px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  color: #999;
+  font-size: 14px;
+}
+
+/* Error State */
+.error-state {
+  text-align: center;
+  padding: 80px 40px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.error-message {
+  color: #ef4444;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.retry-btn {
+  padding: 10px 20px;
+  border: none;
+  background: #0066cc;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: #0052a3;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .notifications-page-container {
+    padding: 16px;
+  }
+
+  .inbox-header {
+    padding: 24px 20px 16px;
+  }
+
+  .header-title h1 {
+    font-size: 24px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-buttons {
+    width: 100%;
+  }
+
+  .filter-btn {
+    flex: 1;
+  }
+
+  .notification-card {
+    padding: 16px 20px;
+  }
+
+  .notification-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .notification-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
