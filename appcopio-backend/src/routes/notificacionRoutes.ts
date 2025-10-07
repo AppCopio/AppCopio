@@ -7,7 +7,8 @@ import {
   markRead,
   listByUser,
   listByCenter,
-  getNotificationById
+  getNotificationById,
+  sendNotification
 } from "../services/notificationService";
 import type { NotificationStatus } from "../types/notification";
 
@@ -37,7 +38,7 @@ const createNotification: RequestHandler = async (req, res, next) => {
     }
 
     await client.query("BEGIN");
-    const row = await createNotificationService(client, {
+    const result = await sendNotification(client, {
       center_id,
       activation_id,
       destinatary,
@@ -46,32 +47,10 @@ const createNotification: RequestHandler = async (req, res, next) => {
       event_at,
       channel,
     });
-
-    // Enviar email
-    const toEmail = await getUserEmailById(client, destinatary);
-    let emailStatus: "sent" | "skipped" | "failed" = "skipped";
-    let emailError: string | undefined;
-    if (toEmail) {
-      try {
-        await sendEmail({
-          to: toEmail,
-          subject: title,
-          text: message,
-          html: ""
-        });
-        emailStatus = "sent";
-      } catch (e: any) {
-        emailStatus = "failed";
-        emailError = e?.message || String(e);
-        console.error("[notifications] email send failed:", emailError);
-      }
-    }
-    
     await client.query("COMMIT");
     client.release();
-    return res.status(201).json({ 
-      data: row, 
-      email: emailStatus === "failed" ? { status: emailStatus, error: emailError } : { status: emailStatus } });
+    
+    return res.status(201).json(result);
   } catch (err) {
     await client.query("ROLLBACK");
     client.release();

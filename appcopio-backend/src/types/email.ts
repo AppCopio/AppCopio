@@ -5,3 +5,5 @@ export type SendEmailInput = {
   html?: string;
   replyTo?: string;
 };
+
+export type EmailStatus = "sent" | "skipped" | "failed";

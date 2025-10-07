@@ -1,10 +1,34 @@
 import { Db } from "../types/db";
-import type {
-  CenterNotification,
-  NotificationStatus,
-  CreateNotificationInput,
-  ListOpts
-} from "../types/notification";
+import type { CenterNotification, NotificationStatus, CreateNotificationInput, ListOpts } from "../types/notification";
+import type { EmailStatus } from "../types/email";
+import { sendEmail, prepareEmail } from "../services/emailService";
+
+export async function sendNotification(db: Db, input: CreateNotificationInput)
+: Promise< { data: CenterNotification; email: { status: EmailStatus; error?: string} } > {
+  const notification = await createNotification(db, input);
+  console.log(notification)
+  let emailStatus: EmailStatus = "skipped";
+  let emailError: string | undefined;
+
+  const emailContent = await prepareEmail(db, notification);
+  //console.log(emailContent)
+  try {
+    if (!emailContent) {
+      emailStatus = "skipped";
+    } else {
+      await sendEmail(emailContent);
+      emailStatus = "sent";
+    }
+  } catch (e: any) {
+    emailStatus = "failed";
+    emailError = e?.message || String(e);
+    console.error("[notifications] email send failed:", emailError);
+  }
+  return { 
+    data: notification, 
+    email: emailStatus === "failed" ? { status: emailStatus, error: emailError } : { status: emailStatus }
+  };
+}
 
 export async function createNotification(db: Db, input: CreateNotificationInput): Promise<CenterNotification> {
   const {
@@ -33,7 +57,43 @@ export async function createNotification(db: Db, input: CreateNotificationInput)
     event_at ?? null,
     channel,
   ]);
-  return rows[0];
+
+  const r = rows[0];
+
+  // Helpers mínimos para fechas → ISO
+  const toIso = (v: any): string => {
+    if (!v) return new Date().toISOString();
+    if (v instanceof Date) return v.toISOString();
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  };
+  const toIsoOrNull = (v: any): string | null => {
+    if (!v) return null;
+    if (v instanceof Date) return v.toISOString();
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  };
+
+  const out: CenterNotification = {
+    notification_id: String(r.notification_id),
+    center_id: String(r.center_id),
+    center_name: '', // sin JOIN no lo tenemos
+    activation_id: r.activation_id ?? null,
+    destinatary_id: r.destinatary ?? null, // renombrado desde 'destinatary'
+    destinatary_name: '', // sin JOIN no lo tenemos
+    title: r.title,
+    message: r.message,
+    event_at: toIso(r.event_at),
+    channel: r.channel,
+    status: (r.status ?? 'queued') as NotificationStatus, // por si la tabla tiene default
+    sent_at: toIsoOrNull(r.sent_at),
+    read_at: toIsoOrNull(r.read_at),
+    error: r.error ?? null,
+    created_at: toIso(r.created_at),
+    updated_at: toIsoOrNull(r.updated_at),
+  };
+
+  return out;
 }
 
 export async function updateStatus(

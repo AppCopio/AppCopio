@@ -22,7 +22,7 @@ export type CenterNotification = {
 export type CreateNotificationInput = {
   center_id: string;
   activation_id?: number | null;
-  destinatary?: number | null; // Users.user_id
+  destinatary?: number; // Users.user_id
   title: string;
   message: string;
   event_at?: Date | string; // por defecto now()
