@@ -7,13 +7,43 @@ import "./CenterManagementPage.css";
 import { Center } from "@/types/center";
 import { listCenters, updateCenterStatus, deleteCenter } from "@/services/centers.service";
 import { getOmzZoneForCenter } from "@/services/zones.service";
-
-import * as XLSX from "xlsx";
+import JSZip from "jszip";
+import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import { listPeopleByCenter } from "@/services/residents.service";
 import { listCenterInventory } from "@/services/inventory.service";
 import { listUpdates } from "@/services/updates.service";
 
+// Normaliza a "YYYY-MM-DD" aunque venga "2025-10-07 12:00:00"
+const toISODate = (s?: string | null) => {
+  if (!s) return "";
+  const iso = s.includes(" ") && !s.includes("T") ? s.replace(" ", "T") : s;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+};
+
+// Busca la primera fecha válida entre alias posibles
+const pickDateISO = (obj: any, keys: string[]) => {
+  for (const k of keys) {
+    const v = obj?.[k];
+    const iso = toISODate(v);
+    if (iso) return iso;
+  }
+  return "";
+};
+
+// Convierte un string a UTF-16LE con BOM (Excel-friendly)
+const utf16leArrayBuffer = (text: string) => {
+  const bom = new Uint8Array([0xff, 0xfe]); // BOM
+  const buf = new Uint16Array(text.length);
+  for (let i = 0; i < text.length; i++) buf[i] = text.charCodeAt(i);
+  const bytes = new Uint8Array(buf.buffer);
+  // Concatenar BOM + bytes
+  const out = new Uint8Array(bom.length + bytes.length);
+  out.set(bom, 0);
+  out.set(bytes, bom.length);
+  return out.buffer; // ArrayBuffer listo para zip.file
+};
 
 const StatusSwitch: React.FC<{
   center: Center;
@@ -161,182 +191,145 @@ const CenterManagementPage: React.FC = () => {
     setLocationFilter("");
   };
   const handleExportCenter = async (center: Center) => {
-      // 1. Datos del centro
-      const centerData = [
-        {
-          ID: center.center_id,
-          Nombre: center.name,
-          Dirección: center.address,
-          Tipo: center.type,
-          Activo: center.is_active ? "Sí" : "No",
-          Porcentaje: typeof center.fullnessPercentage === "number"
-            ? `${center.fullnessPercentage.toFixed(1)}%`
-            : "N/A"
-        }
-      ];
-  
-      const wb = XLSX.utils.book_new();
-      const centerSheet = XLSX.utils.json_to_sheet(centerData);
-      XLSX.utils.book_append_sheet(wb, centerSheet, "Centro");
-  
-      // 2. Personas del centro
-      try {
-        const people = await listPeopleByCenter(center.center_id);
-        console.log("Personas obtenidas:", people);
-  
-        const peopleFormatted = people.map((p) => ({
-          RUT: p.rut ?? "",
-          Nombre: p.nombre ?? "",
-          Edad: p.edad ?? "",
-          Género: p.genero ?? "",
-          "Fecha de Ingreso": p.fecha_ingreso ?? "",
-          "Fecha de Salida": p.fecha_salida ?? "",
-          "Primer Apellido": p.primer_apellido ?? "",
-          "Segundo Apellido": p.segundo_apellido ?? "",
-          Nacionalidad: p.nacionalidad ?? "",
-          Estudia: p.estudia ? "Sí" : "No",
-          Trabaja: p.trabaja ? "Sí" : "No",
-          "Perdió Trabajo": p.perdida_trabajo ? "Sí" : "No",
-          Rubro: p.rubro ?? "",
-          Discapacidad: p.discapacidad ? "Sí" : "No",
-          Dependencia: p.dependencia ? "Sí" : "No",
-        }));
-  
-        const peopleSheet =
-          peopleFormatted.length > 0
-            ? XLSX.utils.json_to_sheet(peopleFormatted)
-            : XLSX.utils.json_to_sheet([
-                {
-                  RUT: "",
-                  Nombre: "",
-                  Edad: "",
-                  Género: "",
-                  "Fecha de Ingreso": "",
-                  "Fecha de Salida": "",
-                  "Primer Apellido": "",
-                  "Segundo Apellido": "",
-                  Nacionalidad: "",
-                  Estudia: "",
-                  Trabaja: "",
-                  "Perdió Trabajo": "",
-                  Rubro: "",
-                  Discapacidad: "",
-                  Dependencia: "",
-                },
-              ]); // hoja vacía con columnas
-  
-        XLSX.utils.book_append_sheet(wb, peopleSheet, "Personas");
-      } catch (error) {
-        console.error("Error al cargar personas del centro", error);
-        window.alert("No se pudieron incluir las personas del centro en el Excel.");
-      }
-  
-      // 3. Inventario
+    // CSV con COMA, comillas y CRLF
+    // TSV con tabulador, CRLF y SIN "sep=;"
+    // CSV con COMA, comillas y CRLF + BOM UTF-8 (para que Excel muestre tildes bien)
+    // Helper para crear CSV con ;, comillas y BOM (amigable con Excel)
+    const toCSV = (rows: any[], headers?: string[]) => {
+        const csvCore = Papa.unparse(
+          headers ? { fields: headers, data: rows.map(r => headers.map(h => r[h])) } : rows,
+          { delimiter: ";", quotes: true, newline: "\r\n" }
+        );
+        const csv = "sep=;\r\n" + csvCore;          // pista para Excel
+        return "\uFEFF" + csv;                      // BOM UTF-8
+    };
+
+    // 1) Centro
+    const centerRows = [{
+      ID: center.center_id,
+      Nombre: center.name ?? "",
+      Dirección: center.address ?? "",
+      Tipo: center.type ?? "",
+      Activo: center.is_active ? "Sí" : "No",
+      Abastecimiento: typeof center.fullnessPercentage === "number"
+        ? `${center.fullnessPercentage.toFixed(1)}%`
+        : "N/A",
+      Zona_OMZ: "", // puedes poner omzZones[center.center_id]
+    }];
+    const centerHeaders = ["ID","Nombre","Dirección","Tipo","Activo","Abastecimiento","Zona_OMZ"];
+
+    // 2) Personas (normaliza fechas)
+    let peopleRows: any[] = [];
+    try {
+      const people = await listPeopleByCenter(center.center_id);
+      peopleRows = (people ?? []).map((p: any) => ({
+        RUT: p.rut ?? "",
+        Nombre: p.nombre ?? "",
+        Edad: p.edad ?? "",
+        Género: p.genero ?? "",
+        // 👇 busca alias y normaliza a YYYY-MM-DD
+        Fecha_Ingreso: pickDateISO(p, ["fecha_ingreso","fechaIngreso","entry_date","entryDate","created_at","createdAt"]),
+        Fecha_Salida : pickDateISO(p, ["fecha_salida","fechaSalida","departure_date","departureDate","egreso","salida"]),
+        Primer_Apellido: p.primer_apellido ?? "",
+        Segundo_Apellido: p.segundo_apellido ?? "",
+        Nacionalidad: p.nacionalidad ?? "",
+        Estudia: p.estudia ? "Sí" : "No",
+        Trabaja: p.trabaja ? "Sí" : "No",
+        Perdio_Trabajo: p.perdida_trabajo ? "Sí" : "No",
+        Rubro: p.rubro ?? "",
+        Discapacidad: p.discapacidad ? "Sí" : "No",
+        Dependencia: p.dependencia ? "Sí" : "No",
+      }));
+    } catch (e) {
+      console.error("Personas:", e);
+      window.alert("No se pudieron incluir las personas del centro en el ZIP.");
+    }
+    const peopleHeaders = [
+      "RUT","Nombre","Edad","Género","Fecha_Ingreso","Fecha_Salida",
+      "Primer_Apellido","Segundo_Apellido","Nacionalidad",
+      "Estudia","Trabaja","Perdio_Trabajo","Rubro","Discapacidad","Dependencia"
+    ];
+
+    // 3) Inventario
+    let inventoryRows: any[] = [];
+    try {
       const inventory = await listCenterInventory(center.center_id);
-      const inventorySheetData = inventory.map((item) => ({
-        Categoría: item.category || "Sin categoría",
+      inventoryRows = (inventory ?? []).map((item: any) => ({
+        Categoria: item.category || "Sin categoría",
         Nombre: item.name,
         Cantidad: item.quantity,
         Unidad: item.unit || "-",
-        "Última Actualización": new Date(item.updated_at).toLocaleString(),
-        "Actualizado Por": item.updated_by_user || "Sistema",
+        Ultima_Actualizacion: item.updated_at ? new Date(item.updated_at).toLocaleString("es-CL") : "",
+        Actualizado_Por: item.updated_by_user || "Sistema",
       }));
-      const inventorySheet = XLSX.utils.json_to_sheet(inventorySheetData);
-      XLSX.utils.book_append_sheet(wb, inventorySheet, "Inventario");
-  
-      // 2.7) Actualizaciones del centro (todas las categorías)
-      try {
-        // helper para traer TODO sin depender de la paginación de la vista
-        const fetchAllUpdatesForCenter = async (centerId: string) => {
-          const STATUSES: Array<"pending"|"approved"|"rejected"|"canceled"> = [
-            "pending","approved","rejected","canceled"
-          ];
-          const all: any[] = [];
-          // si tu API soporta status=all, cambia a una sola llamada con limit alto
-          const LIMIT = 500; // sube si esperas más
-          for (const status of STATUSES) {
-            let page = 1;
-            // bucle de páginas por estado
-            // tu listUpdates acepta: { status, page, limit, centerId, signal? }
-            // si acepta centerId como string | undefined, pásalo como String(center.center_id)
-            // si tu backend no necesita status para "todas", puedes omitir el for y usar status: undefined
-            // mantengo por compatibilidad con lo que mostraste.
-            // eslint-disable-next-line no-constant-condition
-            while (true) {
-              const resp = await listUpdates({
-                status,
-                page,
-                limit: LIMIT,
-                centerId: String(center.center_id)
-              } as any);
-              const items = resp?.requests ?? [];
-              all.push(...items);
-              if (items.length < LIMIT) break; // última página de ese status
-              page++;
-            }
+    } catch (e) {
+      console.error("Inventario:", e);
+    }
+    const inventoryHeaders = ["Categoria","Nombre","Cantidad","Unidad","Ultima_Actualizacion","Actualizado_Por"];
+
+    // 4) Actualizaciones
+    let updatesRows: any[] = [];
+    try {
+      const fetchAllUpdatesForCenter = async (centerId: string) => {
+        const STATUSES: Array<"pending"|"approved"|"rejected"|"canceled"> = ["pending","approved","rejected","canceled"];
+        const LIMIT = 500;
+        const all: any[] = [];
+        for (const status of STATUSES) {
+          let page = 1;
+          // eslint-disable-next-line no-constant-condition
+          while (true) {
+            const resp = await listUpdates({ status, page, limit: LIMIT, centerId: String(centerId) } as any);
+            const items = resp?.requests ?? [];
+            all.push(...items);
+            if (items.length < LIMIT) break;
+            page++;
           }
-          // opcional: ordenar por fecha descendente
-          all.sort((a,b) => new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime());
-          return all;
-        };
-        const updates = await fetchAllUpdatesForCenter(String(center.center_id));
-  
-        const updatesSheetData = (updates.length ? updates : [{
-          registered_at: "",
-          center_name: "",
-          requested_by_name: "",
-          description: "",
-          urgency: "",
-          status: "",
-          assigned_to_name: "",
-          resolution_comment: ""
-        }]).map((u: any) => ({
-          "Fecha": u.registered_at ? new Date(u.registered_at).toLocaleString() : "",
-          "Centro": u.center_name ?? "",
-          "Solicitado por": u.requested_by_name ?? "",
-          "Descripción": u.description ?? "",
-          "Urgencia": u.urgency ?? "",
-          "Estado": u.status ?? "",
-          "Asignado a": u.assigned_to_name ?? "Sin asignar",
-          "Comentario de resolución": u.resolution_comment ?? ""
-        }));
-  
-        const updatesSheet = XLSX.utils.json_to_sheet(updatesSheetData);
-  
-        // (opcional) ajustar ancho de columnas
-        const colWidths = [
-          { wch: 20 }, // Fecha
-          { wch: 28 }, // Centro
-          { wch: 24 }, // Solicitado por
-          { wch: 60 }, // Descripción
-          { wch: 10 }, // Urgencia
-          { wch: 12 }, // Estado
-          { wch: 24 }, // Asignado a
-          { wch: 40 }, // Comentario
-        ];
-        (updatesSheet as any)["!cols"] = colWidths;
-  
-        XLSX.utils.book_append_sheet(wb, updatesSheet, "Actualizaciones");
-      } catch (e) {
-        console.error("Error al cargar actualizaciones del centro", e);
-        const updatesSheet = XLSX.utils.json_to_sheet([{
-          "Fecha": "", "Centro": "", "Solicitado por": "", "Descripción": "",
-          "Urgencia": "", "Estado": "", "Asignado a": "", "Comentario de resolución": ""
-        }]);
-        XLSX.utils.book_append_sheet(wb, updatesSheet, "Actualizaciones");
-      }
-      
-  
-      // 4. Hojas vacías
-      const emptySheet = XLSX.utils.aoa_to_sheet([[]]);
-      XLSX.utils.book_append_sheet(wb, emptySheet, "Encargados");
-      XLSX.utils.book_append_sheet(wb, emptySheet, "Donaciones");
-  
-      // 5. Exportar
-      const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([buffer], { type: "application/octet-stream" });
-      saveAs(blob, `Centro_${center.center_id}.xlsx`);
-    };
+        }
+        all.sort((a,b) => new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime());
+        return all;
+      };
+      const updates = await fetchAllUpdatesForCenter(String(center.center_id));
+      updatesRows = (updates ?? []).map((u: any) => ({
+        Fecha: u.registered_at ? new Date(u.registered_at).toLocaleString("es-CL") : "",
+        Centro: u.center_name ?? "",
+        Solicitado_por: u.requested_by_name ?? "",
+        Descripcion: u.description ?? "",
+        Urgencia: u.urgency ?? "",
+        Estado: u.status ?? "",
+        Asignado_a: u.assigned_to_name ?? "Sin asignar",
+        Comentario_resolucion: u.resolution_comment ?? ""
+      }));
+    } catch (e) {
+      console.error("Actualizaciones:", e);
+    }
+    const updatesHeaders = ["Fecha","Centro","Solicitado_por","Descripcion","Urgencia","Estado","Asignado_a","Comentario_resolucion"];
+
+    // 5) Encargados / Donaciones (cabeceras vacías)
+    const encargadosHeaders = ["Nombre","RUT","Telefono","Email","Rol"];
+    const donacionesHeaders = ["Fecha","Tipo","Detalle","Cantidad","Unidad","Origen"];
+
+    // --- ZIP (cada CSV en UTF-16LE) ---
+    const zip = new JSZip();
+
+    const files: Array<{name: string, csv: string}> = [
+      { name: "Centro.csv",          csv: toCSV(centerRows,  centerHeaders) },
+      { name: "Personas.csv",        csv: toCSV(peopleRows,  peopleHeaders) },
+      { name: "Inventario.csv",      csv: toCSV(inventoryRows, inventoryHeaders) },
+      { name: "Actualizaciones.csv", csv: toCSV(updatesRows, updatesHeaders) },
+      { name: "Encargados.csv",      csv: toCSV([], encargadosHeaders) },
+      { name: "Donaciones.csv",      csv: toCSV([], donacionesHeaders) },
+    ];
+
+    for (const f of files) {
+      zip.file(f.name, f.csv); // <-- texto UTF-8 con BOM (sin conversión a UTF-16)
+    }
+
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, `Centro_${center.center_id}.zip`);
+  };
+
+
 
   if (isLoading || isAuthLoading) {
     return <div className="center-management-container">Cargando...</div>;
