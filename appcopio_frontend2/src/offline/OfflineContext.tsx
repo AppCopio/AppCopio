@@ -9,6 +9,7 @@ import {
   cleanExpiredCache,
   getDBStats 
 } from './db';
+import { processQueue } from './queue';
 import type { OfflineState, SyncConflict } from './types';
 
 /**
@@ -119,7 +120,7 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
 
   /**
    * Trigger manual de sincronización
-   * (La lógica real de sincronización se implementará en sync.ts en Fase 3)
+   * Procesa todas las mutaciones pendientes usando la cola
    */
   const triggerSync = React.useCallback(async () => {
     if (isSyncing) {
@@ -134,31 +135,43 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
 
     try {
       setIsSyncing(true);
-      console.log('[OfflineContext] Iniciando sincronización...');
+      console.log('[OfflineContext] 🔄 Iniciando sincronización...');
 
-      // Obtener mutaciones pendientes
-      const pending = await getPendingMutations();
+      // Procesar cola usando queue.ts (FASE 2)
+      const result = await processQueue();
       
-      if (pending.length === 0) {
-        console.log('[OfflineContext] No hay mutaciones pendientes');
-        setLastSync(Date.now());
-        return;
-      }
-
-      console.log(`[OfflineContext] ${pending.length} mutaciones por sincronizar`);
-      
-      // TODO: Implementar lógica de sincronización real en Fase 3
-      // Por ahora solo logueamos las mutaciones pendientes
-      pending.forEach(mutation => {
-        console.log(`  - ${mutation.method} ${mutation.url} (status: ${mutation.status})`);
+      console.log('[OfflineContext] ✅ Sincronización completada:', {
+        exitosas: result.success,
+        fallidas: result.failed,
+        conflictos: result.conflicts.length,
+        total: result.total,
       });
 
-      // Actualizar contador
+      // Actualizar conflictos si hay
+      if (result.conflicts.length > 0) {
+        const newConflicts: SyncConflict[] = result.conflicts.map(c => ({
+          mutationId: c.mutation.id,
+          entityType: c.mutation.entityType || 'unknown',
+          entityId: c.mutation.entityId || 'unknown',
+          localVersion: c.mutation.data,
+          remoteVersion: c.error.response?.data,
+          timestamp: Date.now(),
+        }));
+        
+        setConflicts(prev => [...prev, ...newConflicts]);
+        console.warn(`[OfflineContext] ⚠️ ${result.conflicts.length} conflictos detectados`);
+      }
+
+      // Actualizar contador de pendientes
       await refreshPendingCount();
-      setLastSync(Date.now());
+      
+      // Actualizar timestamp de última sync exitosa
+      if (result.success > 0) {
+        setLastSync(Date.now());
+      }
       
     } catch (error) {
-      console.error('[OfflineContext] Error durante sincronización:', error);
+      console.error('[OfflineContext] ❌ Error durante sincronización:', error);
     } finally {
       setIsSyncing(false);
     }

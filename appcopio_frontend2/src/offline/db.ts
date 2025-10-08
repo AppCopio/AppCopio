@@ -388,3 +388,37 @@ export async function exportDB() {
     metadata,
   };
 }
+
+// ====================================================================
+// FUNCIONES ADICIONALES PARA FASE 2
+// ====================================================================
+
+/**
+ * Marca una mutación como exitosa (la elimina de la cola)
+ * 
+ * @param id - ID de la mutación
+ */
+export async function markMutationAsSuccess(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('mutation-queue', id);
+  console.log(`[OfflineDB] Mutación ${id} marcada como exitosa y eliminada`);
+}
+
+/**
+ * Incrementa el contador de reintentos de una mutación
+ * 
+ * @param id - ID de la mutación
+ */
+export async function incrementRetryCount(id: string): Promise<void> {
+  const db = await getDB();
+  const mutation = await db.get('mutation-queue', id);
+  
+  if (mutation) {
+    mutation.retries = (mutation.retries || 0) + 1;
+    mutation.status = 'error';
+    mutation.error = `Reintento #${mutation.retries}`;
+    
+    await db.put('mutation-queue', mutation);
+    console.log(`[OfflineDB] Mutación ${id} incrementada a ${mutation.retries} reintentos`);
+  }
+}
