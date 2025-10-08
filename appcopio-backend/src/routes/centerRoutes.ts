@@ -160,7 +160,7 @@ const setActivationStatus: RequestHandler = async (req, res) => {
                 destinatary: rec, // id del usuario destinatario
                 title,
                 message,
-                channel: "event:center_status_changed",
+                channel: "ctrStatus_change",
             });
         }
         
