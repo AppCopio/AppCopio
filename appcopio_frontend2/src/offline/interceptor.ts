@@ -162,7 +162,7 @@ async function handleOfflineRequest(
       data: config.data,
       headers: config.headers as Record<string, string>,
       timestamp: Date.now(),
-      retryCount: 0,
+      retries: 0,
       status: 'pending',
     });
 
