@@ -7,12 +7,25 @@ import "./CenterManagementPage.css";
 import { Center } from "@/types/center";
 import { listCenters, updateCenterStatus, deleteCenter } from "@/services/centers.service";
 import { getOmzZoneForCenter } from "@/services/zones.service";
-import JSZip from "jszip";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import { listPeopleByCenter } from "@/services/residents.service";
 import { listCenterInventory } from "@/services/inventory.service";
 import { listUpdates } from "@/services/updates.service";
+
+// Formatea RUT y lo fuerza a texto para Excel
+const formatRut = (raw: any, { withDots = true, excelFormulaText = true } = {}) => {
+  if (raw == null) return "";
+  const s = String(raw).replace(/[.\-\s\u2010-\u2015\u2212]/g, "");
+  if (s.length < 2) return String(raw);
+
+  const cuerpo = s.slice(0, -1);
+  const dv = s.slice(-1).toUpperCase();
+  const cuerpoFmt = withDots ? cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : cuerpo;
+  const rutFmt = `${cuerpoFmt}-${dv}`;
+
+  return excelFormulaText ? `="${rutFmt}"` : rutFmt;
+};
 
 // Normaliza a "YYYY-MM-DD" aunque venga "2025-10-07 12:00:00"
 const toISODate = (s?: string | null) => {
@@ -191,20 +204,18 @@ const CenterManagementPage: React.FC = () => {
     setLocationFilter("");
   };
   const handleExportCenter = async (center: Center) => {
-    // CSV con COMA, comillas y CRLF
-    // TSV con tabulador, CRLF y SIN "sep=;"
-    // CSV con COMA, comillas y CRLF + BOM UTF-8 (para que Excel muestre tildes bien)
-    // Helper para crear CSV con ;, comillas y BOM (amigable con Excel)
+    // Helper CSV con ;, comillas, CRLF y BOM para Excel
     const toCSV = (rows: any[], headers?: string[]) => {
-        const csvCore = Papa.unparse(
-          headers ? { fields: headers, data: rows.map(r => headers.map(h => r[h])) } : rows,
-          { delimiter: ";", quotes: true, newline: "\r\n" }
-        );
-        const csv = "sep=;\r\n" + csvCore;          // pista para Excel
-        return "\uFEFF" + csv;                      // BOM UTF-8
+      const csvCore = Papa.unparse(
+        headers ? { fields: headers, data: rows.map(r => headers.map(h => r[h])) } : rows,
+        { delimiter: ";", quotes: true, newline: "\r\n" }
+      );
+      const csv = "sep=;\r\n" + csvCore;
+      return "\uFEFF" + csv; // BOM UTF-8
     };
 
     // 1) Centro
+    const centerHeaders = ["ID","Nombre","Dirección","Tipo","Activo","Abastecimiento","Zona_OMZ"];
     const centerRows = [{
       ID: center.center_id,
       Nombre: center.name ?? "",
@@ -214,20 +225,23 @@ const CenterManagementPage: React.FC = () => {
       Abastecimiento: typeof center.fullnessPercentage === "number"
         ? `${center.fullnessPercentage.toFixed(1)}%`
         : "N/A",
-      Zona_OMZ: "", // puedes poner omzZones[center.center_id]
+      Zona_OMZ: "", // omzZones[center.center_id] si quieres
     }];
-    const centerHeaders = ["ID","Nombre","Dirección","Tipo","Activo","Abastecimiento","Zona_OMZ"];
 
-    // 2) Personas (normaliza fechas)
+    // 2) Personas
     let peopleRows: any[] = [];
+    const peopleHeaders = [
+      "RUT","Nombre","Edad","Género","Fecha_Ingreso","Fecha_Salida",
+      "Primer_Apellido","Segundo_Apellido","Nacionalidad",
+      "Estudia","Trabaja","Perdio_Trabajo","Rubro","Discapacidad","Dependencia"
+    ];
     try {
       const people = await listPeopleByCenter(center.center_id);
       peopleRows = (people ?? []).map((p: any) => ({
-        RUT: p.rut ?? "",
+        RUT: formatRut(p.rut, { withDots: true, forceExcelText: true }),
         Nombre: p.nombre ?? "",
         Edad: p.edad ?? "",
         Género: p.genero ?? "",
-        // 👇 busca alias y normaliza a YYYY-MM-DD
         Fecha_Ingreso: pickDateISO(p, ["fecha_ingreso","fechaIngreso","entry_date","entryDate","created_at","createdAt"]),
         Fecha_Salida : pickDateISO(p, ["fecha_salida","fechaSalida","departure_date","departureDate","egreso","salida"]),
         Primer_Apellido: p.primer_apellido ?? "",
@@ -242,16 +256,11 @@ const CenterManagementPage: React.FC = () => {
       }));
     } catch (e) {
       console.error("Personas:", e);
-      window.alert("No se pudieron incluir las personas del centro en el ZIP.");
+      window.alert("No se pudieron incluir las personas del centro.");
     }
-    const peopleHeaders = [
-      "RUT","Nombre","Edad","Género","Fecha_Ingreso","Fecha_Salida",
-      "Primer_Apellido","Segundo_Apellido","Nacionalidad",
-      "Estudia","Trabaja","Perdio_Trabajo","Rubro","Discapacidad","Dependencia"
-    ];
-
     // 3) Inventario
     let inventoryRows: any[] = [];
+    const inventoryHeaders = ["Categoria","Nombre","Cantidad","Unidad","Ultima_Actualizacion","Actualizado_Por"];
     try {
       const inventory = await listCenterInventory(center.center_id);
       inventoryRows = (inventory ?? []).map((item: any) => ({
@@ -265,10 +274,10 @@ const CenterManagementPage: React.FC = () => {
     } catch (e) {
       console.error("Inventario:", e);
     }
-    const inventoryHeaders = ["Categoria","Nombre","Cantidad","Unidad","Ultima_Actualizacion","Actualizado_Por"];
 
     // 4) Actualizaciones
     let updatesRows: any[] = [];
+    const updatesHeaders = ["Fecha","Centro","Solicitado_por","Descripcion","Urgencia","Estado","Asignado_a","Comentario_resolucion"];
     try {
       const fetchAllUpdatesForCenter = async (centerId: string) => {
         const STATUSES: Array<"pending"|"approved"|"rejected"|"canceled"> = ["pending","approved","rejected","canceled"];
@@ -302,33 +311,61 @@ const CenterManagementPage: React.FC = () => {
     } catch (e) {
       console.error("Actualizaciones:", e);
     }
-    const updatesHeaders = ["Fecha","Centro","Solicitado_por","Descripcion","Urgencia","Estado","Asignado_a","Comentario_resolucion"];
-
-    // 5) Encargados / Donaciones (cabeceras vacías)
+    // 5) Encargados / 6) Donaciones (vacías por ahora)
     const encargadosHeaders = ["Nombre","RUT","Telefono","Email","Rol"];
+    const encargadosRows: any[] = [];
     const donacionesHeaders = ["Fecha","Tipo","Detalle","Cantidad","Unidad","Origen"];
+    const donacionesRows: any[] = [];
 
-    // --- ZIP (cada CSV en UTF-16LE) ---
-    const zip = new JSZip();
-
+    // Archivos que vamos a generar
     const files: Array<{name: string, csv: string}> = [
-      { name: "Centro.csv",          csv: toCSV(centerRows,  centerHeaders) },
-      { name: "Personas.csv",        csv: toCSV(peopleRows,  peopleHeaders) },
-      { name: "Inventario.csv",      csv: toCSV(inventoryRows, inventoryHeaders) },
-      { name: "Actualizaciones.csv", csv: toCSV(updatesRows, updatesHeaders) },
-      { name: "Encargados.csv",      csv: toCSV([], encargadosHeaders) },
-      { name: "Donaciones.csv",      csv: toCSV([], donacionesHeaders) },
+      { name: `Centro_${center.center_id}__CentroInfo.csv`,          csv: toCSV(centerRows,  centerHeaders) },
+      { name: `Centro_${center.center_id}__Personas.csv`,        csv: toCSV(peopleRows,  peopleHeaders) },
+      { name: `Centro_${center.center_id}__Inventario.csv`,      csv: toCSV(inventoryRows, inventoryHeaders) },
+      { name: `Centro_${center.center_id}__Actualizaciones.csv`, csv: toCSV(updatesRows, updatesHeaders) },
+      { name: `Centro_${center.center_id}__Encargados.csv`,      csv: toCSV(encargadosRows, encargadosHeaders) },
+      { name: `Centro_${center.center_id}__Donaciones.csv`,      csv: toCSV(donacionesRows, donacionesHeaders) },
     ];
 
-    for (const f of files) {
-      zip.file(f.name, f.csv); // <-- texto UTF-8 con BOM (sin conversión a UTF-16)
+    // A) Guardar dentro de una carpeta elegida (Chromium)
+    const saveToDirectory = async () => {
+      if (typeof (window as any).showDirectoryPicker !== "function") {
+        throw new Error("No soportado");
+      }
+      const dirHandle = await (window as any).showDirectoryPicker({
+        id: `Centro_${center.center_id}`,
+        mode: "readwrite",
+        startIn: "downloads",
+      });
+      if (dirHandle.requestPermission) {
+        const perm = await dirHandle.requestPermission({ mode: "readwrite" });
+        if (perm !== "granted") throw new Error("Permiso denegado");
+      }
+      for (const f of files) {
+        const fileHandle = await dirHandle.getFileHandle(f.name, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(new Blob([f.csv], { type: "text/csv;charset=utf-8" }));
+        await writable.close();
+      }
+      window.alert(`Se exportaron ${files.length} CSV a la carpeta seleccionada.`);
+    };
+
+    // B) Fallback: descargas múltiples (funciona en todos los navegadores)
+    const saveIndividually = async () => {
+      for (const f of files) {
+        saveAs(new Blob([f.csv], { type: "text/csv;charset=utf-8" }), f.name);
+        // Pequeña pausa para no saturar el gestor de descargas
+        await new Promise(r => setTimeout(r, 120));
+      }
+      // Tip: recuerda decirle al usuario que habilite múltiples descargas si el navegador lo pide
+    };
+
+    try {
+      await saveToDirectory();
+    } catch (_err) {
+      await saveIndividually();
     }
-
-
-    const blob = await zip.generateAsync({ type: "blob" });
-    saveAs(blob, `Centro_${center.center_id}.zip`);
   };
-
 
 
   if (isLoading || isAuthLoading) {
