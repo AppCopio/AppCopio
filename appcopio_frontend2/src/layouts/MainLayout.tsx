@@ -2,7 +2,6 @@ import * as React from "react";
 import { Outlet } from "react-router-dom";
 import { Box, LinearProgress } from "@mui/material";
 import Navbar from "@/components/layout/navbar/Navbar";
-import OfflineBanner from "@/components/common/OfflineBanner";
 import { OfflineNotificationContainer, useAutoNotifications } from "@/offline/OfflineNotifications";
 
 function PageFallback() {
@@ -20,7 +19,6 @@ function MainLayoutContent() {
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Navbar />
-      <OfflineBanner />
       <Box component="main" sx={{ p: { xs: 2, md: 3 }, flex: 1 }}>
         <React.Suspense fallback={<PageFallback />}>
           <Outlet />
