@@ -1,6 +1,7 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
 import { sendEmail, getUserEmailById } from "../services/emailService";
+import { requireAuth } from "../auth/middleware";
 import {
   createNotification as createNotificationService,
   updateStatus as updateStatusService,
@@ -15,6 +16,8 @@ import type { NotificationStatus } from "../types/notification";
 const router = Router();
 
 const allowedStatus = new Set(['queued', 'sent', 'failed']);
+//La cosa del token
+router.use(requireAuth);
 
 // ---------------------------------------------
 // POST /notifications  (crear/enviar notificación)
@@ -126,7 +129,7 @@ const getByUser: RequestHandler = async (req, res, next) => {
     if (!Number.isFinite(userId)) return res.status(400).json({ error: "userId inválido" });
 
     const rows = await listByUser(pool, userId);
-    return res.json({ data: rows });
+    return res.json( rows );
   } catch (err) {
     next(err);
   }
@@ -140,7 +143,7 @@ const getByCenter: RequestHandler = async (req, res, next) => {
   try {
     const centerId = req.params.centerId;
     const rows = await listByCenter(pool, centerId);
-    return res.json({ data: rows });    
+    return res.json(rows );    
   } catch (err) {
     next(err);
   }
