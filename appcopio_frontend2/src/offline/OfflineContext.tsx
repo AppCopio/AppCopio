@@ -8,12 +8,14 @@ import {
   getPendingMutations,
   cleanExpiredCache,
   getDBStats,
-  cleanStuckMutations // Limpieza automática de mutaciones bloqueadas
+  cleanStuckMutations
 } from './db';
-import { processQueue } from './queue';
-import { performIntelligentSync } from './sync'; // FASE 3
-import { startBackgroundSync, stopBackgroundSync } from './backgroundSync'; // FASE 3
-import { emitSyncCompleted, emitSyncFailed } from './events'; // Notificaciones
+import { 
+  performIntelligentSync, 
+  startBackgroundSync, 
+  stopBackgroundSync 
+} from './offline-sync';
+import { emitSyncCompleted, emitSyncFailed } from './events';
 import type { OfflineState, SyncConflict } from './types';
 
 /**
@@ -82,11 +84,7 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
         }
         
         // Iniciar background sync automático (FASE 3)
-        startBackgroundSync({ 
-          intervalMs: 5 * 60 * 1000, // 5 minutos
-          respectBattery: true,
-          respectNetwork: true
-        });
+        startBackgroundSync();
         
         // Recontear pendientes después de la limpieza
         const finalCount = await countPendingMutations();

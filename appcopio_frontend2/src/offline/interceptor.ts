@@ -9,81 +9,10 @@
 
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { cacheResponse, getCachedResponse } from './db';
-import { addMutationToQueue } from './queue';
+import { addMutationToQueue } from './offline-sync';
 import { emitMutationQueued } from './events';
-
-// =====================================================
-// CONFIGURACIÓN DE CACHE POR ENDPOINT
-// =====================================================
-
-/**
- * Determina el TTL (tiempo de vida) del cache según el endpoint
- * @param url - URL del endpoint
- * @returns TTL en segundos (0 = no cachear)
- */
-export function getTTLForEndpoint(url: string | undefined): number {
-  if (!url) return 300; // Default: 5 minutos
-
-  // Auth → NUNCA cachear (seguridad)
-  if (url.includes('/auth')) return 0;
-  
-  // Notifications → 30 segundos (tiempo real)
-  if (url.includes('/notifications')) return 30;
-  
-  // Inventory → 1 minuto (datos críticos)
-  if (url.includes('/inventory')) return 60;
-  
-  // Centers detail → 5 minutos
-  if (url.match(/\/centers\/\d+$/)) return 300;
-  
-  // Centers list → 5 minutos
-  if (url.includes('/centers')) return 300;
-  
-  // Users → 15 minutos (raramente cambian)
-  if (url.includes('/users')) return 900;
-  
-  // Zones → 1 hora (datos estáticos)
-  if (url.includes('/zones')) return 3600;
-
-  // Family → 5 minutos
-  if (url.includes('/family')) return 300;
-
-  // Persons → 5 minutos
-  if (url.includes('/persons')) return 300;
-
-  // Databases → 10 minutos
-  if (url.includes('/databases')) return 600;
-
-  // Fields → 15 minutos
-  if (url.includes('/fields')) return 900;
-
-  // Templates → 15 minutos
-  if (url.includes('/templates')) return 900;
-
-  // Categories → 1 hora
-  if (url.includes('/categories')) return 3600;
-
-  // Roles → 1 hora
-  if (url.includes('/roles')) return 3600;
-  
-  // Default → 5 minutos
-  return 300;
-}
-
-/**
- * Determina si un endpoint debe ser cacheado
- * @param url - URL del endpoint
- * @returns true si debe cachearse, false si no
- */
-export function shouldCacheEndpoint(url: string | undefined): boolean {
-  if (!url) return false;
-
-  // NUNCA cachear endpoints de auth (tokens, login, logout, etc.)
-  if (url.includes('/auth')) return false;
-
-  // Cachear todo lo demás
-  return true;
-}
+import { getTTLForEndpoint, shouldCacheEndpoint } from './config';
+import { generateUUID } from './offline-core';
 
 // =====================================================
 // REQUEST INTERCEPTOR
@@ -157,14 +86,10 @@ async function handleOfflineRequest(
   
   try {
     await addMutationToQueue({
-      id: crypto.randomUUID(),
       method: method as 'POST' | 'PUT' | 'DELETE' | 'PATCH',
       url: url,
       data: config.data,
       headers: config.headers as Record<string, string>,
-      timestamp: Date.now(),
-      retries: 0,
-      retryCount: 0, // Fase 3 - campo requerido
       status: 'pending',
     });
 

@@ -414,13 +414,12 @@ export async function incrementRetryCount(id: string): Promise<void> {
   const mutation = await db.get('mutation-queue', id);
   
   if (mutation) {
-    mutation.retries = (mutation.retries || 0) + 1;
-    mutation.retryCount = (mutation.retryCount || 0) + 1; // Fase 3
+    mutation.retryCount = (mutation.retryCount || 0) + 1;
     mutation.status = 'error';
-    mutation.error = `Reintento #${mutation.retries}`;
+    mutation.error = `Reintento #${mutation.retryCount}`;
     
     await db.put('mutation-queue', mutation);
-    console.log(`[OfflineDB] Mutación ${id} incrementada a ${mutation.retries} reintentos`);
+    console.log(`[OfflineDB] Mutación ${id} incrementada a ${mutation.retryCount} reintentos`);
   }
 }
 
@@ -444,7 +443,7 @@ export async function getMutationsToSync(): Promise<MutationQueueItem[]> {
     // Para errores, verificar que no hayan superado el máximo de reintentos
     if (mutation.status === 'error') {
       const maxRetries = 5; // Debería coincidir con DEFAULT_SYNC_OPTIONS.maxRetries
-      const currentRetries = mutation.retryCount || mutation.retries || 0;
+      const currentRetries = mutation.retryCount || 0;
       return currentRetries < maxRetries;
     }
     
@@ -507,7 +506,7 @@ export async function cleanStuckMutations(maxRetries: number = 5): Promise<numbe
   let cleanedCount = 0;
   
   for (const mutation of allMutations) {
-    const retryCount = mutation.retryCount || mutation.retries || 0;
+    const retryCount = mutation.retryCount || 0;
     
     // Si ha superado el máximo de reintentos, eliminarla
     if (retryCount >= maxRetries) {
@@ -536,7 +535,7 @@ export async function getProblematicMutations(): Promise<MutationQueueItem[]> {
   const allMutations = await db.getAll('mutation-queue');
   
   return allMutations.filter(mutation => {
-    const retryCount = mutation.retryCount || mutation.retries || 0;
+    const retryCount = mutation.retryCount || 0;
     return retryCount >= 3; // Mutaciones con 3+ reintentos son problemáticas
   });
 }

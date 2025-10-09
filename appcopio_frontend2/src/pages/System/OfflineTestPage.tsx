@@ -36,7 +36,6 @@ export default function OfflineTestPage() {
         timestamp: Date.now(),
         status: 'pending',
         entityType: 'test',
-        retries: 0,
         retryCount: 0
       });
       setMessage(`✅ Mutación encolada: POST ${testUrl}`);

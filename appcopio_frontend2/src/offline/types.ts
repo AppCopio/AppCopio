@@ -21,8 +21,7 @@ export interface MutationQueueItem {
   data?: any; // Payload del request
   headers?: Record<string, string>;
   timestamp: number; // Timestamp de creación
-  retries: number; // Número de intentos de sincronización (legacy)
-  retryCount: number; // Número de intentos de sincronización (Fase 3)
+  retryCount: number; // Número de intentos de sincronización
   status: MutationStatus;
   error?: string; // Mensaje de error si falló
   optimisticId?: string; // ID temporal para actualizaciones optimistas

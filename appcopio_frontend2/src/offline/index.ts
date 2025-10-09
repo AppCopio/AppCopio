@@ -12,23 +12,32 @@ export {
 // Componentes UI
 export { OfflineIndicator } from './components/OfflineIndicator';
 
-// Interceptor (FASE 2)
-export {
-  setupOfflineInterceptor,
-  getTTLForEndpoint,
-  shouldCacheEndpoint,
-} from './interceptor';
+// Interceptor
+export { setupOfflineInterceptor } from './interceptor';
 
-// Queue (FASE 2)
+// Configuración
+export { getTTLForEndpoint, shouldCacheEndpoint } from './config';
+
+// Sincronización consolidada
 export {
   addMutationToQueue,
   processQueue,
+  performIntelligentSync,
   getQueueStatus,
+  startBackgroundSync,
+  stopBackgroundSync,
   cleanOldSuccessfulMutations,
-} from './queue';
+} from './offline-sync';
 
-// Tipos de queue (con alias para evitar conflicto)
-export type { ConflictInfo } from './queue';
+// Utilidades core
+export {
+  tryRefreshToken,
+  clearAuthTokens,
+  handle401Error,
+  executeWithTokenRefresh,
+  generateUUID,
+  isOnline
+} from './offline-core';
 
 // Funciones de base de datos
 export {
