@@ -18,7 +18,8 @@ import {
     getInventoryByCenterId,
     addInventoryItem as addInventoryItemService,
     updateInventoryItem as updateInventoryItemService,
-    deleteInventoryItem as deleteInventoryItemService
+    deleteInventoryItem as deleteInventoryItemService,
+    getAssignedUsersByCenter as getAssignedUsersByCenter
 } from '../services/centerService';
 
 import { getCenterGroups } from '../services/familyService';
@@ -333,6 +334,21 @@ const deleteInventoryItem: RequestHandler = async (req, res) => {
     }
 };
 
+// NUEVO: Obtiene todos los usuarios (Encargado Comunitario, Municipal y M:N) asignados a un centro.
+const listAssignedUsers: RequestHandler = async (req, res) => {
+    try {
+        const centerId = req.params.centerId;
+        // La función del servicio contiene la compleja lógica SQL (UNION ALL)
+        const users = await getAssignedUsersByCenter(pool, centerId); 
+        
+        // El frontend espera el objeto { users: [...] }
+        res.json({ users }); 
+    } catch (error) {
+        console.error(`Error en listAssignedUsers (centerId: ${req.params.centerId}):`, error);
+        res.status(500).json({ error: 'Error interno al obtener los usuarios asignados.' });
+    }
+};
+
 // =================================================================
 // 4. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
@@ -359,5 +375,7 @@ router.get('/:centerId/inventory', requireAuth, getInventory);
 router.post('/:centerId/inventory', requireAuth, addInventoryItem);
 router.put('/:centerId/inventory/:itemId', requireAuth, updateInventoryItem);
 router.delete('/:centerId/inventory/:itemId', requireAuth, deleteInventoryItem);
+
+router.get('/:centerId/assigned-users', requireAuth, listAssignedUsers); 
 
 export default router;

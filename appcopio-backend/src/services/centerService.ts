@@ -274,3 +274,49 @@ export async function deleteInventoryItem(client: PoolClient, centerId: string, 
     
     return deleteOp.rowCount ?? 0;
 }
+
+
+// SECCIÓN 5: USUARIOS ASIGNADOS
+// =================================================================
+
+ //Obtiene todos los usuarios asignados a un centro específico, 
+
+
+export async function getAssignedUsersByCenter(db: Db, centerId: string) {
+    const query = `
+        -- 1. Usuarios asignados como Encargado Comunitario (1:N)
+        SELECT
+            U.user_id, U.nombre, U.rut, U.username, U.email, U.genero, U.celular, U.is_active, U.es_apoyo_admin, U.created_at,
+            R.role_name
+        FROM Centers AS C
+        JOIN Users AS U ON C.comunity_charge_id = U.user_id
+        JOIN Roles AS R ON U.role_id = R.role_id
+        WHERE C.center_id = $1
+
+        UNION
+        -- UNION elimina duplicados automáticamente si todas las columnas son idénticas
+
+        -- 2. Usuarios asignados como Trabajador Municipal Manager (1:N)
+        SELECT
+            U.user_id, U.nombre, U.rut, U.username, U.email, U.genero, U.celular, U.is_active, U.es_apoyo_admin, U.created_at,
+            R.role_name
+        FROM Centers AS C
+        JOIN Users AS U ON C.municipal_manager_id = U.user_id
+        JOIN Roles AS R ON U.role_id = R.role_id
+        WHERE C.center_id = $1
+
+        UNION
+        
+        -- 3. Usuarios asignados por la tabla M:N (CenterAssignments)
+        SELECT
+            U.user_id, U.nombre, U.rut, U.username, U.email, U.genero, U.celular, U.is_active, U.es_apoyo_admin, U.created_at,
+            R.role_name
+        FROM CenterAssignments AS CA 
+        JOIN Users AS U ON CA.user_id = U.user_id
+        JOIN Roles AS R ON U.role_id = R.role_id
+        WHERE CA.center_id = $1;
+    `;
+
+    const result = await db.query(query, [centerId]);
+    return result.rows; 
+}

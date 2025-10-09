@@ -12,19 +12,24 @@ import { saveAs } from "file-saver";
 import { listPeopleByCenter } from "@/services/residents.service";
 import { listCenterInventory } from "@/services/inventory.service";
 import { listUpdates } from "@/services/updates.service";
+import { listAssignedUsersToCenter } from "@/services/centers.service";
+import type { User } from "@/types/user"; // Usaremos este tipo
 
 // Formatea RUT y lo fuerza a texto para Excel
-const formatRut = (raw: any, { withDots = true, excelFormulaText = true } = {}) => {
+const formatRut = (raw: any, { withDots = true, forceExcelText = false } = {}) => {
   if (raw == null) return "";
   const s = String(raw).replace(/[.\-\s\u2010-\u2015\u2212]/g, "");
   if (s.length < 2) return String(raw);
 
   const cuerpo = s.slice(0, -1);
   const dv = s.slice(-1).toUpperCase();
+  // Uso de expresión regular para añadir puntos (separadores de miles)
   const cuerpoFmt = withDots ? cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : cuerpo;
   const rutFmt = `${cuerpoFmt}-${dv}`;
 
-  return excelFormulaText ? `="${rutFmt}"` : rutFmt;
+  // Si se fuerza el texto para Excel (usando ="" para evitar que Excel lo interprete como número), 
+  // devolvemos la cadena envuelta en esa fórmula.
+  return forceExcelText ? `="${rutFmt}"` : rutFmt;
 };
 
 // Normaliza a "YYYY-MM-DD" aunque venga "2025-10-07 12:00:00"
@@ -225,8 +230,7 @@ const CenterManagementPage: React.FC = () => {
       Abastecimiento: typeof center.fullnessPercentage === "number"
         ? `${center.fullnessPercentage.toFixed(1)}%`
         : "N/A",
-      Zona_OMZ: "", // omzZones[center.center_id] si quieres
-    }];
+      Zona_OMZ: omzZones[center.center_id] ?? "No asignada",    }];
 
     // 2) Personas
     let peopleRows: any[] = [];
@@ -311,11 +315,31 @@ const CenterManagementPage: React.FC = () => {
     } catch (e) {
       console.error("Actualizaciones:", e);
     }
-    // 5) Encargados / 6) Donaciones (vacías por ahora)
-    const encargadosHeaders = ["Nombre","RUT","Telefono","Email","Rol"];
-    const encargadosRows: any[] = [];
-    const donacionesHeaders = ["Fecha","Tipo","Detalle","Cantidad","Unidad","Origen"];
-    const donacionesRows: any[] = [];
+    // 5) Encargados / Usuarios (poblamos la sección de encargados)
+    let encargadosRows: any[] = [];
+    const encargadosHeaders = ["Nombre", "RUT", "Telefono" ,"Email", "Rol"];
+    
+    // La sección 'usuarios' se mantiene vacía, ya que 'encargados' es más específico.
+    try {
+        // USAMOS LA NUEVA FUNCIÓN DEL FRONTEND
+        const assignedUsers = await listAssignedUsersToCenter(center.center_id);
+        
+        encargadosRows = (assignedUsers ?? []).map((u: any) => ({
+            Nombre: u.nombre ?? "",
+            RUT: formatRut(u.rut, { withDots: true, forceExcelText: true }),
+            // Nota: Aquí no tenemos el teléfono directamente en el objeto User completo, 
+            // asumiremos que el backend lo incluye. Si no lo incluye, será null.
+            Telefono: u.celular ?? "", 
+            Email: u.email ?? "",
+            Rol: u.role_name ?? "Sin Rol",
+        }));
+
+    } catch (e) {
+        console.error("Encargados/Usuarios:", e);
+        window.alert("No se pudieron incluir los usuarios/encargados del centro.");
+    }
+    const usuariosHeaders = ["Fecha","Tipo","Detalle","Cantidad","Unidad","Origen"];
+    const usuariosRows: any[] = [];
 
     // Archivos que vamos a generar
     const files: Array<{name: string, csv: string}> = [
@@ -324,7 +348,7 @@ const CenterManagementPage: React.FC = () => {
       { name: `Centro_${center.center_id}__Inventario.csv`,      csv: toCSV(inventoryRows, inventoryHeaders) },
       { name: `Centro_${center.center_id}__Actualizaciones.csv`, csv: toCSV(updatesRows, updatesHeaders) },
       { name: `Centro_${center.center_id}__Encargados.csv`,      csv: toCSV(encargadosRows, encargadosHeaders) },
-      { name: `Centro_${center.center_id}__Donaciones.csv`,      csv: toCSV(donacionesRows, donacionesHeaders) },
+      { name: `Centro_${center.center_id}__Usuarios.csv`,      csv: toCSV(usuariosRows, usuariosHeaders) },
     ];
 
     // A) Guardar dentro de una carpeta elegida (Chromium)
