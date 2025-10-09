@@ -21,7 +21,8 @@ export interface MutationQueueItem {
   data?: any; // Payload del request
   headers?: Record<string, string>;
   timestamp: number; // Timestamp de creación
-  retries: number; // Número de intentos de sincronización
+  retries: number; // Número de intentos de sincronización (legacy)
+  retryCount: number; // Número de intentos de sincronización (Fase 3)
   status: MutationStatus;
   error?: string; // Mensaje de error si falló
   optimisticId?: string; // ID temporal para actualizaciones optimistas
@@ -53,6 +54,15 @@ export interface SyncMetadata {
 }
 
 /**
+ * Wrapper para datos almacenados en sync-metadata store
+ */
+export interface SyncMetadataWrapper {
+  id: string; // Identificador único (ej: 'sync-metrics', 'centers', etc.)
+  data: SyncMetadata | SyncMetrics | any; // Datos específicos
+  timestamp: number; // Timestamp de última actualización
+}
+
+/**
  * Configuración de estrategia de cache por endpoint
  */
 export interface CacheStrategy {
@@ -72,17 +82,19 @@ export interface SyncConflict {
   localVersion: any; // Versión local (lo que intentamos sincronizar)
   remoteVersion: any; // Versión remota actual (lo que está en el servidor)
   timestamp: number;
+  error?: any; // Error que causó el conflicto (Fase 3)
 }
 
 /**
  * Resultado de una operación de sincronización
  */
 export interface SyncResult {
-  success: boolean;
-  synced: number; // Número de operaciones sincronizadas exitosamente
+  success: number; // Número de operaciones sincronizadas exitosamente
   failed: number; // Número de operaciones que fallaron
   conflicts: SyncConflict[]; // Conflictos detectados
-  errors: Array<{ mutationId: string; error: string }>;
+  total: number; // Total de operaciones procesadas
+  duration: number; // Duración de la sincronización en ms
+  metrics?: SyncMetrics; // Métricas actualizadas
 }
 
 /**
@@ -106,4 +118,39 @@ export interface OfflineOptions {
   skipQueue?: boolean; // Si debe fallar inmediatamente cuando offline (para operaciones críticas)
   entityType?: string; // Tipo de entidad para tracking
   entityId?: string; // ID de entidad para tracking
+}
+
+// =====================================================
+// TIPOS PARA FASE 3: SINCRONIZACIÓN INTELIGENTE
+// =====================================================
+
+/**
+ * Opciones de configuración para sincronización inteligente
+ */
+export interface SyncOptions {
+  maxRetries: number; // Máximo número de reintentos
+  baseDelay: number; // Delay inicial en ms
+  backoffMultiplier: number; // Factor de multiplicación para backoff exponencial
+  maxDelay: number; // Delay máximo entre reintentos
+  conflictStrategy: 'manual' | 'last-write-wins' | 'merge' | 'remote-wins';
+  batchSize: number; // Número máximo de mutaciones por lote
+  priorityWeights: {
+    critical: number;
+    high: number;
+    normal: number;
+    low: number;
+  };
+}
+
+/**
+ * Métricas de rendimiento del sistema de sincronización
+ */
+export interface SyncMetrics {
+  totalSyncs: number; // Total de sincronizaciones ejecutadas
+  totalSuccessful: number; // Total de mutaciones sincronizadas exitosamente
+  totalFailed: number; // Total de mutaciones fallidas
+  totalConflicts: number; // Total de conflictos detectados
+  averageDuration: number; // Duración promedio de sincronización en ms
+  lastSyncTime: number; // Timestamp de última sincronización
+  successRate: number; // Porcentaje de éxito (0-100)
 }

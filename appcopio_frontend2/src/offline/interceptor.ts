@@ -10,6 +10,7 @@
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { cacheResponse, getCachedResponse } from './db';
 import { addMutationToQueue } from './queue';
+import { emitMutationQueued } from './events';
 
 // =====================================================
 // CONFIGURACIÓN DE CACHE POR ENDPOINT
@@ -163,10 +164,14 @@ async function handleOfflineRequest(
       headers: config.headers as Record<string, string>,
       timestamp: Date.now(),
       retries: 0,
+      retryCount: 0, // Fase 3 - campo requerido
       status: 'pending',
     });
 
     console.log('[Interceptor] ✅ Mutación encolada exitosamente');
+
+    // Emitir evento para notificación al usuario
+    emitMutationQueued(method, url, config.data);
 
     // Lanzar error para que el servicio sepa que está encolado
     return Promise.reject({

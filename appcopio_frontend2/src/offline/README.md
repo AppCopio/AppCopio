@@ -5,6 +5,8 @@
 1. **Visualización offline**: Acceso a datos previamente cargados sin conexión
 2. **Cola de mutaciones**: Sincronización automática de cambios al recuperar internet
 3. **Arquitectura generalizada**: Solución escalable para todas las operaciones
+4. **Manejo robusto de errores**: Prevención de bloqueo de cola por operaciones duplicadas
+5. **Notificaciones de usuario**: Feedback claro sobre operaciones offline
 
 ---
 
@@ -1190,11 +1192,127 @@ await refreshPendingCount(); // Refrescar manualmente
 
 ---
 
-## 📝 Notas Importantes
+## � BUG CRÍTICO RESUELTO: Bloqueo de Cola por Operaciones Duplicadas
 
-- La sincronización real aún no está implementada (FASE 3)
-- Por ahora, `triggerSync()` solo loguea las mutaciones pendientes
-- El sistema está preparado para recibir el interceptor de Axios (FASE 2)
+### 🔍 Problema Identificado
+**Escenario**: Usuario elimina un registro offline, luego intenta eliminarlo nuevamente antes de la sincronización.
+
+**Comportamiento anterior**:
+1. Primera DELETE se ejecuta correctamente durante sync
+2. Segunda DELETE falla con 404 (registro ya eliminado)
+3. La mutación fallida se marcaba como "error" pero permanecía en cola
+4. Cola bloqueada permanentemente - no más sincronizaciones
+
+### ✅ Solución Implementada
+
+#### 1. **Manejo Inteligente de Errores**
+```typescript
+// En markMutationAsFailed (db.ts)
+// ANTES: Solo marcaba como error, mutación permanecía en cola
+// AHORA: Elimina mutaciones con errores irrecuperables
+
+if (mutation.retries >= 3) {
+  // Eliminar permanentemente en lugar de marcar como error
+  await store.delete(mutationId);
+  console.log(`Mutation ${mutationId} deleted after ${mutation.retries} failed attempts`);
+}
+```
+
+#### 2. **Limpieza Automática de Mutaciones Bloqueadas**
+```typescript
+// Función cleanStuckMutations()
+// Identifica y elimina mutaciones problemáticas automáticamente
+const cleanedCount = await cleanStuckMutations(5); // max 5 reintentos
+```
+
+#### 3. **Integración en Contexto Offline**
+- **Auto-limpieza al inicializar**: Limpia mutaciones bloqueadas al cargar app
+- **Auto-limpieza post-sync**: Ejecuta limpieza después de cada sincronización
+- **Funciones de depuración**: Acceso directo vía `useOffline()` hook
+
+### 🛠️ Herramientas de Depuración
+
+#### Componente Debug Visual
+```tsx
+import { OfflineDebugUtils } from './offline/components/OfflineDebugUtils';
+
+function App() {
+  return (
+    <OfflineProvider>
+      <YourApp />
+      <OfflineDebugUtils /> {/* Botón flotante de debug */}
+    </OfflineProvider>
+  );
+}
+```
+
+#### API de Depuración
+```typescript
+const { cleanStuckMutations, getProblematicMutations } = useOffline();
+
+// Limpiar mutaciones bloqueadas manualmente
+const cleaned = await cleanStuckMutations();
+
+// Inspeccionar mutaciones problemáticas
+const problematic = await getProblematicMutations();
+```
+
+#### Script de Prueba del Escenario
+```javascript
+// Archivo: test-delete-scenario.js
+// Simula el escenario problemático para verificar la solución
+await testDuplicateDeleteScenario();
+```
+
+### 🎯 Casos de Error Manejados
+1. **404 Not Found**: Recurso ya eliminado (elimina mutación)
+2. **400 Bad Request**: Request inválido (elimina mutación)
+3. **403 Forbidden**: Sin permisos (elimina mutación)
+4. **422 Unprocessable**: Datos inválidos (elimina mutación)
+5. **500+ Server Errors**: Reintenta hasta máximo configurado
+
+### 📊 Monitoreo de Salud del Sistema
+- **Estado de cola**: Visible en debug panel
+- **Conteo de operaciones**: Actualización automática
+- **Mutaciones problemáticas**: Detección proactiva
+- **Limpieza automática**: Logs detallados en consola
+
+---
+
+## � NUEVO: Manejo Robusto de Autenticación
+
+### 🎯 Problema Resuelto: Tokens Expirados Durante Offline
+**Escenario**: Usuario hace operaciones offline, cuando regresa internet el token ha expirado → mutaciones se perdían.
+
+### ✅ Solución Implementada
+- ✅ **Refresh automático**: Detecta 401, renueva token, reintenta mutación
+- ✅ **Preservación de mutaciones**: Si refresh falla, mutaciones se PAUSAN (no eliminan)  
+- ✅ **Reanudación automática**: Después de re-login, mutaciones pausadas continúan
+- ✅ **UX claro**: Componente visual notifica mutaciones pausadas por auth expirada
+
+### 🧩 Componentes Nuevos
+```tsx
+import { AuthExpiredHandler } from './offline/components/AuthExpiredHandler';
+
+// AuthContext actualizado con refreshToken()
+const { refreshToken } = useAuth();
+await refreshToken(); // Renueva token automáticamente
+
+// Componente que aparece cuando hay mutaciones pausadas por auth
+<AuthExpiredHandler />
+```
+
+**📚 Documentación completa**: [`TOKEN_AUTH_HANDLING.md`](./TOKEN_AUTH_HANDLING.md)
+
+---
+
+## �📝 Notas Importantes
+
+- ✅ **Sistema completo implementado**: Todas las fases completadas
+- ✅ **Bug crítico resuelto**: Cola no se bloquea por duplicados
+- ✅ **Manejo robusto de auth**: Tokens expirados no hacen perder mutaciones
+- ✅ **Notificaciones de usuario**: Feedback en operaciones offline
+- ✅ **Herramientas de debug**: Panel visual y scripts de prueba
 - IndexedDB tiene límite de ~50MB en algunos navegadores (configurable)
 
 ## 🎓 Recursos

@@ -415,10 +415,146 @@ export async function incrementRetryCount(id: string): Promise<void> {
   
   if (mutation) {
     mutation.retries = (mutation.retries || 0) + 1;
+    mutation.retryCount = (mutation.retryCount || 0) + 1; // Fase 3
     mutation.status = 'error';
     mutation.error = `Reintento #${mutation.retries}`;
     
     await db.put('mutation-queue', mutation);
     console.log(`[OfflineDB] Mutación ${id} incrementada a ${mutation.retries} reintentos`);
+  }
+}
+
+// ====================================================================
+// FUNCIONES ADICIONALES PARA FASE 3: SINCRONIZACIÓN INTELIGENTE
+// ====================================================================
+
+/**
+ * Obtiene todas las mutaciones listas para sincronizar
+ * (pendientes y con errores que pueden reintentarse)
+ */
+export async function getMutationsToSync(): Promise<MutationQueueItem[]> {
+  const db = await getDB();
+  const allMutations = await db.getAll('mutation-queue');
+  
+  // Filtrar solo las que pueden sincronizarse
+  return allMutations.filter(mutation => {
+    // Solo pendientes y errores recuperables
+    if (mutation.status === 'pending') return true;
+    
+    // Para errores, verificar que no hayan superado el máximo de reintentos
+    if (mutation.status === 'error') {
+      const maxRetries = 5; // Debería coincidir con DEFAULT_SYNC_OPTIONS.maxRetries
+      const currentRetries = mutation.retryCount || mutation.retries || 0;
+      return currentRetries < maxRetries;
+    }
+    
+    return false;
+  });
+}
+
+/**
+ * Marca una mutación como fallida permanentemente y la ELIMINA de la cola
+ * Los errores irrecuperables (404, 400, etc.) no deben bloquear la cola
+ * 
+ * @param id - ID de la mutación
+ * @param errorMessage - Mensaje de error
+ */
+export async function markMutationAsFailed(id: string, errorMessage: string): Promise<void> {
+  const db = await getDB();
+  
+  // ELIMINAR la mutación en lugar de marcarla como error
+  // Los errores irrecuperables no deben quedarse en la cola
+  await db.delete('mutation-queue', id);
+  
+  console.log(`[OfflineDB] Mutación ${id} eliminada por error irrecuperable: ${errorMessage}`);
+  
+  // Opcionalmente, guardar en un log de errores para debugging
+  await saveFailedMutationLog(id, errorMessage);
+}
+
+/**
+ * Guarda un log de mutaciones fallidas para debugging (opcional)
+ */
+async function saveFailedMutationLog(mutationId: string, errorMessage: string): Promise<void> {
+  try {
+    const db = await getDB();
+    const logEntry = {
+      id: `failed-${mutationId}-${Date.now()}`,
+      mutationId,
+      errorMessage,
+      timestamp: Date.now()
+    };
+    
+    await db.put('sync-metadata', logEntry as any);
+  } catch (error) {
+    // No bloquear si falla el log
+    console.warn('[OfflineDB] No se pudo guardar log de mutación fallida:', error);
+  }
+}
+
+// ====================================================================
+// FUNCIONES DE LIMPIEZA Y RECUPERACIÓN
+// ====================================================================
+
+/**
+ * Limpia mutaciones que han superado el máximo de reintentos
+ * Útil para resolver colas bloqueadas
+ */
+export async function cleanStuckMutations(maxRetries: number = 5): Promise<number> {
+  const db = await getDB();
+  const allMutations = await db.getAll('mutation-queue');
+  
+  let cleanedCount = 0;
+  
+  for (const mutation of allMutations) {
+    const retryCount = mutation.retryCount || mutation.retries || 0;
+    
+    // Si ha superado el máximo de reintentos, eliminarla
+    if (retryCount >= maxRetries) {
+      await db.delete('mutation-queue', mutation.id);
+      cleanedCount++;
+      
+      console.log(`[OfflineDB] 🧹 Limpiada mutación bloqueada: ${mutation.method} ${mutation.url} (${retryCount} reintentos)`);
+      
+      // Guardar log para debugging
+      await saveFailedMutationLog(mutation.id, `Limpiada automáticamente tras ${retryCount} reintentos`);
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    console.log(`[OfflineDB] ✅ Limpiadas ${cleanedCount} mutaciones bloqueadas`);
+  }
+  
+  return cleanedCount;
+}
+
+/**
+ * Obtiene mutaciones que están causando problemas (muchos reintentos)
+ */
+export async function getProblematicMutations(): Promise<MutationQueueItem[]> {
+  const db = await getDB();
+  const allMutations = await db.getAll('mutation-queue');
+  
+  return allMutations.filter(mutation => {
+    const retryCount = mutation.retryCount || mutation.retries || 0;
+    return retryCount >= 3; // Mutaciones con 3+ reintentos son problemáticas
+  });
+}
+
+/**
+ * Fuerza la eliminación de una mutación específica (para casos extremos)
+ */
+export async function forceMutationRemoval(mutationId: string, reason: string = 'Eliminación forzada por admin'): Promise<boolean> {
+  const db = await getDB();
+  
+  try {
+    await db.delete('mutation-queue', mutationId);
+    await saveFailedMutationLog(mutationId, reason);
+    
+    console.log(`[OfflineDB] 🔨 Mutación ${mutationId} eliminada forzadamente: ${reason}`);
+    return true;
+  } catch (error) {
+    console.error(`[OfflineDB] Error eliminando mutación ${mutationId}:`, error);
+    return false;
   }
 }

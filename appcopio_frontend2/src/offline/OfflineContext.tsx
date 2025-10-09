@@ -7,9 +7,13 @@ import {
   countPendingMutations, 
   getPendingMutations,
   cleanExpiredCache,
-  getDBStats 
+  getDBStats,
+  cleanStuckMutations // Limpieza automática de mutaciones bloqueadas
 } from './db';
 import { processQueue } from './queue';
+import { performIntelligentSync } from './sync'; // FASE 3
+import { startBackgroundSync, stopBackgroundSync } from './backgroundSync'; // FASE 3
+import { emitSyncCompleted, emitSyncFailed } from './events'; // Notificaciones
 import type { OfflineState, SyncConflict } from './types';
 
 /**
@@ -71,13 +75,36 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
         // Limpiar cache expirado (más de 24 horas)
         await cleanExpiredCache(24 * 60 * 60 * 1000);
         
-        console.log(`[OfflineContext] ${count} mutaciones pendientes encontradas`);
+        // Limpiar mutaciones bloqueadas al iniciar (SOLUCIÓN AL BUG)
+        const cleanedCount = await cleanStuckMutations(5);
+        if (cleanedCount > 0) {
+          console.log(`[OfflineContext] 🧹 Limpiadas ${cleanedCount} mutaciones bloqueadas al iniciar`);
+        }
+        
+        // Iniciar background sync automático (FASE 3)
+        startBackgroundSync({ 
+          intervalMs: 5 * 60 * 1000, // 5 minutos
+          respectBattery: true,
+          respectNetwork: true
+        });
+        
+        // Recontear pendientes después de la limpieza
+        const finalCount = await countPendingMutations();
+        setPendingCount(finalCount);
+        
+        console.log(`[OfflineContext] ${finalCount} mutaciones pendientes encontradas (${cleanedCount} limpiadas)`);
+        console.log('[OfflineContext] 🚀 Background sync iniciado (Fase 3)');
       } catch (error) {
         console.error('[OfflineContext] Error inicializando offline system:', error);
       }
     }
 
     init();
+    
+    // Cleanup al desmontar
+    return () => {
+      stopBackgroundSync();
+    };
   }, []);
 
   /**
@@ -137,8 +164,8 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
       setIsSyncing(true);
       console.log('[OfflineContext] 🔄 Iniciando sincronización...');
 
-      // Procesar cola usando queue.ts (FASE 2)
-      const result = await processQueue();
+      // Procesar cola usando sync.ts (FASE 3 - Sincronización Inteligente)
+      const result = await performIntelligentSync();
       
       console.log('[OfflineContext] ✅ Sincronización completada:', {
         exitosas: result.success,
@@ -149,17 +176,15 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
 
       // Actualizar conflictos si hay
       if (result.conflicts.length > 0) {
-        const newConflicts: SyncConflict[] = result.conflicts.map(c => ({
-          mutationId: c.mutation.id,
-          entityType: c.mutation.entityType || 'unknown',
-          entityId: c.mutation.entityId || 'unknown',
-          localVersion: c.mutation.data,
-          remoteVersion: c.error.response?.data,
-          timestamp: Date.now(),
-        }));
-        
-        setConflicts(prev => [...prev, ...newConflicts]);
+        // Los conflictos de Fase 3 ya vienen con la estructura correcta
+        setConflicts(prev => [...prev, ...result.conflicts]);
         console.warn(`[OfflineContext] ⚠️ ${result.conflicts.length} conflictos detectados`);
+      }
+
+      // Limpiar mutaciones bloqueadas después del sync (prevenir acumulación)
+      const cleanedAfterSync = await cleanStuckMutations(5);
+      if (cleanedAfterSync > 0) {
+        console.log(`[OfflineContext] 🧹 Limpiadas ${cleanedAfterSync} mutaciones bloqueadas post-sync`);
       }
 
       // Actualizar contador de pendientes
@@ -169,9 +194,17 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
       if (result.success > 0) {
         setLastSync(Date.now());
       }
+
+      // Emitir evento de sincronización completada para notificaciones
+      if (result.total > 0) {
+        emitSyncCompleted(result.success, result.failed, result.total);
+      }
       
     } catch (error) {
       console.error('[OfflineContext] ❌ Error durante sincronización:', error);
+      
+      // Emitir evento de error de sincronización
+      emitSyncFailed(error);
     } finally {
       setIsSyncing(false);
     }
@@ -208,7 +241,7 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
     refreshPendingCount,
     triggerSync,
     clearConflict,
-    getStats,
+    getStats
   };
 
   return (

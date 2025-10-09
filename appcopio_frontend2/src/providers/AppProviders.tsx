@@ -4,8 +4,8 @@ import { StyledEngineProvider, ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OfflineProvider } from "@/offline/OfflineContext";
+import { OfflineNotificationProvider } from "@/offline/OfflineNotifications";
 import { theme } from "@/theme"; 
-
 type Props = { children: React.ReactNode };
 
 export function AppProviders({ children }: Props) {
@@ -14,9 +14,11 @@ export function AppProviders({ children }: Props) {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <OfflineProvider>
-          <AuthProvider>
-            <BrowserRouter>{children}</BrowserRouter>
-          </AuthProvider>
+          <OfflineNotificationProvider>
+            <AuthProvider>
+              <BrowserRouter>{children}</BrowserRouter>
+            </AuthProvider>
+          </OfflineNotificationProvider>
         </OfflineProvider>
       </ThemeProvider>
     </StyledEngineProvider>
