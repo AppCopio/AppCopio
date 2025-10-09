@@ -12,6 +12,8 @@ import {
   OperationalStatusUI,
 } from "@/services/centers.service";
 import { listCenterInventory } from "@/services/inventory.service";
+
+import { getOmzZoneForCenter } from "@/services/zones.service";
 import { 
   listNotificationsByCenter, 
   createNotification,
@@ -57,6 +59,7 @@ const CenterDetailsPage: React.FC = () => {
   const [assignRole, setAssignRole] = useState<AssignRole | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
 
+
   const [notificationToast, setNotificationToast] = useState<{
     show: boolean;
     message: string;
@@ -69,6 +72,9 @@ const CenterDetailsPage: React.FC = () => {
       setNotificationToast({ show: false, message: '', type: 'success' });
     }, 4000);
   };
+  // OMZ zone state
+  const [omzZone, setOmzZone] = useState<string | null>(null);
+
   // Función para cargar las notificaciones
   const fetchNotifications = useCallback(async () => {
     if (!centerId) return;
@@ -174,6 +180,10 @@ const fullnessPercentage = useMemo(() => {
 
         setCenter(mapped as CenterData);
         setResources(inv);
+        // Obtener zona OMZ como string
+        const omz = await getOmzZoneForCenter(centerId);
+        setOmzZone(omz);
+        await fetchNotifications();
       } catch (e: any) {
         if (alive) {
           setError(e?.response?.data?.message || e?.message || "No se pudieron cargar los detalles del centro.");
@@ -279,14 +289,9 @@ const fullnessPercentage = useMemo(() => {
                   <div className="public-note-display">{center.public_note}</div>
                 </div>
               )}
-              {/* Aquí añadimos las zonas OMZ y la oficina asignada */}
-              <div className="info-item">
-                <label>Oficina Municipal:</label>
-                <span>{"----"}</span> {/* Reemplaza esto por el nombre de la oficina cuando esté disponible */}
-              </div>
               <div className="info-item">
                 <label>Zona OMZ:</label>
-                <span>{"-----"}</span> {/* Reemplaza esto por la zona OMZ cuando esté disponible */}
+                <span>{omzZone ? omzZone : "No asignada"}</span>
               </div>
             </div>
 
