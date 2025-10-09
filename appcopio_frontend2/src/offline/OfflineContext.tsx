@@ -193,10 +193,8 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
         setLastSync(Date.now());
       }
 
-      // Emitir evento de sincronización completada para notificaciones
-      if (result.total > 0) {
-        emitSyncCompleted(result.success, result.failed, result.total);
-      }
+      // NO emitir evento aquí - ya lo hace performIntelligentSync()
+      // Evita duplicación de notificaciones
       
     } catch (error) {
       console.error('[OfflineContext] ❌ Error durante sincronización:', error);

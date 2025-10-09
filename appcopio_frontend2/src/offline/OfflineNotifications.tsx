@@ -93,48 +93,68 @@ export function useOfflineNotifications() {
 
 /**
  * Hook que escucha eventos offline y muestra notificaciones automáticamente
+ * IMPORTANTE: Solo debe usarse UNA vez en la aplicación (típicamente en Layout principal)
  */
 export function useAutoNotifications() {
   const { addNotification } = useOfflineNotifications();
+  
+  // Usar ref para evitar que addNotification cause re-registros
+  const addNotificationRef = React.useRef(addNotification);
+  
+  React.useEffect(() => {
+    addNotificationRef.current = addNotification;
+  }, [addNotification]);
 
   React.useEffect(() => {
+    console.log('[OfflineNotifications] 🔔 Inicializando listeners de eventos...');
+
+    let unsubscribeMutation: (() => void) | undefined;
+    let unsubscribeSync: (() => void) | undefined;
+    let unsubscribeFailed: (() => void) | undefined;
+
     // Importar dinámicamente para evitar dependencias circulares
     import('./events').then(({ offlineEventEmitter }) => {
       
       // Listener para mutaciones encoladas
-      const unsubscribeMutation = offlineEventEmitter.on('mutation_queued', (event) => {
+      unsubscribeMutation = offlineEventEmitter.on('mutation_queued', (event) => {
         const { operation, entityType } = event.data;
         
-        addNotification(createOfflineNotification(operation, entityType));
+        console.log('[OfflineNotifications] 📝 Mutación encolada:', operation, entityType);
+        addNotificationRef.current(createOfflineNotification(operation, entityType));
       });
 
       // Listener para sincronización completada
-      const unsubscribeSync = offlineEventEmitter.on('sync_completed', (event) => {
-        const { success, failed } = event.data;
+      unsubscribeSync = offlineEventEmitter.on('sync_completed', (event) => {
+        const { success, failed, total } = event.data;
+        
+        console.log('[OfflineNotifications] ✅ Sync completada:', { success, failed, total });
         
         if (success > 0) {
-          addNotification(createSyncNotification(success, failed));
+          addNotificationRef.current(createSyncNotification(success, failed));
         }
       });
 
       // Listener para fallos de sincronización
-      const unsubscribeFailed = offlineEventEmitter.on('sync_failed', (event) => {
-        addNotification({
+      unsubscribeFailed = offlineEventEmitter.on('sync_failed', (event) => {
+        console.log('[OfflineNotifications] ❌ Sync fallida:', event.data);
+        
+        addNotificationRef.current({
           type: 'error',
           title: '❌ Error de sincronización',
           message: `No se pudieron sincronizar las operaciones: ${event.data.error}`,
           duration: 8000
         });
       });
-
-      // Cleanup
-      return () => {
-        unsubscribeMutation();
-        unsubscribeSync();
-        unsubscribeFailed();
-      };
     });
-  }, [addNotification]);
+
+    // Cleanup al desmontar - IMPORTANTE: fuera del .then()
+    return () => {
+      console.log('[OfflineNotifications] 🧹 Limpiando listeners de eventos...');
+      if (unsubscribeMutation) unsubscribeMutation();
+      if (unsubscribeSync) unsubscribeSync();
+      if (unsubscribeFailed) unsubscribeFailed();
+    };
+  }, []); // Sin dependencias - solo se ejecuta una vez
 }
 
 // =====================================================

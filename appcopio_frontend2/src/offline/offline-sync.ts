@@ -216,22 +216,35 @@ function detectConflictType(error: any): 'version' | 'deleted' | 'unknown' {
 // SINCRONIZACIÓN INTELIGENTE
 // =====================================================
 
+// Lock para prevenir sincronizaciones concurrentes
+let isSyncInProgress = false;
+
 /**
  * Realiza sincronización inteligente con backoff y priorización
  */
 export async function performIntelligentSync(options: Partial<SyncOptions> = {}): Promise<SyncResult> {
-  const config = { ...SYNC_CONFIG, ...options };
-  
-  console.log('[OfflineSync] 🧠 Iniciando sincronización inteligente...');
+  // Prevenir ejecuciones concurrentes
+  if (isSyncInProgress) {
+    console.log('[OfflineSync] ⏸️  Sincronización ya en progreso, omitiendo...');
+    return { success: 0, failed: 0, conflicts: [], total: 0, duration: 0 };
+  }
+
+  isSyncInProgress = true;
 
   try {
+    const config = { ...SYNC_CONFIG, ...options };
+    
+    console.log('[OfflineSync] 🧠 Iniciando sincronización inteligente...');
+
+    // Resto de la lógica continúa...
     // Obtener mutaciones a sincronizar (excluye las que han fallado demasiadas veces)
     const mutations = await getMutationsToSync();
     
     if (mutations.length === 0) {
       console.log('[OfflineSync] ✅ No hay mutaciones para sincronizar');
       const result: SyncResult = { success: 0, failed: 0, conflicts: [], total: 0, duration: 0 };
-      emitSyncCompleted(result.success, result.failed, result.total);
+      // NO emitir evento cuando no hay nada que sincronizar
+      // emitSyncCompleted(result.success, result.failed, result.total);
       return result;
     }
 
@@ -295,6 +308,9 @@ export async function performIntelligentSync(options: Partial<SyncOptions> = {})
     console.error('[OfflineSync] ❌ Error en sincronización:', error);
     emitSyncFailed(error);
     throw error;
+  } finally {
+    // IMPORTANTE: Liberar el lock siempre, incluso si hay error
+    isSyncInProgress = false;
   }
 }
 
