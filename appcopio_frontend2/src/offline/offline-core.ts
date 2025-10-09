@@ -1,7 +1,7 @@
 // src/offline/offline-core.ts  
 // Funciones core consolidadas: autenticación + utilidades
 
-import { api, setAccessToken } from '@/lib/api';
+import { api, apiNoRetry, setAccessToken } from '@/lib/api';
 
 // =====================================================
 // MANEJO DE AUTENTICACIÓN
@@ -20,7 +20,8 @@ export async function tryRefreshToken(): Promise<boolean> {
       return false;
     }
 
-    const response = await api.post('/auth/refresh', {
+    // Usar apiNoRetry para evitar bucles de interceptores
+    const response = await apiNoRetry.post('/auth/refresh', {
       refresh_token: refreshTokenValue
     });
 

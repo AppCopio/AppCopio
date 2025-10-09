@@ -33,6 +33,12 @@ export const apiNoRetry = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
+// Añadir interceptor de autenticación a apiNoRetry también
+apiNoRetry.interceptors.request.use((config) => {
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  return config;
+});
+
 // Interceptor de errores genérico
 api.interceptors.response.use(
   r => r,

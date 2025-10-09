@@ -20,6 +20,7 @@ import {
 import { apiNoRetry } from '@/lib/api';
 import { SYNC_CONFIG, BACKGROUND_SYNC_CONFIG, getMutationPriority } from './config';
 import { emitSyncCompleted, emitSyncFailed } from './events';
+import { executeWithTokenRefresh } from './offline-core';
 
 // =====================================================
 // TIPOS CONSOLIDADOS
@@ -159,11 +160,14 @@ async function replayMutation(mutation: MutationQueueItem): Promise<{ success: b
   try {
     console.log(`[OfflineSync] 🎬 Replayeando mutación: ${mutation.method} ${mutation.url}`);
     
-    const response = await apiNoRetry({
-      method: mutation.method,
-      url: mutation.url,
-      data: mutation.data
-    });
+    // Usar executeWithTokenRefresh para manejar automáticamente el refresh del token
+    const response = await executeWithTokenRefresh(() => 
+      apiNoRetry({
+        method: mutation.method,
+        url: mutation.url,
+        data: mutation.data
+      })
+    );
 
     console.log(`[OfflineSync] ✅ Mutación exitosa: ${mutation.id}`);
     return { success: true };
