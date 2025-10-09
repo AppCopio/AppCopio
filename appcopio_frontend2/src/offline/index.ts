@@ -11,7 +11,6 @@ export {
 
 // Componentes UI
 export { OfflineIndicator } from './components/OfflineIndicator';
-export { OfflineDebugPanel } from './components/OfflineDebugPanel';
 
 // Interceptor (FASE 2)
 export {

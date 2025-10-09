@@ -17,7 +17,6 @@ import {
   enqueueMutation, 
   cacheResponse,
   getCachedResponse,
-  OfflineDebugPanel 
 } from '@/offline';
 
 export default function OfflineTestPage() {
@@ -35,9 +34,10 @@ export default function OfflineTestPage() {
         method: 'POST',
         data,
         timestamp: Date.now(),
-        retries: 0,
         status: 'pending',
         entityType: 'test',
+        retries: 0,
+        retryCount: 0
       });
       setMessage(`✅ Mutación encolada: POST ${testUrl}`);
     } catch (error: any) {
@@ -189,8 +189,6 @@ export default function OfflineTestPage() {
         </Stack>
       </Paper>
 
-      {/* Panel de debugging */}
-      <OfflineDebugPanel />
 
       {/* Instrucciones */}
       <Paper sx={{ p: 3, mt: 3 }}>
