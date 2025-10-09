@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/components/notification/NotificationsHistory.tsx
+import React, { useState, useMemo } from 'react';
 import { Bell, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import './NotificationHistory.css';
 
@@ -10,6 +11,7 @@ interface CenterNotification {
   event_at: string;
   center_id: string;
   destinatary_name: string | null;
+  destinatary_id?: number | null;
   status?: 'queued' | 'sent' | 'failed';
   read_at?: string | null;
 }
@@ -18,6 +20,19 @@ interface NotificationsHistoryProps {
   notifications: CenterNotification[];
   loading?: boolean;
   onRefresh?: () => void;
+}
+
+// Tipo para notificaciones agrupadas
+interface GroupedNotification {
+  id: string; // ID único para el grupo
+  title: string;
+  message: string;
+  event_at: string;
+  center_id: string;
+  destinataries: Array<{ id?: number | null; name: string | null }>;
+  status?: 'queued' | 'sent' | 'failed';
+  read_at?: string | null;
+  notification_ids: string[]; // IDs originales
 }
 
 const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({ 
@@ -31,9 +46,61 @@ const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({
   // Asegurar que notifications siempre sea un array
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
 
+  // Agrupar notificaciones duplicadas (mismo título, mensaje y fecha)
+  const groupedNotifications = useMemo(() => {
+    const groups = new Map<string, GroupedNotification>();
+
+    safeNotifications.forEach(notif => {
+      // Crear una clave única basada en título, mensaje y fecha (redondeada al minuto)
+      const eventDate = new Date(notif.event_at);
+      const roundedTime = new Date(
+        eventDate.getFullYear(),
+        eventDate.getMonth(),
+        eventDate.getDate(),
+        eventDate.getHours(),
+        eventDate.getMinutes()
+      ).toISOString();
+      
+      const groupKey = `${notif.title}|${notif.message}|${roundedTime}`;
+
+      if (groups.has(groupKey)) {
+        // Agregar destinatario al grupo existente
+        const group = groups.get(groupKey)!;
+        group.destinataries.push({
+          id: notif.destinatary_id,
+          name: notif.destinatary_name
+        });
+        group.notification_ids.push(notif.notification_id);
+        
+        // Si alguna está leída, marcar el grupo como leído
+        if (notif.read_at) {
+          group.read_at = notif.read_at;
+        }
+      } else {
+        // Crear nuevo grupo
+        groups.set(groupKey, {
+          id: groupKey,
+          title: notif.title,
+          message: notif.message,
+          event_at: notif.event_at,
+          center_id: notif.center_id,
+          destinataries: [{
+            id: notif.destinatary_id,
+            name: notif.destinatary_name
+          }],
+          status: notif.status,
+          read_at: notif.read_at,
+          notification_ids: [notif.notification_id]
+        });
+      }
+    });
+
+    return Array.from(groups.values());
+  }, [safeNotifications]);
+
   const filteredNotifications = filter === 'unread' 
-    ? safeNotifications.filter(n => !n.read_at)
-    : safeNotifications;
+    ? groupedNotifications.filter(n => !n.read_at)
+    : groupedNotifications;
 
   const getStatusIcon = (status?: string) => {
     switch (status) {
@@ -135,14 +202,15 @@ const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({
       ) : (
         <div className="notifications-list">
           {filteredNotifications.map((notif) => {
-            const isExpanded = expandedId === notif.notification_id;
+            const isExpanded = expandedId === notif.id;
             const isUnread = !notif.read_at;
+            const hasMultipleDestinataries = notif.destinataries.length > 1;
 
             return (
               <div
-                key={notif.notification_id}
+                key={notif.id}
                 className={`notification-card ${isUnread ? 'unread' : ''} ${isExpanded ? 'expanded' : ''}`}
-                onClick={() => toggleExpand(notif.notification_id)}
+                onClick={() => toggleExpand(notif.id)}
               >
                 <div className="notification-header-content">
                   <div className="notification-main">
@@ -164,18 +232,34 @@ const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({
                         <span>{formatDate(notif.event_at)}</span>
                       </div>
                       
-                      {notif.destinatary_name && (
-                        <div className="notification-meta-item">
-                          <span>👤</span>
-                          <span>{notif.destinatary_name}</span>
-                        </div>
-                      )}
-
+                      {/* Mostrar destinatarios */}
+                      <div className="notification-meta-item">
+                        <span>👤</span>
+                        <span>
+                          {hasMultipleDestinataries ? (
+                            <span>
+                              {notif.destinataries.length} destinatarios
+                              {isExpanded && (
+                                <span className="destinataries-list">
+                                  {': '}
+                                  {notif.destinataries
+                                    .map(d => d.name || 'Sin nombre')
+                                    .filter((name, index, self) => self.indexOf(name) === index) // Eliminar duplicados
+                                    .join(', ')}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            notif.destinataries[0]?.name || 'Sin destinatario'
+                          )}
+                        </span>
+                      </div>
+                      {/*}    
                       {notif.status && (
                         <div className="notification-meta-item">
                           <span>Estado: {notif.status}</span>
                         </div>
-                      )}
+                      )}*/}
                     </div>
                   </div>
                 </div>

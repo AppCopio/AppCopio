@@ -1,7 +1,7 @@
 // src/pages/NotificationsPage/NotificationsPage.tsx
 import React, { useEffect, useState } from 'react';
-import { Bell, RefreshCw, ExternalLink } from 'lucide-react';
-import { listUserNotifications, CenterNotification } from "@/services/notifications.service";
+import { Bell, RefreshCw, ExternalLink, Check } from 'lucide-react';
+import { listUserNotifications, CenterNotification, markNotificationAsRead } from "@/services/notifications.service";
 import { Link } from "react-router-dom";
 import "./NotificationsPage.css";
 
@@ -38,6 +38,53 @@ const NotificationsPage: React.FC = () => {
     const handleFilterChange = (newFilter: 'all' | 'unread') => {
         setFilter(newFilter);
         applyFilter(notifications, newFilter);
+    };
+    const handleNotificationClick = async (notification: CenterNotification) => {
+        // Toggle selección
+        setSelectedId(selectedId === notification.notification_id ? null : notification.notification_id);
+        
+        // Si no está leída, marcarla como leída
+        if (!notification.read_at) {
+            try {
+                await markNotificationAsRead(notification.notification_id);
+                
+                // Actualizar el estado local
+                const updatedNotifications = notifications.map(n => 
+                    n.notification_id === notification.notification_id 
+                        ? { ...n, read_at: new Date().toISOString() }
+                        : n
+                );
+                setNotifications(updatedNotifications);
+                applyFilter(updatedNotifications, filter);
+            } catch (error) {
+                console.error('Error al marcar notificación como leída:', error);
+            }
+        }
+    };
+
+    const handleMarkAllAsRead = async () => {
+        const unreadNotifications = notifications.filter(n => !n.read_at);
+        
+        if (unreadNotifications.length === 0) return;
+
+        try {
+            // Marcar todas como leídas en paralelo
+            await Promise.all(
+                unreadNotifications.map(n => markNotificationAsRead(n.notification_id))
+            );
+
+            // Actualizar estado local
+            const updatedNotifications = notifications.map(n => ({
+                ...n,
+                read_at: n.read_at || new Date().toISOString()
+            }));
+            
+            setNotifications(updatedNotifications);
+            applyFilter(updatedNotifications, filter);
+        } catch (error) {
+            console.error('Error al marcar todas como leídas:', error);
+            alert('Error al marcar todas las notificaciones como leídas');
+        }
     };
 
     const formatDate = (dateString: string) => {
@@ -89,7 +136,6 @@ const NotificationsPage: React.FC = () => {
             </div>
         );
     }
-
     return (
         <div className="notifications-page-container">
             {/* Header */}
@@ -118,14 +164,27 @@ const NotificationsPage: React.FC = () => {
                         </button>
                     </div>
                     
-                    <button 
-                        onClick={fetchNotifications} 
-                        className="refresh-btn"
-                        title="Actualizar"
-                    >
-                        <RefreshCw size={16} />
-                        Actualizar
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {unreadCount > 0 && (
+                            <button 
+                                onClick={handleMarkAllAsRead}
+                                className="mark-all-btn"
+                                title="Marcar todas como leídas"
+                            >
+                                <Check size={16} />
+                                Marcar todas
+                            </button>
+                        )}
+                        
+                        <button 
+                            onClick={fetchNotifications} 
+                            className="refresh-btn"
+                            title="Actualizar"
+                        >
+                            <RefreshCw size={16} />
+                            Actualizar
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -150,7 +209,7 @@ const NotificationsPage: React.FC = () => {
                             <div
                                 key={notification.notification_id}
                                 className={`notification-card ${isUnread ? 'unread' : ''} ${isSelected ? 'selected' : ''}`}
-                                onClick={() => setSelectedId(isSelected ? null : notification.notification_id)}
+                                onClick={() => handleNotificationClick(notification)}
                             >
                                 <div className="notification-indicator">
                                     {isUnread && <div className="unread-dot" />}

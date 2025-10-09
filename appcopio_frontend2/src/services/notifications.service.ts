@@ -76,7 +76,7 @@ export async function listUserNotifications(): Promise<CenterNotification[]> {
  */
 export async function markNotificationAsRead(notificationId: string, signal?: AbortSignal): Promise<void> {
   try {
-    await api.patch(`/notifications/${notificationId}/read`, {}, { signal });
+    await api.patch(`/notifications/${notificationId}/mark-read`, {}, { signal });
   } catch (error) {
     console.error(`Error marking notification ${notificationId} as read:`, error);
     throw error;

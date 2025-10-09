@@ -316,29 +316,6 @@ const fullnessPercentage = useMemo(() => {
             onRefresh={fetchNotifications}
           />
         </div>
-        
-        {/* Botón de prueba (solo en desarrollo) */}
-        {process.env.NODE_ENV === 'development' && center?.comunity_charge_id && (
-          <button 
-            onClick={handleSendTestNotification}
-            style={{
-              marginTop: '20px',
-              padding: '12px 24px',
-              background: '#0066cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: '14px',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = '#0052a3'}
-            onMouseOut={(e) => e.currentTarget.style.background = '#0066cc'}
-          >
-            📧 Enviar Notificación de Prueba
-          </button>
-        )}
       </div>
 
         <div className="responsible-section">

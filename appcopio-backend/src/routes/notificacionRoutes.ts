@@ -1,7 +1,6 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
 import { sendEmail, getUserEmailById } from "../services/emailService";
-import { requireAuth } from "../auth/middleware";
 import {
   createNotification as createNotificationService,
   updateStatus as updateStatusService,
@@ -17,7 +16,6 @@ const router = Router();
 
 const allowedStatus = new Set(['queued', 'sent', 'failed']);
 //La cosa del token
-router.use(requireAuth);
 
 // ---------------------------------------------
 // POST /notifications  (crear/enviar notificación)
@@ -111,14 +109,28 @@ const markMessageAsRead : RequestHandler = async (req, res, next) => {
 // ---------------------------------------------
 const getById: RequestHandler = async (req, res, next) => {
   try {
-    const row = await getNotificationById(pool, req.params.id);
-    if (!row) return res.status(404).json({ error: "Notificación no encontrada" });
+    const id = req.params.id;
+    
+    if (id === 'me') {
+      const userId = (req as any).user?.user_id; 
+      
+      if (!userId) {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+      
+      const rows = await listByUser(pool, userId);
+      return res.json(rows);
+    }
+    
+    const row = await getNotificationById(pool, id);
+    if (!row) {
+      return res.status(404).json({ error: "Notificación no encontrada" });
+    }
     return res.json({ data: row });
   } catch (err) {
     next(err);
   }
 };
-
 // ---------------------------------------------
 // GET /notifications/by-user/:userId
 // query: ?limit=&offset=&status=(queued|sent|failed|any)&since=&until=
