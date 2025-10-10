@@ -14,56 +14,56 @@ export const CSV_MODULE_CONFIGS: Record<
 > = {
   users: {
     displayName: 'Usuarios',
-    description: 'Usuarios del sistema',
-    requiredColumns: ['rut', 'nombre', 'username', 'email', 'role_id'],
-    optionalColumns: ['genero', 'celular', 'es_apoyo_admin', 'is_active', 'password'],
+    description: 'Usuarios del sistema con credenciales de acceso',
+    requiredColumns: ['rut', 'username', 'email', 'role'],
+    optionalColumns: ['nombre', 'genero', 'celular', 'is_active', 'es_apoyo_admin', 'password'],
     sampleRows: [
-      { rut: '12.345.678-5', nombre: 'Juan Paredes', username: 'jparedes', email: 'jparedes@example.com', role_id: 1, genero: 'M', celular: '+56 9 1234 5678', es_apoyo_admin: 1, is_active: 1 }
+      { rut: '12.345.678-5', username: 'jperez', email: 'juan.perez@email.com', role: 'Trabajador Municipal', nombre: 'Juan Pérez', genero: 'M', celular: '+56912345678', is_active: 1, es_apoyo_admin: 0, password: 'password123' }
     ]
   },
   centers: {
     displayName: 'Centros',
-    description: 'Creación de Centros (básicos + catastro opcional)',
-    requiredColumns: ['name', 'address', 'type', 'capacity', 'latitude', 'longitude'],
-    optionalColumns: ['should_be_active', 'comunity_charge_id', 'municipal_manager_id', 'public_note', 'operational_status'],
+    description: 'Creación de Centros de Acopio con ubicación geográfica',
+    requiredColumns: ['name', 'address', 'type', 'latitude', 'longitude'],
+    optionalColumns: ['capacity', 'should_be_active', 'comunity_charge_username', 'municipal_manager_username'],
     sampleRows: [
-      { name: 'Liceo A N°1', address: 'Av. Siempre Viva 123', type: 'acopio', capacity: 500, latitude: -33.045, longitude: -71.62, should_be_active: 1, comunity_charge_id: 101, municipal_manager_id: 202 }
+      { name: 'Centro de Acopio Norte', type: 'Albergue', address: 'Av. Libertador 1234', latitude: -33.4489, longitude: -70.6693, capacity: 200, is_active: 1, should_be_active: 1, operational_status: 'abierto', public_note: 'Centro principal para emergencias', folio: 'FOL001', comunity_charge_username: 'jperez', municipal_manager_username: 'mgarcia' }
     ]
   },
   inventory: {
     displayName: 'Inventario',
-    description: 'Agregar ítems a inventario por centro',
-    requiredColumns: ['center_id', 'item_name', 'category_id', 'quantity', 'unit', 'user_id'],
-    optionalColumns: ['notes'],
+    description: 'Agregar ítems al inventario de centros (crea producto y categoría si no existen). Si no se especifica updated_by, se usa el usuario que sube el archivo.',
+    requiredColumns: ['center_id', 'item_name', 'category', 'quantity', 'unit'],
+    optionalColumns: ['notes', 'updated_by'],
     sampleRows: [
-      { center_id: 'CTR-001', item_name: 'Arroz 1kg', category_id: 1, quantity: 50, unit: 'kg', user_id: 10, notes: 'Donación JJVV' }
+      { center_id: 'C001', item_name: 'Arroz', category: 'Alimentos', quantity: 100, unit: 'kg', updated_by: 'jperez', notes: 'Donación JJVV' }
     ]
   },
   residents: {
     displayName: 'Personas',
-    description: 'Registro de personas/residentes',
+    description: 'Registro de personas/residentes con información socioeconómica',
     requiredColumns: ['rut', 'nombre', 'primer_apellido', 'nacionalidad', 'genero', 'edad'],
     optionalColumns: ['segundo_apellido', 'estudia', 'trabaja', 'perdida_trabajo', 'rubro', 'discapacidad', 'dependencia'],
     sampleRows: [
-      { rut: '18.765.432-1', nombre: 'Carla', primer_apellido: 'Rojas', segundo_apellido: '', nacionalidad: 'Chilena', genero: 'F', edad: 34, estudia: 0, trabaja: 1, perdida_trabajo: 0, rubro: 'Comercio', discapacidad: 0, dependencia: 0 }
+      { rut: '18.765.432-1', nombre: 'Ana', primer_apellido: 'Martínez', segundo_apellido: 'López', nacionalidad: 'Chilena', genero: 'F', edad: 34, estudia: 0, trabaja: 1, perdida_trabajo: 0, rubro: 'Comercio', discapacidad: 0, dependencia: 0 }
     ]
   },
   assignments: {
     displayName: 'Asignaciones',
-    description: 'Asignar usuarios a centros por rol',
-    requiredColumns: ['user_id', 'center_id', 'role'],
-    optionalColumns: ['changed_by'],
+    description: 'Asignar usuarios a centros por rol (trabajador municipal, contacto ciudadano). Si no se especifica changed_by_username, se usa el usuario que sube el archivo. Detecta automáticamente asignaciones duplicadas.',
+    requiredColumns: ['username', 'center_id', 'role'],
+    optionalColumns: ['changed_by_username'],
     sampleRows: [
-      { user_id: 10, center_id: 'CTR-001', role: 'encargado', changed_by: 1 }
+      { username: 'jperez', center_id: 'C001', role: 'trabajador municipal', changed_by_username: 'mgarcia' }
     ]
   },
   updates: {
     displayName: 'Solicitudes de Actualización',
-    description: 'Crear solicitudes de actualización para centros',
-    requiredColumns: ['center_id', 'description', 'urgency', 'requested_by'],
+    description: 'Crear solicitudes de actualización para centros (urgencia: baja, media, alta)',
+    requiredColumns: ['center_id', 'description', 'urgency', 'requested_by_username'],
     optionalColumns: [],
     sampleRows: [
-      { center_id: 'CTR-001', description: 'Actualizar stock de agua.', urgency: 'alta', requested_by: 10 }
+      { center_id: 'C001', description: 'Actualizar stock de agua.', urgency: 'alta', requested_by_username: 'jperez' }
     ]
   }
 };

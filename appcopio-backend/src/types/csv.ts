@@ -1,5 +1,5 @@
 // src/types/csv.ts
-export type CSVModule =
+export type CSVUploadModule =
   | 'centers' 
   | 'inventory' 
   | 'users' 
@@ -7,9 +7,16 @@ export type CSVModule =
   | 'assignments'
   | 'updates';
 
+// Alias para compatibilidad
+export type CSVModule = CSVUploadModule;
+
 export interface CSVUploadRequest {
   module: CSVModule;
   data: Array<Record<string, any>>;
+  uploadedBy?: {
+    user_id: number;
+    username: string;
+  };
 }
 
 export interface CSVUploadRowError {
@@ -33,7 +40,7 @@ export interface CSVUploadResponse {
 
 // USERS
 export interface RawUserRow {
-  rut?: string; nombre?: string; username?: string; email?: string; role_id?: string|number;
+  rut?: string; nombre?: string; username?: string; email?: string; role?: string; // Cambiado role_id por role
   genero?: string; celular?: string; es_apoyo_admin?: string|number|boolean; is_active?: string|number|boolean;
   password?: string;
 }
@@ -42,20 +49,20 @@ export interface RawUserRow {
 export interface RawCenterRow {
   name?: string; address?: string; type?: string; capacity?: string|number;
   latitude?: string|number; longitude?: string|number;
-  should_be_active?: string|number|boolean; comunity_charge_id?: string|number; municipal_manager_id?: string|number;
+  should_be_active?: string|number|boolean; comunity_charge_username?: string; municipal_manager_username?: string; // Cambiado RUTs por usernames
   // resto opcional (catastro / denormalizados)
   [k: string]: any;
 }
 
 // INVENTORY
 export interface RawInventoryRow {
-  center_id?: string;
+  center_id?: string; // Mantenemos center_id como está (C001, C002, etc.)
   item_name?: string;
-  category_id?: string|number;
+  category?: string; // Cambiado category_id por category (nombre de categoría)
   quantity?: string|number;
   unit?: string;
   notes?: string;
-  user_id?: string|number;
+  updated_by?: string; // Cambiado username por updated_by para mayor claridad
 }
 
 // RESIDENTS (Persons)
@@ -68,10 +75,10 @@ export interface RawResidentRow {
 
 // ASSIGNMENTS
 export interface RawAssignmentRow {
-  user_id?: string|number;
+  username?: string; // Cambiado user_rut por username
   center_id?: string;
   role?: string;           // normRole
-  changed_by?: string|number;
+  changed_by_username?: string; // Cambiado changed_by_rut por changed_by_username
 }
 
 // UPDATES
@@ -79,5 +86,5 @@ export interface RawUpdateRow {
   center_id?: string;
   description?: string;
   urgency?: string;
-  requested_by?: string|number;
+  requested_by_username?: string; // Cambiado requested_by_rut por requested_by_username
 }

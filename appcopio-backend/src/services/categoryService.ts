@@ -56,3 +56,17 @@ export async function categoryHasProducts(db: Db, categoryId: number): Promise<b
     );
     return parseInt(result.rows[0].count, 10) > 0;
 }
+
+/**
+ * Busca una categoría por su nombre.
+ * @param db Pool de conexión a la base de datos.
+ * @param categoryName El nombre de la categoría a buscar.
+ * @returns El objeto Category si se encuentra, null si no existe.
+ */
+export async function getCategoryByName(db: Db, categoryName: string): Promise<Category | null> {
+    const result = await db.query(
+        "SELECT * FROM Categories WHERE LOWER(name) = LOWER($1)",
+        [categoryName.trim()]
+    );
+    return result.rows[0] || null;
+}

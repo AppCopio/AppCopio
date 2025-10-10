@@ -1,2 +1,5 @@
-user_id,center_id,role
-1,"CNT001","encargado"
+username,center_id,role,changed_by_username
+jperez,C001,trabajador municipal,mgarcia
+asanchez,C001,contacto ciudadano,
+mgarcia,C002,trabajador municipal,
+jperez,C003,trabajador municipal,mgarcia

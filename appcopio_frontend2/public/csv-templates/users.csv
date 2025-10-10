@@ -1,2 +1,4 @@
-rut,nombre,username,email,role_id,genero,celular,es_apoyo_admin,is_active
-"21257503-8","Juan Paredes","jparedes","jparedes@example.com",1,"M","+56 9 1234 5678",1,1
+rut,username,email,role,nombre,genero,celular,is_active,es_apoyo_admin,password
+12.345.678-5,jperez,juan.perez@email.com,Trabajador Municipal,Juan Pérez,M,+56912345678,1,0,password123
+18.765.432-1,mgarcia,maria.garcia@email.com,Contacto Ciudadano,María García,F,+56987654321,1,1,password456
+21.234.567-8,asanchez,andres.sanchez@email.com,Trabajador Municipal,Andrés Sánchez,M,,1,0,password789

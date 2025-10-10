@@ -1,2 +1,4 @@
-name,address,type,capacity,latitude,longitude,folio,nombre_dirigente,cargo_dirigente,telefono_contacto
-"Centro de Acopio Norte","Av. Libertador 1234","Acopio",200,-33.4489,-70.6693,"FOLIO001","Maria Gonzalez","Directora","+56 9 8765 4321"
+name,type,address,latitude,longitude,capacity,is_active,should_be_active,operational_status,public_note,folio,comunity_charge_username,municipal_manager_username
+Centro de Acopio Norte,Acopio,Av. Libertador 1234,-33.4489,-70.6693,200,1,1,abierto,Centro principal para emergencias,FOL001,jperez,mgarcia
+Liceo Municipal Sur,Liceo,Calle Principal 567,-33.4372,-70.6506,150,1,1,abierto,,FOL002,asanchez,jperez
+Centro Comunitario Este,Centro Comunitario,Pasaje Los Olivos 89,-33.4291,-70.6421,75,0,0,cerrado,En mantenimiento,FOL003,,mgarcia

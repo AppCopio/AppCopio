@@ -1,2 +1,6 @@
-center_id,name,category,quantity,unit,description
-"CNT001","Colchones","Dormitorio",50,"unidades","Colchones individuales para albergue"
+center_id,item_name,category,quantity,unit,notes
+C001,Arroz,Alimentos,100,kg,,Donación JJVV
+C001,Frazadas,Vestuario y Textiles,50,unidades,Para temporada invierno
+C002,Agua embotellada,Bebidas,200,litros,Urgente para distribución
+C001,Medicamentos básicos,Salud e Higiene,30,unidades,Kit de primeros auxilios
+C002,Colchones inflables,Mobiliario,15,unidades,Para refugio temporal

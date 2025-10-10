@@ -58,7 +58,24 @@ export default function CsvUploadPage() {
     null
   );
   const [showPreview, setShowPreview] = useState(false);
-    useState<CSVUploadResponse | null>(null);
+
+  // Función para calcular duplicados
+  const calculateDuplicates = (errors: any[] | undefined): number => {
+    if (!errors) return 0;
+    return errors.filter(
+      error => error.message.toLowerCase().includes('ya existe') || 
+              error.message.toLowerCase().includes('duplicado')
+    ).length;
+  };
+
+  // Función para calcular errores de validación (no duplicados)
+  const calculateValidationErrors = (errors: any[] | undefined): number => {
+    if (!errors) return 0;
+    return errors.filter(
+      error => !error.message.toLowerCase().includes('ya existe') && 
+              !error.message.toLowerCase().includes('duplicado')
+    ).length;
+  };
 
   const handleModuleSelect = (module: CSVUploadModule) => {
     setSelectedModule(module);
@@ -358,64 +375,126 @@ export default function CsvUploadPage() {
           <StepContent>
             {uploadResult && (
               <Box>
-                <Alert
-                  severity={uploadResult.success ? "success" : "error"}
-                  sx={{ mb: 2 }}
-                >
-                  {uploadResult.message}
-                </Alert>
 
                 {uploadResult.results && (
-                  <Grid container spacing={2} sx={{ mb: 2 }}>
-                    <Grid size={{ xs: 6, md: 3 }}>
-                      <Card className="result-card success">
-                        <CardContent>
-                          <Typography variant="h4" className="value">
-                            {uploadResult.results.createdRows}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Registros Creados
-                          </Typography>
-                        </CardContent>
-                      </Card>
+                  <Box>
+                    {/* Resumen numérico en tarjetas */}
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      <Grid size={{ xs: 6, md: 3 }}>
+                        <Card className="result-card success">
+                          <CardContent>
+                            <Typography variant="h4" className="value" color="success.main">
+                              {uploadResult.results.createdRows || 0}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                               Registros Creados
+                            </Typography>
+                            <Typography variant="caption" color="success.main">
+                              Nuevos registros agregados exitosamente
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      
+                      <Grid size={{ xs: 6, md: 3 }}>
+                        <Card className="result-card error">
+                          <CardContent>
+                            <Typography variant="h4" className="value" color="error.main">
+                              {calculateValidationErrors(uploadResult.results.errors)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                               Errores de Validación
+                            </Typography>
+                            <Typography variant="caption" color="error.main">
+                              Registros con datos inválidos
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+
+                      <Grid size={{ xs: 6, md: 3 }}>
+                        <Card className="result-card warning">
+                          <CardContent>
+                            <Typography variant="h4" className="value" color="warning.main">
+                              {calculateDuplicates(uploadResult.results.errors)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                               Duplicados
+                            </Typography>
+                            <Typography variant="caption" color="warning.main">
+                              Registros que ya existían
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+
+                      <Grid size={{ xs: 6, md: 3 }}>
+                        <Card className="result-card info">
+                          <CardContent>
+                            <Typography variant="h4" className="value" color="info.main">
+                              {uploadResult.results.totalRows || 0}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                               Total Procesado
+                            </Typography>
+                            <Typography variant="caption" color="info.main">
+                              Filas analizadas del archivo
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
                     </Grid>
-                    <Grid size={{ xs: 6, md: 3 }}>
-                      <Card className="result-card warning">
-                        <CardContent>
-                          <Typography variant="h4" className="value">
-                            {uploadResult.results.updatedRows}
+                  </Box>
+                )}
+
+                {/* Mostrar errores detallados si existen */}
+                {uploadResult.results?.errors && uploadResult.results.errors.length > 0 && (
+                  <Card sx={{ mb: 2 }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Detalle de Problemas
+                      </Typography>
+                      
+                      {/* Errores de validación */}
+                      {calculateValidationErrors(uploadResult.results.errors) > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" color="error.main" gutterBottom>
+                             Errores de Validación ({calculateValidationErrors(uploadResult.results.errors)})
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Registros Actualizados
+                          <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                            {uploadResult.results.errors
+                              .filter(error => !error.message.toLowerCase().includes('ya existe') && 
+                                             !error.message.toLowerCase().includes('duplicado'))
+                              .map((error, index) => (
+                                <Alert key={`validation-${index}`} severity="error" sx={{ mb: 1 }}>
+                                  <strong>Fila {error.row}:</strong> {error.message}
+                                  {error.column && <><br/><strong>Columna:</strong> {error.column}</>}
+                                </Alert>
+                              ))}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Duplicados */}
+                      {calculateDuplicates(uploadResult.results.errors) > 0 && (
+                        <Box>
+                          <Typography variant="subtitle2" color="warning.main" gutterBottom>
+                             Registros Duplicados ({calculateDuplicates(uploadResult.results.errors)})
                           </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid size={{ xs: 6, md: 3 }}>
-                      <Card className="result-card error">
-                        <CardContent>
-                          <Typography variant="h4" className="value">
-                            {uploadResult.results.errorRows}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Errores
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid size={{ xs: 6, md: 3 }}>
-                      <Card className="result-card">
-                        <CardContent>
-                          <Typography variant="h4" className="value">
-                            {uploadResult.results.processedRows}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Total Procesadas
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
+                          <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                            {uploadResult.results.errors
+                              .filter(error => error.message.toLowerCase().includes('ya existe') || 
+                                             error.message.toLowerCase().includes('duplicado'))
+                              .map((error, index) => (
+                                <Alert key={`duplicate-${index}`} severity="warning" sx={{ mb: 1 }}>
+                                  <strong>Fila {error.row}:</strong> {error.message}
+                                </Alert>
+                              ))}
+                          </Box>
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
                 )}
 
                 <Button

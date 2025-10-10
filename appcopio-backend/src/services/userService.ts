@@ -154,3 +154,45 @@ export async function getActiveUsersByRole(db: Db, roleId: number) {
     const result = await db.query(sql, [roleId]);
     return { users: result.rows, total: result.rowCount };
 }
+
+/**
+ * Busca un usuario por su nombre.
+ * @param db Pool de conexión a la base de datos.
+ * @param userName El nombre del usuario a buscar.
+ * @returns El objeto User si se encuentra, null si no existe.
+ */
+export async function getUserByName(db: Db, userName: string): Promise<any | null> {
+    const result = await db.query(
+        "SELECT user_id, username, nombre, email FROM users WHERE LOWER(nombre) = LOWER($1) OR LOWER(username) = LOWER($1)",
+        [userName.trim()]
+    );
+    return result.rows[0] || null;
+}
+
+/**
+ * Busca un usuario por su RUT.
+ * @param db Pool de conexión a la base de datos.
+ * @param rut El RUT del usuario a buscar.
+ * @returns El objeto User si se encuentra, null si no existe.
+ */
+export async function getUserByRut(db: Db, rut: string): Promise<any | null> {
+    const result = await db.query(
+        "SELECT user_id, username, nombre, email, rut FROM users WHERE rut = $1",
+        [rut.trim()]
+    );
+    return result.rows[0] || null;
+}
+
+/**
+ * Busca un usuario por su username.
+ * @param db Pool de conexión a la base de datos.
+ * @param username El username del usuario a buscar.
+ * @returns El objeto User si se encuentra, null si no existe.
+ */
+export async function getUserByUsername(db: Db, username: string): Promise<any | null> {
+    const result = await db.query(
+        "SELECT user_id, username, nombre, email, rut FROM users WHERE username = $1",
+        [username.trim()]
+    );
+    return result.rows[0] || null;
+}

@@ -1,2 +1,4 @@
-center_id,rut,nombre,primer_apellido,segundo_apellido,edad,genero,nacionalidad,estudia,trabaja,discapacidad,parentesco
-"CNT001","12345678-9","Ana","Martinez","Lopez",34,"F","Chilena",false,true,false,"Jefe de hogar"
+rut,nombre,primer_apellido,segundo_apellido,nacionalidad,genero,edad,estudia,trabaja,perdida_trabajo,rubro,discapacidad,dependencia
+18.765.432-1,Ana,Martínez,López,Chilena,F,34,0,1,0,Comercio,0,0
+12.345.678-9,Carlos,Rojas,Silva,Chilena,M,45,0,1,1,Construcción,0,0
+21.987.654-3,Sofía,González,,Venezolana,F,28,1,0,0,Estudiante,0,1

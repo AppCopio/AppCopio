@@ -9,7 +9,16 @@ const router = Router();
  */
 router.post("/", async (req, res) => {
   try {
-    const result = await handleCsvUpload(pool, req.body);
+    // Agregar información del usuario que sube el archivo si está autenticado
+    const uploadRequest = {
+      ...req.body,
+      uploadedBy: (req as any).user ? {
+        user_id: (req as any).user.user_id,
+        username: (req as any).user.username
+      } : undefined
+    };
+    
+    const result = await handleCsvUpload(pool, uploadRequest);
     res.json(result);
   } catch (err: any) {
     console.error("csv/upload error", err);

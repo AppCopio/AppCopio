@@ -1,16 +1,18 @@
 // src/services/csvService.ts
 import type { Db } from "../types/db";
 import type {
-  CSVUploadRequest, CSVUploadResponse, CSVModule,
+  CSVUploadRequest, CSVUploadResponse, CSVUploadModule,
   RawUserRow, RawCenterRow, RawInventoryRow, RawResidentRow, RawAssignmentRow, RawUpdateRow
 } from "../types/csv";
 
 // Reusas lo de users (ya lo tenías):
-import { createUser } from "./userService";
+import { createUser, getUserByName, getUserByRut, getUserByUsername } from "./userService";
 import { createCenter, addInventoryItem } from "./centerService";
 import { createPersonDB } from "./personService";
 import { createOrUpdateAssignment } from "./assignmentService";
 import { createUpdateRequest } from "./updateService";
+import { getRoleByName } from "./roleService";
+import { getCategoryByName, addCategory } from "./categoryService";
 
 // helpers comunes
 const toBool = (v: any) => typeof v === "boolean" ? v : /^(1|true|si|sí)$/i.test(String(v ?? "").trim());
@@ -29,11 +31,11 @@ export async function handleCsvUpload(db: Db, body: CSVUploadRequest): Promise<C
     case "centers":
       return importCenters(db, body.data as RawCenterRow[]);
     case "inventory":
-      return importInventory(db, body.data as RawInventoryRow[]);
+      return importInventory(db, body.data as RawInventoryRow[], body.uploadedBy);
     case "residents":
       return importResidents(db, body.data as RawResidentRow[]);
     case "assignments":
-      return importAssignments(db, body.data as RawAssignmentRow[]);
+      return importAssignments(db, body.data as RawAssignmentRow[], body.uploadedBy);
     case "updates":
       return importUpdates(db, body.data as RawUpdateRow[]);
     default:
@@ -42,47 +44,100 @@ export async function handleCsvUpload(db: Db, body: CSVUploadRequest): Promise<C
 
 }
 
-/* ========== USERS (igual al que ya te dejé, resumido) ========== */
+/* ========== USERS ========== */
 async function importUsers(db: Db, rows: RawUserRow[]): Promise<CSVUploadResponse> {
-  let created = 0, updated = 0, errors = 0; const detail: any[] = [];
+  let created = 0, errors = 0, skipped = 0; 
+  const detail: any[] = [];
+  
   await db.query("BEGIN");
   try {
     for (let i = 0; i < rows.length; i++) {
-      const r = rows[i]; const n = {
-        rut: normRut(r.rut), nombre: cleanStr(r.nombre), username: cleanStr(r.username),
-        email: cleanStr(r.email).toLowerCase(), role_id: toInt(r.role_id),
-        genero: r.genero ? cleanStr(r.genero).toUpperCase() : undefined, celular: r.celular ? cleanStr(r.celular) : undefined,
-        es_apoyo_admin: toBool(r.es_apoyo_admin), is_active: toBool(r.is_active), password: r.password ? String(r.password) : ""
+      const r = rows[i]; 
+      const n = {
+        rut: normRut(r.rut), 
+        nombre: cleanStr(r.nombre), 
+        username: cleanStr(r.username),
+        email: cleanStr(r.email).toLowerCase(), 
+        role: cleanStr(r.role), // Cambiado de role_id a role (nombre)
+        genero: r.genero ? cleanStr(r.genero).toUpperCase() : undefined, 
+        celular: r.celular ? cleanStr(r.celular) : undefined,
+        es_apoyo_admin: toBool(r.es_apoyo_admin), 
+        is_active: toBool(r.is_active), 
+        password: r.password ? String(r.password) : genTempPwd()
       };
-      // validación mínima
+
+      // Validaciones requeridas basadas en createUser
       const errs = [];
       if (!n.rut) errs.push({ column: "rut", message: "RUT requerido" });
       if (!n.nombre) errs.push({ column: "nombre", message: "Nombre requerido" });
       if (!n.username) errs.push({ column: "username", message: "Username requerido" });
-      if (!n.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(n.email)) errs.push({ column: "email", message: "Email inválido" });
-      if (!Number.isInteger(n.role_id)) errs.push({ column: "role_id", message: "role_id numérico requerido" });
-      if (errs.length) { errors++; errs.forEach(e => detail.push({ row: i + 2, ...e })); continue; }
+      if (!n.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(n.email)) errs.push({ column: "email", message: "Email válido requerido" });
+      if (!n.role) errs.push({ column: "role", message: "Rol requerido" });
 
-      const ex = await db.query(`SELECT user_id FROM users WHERE email=$1 OR username=$2 OR rut=$3 LIMIT 1`, [n.email, n.username, n.rut]);
-      if (ex.rowCount === 0) {
-        await createUser(db, {
-          rut: n.rut!, username: n.username!, password: n.password || genTempPwd(),
-          email: n.email!, role_id: n.role_id!, nombre: n.nombre!, genero: n.genero, celular: n.celular,
-          is_active: n.is_active ?? true, es_apoyo_admin: n.es_apoyo_admin ?? false
-        });
-        created++;
+      // Buscar role_id por nombre
+      let role_id: number | null = null;
+      if (n.role) {
+        const roleData = await getRoleByName(db, n.role);
+        if (!roleData) {
+          errs.push({ column: "role", message: `Rol "${n.role}" no encontrado` });
+        } else {
+          role_id = roleData.role_id;
+        }
+      }
+      // Validar que password no esté vacío si se proporciona
+      if (r.password !== undefined && !n.password) errs.push({ column: "password", message: "Password no puede estar vacío si se especifica" });
+      
+      if (errs.length) { 
+        errors++; 
+        errs.forEach(e => detail.push({ row: i + 2, ...e })); 
+        continue; 
+      }
+
+      // Verificar si ya existe (solo CREATE, no UPDATE)
+      const existing = await db.query(
+        `SELECT user_id FROM users WHERE email=$1 OR username=$2 OR rut=$3 LIMIT 1`, 
+        [n.email, n.username, n.rut]
+      );
+      
+      if (existing.rowCount === 0) {
+        try {
+          await createUser(db, {
+            rut: n.rut!,
+            username: n.username!,
+            password: n.password,
+            email: n.email!,
+            role_id: role_id!,
+            nombre: n.nombre!,
+            genero: n.genero,
+            celular: n.celular,
+            is_active: n.is_active ?? true,
+            es_apoyo_admin: n.es_apoyo_admin ?? false
+          });
+          created++;
+        } catch (createErr) {
+          errors++;
+          detail.push({ 
+            row: i + 2, 
+            column: "general", 
+            message: `Error al crear usuario: ${(createErr as Error).message}` 
+          });
+        }
       } else {
-        await db.query(
-          `UPDATE users SET rut=$1,nombre=$2,role_id=$3,genero=$4,celular=$5,is_active=$6,es_apoyo_admin=$7,
-                            username=$8,email=$9,updated_at=NOW() WHERE user_id=$10`,
-          [n.rut, n.nombre, n.role_id, n.genero, n.celular, n.is_active, n.es_apoyo_admin, n.username, n.email, ex.rows[0].user_id]
-        );
-        updated++;
+        skipped++;
+        detail.push({ 
+          row: i + 2, 
+          column: "general", 
+          message: "Usuario ya existe (RUT, email o username duplicado)" 
+        });
       }
     }
     await db.query("COMMIT");
-  } catch (e) { await db.query("ROLLBACK"); throw e; }
-  return ok(rows.length, created, updated, errors, detail);
+  } catch (e) { 
+    await db.query("ROLLBACK"); 
+    throw e; 
+  }
+  
+  return createResponse(rows.length, created, 0, errors, skipped, detail);
 }
 function genTempPwd(len = 12) { const c = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*"; let s = ""; for (let i = 0; i < len; i++) s += c[Math.floor(Math.random() * c.length)]; return s; }
 
@@ -94,6 +149,24 @@ async function importCenters(db: Db, rows: RawCenterRow[]): Promise<CSVUploadRes
   try {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
+      // Buscar IDs de usuarios por username si se proporcionan
+      let comunity_charge_id: number | null = null;
+      let municipal_manager_id: number | null = null;
+      
+      if (r.comunity_charge_username) {
+        const comUser = await getUserByUsername(db, cleanStr(r.comunity_charge_username));
+        if (comUser) {
+          comunity_charge_id = comUser.user_id;
+        }
+      }
+      
+      if (r.municipal_manager_username) {
+        const munUser = await getUserByUsername(db, cleanStr(r.municipal_manager_username));
+        if (munUser) {
+          municipal_manager_id = munUser.user_id;
+        }
+      }
+
       const body = {
         name: cleanStr(r.name),
         address: cleanStr(r.address),
@@ -102,8 +175,8 @@ async function importCenters(db: Db, rows: RawCenterRow[]): Promise<CSVUploadRes
         latitude: toFloat(r.latitude),
         longitude: toFloat(r.longitude),
         should_be_active: toBool(r.should_be_active),
-        comunity_charge_id: r.comunity_charge_id ? toInt(r.comunity_charge_id) : null,
-        municipal_manager_id: r.municipal_manager_id ? toInt(r.municipal_manager_id) : null,
+        comunity_charge_id,
+        municipal_manager_id,
         // “restOfBody” (catastro y extras): copia el resto tal cual
         public_note: r.public_note ?? null,
         operational_status: r.operational_status ?? null,
@@ -124,63 +197,130 @@ async function importCenters(db: Db, rows: RawCenterRow[]): Promise<CSVUploadRes
       );
 
       if (ex.rowCount === 0) {
-        await createCenter(client, body);
-        created++;
+        try {
+          await createCenter(client, body);
+          created++;
+        } catch (createErr) {
+          errors++;
+          detail.push({ 
+            row: i + 2, 
+            column: "general", 
+            message: `Error al crear centro: ${(createErr as Error).message}` 
+          });
+        }
       } else {
-        // UPDATE básico si quieres permitirlo:
-        await db.query(
-          `UPDATE centers SET type=$3, capacity=$4, should_be_active=$5,
-                              comunity_charge_id=$6, municipal_manager_id=$7,
-                              public_note=$8, operational_status=$9,
-                              updated_at=NOW()
-           WHERE center_id=$1`,
-          [ex.rows[0].center_id, body.name, body.type, body.capacity, body.should_be_active,
-          body.comunity_charge_id, body.municipal_manager_id, body.public_note, body.operational_status]
-        );
-        updated++;
+        // Solo CREATE, no UPDATE - registrar como duplicado
+        detail.push({ 
+          row: i + 2, 
+          column: "general", 
+          message: "Centro ya existe (mismo nombre+dirección o coordenadas)" 
+        });
       }
     }
     await db.query("COMMIT");
   } catch (e) { await db.query("ROLLBACK"); throw e; }
-  return ok(rows.length, created, updated, errors, detail);
+  return createResponse(rows.length, created, 0, errors, 0, detail);
 }
 
 /* ========== INVENTORY ITEMS ========== */
-async function importInventory(db: Db, rows: RawInventoryRow[]): Promise<CSVUploadResponse> {
+async function importInventory(db: Db, rows: RawInventoryRow[], uploadedBy?: { user_id: number; username: string }): Promise<CSVUploadResponse> {
   let created = 0, updated = 0, errors = 0; const detail: any[] = [];
   const client = db as any;
   await db.query("BEGIN");
   try {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
+      
+      // Buscar category_id por nombre, crear si no existe
+      let categoryId: number | null = null;
+      if (r.category) {
+        const categoryName = cleanStr(r.category);
+        let categoryData = await getCategoryByName(db, categoryName);
+        
+        if (!categoryData) {
+          // Crear la categoría si no existe
+          try {
+            categoryData = await addCategory(db, categoryName);
+            detail.push({ 
+              row: i + 2, 
+              column: "category", 
+              message: `Categoría "${categoryName}" creada automáticamente` 
+            });
+          } catch (createCategoryErr) {
+            errors++;
+            detail.push({ 
+              row: i + 2, 
+              column: "category", 
+              message: `Error al crear categoría "${categoryName}": ${(createCategoryErr as Error).message}` 
+            });
+            continue;
+          }
+        }
+        categoryId = categoryData.category_id;
+      }
+      
+      // Buscar user_id por updated_by o usar el usuario que sube el archivo
+      let userId: number | null = null;
+      if (r.updated_by) {
+        // Si se especifica updated_by, buscar ese usuario
+        const userData = await getUserByUsername(db, cleanStr(r.updated_by));
+        if (!userData) {
+          errors++;
+          detail.push({ 
+            row: i + 2, 
+            column: "updated_by", 
+            message: `Usuario con username "${r.updated_by}" no encontrado` 
+          });
+          continue;
+        }
+        userId = userData.user_id;
+      } else if (uploadedBy) {
+        // Si no se especifica updated_by, usar el usuario que sube el archivo
+        userId = uploadedBy.user_id;
+      }
+
       const n = {
         center_id: cleanStr(r.center_id),
         itemName: cleanStr(r.item_name),
-        categoryId: toInt(r.category_id),
+        categoryId,
         quantity: toFloat(r.quantity),
         unit: cleanStr(r.unit),
         notes: r.notes ? cleanStr(r.notes) : undefined,
-        userId: toInt(r.user_id),
+        userId,
       };
+      
       const errs = [];
       if (!n.center_id) errs.push({ column: "center_id", message: "center_id requerido" });
       if (!n.itemName) errs.push({ column: "item_name", message: "item_name requerido" });
-      if (!Number.isInteger(n.categoryId)) errs.push({ column: "category_id", message: "category_id numérico" });
+      if (!n.categoryId) errs.push({ column: "category", message: "category requerida" });
       if (!(Number.isFinite(n.quantity) && n.quantity > 0)) errs.push({ column: "quantity", message: "quantity > 0 requerido" });
       if (!n.unit) errs.push({ column: "unit", message: "unit requerido" });
-      if (!Number.isInteger(n.userId)) errs.push({ column: "user_id", message: "user_id numérico" });
+      if (!n.userId) errs.push({ column: "updated_by", message: "updated_by requerido o usuario de sesión no disponible" });
       if (errs.length) { errors++; errs.forEach(e => detail.push({ row: i + 2, ...e })); continue; }
 
-      // addInventoryItem ya hace UPSERT por (center_id,item_id)
-      await addInventoryItem(client, n.center_id, {
-        itemName: n.itemName, categoryId: n.categoryId, quantity: n.quantity, unit: n.unit, notes: n.notes, userId: n.userId
-      });
-      // No sabemos si creó o sumó; contemos como updated si existía
-      updated++; // o incrementa created si quieres separar, pero el método hace upsert
+      // addInventoryItem hace UPSERT - necesitamos crear solo si no existe
+      try {
+        await addInventoryItem(client, n.center_id, {
+          itemName: n.itemName, 
+          categoryId: n.categoryId!, 
+          quantity: n.quantity, 
+          unit: n.unit, 
+          notes: n.notes, 
+          userId: n.userId!
+        });
+        created++; // Consideramos como creado ya que addInventoryItem maneja la lógica
+      } catch (createErr) {
+        errors++;
+        detail.push({ 
+          row: i + 2, 
+          column: "general", 
+          message: `Error al agregar item al inventario: ${(createErr as Error).message}` 
+        });
+      }
     }
     await db.query("COMMIT");
   } catch (e) { await db.query("ROLLBACK"); throw e; }
-  return ok(rows.length, created, updated, errors, detail);
+  return createResponse(rows.length, created, 0, errors, 0, detail);
 }
 
 /* ========== RESIDENTS (Persons) ========== */
@@ -199,63 +339,131 @@ async function importResidents(db: Db, rows: RawResidentRow[]): Promise<CSVUploa
       };
 
       const errs = [];
-      if (!p.rut) errs.push({ column: "rut", message: "rut requerido" });
-      if (!p.nombre) errs.push({ column: "nombre", message: "nombre requerido" });
-      if (!p.primer_apellido) errs.push({ column: "primer_apellido", message: "primer_apellido requerido" });
-      if (!p.nacionalidad) errs.push({ column: "nacionalidad", message: "nacionalidad requerida" });
-      if (!p.genero) errs.push({ column: "genero", message: "genero requerido" });
-      if (!Number.isInteger(p.edad)) errs.push({ column: "edad", message: "edad numérica requerida" });
+      if (!p.rut) errs.push({ column: "rut", message: "RUT requerido" });
+      if (!p.nombre) errs.push({ column: "nombre", message: "Nombre requerido" });
+      if (!p.primer_apellido) errs.push({ column: "primer_apellido", message: "Primer apellido requerido" });
+      if (!p.nacionalidad) errs.push({ column: "nacionalidad", message: "Nacionalidad requerida" });
+      if (!p.genero) errs.push({ column: "genero", message: "Género requerido" });
+      if (!Number.isInteger(p.edad) || p.edad <= 0) errs.push({ column: "edad", message: "Edad numérica positiva requerida" });
       if (errs.length) { errors++; errs.forEach(e => detail.push({ row: i + 2, ...e })); continue; }
 
-      // ¿Existe persona? (si tu tabla Persons tiene unique por rut)
-      const ex = await db.query(`SELECT person_id FROM persons WHERE rut=$1 LIMIT 1`, [p.rut]);
-      if (ex.rowCount === 0) {
-        await createPersonDB(db, p as any);
-        created++;
+      // Verificar si ya existe (solo CREATE, no UPDATE)
+      const existing = await db.query(`SELECT person_id FROM persons WHERE rut=$1 LIMIT 1`, [p.rut]);
+      if (existing.rowCount === 0) {
+        try {
+          await createPersonDB(db, p as any);
+          created++;
+        } catch (createErr) {
+          errors++;
+          detail.push({ 
+            row: i + 2, 
+            column: "general", 
+            message: `Error al crear persona: ${(createErr as Error).message}` 
+          });
+        }
       } else {
-        await db.query(
-          `UPDATE persons SET nombre=$2, primer_apellido=$3, segundo_apellido=$4, nacionalidad=$5, genero=$6, edad=$7,
-                              estudia=$8, trabaja=$9, perdida_trabajo=$10, rubro=$11, discapacidad=$12, dependencia=$13,
-                              updated_at=NOW()
-           WHERE person_id=$1`,
-          [ex.rows[0].person_id, p.nombre, p.primer_apellido, p.segundo_apellido, p.nacionalidad, p.genero, p.edad,
-          p.estudia, p.trabaja, p.perdida_trabajo, p.rubro, p.discapacidad, p.dependencia]
-        );
-        updated++;
+        // Solo CREATE, no UPDATE - registrar como duplicado
+        detail.push({ 
+          row: i + 2, 
+          column: "rut", 
+          message: "Persona ya existe con este RUT" 
+        });
       }
     }
     await db.query("COMMIT");
   } catch (e) { await db.query("ROLLBACK"); throw e; }
-  return ok(rows.length, created, updated, errors, detail);
+  return createResponse(rows.length, created, 0, errors, 0, detail);
 }
 
 /* ========== ASSIGNMENTS ========== */
-async function importAssignments(db: Db, rows: RawAssignmentRow[]): Promise<CSVUploadResponse> {
+async function importAssignments(db: Db, rows: RawAssignmentRow[], uploadedBy?: { user_id: number; username: string }): Promise<CSVUploadResponse> {
   let created = 0, updated = 0, errors = 0; const detail: any[] = [];
   const client = db as any;
   await db.query("BEGIN");
   try {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
+      
+      // Buscar user_id por username
+      let user_id: number | null = null;
+      if (r.username) {
+        const userData = await getUserByUsername(db, cleanStr(r.username));
+        if (!userData) {
+          errors++;
+          detail.push({ 
+            row: i + 2, 
+            column: "username", 
+            message: `Usuario con username "${r.username}" no encontrado` 
+          });
+          continue;
+        }
+        user_id = userData.user_id;
+      }
+      
+      // Buscar changed_by por username o usar el usuario que sube el archivo
+      let changed_by: number | null = null;
+      if (r.changed_by_username) {
+        // Si se especifica changed_by_username, buscar ese usuario
+        const changedByUser = await getUserByUsername(db, cleanStr(r.changed_by_username));
+        if (!changedByUser) {
+          errors++;
+          detail.push({ 
+            row: i + 2, 
+            column: "changed_by_username", 
+            message: `Usuario changed_by con username "${r.changed_by_username}" no encontrado` 
+          });
+          continue;
+        }
+        changed_by = changedByUser.user_id;
+      } else if (uploadedBy) {
+        // Si no se especifica changed_by_username, usar el usuario que sube el archivo
+        changed_by = uploadedBy.user_id;
+      }
+
       const data = {
-        user_id: toInt(r.user_id),
+        user_id,
         center_id: cleanStr(r.center_id),
         normRole: cleanStr(r.role).toLowerCase(), // tu función espera normRole
-        changed_by: r.changed_by ? toInt(r.changed_by) : null
+        changed_by
       };
+      
       const errs = [];
-      if (!Number.isInteger(data.user_id)) errs.push({ column: "user_id", message: "user_id numérico requerido" });
-      if (!data.center_id) errs.push({ column: "center_id", message: "center_id requerido" });
-      if (!data.normRole) errs.push({ column: "role", message: "role requerido" });
+      if (!data.user_id) errs.push({ column: "username", message: "username requerido" });
+      if (!data.center_id) errs.push({ column: "center_id", message: "ID de centro requerido" });
+      if (!data.normRole) errs.push({ column: "role", message: "Rol requerido" });
+      // Validar roles permitidos
+      const validRoles = ['trabajador municipal', 'contacto ciudadano'];
+      if (data.normRole && !validRoles.includes(data.normRole)) {
+        errs.push({ column: "role", message: `Rol debe ser uno de: ${validRoles.join(', ')}` });
+      }
       if (errs.length) { errors++; errs.forEach(e => detail.push({ row: i + 2, ...e })); continue; }
 
-      const out = await createOrUpdateAssignment(client, data as any);
-      // out.isNew dice si creó tramo nuevo
-      if (out?.isNew) created++; else updated++;
+      try {
+        const out = await createOrUpdateAssignment(client, data as any);
+        // out.isNew dice si creó tramo nuevo o reasignó
+        if (out?.isNew) {
+          created++;
+        } else {
+          // Si no es nuevo, significa que el usuario ya estaba asignado a ese centro con ese rol
+          updated++; // Contamos como actualizado aunque no hubo cambio real
+          detail.push({ 
+            row: i + 2, 
+            column: "general", 
+            message: `Usuario "${data.user_id}" ya estaba asignado como "${data.normRole}" en centro "${data.center_id}"` 
+          });
+        }
+      } catch (createErr) {
+        errors++;
+        detail.push({ 
+          row: i + 2, 
+          column: "general", 
+          message: `Error al crear asignación: ${(createErr as Error).message}` 
+        });
+      }
     }
     await db.query("COMMIT");
   } catch (e) { await db.query("ROLLBACK"); throw e; }
-  return ok(rows.length, created, updated, errors, detail);
+  return createResponse(rows.length, created, updated, errors, 0, detail);
 }
 
 /* ========== UPDATE REQUESTS ========== */
@@ -265,32 +473,90 @@ async function importUpdates(db: Db, rows: RawUpdateRow[]): Promise<CSVUploadRes
   try {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
+      
+      // Buscar requested_by por username
+      let requested_by: number | null = null;
+      if (r.requested_by_username) {
+        const userData = await getUserByUsername(db, cleanStr(r.requested_by_username));
+        if (!userData) {
+          errors++;
+          detail.push({ 
+            row: i + 2, 
+            column: "requested_by_username", 
+            message: `Usuario solicitante con username "${r.requested_by_username}" no encontrado` 
+          });
+          continue;
+        }
+        requested_by = userData.user_id;
+      }
+
       const data = {
         center_id: cleanStr(r.center_id),
         description: cleanStr(r.description),
         urgency: cleanStr(r.urgency).toLowerCase(), // asume 'baja|media|alta' o tu catálogo
-        requested_by: toInt(r.requested_by),
+        requested_by,
       };
+      
       const errs = [];
-      if (!data.center_id) errs.push({ column: "center_id", message: "center_id requerido" });
-      if (!data.description) errs.push({ column: "description", message: "description requerida" });
-      if (!data.urgency) errs.push({ column: "urgency", message: "urgency requerida" });
-      if (!Number.isInteger(data.requested_by)) errs.push({ column: "requested_by", message: "requested_by numérico" });
+      if (!data.center_id) errs.push({ column: "center_id", message: "ID de centro requerido" });
+      if (!data.description) errs.push({ column: "description", message: "Descripción requerida" });
+      if (!data.urgency) errs.push({ column: "urgency", message: "Nivel de urgencia requerido" });
+      if (!data.requested_by) errs.push({ column: "requested_by_username", message: "requested_by_username requerido" });
+      // Validar niveles de urgencia permitidos
+      const validUrgencies = ['baja', 'media', 'alta'];
+      if (data.urgency && !validUrgencies.includes(data.urgency)) {
+        errs.push({ column: "urgency", message: `Urgencia debe ser una de: ${validUrgencies.join(', ')}` });
+      }
       if (errs.length) { errors++; errs.forEach(e => detail.push({ row: i + 2, ...e })); continue; }
 
-      await createUpdateRequest(db, data as any);
-      created++;
+      try {
+        await createUpdateRequest(db, data as any);
+        created++;
+      } catch (createErr) {
+        errors++;
+        detail.push({ 
+          row: i + 2, 
+          column: "general", 
+          message: `Error al crear solicitud de actualización: ${(createErr as Error).message}` 
+        });
+      }
     }
     await db.query("COMMIT");
   } catch (e) { await db.query("ROLLBACK"); throw e; }
-  return ok(rows.length, created, updated, errors, detail);
+  return createResponse(rows.length, created, 0, errors, 0, detail);
 }
 
 /* ---------- helper de respuesta ---------- */
-function ok(total: number, created: number, updated: number, err: number, detail: any[]): CSVUploadResponse {
+function createResponse(
+  total: number, 
+  created: number, 
+  updated: number, 
+  errors: number, 
+  skipped: number, 
+  detail: any[]
+): CSVUploadResponse {
+  const processedRows = total - errors;
+  const hasErrors = errors > 0;
+  
+  let message = "Importación exitosa";
+  if (hasErrors && processedRows > 0) {
+    message = "Importación con errores parciales";
+  } else if (hasErrors) {
+    message = "Importación fallida";
+  } else if (skipped > 0) {
+    message = `Importación exitosa (${skipped} registros omitidos por duplicados)`;
+  }
+
   return {
-    success: err === 0,
-    message: err ? "Importación con errores parciales" : "Importación exitosa",
-    results: { totalRows: total, processedRows: total - err, createdRows: created, updatedRows: updated, errorRows: err, errors: detail }
+    success: !hasErrors,
+    message,
+    results: {
+      totalRows: total,
+      processedRows,
+      createdRows: created,
+      updatedRows: updated,
+      errorRows: errors,
+      errors: detail
+    }
   };
 }
