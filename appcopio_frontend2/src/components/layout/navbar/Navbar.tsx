@@ -6,11 +6,11 @@ import {
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
 import Logout from "@mui/icons-material/Logout";
 import AccountCircle from "@mui/icons-material/AccountCircle";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdminOrSupport, isFieldUser } from "@/utils/authz";
 import { paths } from "@/routes/paths";
+import { OfflineIndicator } from "@/offline/components/OfflineIndicator";
 
 import "./Navbar.css";
 
@@ -36,19 +36,6 @@ export default function Navbar() {
 
   const initial = (user?.nombre?.trim()?.[0] || user?.username?.trim()?.[0] || "U").toUpperCase();
 
-  // Estado offline
-  const [offline, setOffline] = React.useState(!navigator.onLine);
-  React.useEffect(() => {
-    const handleOnline = () => setOffline(false);
-    const handleOffline = () => setOffline(true);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
   return (
     <nav className="main-navbar">
       <div className="navbar-logo">
@@ -56,14 +43,10 @@ export default function Navbar() {
       </div>
 
       <ul className="navbar-links">
-        {/* Aviso offline */}
-        {offline && (
-          <li style={{ marginRight: "1rem" }}>
-            <Tooltip title="Estás sin conexión. Tus cambios se guardarán y se aplicarán cuando vuelvas a estar conectado." arrow>
-              <WarningAmberIcon style={{ color: '#ffc107', fontSize: 28, verticalAlign: 'middle', cursor: 'pointer' }} />
-            </Tooltip>
-          </li>
-        )}
+        {/* Indicador offline mejorado */}
+        <li style={{ marginRight: "1rem" }}>
+          <OfflineIndicator variant="chip" showWhenOnline={false} />
+        </li>
 
         <li>
           <NavLink to={paths.home} className={({ isActive }) => (isActive ? "active-link" : "")}>Inicio</NavLink>

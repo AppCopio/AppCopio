@@ -1,24 +1,27 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
-import { sendEmail } from "../services/emailService";
+import { sendEmail, getUserEmailById } from "../services/emailService";
 import {
   createNotification as createNotificationService,
   updateStatus as updateStatusService,
   markRead,
   listByUser,
   listByCenter,
-  getNotificationById
+  getNotificationById,
+  sendNotification
 } from "../services/notificationService";
 import type { NotificationStatus } from "../types/notification";
 
 const router = Router();
 
 const allowedStatus = new Set(['queued', 'sent', 'failed']);
+//La cosa del token
 
 // ---------------------------------------------
 // POST /notifications  (crear/enviar notificación)
 // ---------------------------------------------
 const createNotification: RequestHandler = async (req, res, next) => {
+  const client = await pool.connect();
   try {
     const {
       center_id,
@@ -31,10 +34,12 @@ const createNotification: RequestHandler = async (req, res, next) => {
     } = req.body || {};
 
     if (!center_id || !title || !message) {
+      client.release();
       return res.status(400).json({ error: "center_id, title y message son obligatorios" });
     }
 
-    const row = await createNotificationService(pool, {
+    await client.query("BEGIN");
+    const result = await sendNotification(client, {
       center_id,
       activation_id,
       destinatary,
@@ -43,9 +48,13 @@ const createNotification: RequestHandler = async (req, res, next) => {
       event_at,
       channel,
     });
-
-    return res.status(201).json({ data: row });
+    await client.query("COMMIT");
+    client.release();
+    
+    return res.status(201).json(result);
   } catch (err) {
+    await client.query("ROLLBACK");
+    client.release();
     next(err);
   }
 };
@@ -100,14 +109,28 @@ const markMessageAsRead : RequestHandler = async (req, res, next) => {
 // ---------------------------------------------
 const getById: RequestHandler = async (req, res, next) => {
   try {
-    const row = await getNotificationById(pool, req.params.id);
-    if (!row) return res.status(404).json({ error: "Notificación no encontrada" });
+    const id = req.params.id;
+    
+    if (id === 'me') {
+      const userId = (req as any).user?.user_id; 
+      
+      if (!userId) {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+      
+      const rows = await listByUser(pool, userId);
+      return res.json(rows);
+    }
+    
+    const row = await getNotificationById(pool, id);
+    if (!row) {
+      return res.status(404).json({ error: "Notificación no encontrada" });
+    }
     return res.json({ data: row });
   } catch (err) {
     next(err);
   }
 };
-
 // ---------------------------------------------
 // GET /notifications/by-user/:userId
 // query: ?limit=&offset=&status=(queued|sent|failed|any)&since=&until=
@@ -118,7 +141,7 @@ const getByUser: RequestHandler = async (req, res, next) => {
     if (!Number.isFinite(userId)) return res.status(400).json({ error: "userId inválido" });
 
     const rows = await listByUser(pool, userId);
-    return res.json({ data: rows });
+    return res.json( rows );
   } catch (err) {
     next(err);
   }
@@ -132,7 +155,7 @@ const getByCenter: RequestHandler = async (req, res, next) => {
   try {
     const centerId = req.params.centerId;
     const rows = await listByCenter(pool, centerId);
-    return res.json({ data: rows });    
+    return res.json(rows );    
   } catch (err) {
     next(err);
   }

@@ -19,6 +19,7 @@
     "@vis.gl/react-google-maps": "^1.5.5",
     "axios": "^1.11.0",
     "file-saver": "^2.0.5",
+    "idb": "^8.0.3",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.544.0",

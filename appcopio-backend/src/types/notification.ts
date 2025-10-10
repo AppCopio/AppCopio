@@ -3,8 +3,10 @@ export type NotificationStatus = 'queued' | 'sent' | 'failed';
 export type CenterNotification = {
   notification_id: string;
   center_id: string;
+  center_name: string;
   activation_id: number | null;
-  destinatary: number | null;
+  destinatary_id: number | null;
+  destinatary_name: string;
   title: string;
   message: string;
   event_at: string; // ISO
@@ -20,7 +22,7 @@ export type CenterNotification = {
 export type CreateNotificationInput = {
   center_id: string;
   activation_id?: number | null;
-  destinatary?: number | null; // Users.user_id
+  destinatary?: number; // Users.user_id
   title: string;
   message: string;
   event_at?: Date | string; // por defecto now()

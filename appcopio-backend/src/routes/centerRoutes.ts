@@ -21,6 +21,7 @@ import {
     deleteInventoryItem as deleteInventoryItemService,
     getAssignedUsersByCenter as getAssignedUsersByCenter
 } from '../services/centerService';
+import { sendNotification } from '../services/notificationService';
 
 import { getCenterGroups } from '../services/familyService';
 import { requireAuth } from '../auth/middleware';
@@ -129,12 +130,43 @@ const setActivationStatus: RequestHandler = async (req, res) => {
     try {
         await client.query('BEGIN');
         const updatedCenter = await updateActivationStatus(client, req.params.id, isActive, userId);
-        await client.query('COMMIT');
         if (!updatedCenter) {
+            await client.query("ROLLBACK");
             res.status(404).json({ error: 'Centro no encontrado.' });
-        } else {
-            res.json(updatedCenter);
         }
+        const title = `Centro ${isActive ? "activado" : "desactivado"}: ${updatedCenter.name}`;
+        const message = isActive
+        ? `El centro "${updatedCenter.name}" ha sido ACTIVADO por el usuario ${userId}.`
+        : `El centro "${updatedCenter.name}" ha sido DESACTIVADO por el usuario ${userId}.`;
+
+        // Destinatarios: municipal_manager_id y comunity_charge_id (evitando duplicados y nulos)
+        const recipients  = [
+            updatedCenter.municipal_manager_id ?? null,
+            updatedCenter.comunity_charge_id ?? null,
+        ].filter((x) => x != null);
+        
+        const notifications: Record<string, any> = {};
+
+        for (const rec of recipients) {
+            const role =
+                rec === updatedCenter.municipal_manager_id
+                ? "municipal_manager"
+                : rec === updatedCenter.comunity_charge_id
+                ? "comunity_charge"
+                : "recipient";
+
+            notifications[role] = await sendNotification(client, {
+                center_id: updatedCenter.center_id,
+                activation_id: updatedCenter.activation_id ?? null,
+                destinatary: rec, // id del usuario destinatario
+                title,
+                message,
+                channel: "ctrStatus_change",
+            });
+        }
+        
+        await client.query('COMMIT');
+        return res.json({ ...updatedCenter, notifications });
     } catch (error) {
         await client.query('ROLLBACK');
         console.error(`Error en setActivationStatus (id: ${req.params.id}):`, error);

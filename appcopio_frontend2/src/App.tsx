@@ -38,6 +38,7 @@ import { ActivationProvider } from "@/contexts/ActivationContext";
 import DatabasesPage from "@/pages/Databases/DatabasesPage";
 import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
 
+import OfflineTestPage from '@/pages/System/OfflineTestPage';
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
             <Route path={paths.map} element={<MapPage />} />
             <Route path={paths.login} element={<LoginPage />} />
             <Route path="/typo" element={<ExampleFrontend />} /> 
+            <Route path="/system/offline-test" element={<OfflineTestPage />} />
           </Route>
 
           {/* 2) Protegidas (roles 1,2,3; incluye es_apoyo_admin) */}
