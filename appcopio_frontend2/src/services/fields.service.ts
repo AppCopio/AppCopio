@@ -58,6 +58,45 @@ export const fieldsService = {
       .then(r => mapField(r.data?.data ?? r.data));
   },
   remove(field_id: string) {
-    return api.delete(`/database-fields/${encodeURIComponent(field_id)}`).then(()=>{});
+    return api.delete(`/database-fields/${encodeURIComponent(field_id)}`, {
+      // ✅ Permitir códigos de estado 403 (bloqueado) y 409 (necesita confirmación)
+      validateStatus: (status) => {
+        return (status >= 200 && status < 300) || status === 403 || status === 409;
+      }
+    }).then((response) => {
+      console.log("🔍 Respuesta de remove:", response);
+      
+      // Si es 403 (bloqueado por ser obligatorio) o 409 (necesita confirmación)
+      if (response.status === 403 || response.status === 409) {
+        // Lanzar un error personalizado con la info del backend
+        const error: any = new Error(response.data.error || "No se pudo eliminar la columna");
+        error.status = response.status;
+        error.data = response.data;
+        throw error;
+      }
+      
+      // Si es 200-299, todo bien
+      return response.data;
+    });
+  },
+  removeWithConfirmation(field_id: string) {
+    return api.delete(`/database-fields/${encodeURIComponent(field_id)}`, {
+      params: { confirm: 'true' },  // 🔑 Parámetro clave
+      validateStatus: (status) => {
+        return (status >= 200 && status < 300) || status === 403;
+      }
+    }).then((response) => {
+      console.log("🔍 Respuesta de removeWithConfirmation:", response.status, response.data);
+      
+      // Si es 403 (bloqueado por ser obligatorio), lanzar error
+      if (response.status === 403) {
+        const error: any = new Error(response.data.error || "Columna obligatoria");
+        error.status = response.status;
+        error.data = response.data;
+        throw error;
+      }
+      
+      return response.data;
+    });
   },
 };

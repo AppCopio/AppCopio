@@ -94,7 +94,7 @@ app.use("/api/database-fields", requireAuth, fieldRoutes);
 app.use("/api/database-records", requireAuth, recordRoutes);
 app.use("/api/database-templates", requireAuth, templateRoutes);
 app.use("/api/database-history", requireAuth, auditLogRoutes);
-app.use("/api/notifications", notificationRoutes);
+app.use("/api/notifications", requireAuth, notificationRoutes);
 
 
 

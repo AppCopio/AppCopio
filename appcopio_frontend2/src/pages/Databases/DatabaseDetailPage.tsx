@@ -219,11 +219,25 @@ export default function DatabaseDetailPage() {
     alert("No se encontró la columna a eliminar.");
     return;
   }
+
+  console.log("🔍 Intentando eliminar columna:", {
+    name: field.name,
+    field_id: field.field_id,
+    is_required: (field as any).is_required,
+    required: (field as any).required,
+  });
   
   // ✅ VALIDACIÓN 1: Verificar si es columna obligatoria
-  const isRequired = (field as any).is_required ?? (field as any).required ?? false;
+  const isRequired = Boolean((field as any).is_required || (field as any).required);
+  
+  console.log("✅ ¿Es columna obligatoria?", isRequired);
+  
   if (isRequired) {
-    alert("❌ No se puede eliminar una columna obligatoria.\n\nLas columnas marcadas como requeridas no pueden ser eliminadas para mantener la integridad de los datos.");
+    alert(
+      "❌ No se puede eliminar una columna obligatoria.\n\n" +
+      "Las columnas marcadas como obligatorias no pueden ser eliminadas " +
+      "para mantener la integridad de los datos."
+    );
     return;
   }
   
@@ -239,23 +253,28 @@ export default function DatabaseDetailPage() {
     return value !== undefined && value !== null && value !== "";
   }).length;
   
+  console.log("📊 Tiene datos:", hasData, "- Registros con datos:", recordsWithData);
+  
   // ✅ CONFIRMACIÓN: Mensaje diferente según si tiene datos o no
   let confirmMsg = "";
   
   if (hasData) {
-    confirmMsg = `⚠️ ADVERTENCIA: Esta columna contiene datos\n\n` +
+    confirmMsg = 
+      `⚠️ ADVERTENCIA: Esta columna contiene datos\n\n` +
       `Columna: "${field.name}"\n` +
       `Registros con datos: ${recordsWithData} de ${records.length}\n\n` +
       `Si eliminas esta columna, se perderán TODOS los datos asociados de forma permanente.\n\n` +
       `¿Estás seguro de que deseas continuar?`;
   } else {
-    confirmMsg = `¿Eliminar la columna "${field.name}"?\n\n` +
+    confirmMsg = 
+      `¿Eliminar la columna "${field.name}"?\n\n` +
       `Esta columna está vacía (no contiene datos en ningún registro).\n\n` +
       `¿Deseas eliminarla?`;
   }
   
   // Solicitar confirmación
   if (!window.confirm(confirmMsg)) {
+    console.log("❌ Usuario canceló la eliminación en primera confirmación");
     return;
   }
   
@@ -269,30 +288,79 @@ export default function DatabaseDetailPage() {
     );
     
     if (!doubleConfirm) {
+      console.log("❌ Usuario canceló la eliminación en segunda confirmación");
       return;
     }
   }
   
   // Proceder con la eliminación
+  console.log("🗑️ Procediendo a eliminar columna...");
   try {
-    await fieldsService.remove(field_id);
+    // 🔧 PRIMERA PETICIÓN: Intentar eliminar sin confirmación
+    let response;
+    try {
+      response = await fieldsService.remove(field_id);
+      console.log("✅ Eliminación exitosa sin confirmación:", response);
+    } catch (firstError: any) {
+      console.log("📊 Primera respuesta:", firstError);
+      
+      // Si el error es 409 (needs_confirmation), hacer segunda petición con confirm=true
+      if (firstError?.status === 409 && firstError?.data?.status === 'needs_confirmation') {
+        console.log("⚠️ Backend requiere confirmación, enviando confirm=true...");
+        
+        // Segunda petición con confirmación
+        response = await fieldsService.removeWithConfirmation(field_id);
+        console.log("✅ Eliminación exitosa con confirmación:", response);
+      } else {
+        // Si es otro error (403 blocked_required, etc), lanzarlo
+        throw firstError;
+      }
+    }
+    
+    // Verificar que se eliminó correctamente recargando la lista
     const refreshed = await fieldsService.list(db!.dataset_id);
     const stillExists = refreshed.some(f => f.field_id === field_id);
 
     if (stillExists) {
-      alert("❌ El backend rechazó la eliminación (probablemente la columna es obligatoria o hay una restricción). No se realizaron cambios.");
+      console.error("❌ El backend rechazó la eliminación");
+      alert(
+        "❌ El backend rechazó la eliminación. No se realizaron cambios."
+      );
       return;
     }
+    
+    // Actualizar el estado local
     setFields(refreshed.sort((a, b) => a.position - b.position));
+    
+    console.log("✅ Columna eliminada exitosamente");
     
     // Notificación de éxito
     if (hasData) {
-      alert(`✅ Columna "${field.name}" eliminada exitosamente.\n\nSe eliminaron los datos de ${recordsWithData} registro(s).`);
+      alert(
+        `✅ Columna "${field.name}" eliminada exitosamente.\n\n` +
+        `Se eliminaron los datos de ${recordsWithData} registro(s).`
+      );
+    } else {
+      alert(`✅ Columna "${field.name}" eliminada exitosamente.`);
     }
   } catch (e: any) {
-    const errorMsg = e?.response?.data?.error || e?.message || "Error desconocido";
-    alert(`❌ Error al eliminar la columna:\n\n${errorMsg}\n\nPor favor, intenta nuevamente o contacta al administrador.`);
-    console.error("Error al eliminar columna:", e);
+    console.error("❌ Error al eliminar columna:", e);
+    
+    // Manejar error de columna obligatoria
+    if (e?.status === 403 || e?.data?.status === 'blocked_required') {
+      alert(
+        "❌ No se puede eliminar una columna obligatoria.\n\n" +
+        "Las columnas marcadas como obligatorias no pueden ser eliminadas."
+      );
+      return;
+    }
+    
+    // Error genérico
+    const errorMsg = e?.data?.error || e?.message || "Error desconocido";
+    alert(
+      `❌ Error al eliminar la columna:\n\n${errorMsg}\n\n` +
+      `Por favor, intenta nuevamente o contacta al administrador.`
+    );
   }
 };
 

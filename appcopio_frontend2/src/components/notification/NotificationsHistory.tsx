@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, AlertCircle, Info, X } from 'lucide-react';
+// src/components/notification/NotificationsHistory.tsx
+import React, { useState, useMemo } from 'react';
+import { Bell, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import './NotificationHistory.css';
 
-// Tipos (asegúrate de que coincidan con tu proyecto)
+// Tipos
 interface CenterNotification {
   notification_id: string;
   title: string;
@@ -9,6 +11,7 @@ interface CenterNotification {
   event_at: string;
   center_id: string;
   destinatary_name: string | null;
+  destinatary_id?: number | null;
   status?: 'queued' | 'sent' | 'failed';
   read_at?: string | null;
 }
@@ -17,6 +20,19 @@ interface NotificationsHistoryProps {
   notifications: CenterNotification[];
   loading?: boolean;
   onRefresh?: () => void;
+}
+
+// Tipo para notificaciones agrupadas
+interface GroupedNotification {
+  id: string; // ID único para el grupo
+  title: string;
+  message: string;
+  event_at: string;
+  center_id: string;
+  destinataries: Array<{ id?: number | null; name: string | null }>;
+  status?: 'queued' | 'sent' | 'failed';
+  read_at?: string | null;
+  notification_ids: string[]; // IDs originales
 }
 
 const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({ 
@@ -30,9 +46,61 @@ const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({
   // Asegurar que notifications siempre sea un array
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
 
+  // Agrupar notificaciones duplicadas (mismo título, mensaje y fecha)
+  const groupedNotifications = useMemo(() => {
+    const groups = new Map<string, GroupedNotification>();
+
+    safeNotifications.forEach(notif => {
+      // Crear una clave única basada en título, mensaje y fecha (redondeada al minuto)
+      const eventDate = new Date(notif.event_at);
+      const roundedTime = new Date(
+        eventDate.getFullYear(),
+        eventDate.getMonth(),
+        eventDate.getDate(),
+        eventDate.getHours(),
+        eventDate.getMinutes()
+      ).toISOString();
+      
+      const groupKey = `${notif.title}|${notif.message}|${roundedTime}`;
+
+      if (groups.has(groupKey)) {
+        // Agregar destinatario al grupo existente
+        const group = groups.get(groupKey)!;
+        group.destinataries.push({
+          id: notif.destinatary_id,
+          name: notif.destinatary_name
+        });
+        group.notification_ids.push(notif.notification_id);
+        
+        // Si alguna está leída, marcar el grupo como leído
+        if (notif.read_at) {
+          group.read_at = notif.read_at;
+        }
+      } else {
+        // Crear nuevo grupo
+        groups.set(groupKey, {
+          id: groupKey,
+          title: notif.title,
+          message: notif.message,
+          event_at: notif.event_at,
+          center_id: notif.center_id,
+          destinataries: [{
+            id: notif.destinatary_id,
+            name: notif.destinatary_name
+          }],
+          status: notif.status,
+          read_at: notif.read_at,
+          notification_ids: [notif.notification_id]
+        });
+      }
+    });
+
+    return Array.from(groups.values());
+  }, [safeNotifications]);
+
   const filteredNotifications = filter === 'unread' 
-    ? safeNotifications.filter(n => !n.read_at)
-    : safeNotifications;
+    ? groupedNotifications.filter(n => !n.read_at)
+    : groupedNotifications;
 
   const getStatusIcon = (status?: string) => {
     switch (status) {
@@ -86,264 +154,6 @@ const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({
 
   return (
     <div className="notifications-history">
-      <style>{`
-        .notifications-history {
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        .notifications-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-          padding-bottom: 16px;
-          border-bottom: 2px solid #f0f0f0;
-        }
-
-        .notifications-title {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          font-size: 20px;
-          font-weight: 600;
-          color: #1a1a1a;
-        }
-
-        .notifications-title svg {
-          color: #0066cc;
-        }
-
-        .notifications-count {
-          background: #0066cc;
-          color: white;
-          padding: 2px 10px;
-          border-radius: 12px;
-          font-size: 14px;
-          font-weight: 500;
-        }
-
-        .notifications-controls {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        }
-
-        .filter-buttons {
-          display: flex;
-          gap: 8px;
-        }
-
-        .filter-btn {
-          padding: 8px 16px;
-          border: 1px solid #e0e0e0;
-          background: white;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-
-        .filter-btn:hover {
-          background: #f5f5f5;
-        }
-
-        .filter-btn.active {
-          background: #0066cc;
-          color: white;
-          border-color: #0066cc;
-        }
-
-        .refresh-btn {
-          padding: 8px 12px;
-          border: none;
-          background: #f0f0f0;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .refresh-btn:hover {
-          background: #e0e0e0;
-        }
-
-        .notifications-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .notification-card {
-          border: 1px solid #e8e8e8;
-          border-radius: 10px;
-          padding: 16px;
-          transition: all 0.2s;
-          cursor: pointer;
-          background: white;
-        }
-
-        .notification-card:hover {
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          transform: translateY(-1px);
-        }
-
-        .notification-card.unread {
-          background: #f0f7ff;
-          border-left: 4px solid #0066cc;
-        }
-
-        .notification-card.expanded {
-          box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-        }
-
-        .notification-header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-        }
-
-        .notification-main {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .notification-title-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 6px;
-        }
-
-        .notification-title-text {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1a1a1a;
-          flex: 1;
-        }
-
-        .notification-message {
-          color: #666;
-          font-size: 14px;
-          line-height: 1.6;
-          margin-bottom: 8px;
-        }
-
-        .notification-message.collapsed {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .notification-meta {
-          display: flex;
-          gap: 16px;
-          flex-wrap: wrap;
-          font-size: 13px;
-          color: #999;
-          margin-top: 8px;
-        }
-
-        .notification-meta-item {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .notification-date {
-          color: #999;
-          font-size: 13px;
-        }
-
-        .status-icon {
-          flex-shrink: 0;
-        }
-
-        .status-icon.success {
-          color: #10b981;
-        }
-
-        .status-icon.error {
-          color: #ef4444;
-        }
-
-        .status-icon.pending {
-          color: #f59e0b;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 60px 20px;
-          color: #999;
-        }
-
-        .empty-state svg {
-          margin-bottom: 16px;
-          opacity: 0.5;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 8px 0;
-          color: #666;
-          font-size: 18px;
-        }
-
-        .empty-state p {
-          margin: 0;
-          font-size: 14px;
-        }
-
-        .loading-state {
-          text-align: center;
-          padding: 40px;
-          color: #999;
-        }
-
-        .spinner {
-          border: 3px solid #f0f0f0;
-          border-top: 3px solid #0066cc;
-          border-radius: 50%;
-          width: 40px;
-          height: 40px;
-          animation: spin 1s linear infinite;
-          margin: 0 auto 16px;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .unread-badge {
-          background: #ef4444;
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-
-        @media (max-width: 768px) {
-          .notifications-history {
-            padding: 16px;
-          }
-
-          .notifications-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 12px;
-          }
-
-          .notifications-controls {
-            width: 100%;
-            justify-content: space-between;
-          }
-        }
-      `}</style>
-
       <div className="notifications-header">
         <div className="notifications-title">
           <Bell size={24} />
@@ -392,14 +202,15 @@ const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({
       ) : (
         <div className="notifications-list">
           {filteredNotifications.map((notif) => {
-            const isExpanded = expandedId === notif.notification_id;
+            const isExpanded = expandedId === notif.id;
             const isUnread = !notif.read_at;
+            const hasMultipleDestinataries = notif.destinataries.length > 1;
 
             return (
               <div
-                key={notif.notification_id}
+                key={notif.id}
                 className={`notification-card ${isUnread ? 'unread' : ''} ${isExpanded ? 'expanded' : ''}`}
-                onClick={() => toggleExpand(notif.notification_id)}
+                onClick={() => toggleExpand(notif.id)}
               >
                 <div className="notification-header-content">
                   <div className="notification-main">
@@ -421,18 +232,34 @@ const NotificationsHistory: React.FC<NotificationsHistoryProps> = ({
                         <span>{formatDate(notif.event_at)}</span>
                       </div>
                       
-                      {notif.destinatary_name && (
-                        <div className="notification-meta-item">
-                          <span>👤</span>
-                          <span>{notif.destinatary_name}</span>
-                        </div>
-                      )}
-
+                      {/* Mostrar destinatarios */}
+                      <div className="notification-meta-item">
+                        <span>👤</span>
+                        <span>
+                          {hasMultipleDestinataries ? (
+                            <span>
+                              {notif.destinataries.length} destinatarios
+                              {isExpanded && (
+                                <span className="destinataries-list">
+                                  {': '}
+                                  {notif.destinataries
+                                    .map(d => d.name || 'Sin nombre')
+                                    .filter((name, index, self) => self.indexOf(name) === index) // Eliminar duplicados
+                                    .join(', ')}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            notif.destinataries[0]?.name || 'Sin destinatario'
+                          )}
+                        </span>
+                      </div>
+                      {/*}    
                       {notif.status && (
                         <div className="notification-meta-item">
                           <span>Estado: {notif.status}</span>
                         </div>
-                      )}
+                      )}*/}
                     </div>
                   </div>
                 </div>

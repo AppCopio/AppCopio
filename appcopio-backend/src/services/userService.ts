@@ -1,5 +1,4 @@
 // src/services/userService.ts
-import pool from "../config/db";
 import bcrypt from "bcryptjs";
 import { Db } from "../types/db";
 

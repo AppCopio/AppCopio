@@ -81,7 +81,8 @@ export async function createRecordDB(db: Db, userId: number, args: {
 }
 
 export async function updateRecordDB(db: Db, userId: number, args: {
-  record_id: string; version: number;
+  record_id: string; 
+  version: number;
   data?: any | null;
   select_values?: Record<string, string | string[]> | null;
   relations_dynamic?: Array<{ field_id: string; target_record_id: string }> | null;
@@ -93,18 +94,25 @@ export async function updateRecordDB(db: Db, userId: number, args: {
     [args.record_id]
   );
   const cur = sel.rows[0];
-  if (!cur || cur.version !== args.version) return null;
+  if (!cur || cur.version !== args.version) {
+    console.log("❌ Conflicto de versión:", { 
+      expected: args.version, 
+      actual: cur?.version,
+      exists: !!cur 
+    });
+    return null;
+  }
 
   if (args.data !== null && args.data !== undefined) {
     await db.query(
       `UPDATE DatasetRecords
-       SET data = $1::jsonb, version = version + 1, updated_by = $3
+       SET data = data || $1::jsonb, version = version + 1, updated_by = $3, updated_at = now()
        WHERE record_id = $2`,
       [JSON.stringify(args.data ?? {}), args.record_id, userId]
     );
   } else {
     await db.query(
-      `UPDATE DatasetRecords SET version = version + 1, updated_by = $2 WHERE record_id = $1`,
+      `UPDATE DatasetRecords SET version = version + 1, updated_by = $2, updated_at = now() WHERE record_id = $1`,
       [args.record_id, userId]
     );
   }
