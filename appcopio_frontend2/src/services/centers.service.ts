@@ -8,7 +8,7 @@
 import { api } from "@/lib/api";
 import type { Center, ActiveActivation, CenterData} from "@/types/center"; 
 import type { InventoryItem } from "@/types/inventory"; 
-
+import type { User } from "@/types/user"; 
 // =================================================================
 // 1. HELPERS: Normalización y Mapeo de Datos
 // (Estos helpers son útiles para asegurar que la UI siempre reciba datos consistentes)
@@ -256,16 +256,18 @@ export async function getActiveActivation(centerId: string, opts?: { signal?: Ab
         // evitar que tome la respuesta de caché
         params: { t: Date.now() },
         headers: { 'Cache-Control': 'no-cache' },
-        validateStatus: (s) => (s >= 200 && s < 300) || s === 204,
+        validateStatus: (s) => (s >= 200 && s < 300) || s=== 404|| s === 204,
       }
     );
-    if (res.status === 204) return null;
+    if (res.status === 204 || res.status ===404) return null;
 
     const data = res.data as any;
+
     if (!data || !data.activation_id) return null;
     return data as ActiveActivation;  
-  } catch (error) {
-    console.error(`Error fetching active activation for center ${centerId}:`, error);
+  } catch (e: any) {
+    if (e?.code === "ERR_CANCELED") return null;
+    console.error(`Error fetching active activation for center ${centerId}:`, e);
     return null;
   }
 } //Pdría ser un error por el signal
@@ -382,5 +384,23 @@ export async function getCenterInventory(centerId: string, signal?: AbortSignal)
     } catch (error) {
         console.error(`Error fetching inventory for center ${centerId}:`, error);
         return [];
+    }
+}
+
+/**
+ * NUEVO: Obtiene la lista de usuarios asignados a un centro específico.
+ * Asume la existencia del endpoint en el backend: GET /centers/:centerId/assigned-users
+ */
+export async function listAssignedUsersToCenter(centerId: string, signal?: AbortSignal): Promise<User[]> {
+    try {
+        // La API debe devolver un objeto { users: [...] }
+        const { data } = await api.get<{ users: User[] }>(`/centers/${centerId}/assigned-users`, { signal });
+        
+        // Retornamos el array de usuarios.
+        return data?.users ?? [];
+    } catch (error) {
+        console.error(`Error fetching assigned users for center ${centerId}:`, error);
+        // Lanzamos el error para que el componente que exporta pueda manejarlo (e.g., mostrar mensaje).
+        throw error; 
     }
 }

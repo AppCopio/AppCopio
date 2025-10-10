@@ -379,6 +379,7 @@ CREATE TABLE DatasetFields (
     relation_target_dataset_id UUID, -- si es dynamic, a qué dataset apunta
     relation_target_core   TEXT, -- nombre lógico de la tabla SQL ('persons','family_groups')
     
+    
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ,
     deleted_at     TIMESTAMPTZ,
@@ -404,7 +405,7 @@ CREATE TABLE DatasetFields (
 );
 
 CREATE UNIQUE INDEX dataset_fields_uq_active_key ON DatasetFields (dataset_id, key) WHERE is_active; -- Unicidad de key entre campos activos de una misma base de datos
-
+CREATE UNIQUE INDEX dataset_fields_uq_live_pos ON DatasetFields(dataset_id, position) WHERE is_active = TRUE AND deleted_at IS NULL;
 CREATE INDEX dataset_fields_by_dataset_pos ON DatasetFields(dataset_id, position); -- orden de las columnas en la UI rápido
 CREATE INDEX dataset_fields_rel_target_ds  ON DatasetFields(relation_target_dataset_id); -- listar qué campos apuntan a cierto dataset
 
@@ -423,6 +424,7 @@ CREATE TABLE DatasetFieldOptions (
 );
 
 CREATE UNIQUE INDEX dataset_field_options_uq_active ON DatasetFieldOptions(field_id, value) WHERE is_active;  
+CREATE INDEX dfo_by_field_pos_live ON DatasetFieldOptions(field_id, position) WHERE is_active;
 CREATE INDEX dataset_field_options_by_field_pos ON DatasetFieldOptions(field_id, position);
 
 -- Filas / registros de las bases de datos
@@ -430,7 +432,6 @@ CREATE TABLE DatasetRecords (
     record_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     dataset_id    UUID NOT NULL REFERENCES Datasets(dataset_id) ON DELETE CASCADE,
     activation_id INT NOT NULL REFERENCES CentersActivations(activation_id),
-    center_id     VARCHAR(10) NOT NULL REFERENCES Centers(center_id),
     version       INT NOT NULL DEFAULT 1, -- optimistic locking
     data          JSONB NOT NULL DEFAULT '{}'::jsonb,  -- solo los valores atómicos bajo key de la columna
     
@@ -444,9 +445,7 @@ CREATE TABLE DatasetRecords (
 
 CREATE INDEX dataset_records_by_ds_upd ON DatasetRecords(dataset_id, updated_at DESC); 
 CREATE INDEX dataset_records_by_act_upd ON DatasetRecords(activation_id, updated_at DESC);
-
--- Índice GIN para búsquedas por data (exists/contains). Para filtros intensivos crea índices por-campo (expresiones).
-CREATE INDEX dataset_records_data_gin ON DatasetRecords USING gin (data jsonb_path_ops);
+CREATE INDEX dataset_records_data_gin ON DatasetRecords USING gin (data jsonb_path_ops); -- Índice GIN para búsquedas por data (exists/contains).
 
 -- Valores para las filas en campos del tipo select/multi_select
 CREATE TABLE DatasetRecordOptionValues (
@@ -459,6 +458,7 @@ CREATE TABLE DatasetRecordOptionValues (
 );
 CREATE INDEX drov_by_field_option ON DatasetRecordOptionValues(field_id, option_id);
 
+
 -- Valores para las filas en campos del tipo relation (a otros dataset)
 CREATE TABLE DatasetRecordRelations (
     record_id        UUID NOT NULL REFERENCES DatasetRecords(record_id) ON DELETE CASCADE,
@@ -468,7 +468,8 @@ CREATE TABLE DatasetRecordRelations (
     updated_at       TIMESTAMPTZ,
     PRIMARY KEY (record_id, field_id, target_record_id)
 );
-CREATE INDEX drr_by_field_target ON DatasetRecordRelations(field_id, target_record_id); -- útil para backlink
+CREATE INDEX drr_by_field_target ON DatasetRecordRelations(field_id, target_record_id);
+CREATE INDEX drr_by_target ON DatasetRecordRelations(target_record_id);
 
 -- Valores para las filas en campos del tipo relation (a entidades como familia, personas, etc.)
 CREATE TABLE DatasetRecordCoreRelations (
@@ -481,6 +482,7 @@ CREATE TABLE DatasetRecordCoreRelations (
     PRIMARY KEY (record_id, field_id, target_core, target_id)
 );
 CREATE INDEX drcr_by_field_core ON DatasetRecordCoreRelations(field_id, target_core, target_id);
+CREATE INDEX drcr_by_core ON DatasetRecordCoreRelations(target_core, target_id);
 
 -- Plantillas para las bases de datos
 CREATE TABLE Templates (
@@ -507,7 +509,7 @@ CREATE TABLE TemplateFields (
     is_multi          BOOLEAN NOT NULL DEFAULT FALSE,
     position          INTEGER NOT NULL DEFAULT 0,
     settings          JSONB NOT NULL DEFAULT '{}'::jsonb,
-    relation_target_kind TEXT,
+    relation_target_kind TEXT CHECK (relation_target_kind IN ('dynamic','core')),
     relation_target_template_id UUID,
     relation_target_core   TEXT,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -520,7 +522,6 @@ CREATE UNIQUE INDEX template_fields_uq_slug ON TemplateFields(template_id, key);
 CREATE TABLE AuditLog (
     audit_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     activation_id  INT,
-    center_id      VARCHAR(10),
     actor_user_id  INT,
     action         TEXT NOT NULL CHECK (action IN ('insert','update','delete')),
     entity_type    TEXT NOT NULL,      -- p.ej. 'datasets','dataset_fields',...
@@ -529,5 +530,49 @@ CREATE TABLE AuditLog (
     before         JSONB,
     after          JSONB
 );
+
 CREATE INDEX audit_by_activation ON AuditLog(activation_id, at DESC); --listado cronológico de cambios en una activación
 CREATE INDEX audit_by_entity     ON AuditLog(entity_type, entity_id); -- para la historia de un dataset, columna o registro en específico
+
+
+CREATE TABLE CenterNotifications (
+    notification_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    center_id         VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    activation_id     INT REFERENCES CentersActivations(activation_id) ON UPDATE CASCADE ON DELETE SET NULL,
+    destinatary       INT REFERENCES Users(user_id) ON DELETE SET NULL,
+
+    title             VARCHAR(120) NOT NULL,
+    message           TEXT NOT NULL,
+    event_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    channel           VARCHAR(16) NOT NULL DEFAULT 'system',  -- Consutlar si quieren otros medios: 'system' | 'email' | 'sms' | 'push' | 'whatsapp' ...
+    status            VARCHAR(16) NOT NULL DEFAULT 'queued',  -- 'queued' | 'sent' | 'failed'
+    sent_at           TIMESTAMPTZ,
+    read_at           TIMESTAMPTZ,
+    error             TEXT,
+
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ,
+
+    CONSTRAINT chk_channel_len CHECK (char_length(channel) > 0),
+    CONSTRAINT chk_status_val CHECK (status IN ('queued','sent','failed'))
+);
+
+CREATE TABLE municipal_zones (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL, --  'OMZ' para sectores, 'OMZ_OFFICE' para oficinas :)
+  geojson JSONB NOT NULL,
+  icon TEXT,
+  color TEXT,
+  fill TEXT,
+  stroke TEXT,
+  metadata JSONB
+);
+
+
+-- Índices útiles
+CREATE INDEX idx_centernotif_center_eventat ON CenterNotifications (center_id, event_at DESC);
+CREATE INDEX idx_centernotif_activation     ON CenterNotifications (activation_id);
+CREATE INDEX idx_centernotif_recipient      ON CenterNotifications (destinatary);
+CREATE INDEX idx_centernotif_status_queued  ON CenterNotifications (status) WHERE status = 'queued';

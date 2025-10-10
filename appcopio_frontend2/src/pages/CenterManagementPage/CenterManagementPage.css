@@ -161,6 +161,11 @@
   color: #337ab7 !important;
   margin-top: 5px !important;
 }
+.zone-info {
+  margin: 0;
+  font-size: 0.9em;
+  color: #666;
+}
 
 .center-actions {
   display: flex;

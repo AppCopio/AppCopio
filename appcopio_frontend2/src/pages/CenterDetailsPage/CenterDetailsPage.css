@@ -1,4 +1,19 @@
 /* src/pages/CenterDetailsPage/CenterDetailsPage.css */
+.center-details-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.center-details-page.loading,
+.center-details-page.error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  font-size: 18px;
+  color: #666;
+}
 .center-details-container {
   padding: 20px;
   max-width: 1200px;

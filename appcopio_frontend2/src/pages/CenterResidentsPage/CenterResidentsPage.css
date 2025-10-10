@@ -1,3 +1,4 @@
+/* ---------- Layout general ---------- */
 .residents-container {
   padding: 20px;
   font-family: Arial, sans-serif;
@@ -18,29 +19,26 @@
   border-radius: 5px;
   cursor: pointer;
 }
+.back-button:hover { background-color: #0056b3; }
 
-.back-button:hover {
-  background-color: #0056b3;
-}
-
+/* ---------- Panel de capacidad ---------- */
 .capacity-info {
   background-color: #f0f0f0;
   padding: 10px;
   border-radius: 8px;
   margin-bottom: 1rem;
 }
-
 .capacity-info p {
   margin: 5px 0;
   font-size: 1rem;
 }
 
+/* ---------- Exportar ---------- */
 .export-buttons {
   margin-bottom: 20px;
   display: flex;
   gap: 10px;
 }
-
 .export-btn {
   padding: 8px 12px;
   background-color: #007bff;
@@ -49,15 +47,10 @@
   border-radius: 4px;
   cursor: pointer;
 }
+.export-btn:hover { background-color: #0056b3; }
 
-.export-btn:hover {
-  background-color: #0056b3;
-}
-
-.navigate-button {
-  margin-bottom: 20px;
-}
-
+/* ---------- Toggle de vistas ---------- */
+.navigate-button { margin-bottom: 20px; }
 .navigate-btn {
   background-color: #28a745;
   color: white;
@@ -66,18 +59,15 @@
   border-radius: 5px;
   cursor: pointer;
 }
+.navigate-btn:hover { background-color: #218838; }
 
-.navigate-btn:hover {
-  background-color: #218838;
-}
-
+/* ---------- Tablas ---------- */
 .residents-table,
 .people-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
 }
-
 .residents-table th,
 .people-table th,
 .residents-table td,
@@ -86,96 +76,127 @@
   padding: 8px;
   text-align: left;
 }
-
 .residents-table th,
 .people-table th {
   background-color: #f5f5f5;
 }
+.table-container { overflow-x: auto; }
 
-.table-container {
-  overflow-x: auto;
+/* ---------- (Antiguo) Bloque de filtros: oculto ---------- */
+.person-filters { display: none; }
+
+/* ---------- NUEVO: Card de filtros ---------- */
+.filters-card {
+  background: #ffffff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 18px 0 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
 }
 
-.person-filters {
-  margin-top: 20px;
+/* Header de la card: título + acciones */
+.filters-header {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start; /* Alinea los filtros a la izquierda */
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.filters-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+.filters-actions { display: flex; gap: 8px; }
+.btn-secondary-outlined {
+  background: transparent;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-secondary-outlined:hover { background: rgba(37,99,235,0.08); }
+
+/* Grid responsiva de campos */
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
 }
 
-.person-filters div {
-  margin-right: 10px;
-  margin-bottom: 10px;
+/* Cada campo ocupa 12 cols en móvil, 6 en tablet, 4 en desktop */
+.filter-field {
   display: flex;
   flex-direction: column;
+  grid-column: span 12;
+}
+@media (min-width: 640px) {
+  .filter-field { grid-column: span 6; }
+}
+@media (min-width: 1024px) {
+  .filter-field { grid-column: span 4; }
 }
 
-.person-filters label {
-  font-weight: bold;
+/* Etiquetas e inputs */
+.filter-field > span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+.filter-field input,
+.filter-field select {
+  height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-size: 0.95rem;
+}
+.filter-field input::placeholder { color: #9ca3af; }
+/* Estado de foco */
+.filter-field input:focus,
+.filter-field select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 
-.person-filters input,
-.person-filters select {
-  padding: 6px;
-  margin-top: 5px;
-  width: 130px; /* Hacemos los filtros más pequeños */
-}
-
-.filter-button {
+/* ---------- Botones genéricos (modales, etc.) ---------- */
+.filter-button,
+.modal-actions button {
   background-color: #007bff;
   color: white;
   padding: 8px 15px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  margin-top: 10px;
 }
+.filter-button:hover,
+.modal-actions button:hover { background-color: #0056b3; }
+.modal-actions { display: flex; gap: 10px; margin-top: 10px; }
 
-.filter-button:hover {
-  background-color: #0056b3;
-}
-
-.modal-actions button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.modal-actions button:hover {
-  background-color: #0056b3;
-}
-
+/* ---------- Modal ---------- */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
 }
-
 .modal-content {
   background-color: white;
   padding: 20px;
   border-radius: 8px;
   width: 400px;
 }
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  font-weight: bold;
-}
-
+.form-group { margin-bottom: 15px; }
+.form-group label { font-weight: bold; }
 .form-group input,
 .form-group select {
   width: 100%;
@@ -183,4 +204,70 @@
   margin-top: 5px;
   border-radius: 4px;
   border: 1px solid #ccc;
+}
+
+/* ======= Ultra compacto ======= */
+.filters-card.filters-compact {
+  padding: 8px 10px;         /* antes 10x12 */
+  margin: 8px 0;             /* menos margen */
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+
+.filters-card.filters-compact .filters-header {
+  margin-bottom: 4px;
+}
+.filters-card.filters-compact .filters-header h3 {
+  font-size: 0.9rem;         /* más chico */
+}
+.filters-card.filters-compact .btn-secondary-outlined {
+  padding: 2px 8px;          /* botón chiquito */
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+/* Grid con MUY poco gap y más campos por fila */
+.filters-card.filters-compact .filters-grid {
+  gap: 6px;
+  grid-template-columns: repeat(12, 1fr);
+}
+.filters-card.filters-compact .filter-field {
+  grid-column: span 12;      /* móvil: 1 por fila */
+}
+
+/* tablet: 3 por fila */
+@media (min-width: 640px) {
+  .filters-card.filters-compact .filter-field { grid-column: span 4; }
+}
+
+/* desktop: 6 por fila (todos en una línea) */
+@media (min-width: 1024px) {
+  .filters-card.filters-compact .filter-field { grid-column: span 2; }
+  /* en desktop ocultamos labels para ganar altura; usamos placeholder */
+  .filters-card.filters-compact .filter-field > span { display: none; }
+}
+
+.filters-card.filters-compact .filter-field > span {
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+  color: #556070;
+}
+
+/* Inputs realmente pequeños */
+.filters-card.filters-compact .filter-field input,
+.filters-card.filters-compact .filter-field select {
+  height: 28px;              /* antes 30-38px */
+  padding: 4px 6px;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #d8dde6;
+}
+.filters-card.filters-compact .filter-field input::placeholder {
+  font-size: 0.84rem;
+  color: #9aa3b2;
+}
+.filters-card.filters-compact .filter-field input:focus,
+.filters-card.filters-compact .filter-field select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.10);
 }

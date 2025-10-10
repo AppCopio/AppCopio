@@ -21,6 +21,7 @@ export const paths = {
   },
 
   // Perfil y mis centros
+  notifications: '/notifications', 
   profile: "/mi-perfil",
   myCenters: "/mis-centros",
 
@@ -36,6 +37,6 @@ export const paths = {
     residents: (centerId: string | number) => `/center/${centerId}/residents`,
     updates: (centerId: string | number) => `/center/${centerId}/updates`,
     fibe: (centerId: string | number) => `/center/${centerId}/fibe`,
-    datasets: (centerId: string | number) => `/center/${centerId}/datasets`,
+    databases: (centerId: string | number) => `/center/${centerId}/databases`,
   },
 } as const;

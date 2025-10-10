@@ -33,7 +33,12 @@ import CenterEditPage from "@/pages/CenterEditPage/CenterEditPage";
 import MultiStepCenterForm from "@/pages/CreateCenterPage/steps/MultiStepCenterForm";
 import MyUserPage from "@/pages/MyUserPage/MyUserPage";
 import ExampleFrontend from "./pages/ExampleFrontPage/ExampleFrontPage";
-import ActivationDatasetsPage, { DatasetDetail} from "./pages/ActivationDatasetsPage/ActivationDatasetsPage";
+import NotificationsPage from './pages/NotificationsPage/NotificationsPage'; // Importa la nueva página
+import { ActivationProvider } from "@/contexts/ActivationContext";
+import DatabasesPage from "@/pages/Databases/DatabasesPage";
+import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
+
+import OfflineTestPage from '@/pages/System/OfflineTestPage';
 import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
 
 
@@ -49,6 +54,7 @@ export default function App() {
             <Route path={paths.login} element={<LoginPage />} />
             <Route path={paths.admin.csv} element={<CsvUploadPage />} />
             <Route path="/typo" element={<ExampleFrontend />} /> 
+            <Route path="/system/offline-test" element={<OfflineTestPage />} />
           </Route>
 
           {/* 2) Protegidas (roles 1,2,3; incluye es_apoyo_admin) */}
@@ -68,6 +74,7 @@ export default function App() {
               <Route path={paths.admin.updates} element={<UpdatesPage />} />
               <Route path={paths.profile} element={<MyUserPage />} />
               <Route path={paths.myCenters} element={<MisCentrosPage />} />
+              <Route path={paths.notifications} element={<NotificationsPage />} />
 
               {/* center/:centerId con hijos relativos + providers/guards */}
               <Route path={paths.center.pattern} element={<CenterLayout />}>
@@ -79,12 +86,12 @@ export default function App() {
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
-                  <Route path="datasets" element={<ActivationDatasetsPage />} />
-                  <Route path="datasets/:key" element={<DatasetDetail/>} />
 
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>
                     <Route path="fibe" element={<FibePage />} />
+                    <Route path="databases" element={<DatabasesPage />} />
+                    <Route path="databases/:id" element={<DatabaseDetailPage/>} />
                   </Route>
                 </Route>
               </Route>

@@ -1,11 +1,10 @@
-// src/pages/CenterDetailsPage/CenterDetailsPage.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import OperationalStatusControl from "@/components/center/OperationalStatusControl";
 import "./CenterDetailsPage.css";
 
-import type { Center } from "@/types/center";
+import type { CenterData, Center } from "@/types/center";
 import {
   getOneCenter,
   mapStatusToFrontend,
@@ -13,6 +12,14 @@ import {
   OperationalStatusUI,
 } from "@/services/centers.service";
 import { listCenterInventory } from "@/services/inventory.service";
+
+import { getOmzZoneForCenter } from "@/services/zones.service";
+import { 
+  listNotificationsByCenter, 
+  createNotification,
+  CenterNotification 
+} from '@/services/notifications.service';
+import NotificationsHistory from '@/components/notification/NotificationsHistory';
 
 import ResponsibleSection from "./ResponsibleSection";
 import AssignResponsibleDialog from "./AssingResponsibleDialog";
@@ -41,8 +48,10 @@ const CenterDetailsPage: React.FC = () => {
   const { user } = useAuth();
   const { activation } = useActivation();
 
-  const [center, setCenter] = useState<(Center & { public_note?: string }) | null>(null);
+  const [center, setCenter] = useState<CenterData | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [notifications, setNotifications] = useState<CenterNotification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingOperationalStatus, setIsUpdatingOperationalStatus] = useState(false);
@@ -50,9 +59,109 @@ const CenterDetailsPage: React.FC = () => {
   const [assignRole, setAssignRole] = useState<AssignRole | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
 
+
+  const [notificationToast, setNotificationToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({ show: false, message: '', type: 'success' });
+
+  const showNotificationToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setNotificationToast({ show: true, message, type });
+    setTimeout(() => {
+      setNotificationToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  };
+  // OMZ zone state
+  const [omzZone, setOmzZone] = useState<string | null>(null);
+
+  // Función para cargar las notificaciones
+  const fetchNotifications = useCallback(async () => {
+    if (!centerId) return;
+    
+    setLoadingNotifications(true);
+    try {
+      const data = await listNotificationsByCenter(centerId);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error al cargar notificaciones:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [centerId]);
+
+  const handleSendTestNotification = async () => {
+    if (!center?.comunity_charge_id) {
+      alert('No hay encargado asignado a este centro');
+      return;
+    }
+
+    try {
+      await createNotification({
+        center_id: center.center_id,
+        title: '🔔 Notificación de prueba',
+        message: `Esta es una notificación de prueba enviada desde el centro "${center.name}". El sistema de notificaciones está funcionando correctamente.`,
+        destinatary_id: center.comunity_charge_id
+      });
+      
+      showNotificationToast('✅ Notificación de prueba enviada correctamente', 'success');
+      
+      // Recargar notificaciones después de 1 segundo
+      setTimeout(() => {
+        fetchNotifications();
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error al enviar notificación:', error);
+      showNotificationToast('❌ Error al enviar la notificación', 'error');
+    }
+  };
+
+  const openAssign = (role: AssignRole) => { setAssignRole(role); setAssignOpen(true); };
+  const closeAssign = () => setAssignOpen(false);
+
+  const handleOperationalStatusChange = useCallback(
+  async (newStatus: OperationalStatusUI, publicNote?: string) => {
+    if (!center || isUpdatingOperationalStatus) return;
+    setIsUpdatingOperationalStatus(true);
+    try {
+      await updateOperationalStatus(center.center_id, newStatus, publicNote);
+      setCenter((prev) =>
+      prev
+        ? {
+            ...prev,
+            operational_status: (newStatus === "Abierto"
+              ? "abierto"
+              : newStatus === "Cerrado Temporalmente"
+              ? "cerrado_temporalmente"
+              : newStatus === "Capacidad Máxima"
+              ? "capacidad_maxima"
+              : undefined) as Center["operational_status"],
+            public_note: newStatus === "Cerrado Temporalmente" ? publicNote : undefined,
+          }
+        : prev
+    );
+    } catch (err: any) {
+      console.error("Error updating operational status:", err);
+      alert(err?.response?.data?.message || err?.message || "No se pudo actualizar el estado operacional.");
+    } finally {
+      setIsUpdatingOperationalStatus(false);
+    }
+  },
+  [center, isUpdatingOperationalStatus]
+);
+
+const fullnessPercentage = useMemo(() => {
+  if (resources.length === 0) return 0;
+  const totalStock = resources.reduce((acc, r) => acc + (r.quantity || 0), 0);
+  const maxCapacity = resources.length * 100;
+  return maxCapacity > 0 ? Math.min((totalStock / maxCapacity) * 100, 100) : 0;
+}, [resources]);
+
+  // Cargar datos del centro
   useEffect(() => {
     if (!centerId) return;
     let alive = true;
+    
     (async () => {
       setLoading(true);
       setError(null);
@@ -61,24 +170,40 @@ const CenterDetailsPage: React.FC = () => {
           getOneCenter(centerId),
           listCenterInventory(centerId),
         ]);
+        
         if (!alive) return;
-
+        
         const mapped = {
           ...(c as any),
           operational_status: mapStatusToFrontend((c as any).operational_status),
         } as Center & { public_note?: string; operational_status?: OperationalStatusUI };
 
-        setCenter(mapped);
+        setCenter(mapped as CenterData);
         setResources(inv);
+        // Obtener zona OMZ como string
+        const omz = await getOmzZoneForCenter(centerId);
+        setOmzZone(omz);
+        await fetchNotifications();
       } catch (e: any) {
-        setError(e?.response?.data?.message || e?.message || "No se pudieron cargar los detalles del centro.");
+        if (alive) {
+          setError(e?.response?.data?.message || e?.message || "No se pudieron cargar los detalles del centro.");
+        }
       } finally {
-        if (alive) setLoading(false);
+        if (alive) {
+          setLoading(false);
+        }
       }
     })();
+    
     return () => { alive = false; };
   }, [centerId]);
 
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+
+  //revisar si se ocupa esto
   const groupedResources = useMemo(() => {
     return resources.reduce((acc, r) => {
       (acc[r.category] ||= []).push(r);
@@ -86,51 +211,44 @@ const CenterDetailsPage: React.FC = () => {
     }, {} as Record<string, Resource[]>);
   }, [resources]);
 
-  const handleOperationalStatusChange = async (
-    newStatus: OperationalStatusUI,
-    publicNote?: string
-  ) => {
-    if (!center || !centerId) return;
-    setIsUpdatingOperationalStatus(true);
-    try {
-      await updateOperationalStatus(centerId, newStatus, publicNote);
-      setCenter((prev) =>
-        prev
-          ? {
-              ...prev,
-              operational_status: (newStatus === "Abierto"
-                ? "abierto"
-                : newStatus === "Cerrado Temporalmente"
-                ? "cerrado_temporalmente"
-                : newStatus === "Capacidad Máxima"
-                ? "capacidad_maxima"
-                : undefined) as Center["operational_status"],
-              public_note: newStatus === "Cerrado Temporalmente" ? publicNote : undefined,
-            }
-          : prev
-      );
-      alert(`Estado operativo actualizado a "${newStatus}" exitosamente`);
-    } catch (e: any) {
-      alert(e?.response?.data?.message || e?.message || "No se pudo actualizar el estado operativo");
-    } finally {
-      setIsUpdatingOperationalStatus(false);
-    }
-  };
 
-  const openAssign = (role: AssignRole) => { setAssignRole(role); setAssignOpen(true); };
-  const closeAssign = () => setAssignOpen(false);
-
-  if (loading) return <div className="center-details-container loading">Cargando detalles del centro...</div>;
+  if (loading) {
+    return <div className="center-details-page loading">Cargando detalles del centro...</div>;
+  }
   if (error || !center) {
     return (
-      <div className="center-details-container">
-        <div className="error-message">{error || "Centro no encontrado"}</div>
-        <button onClick={() => navigate(-1)} className="back-button">Volver</button>
+      <div className="center-details-page error">
+        <p>{error || "No se pudo cargar el centro."}</p>
+        <button onClick={() => navigate(-1)}>Volver</button>
       </div>
     );
   }
 
   return (
+    <div className="center-details-page">
+      {/* Toast de notificación */}
+      {notificationToast.show && (
+        <div 
+          className={`notification-toast ${notificationToast.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            background: notificationToast.type === 'success' ? '#10b981' : '#ef4444',
+            color: 'white',
+            padding: '16px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 9999,
+            animation: 'slideInRight 0.3s ease-out',
+            maxWidth: '400px',
+            fontWeight: 500
+          }}
+        >
+          {notificationToast.message}
+        </div>
+      )}
+
     <div className="center-details-container">
       <div className="center-details-header">
         <button onClick={() => navigate(-1)} className="back-button">← Volver</button>
@@ -171,6 +289,10 @@ const CenterDetailsPage: React.FC = () => {
                   <div className="public-note-display">{center.public_note}</div>
                 </div>
               )}
+              <div className="info-item">
+                <label>Zona OMZ:</label>
+                <span>{omzZone ? omzZone : "No asignada"}</span>
+              </div>
             </div>
 
             {(user?.role_name === "Encargado" || user?.role_name === "Trabajador Municipal" || user?.role_name === "Contacto Ciudadano") &&
@@ -178,7 +300,7 @@ const CenterDetailsPage: React.FC = () => {
                 <OperationalStatusControl
                   centerId={centerId!}
                   currentStatus={mapStatusToFrontend(center.operational_status) ?? "Abierto"}
-                  currentNote={center.public_note}
+                  currentNote={center.public_note ?? undefined}
                   onStatusChange={handleOperationalStatusChange}
                   isUpdating={isUpdatingOperationalStatus}
                 />
@@ -191,35 +313,22 @@ const CenterDetailsPage: React.FC = () => {
         {/* @ts-ignore - backend trae props del catastro fuera de Center UI */}
         <CenterCatastroDetails centerData={center as any} />
 
-        <div className="resources-section">
-          <h3>Recursos Disponibles</h3>
-          {Object.keys(groupedResources).length === 0 ? (
-            <div className="no-resources"><p>No hay recursos registrados en este centro.</p></div>
-          ) : (
-            <div className="resources-grid">
-              {Object.entries(groupedResources).map(([category, items]) => (
-                <div key={category} className="resource-category">
-                  <h4>{category}</h4>
-                  <div className="resource-items">
-                    {items.map((item) => (
-                      <div key={item.item_id} className="resource-item">
-                        <span className="resource-name">{item.name}</span>
-                        <span className="resource-quantity">{item.quantity}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Sección de Historial de Notificaciones */}
+        <div className="notifications-section" style={{ marginTop: '32px' }}>
+          <NotificationsHistory
+            notifications={notifications}
+            loading={loadingNotifications}
+            onRefresh={fetchNotifications}
+          />
         </div>
+      </div>
 
         <div className="responsible-section">
           <h3>Responsable</h3>
           <div className="responsible-info">
             <ResponsibleSection
-              municipalId={(center as any).municipal_manager_id}
-              comunityId={(center as any).comunity_charge_id}
+              municipalId={center.municipal_manager_id}
+              comunityId={center.comunity_charge_id}
               onAssignMunicipal={() => openAssign("trabajador municipal")}
               onAssignCommunity={() => openAssign("contacto ciudadano")}
             />
