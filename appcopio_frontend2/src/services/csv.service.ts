@@ -32,7 +32,7 @@ export const CSV_MODULE_CONFIGS: Record<
   },
   inventory: {
     displayName: 'Inventario',
-    description: 'Agregar ítems al inventario de centros (crea producto y categoría si no existen). Si no se especifica updated_by, se usa el usuario que sube el archivo.',
+    description: 'Agregar ítems al inventario de centros.',
     requiredColumns: ['center_id', 'item_name', 'category', 'quantity', 'unit'],
     optionalColumns: ['notes', 'updated_by'],
     sampleRows: [
@@ -41,7 +41,7 @@ export const CSV_MODULE_CONFIGS: Record<
   },
   residents: {
     displayName: 'Personas',
-    description: 'Registro de personas/residentes con información socioeconómica',
+    description: 'Registro de personas/residentes.',
     requiredColumns: ['rut', 'nombre', 'primer_apellido', 'nacionalidad', 'genero', 'edad'],
     optionalColumns: ['segundo_apellido', 'estudia', 'trabaja', 'perdida_trabajo', 'rubro', 'discapacidad', 'dependencia'],
     sampleRows: [
@@ -50,7 +50,7 @@ export const CSV_MODULE_CONFIGS: Record<
   },
   assignments: {
     displayName: 'Asignaciones',
-    description: 'Asignar usuarios a centros por rol (trabajador municipal, contacto ciudadano). Si no se especifica changed_by_username, se usa el usuario que sube el archivo. Detecta automáticamente asignaciones duplicadas.',
+    description: 'Asignar usuarios a centros .',
     requiredColumns: ['username', 'center_id', 'role'],
     optionalColumns: ['changed_by_username'],
     sampleRows: [
@@ -59,7 +59,7 @@ export const CSV_MODULE_CONFIGS: Record<
   },
   updates: {
     displayName: 'Solicitudes de Actualización',
-    description: 'Crear solicitudes de actualización para centros (urgencia: baja, media, alta)',
+    description: 'Crear solicitudes de actualización para centros.',
     requiredColumns: ['center_id', 'description', 'urgency', 'requested_by_username'],
     optionalColumns: [],
     sampleRows: [

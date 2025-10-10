@@ -202,56 +202,65 @@ export default function CsvUploadPage() {
                       <Card
                         className={`module-card ${selectedModule === module ? "selected" : ""}`}
                         onClick={() => handleModuleSelect(module)}
+                        sx={{ height: '100%' }}
                       >
-                        <CardContent>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "flex-start",
-                              mb: 1,
-                            }}
-                          >
-                            <Typography variant="h6" component="h3">
-                              {config.displayName}
-                            </Typography>
-                            {selectedModule === module && (
-                              <CheckCircleIcon
-                                color="primary"
-                                fontSize="small"
-                              />
-                            )}
-                          </Box>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            paragraph
-                          >
-                            {config.description}
-                          </Typography>
-                          <div className="required-columns">
-                            <Typography variant="caption" display="block">
-                              Columnas requeridas:
-                            </Typography>
+                        <CardContent sx={{ 
+                          height: '100%', 
+                          display: 'flex', 
+                          flexDirection: 'column',
+                          p: 0 
+                        }}>
+                          <Box sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
                             <Box
                               sx={{
-                                mt: 0.5,
                                 display: "flex",
-                                flexWrap: "wrap",
-                                gap: 0.5,
+                                justifyContent: "space-between",
+                                alignItems: "flex-start",
+                                mb: 1,
                               }}
                             >
-                              {config.requiredColumns.map((column) => (
-                                <Chip
-                                  key={column}
-                                  label={column}
-                                  size="small"
-                                  variant="outlined"
+                              <Typography variant="h6" component="h3">
+                                {config.displayName}
+                              </Typography>
+                              {selectedModule === module && (
+                                <CheckCircleIcon
                                   color="primary"
+                                  fontSize="small"
                                 />
-                              ))}
+                              )}
                             </Box>
-                          </div>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              paragraph
+                              sx={{ flex: 1 }}
+                            >
+                              {config.description}
+                            </Typography>
+                            <div className="required-columns">
+                              <Typography variant="caption" display="block">
+                                Columnas requeridas:
+                              </Typography>
+                              <Box
+                                sx={{
+                                  mt: 0.5,
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 0.5,
+                                }}
+                              >
+                                {config.requiredColumns.map((column) => (
+                                  <Chip
+                                    key={column}
+                                    label={column}
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                  />
+                                ))}
+                              </Box>
+                            </div>
+                          </Box>
                         </CardContent>
                       </Card>
                     </Grid>
