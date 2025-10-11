@@ -41,11 +41,45 @@ export const CSV_MODULE_CONFIGS: Record<
   },
   residents: {
     displayName: 'Personas',
-    description: 'Registro de personas/residentes.',
-    requiredColumns: ['rut', 'nombre', 'primer_apellido', 'nacionalidad', 'genero', 'edad'],
-    optionalColumns: ['segundo_apellido', 'estudia', 'trabaja', 'perdida_trabajo', 'rubro', 'discapacidad', 'dependencia'],
+    description: 'Registro de personas/residentes con asignación automática a grupos familiares.',
+    requiredColumns: ['rut', 'nombre', 'primer_apellido', 'nacionalidad', 'genero', 'edad', 'activation_id', 'parentesco'],
+    optionalColumns: ['segundo_apellido', 'estudia', 'trabaja', 'perdida_trabajo', 'rubro', 'discapacidad', 'dependencia', 'jefe_hogar_rut'],
     sampleRows: [
-      { rut: '18.765.432-1', nombre: 'Ana', primer_apellido: 'Martínez', segundo_apellido: 'López', nacionalidad: 'Chilena', genero: 'F', edad: 34, estudia: 0, trabaja: 1, perdida_trabajo: 0, rubro: 'Comercio', discapacidad: 0, dependencia: 0 }
+      { 
+        rut: '18.765.432-1', 
+        nombre: 'Ana', 
+        primer_apellido: 'Martínez', 
+        segundo_apellido: 'López', 
+        nacionalidad: 'CH', 
+        genero: 'F', 
+        edad: 34, 
+        estudia: 0, 
+        trabaja: 1, 
+        perdida_trabajo: 0, 
+        rubro: 'Comercio', 
+        discapacidad: 0, 
+        dependencia: 0,
+        activation_id: 1,
+        parentesco: 'Jefe de Hogar'
+      },
+      { 
+        rut: '12.345.678-9', 
+        nombre: 'Carlos', 
+        primer_apellido: 'Martínez', 
+        segundo_apellido: 'Silva', 
+        nacionalidad: 'CH', 
+        genero: 'M', 
+        edad: 8, 
+        estudia: 1, 
+        trabaja: 0, 
+        perdida_trabajo: 0, 
+        rubro: '', 
+        discapacidad: 0, 
+        dependencia: 1,
+        jefe_hogar_rut: '18.765.432-1',
+        activation_id: 1,
+        parentesco: 'Hijo/a'
+      }
     ]
   },
   assignments: {

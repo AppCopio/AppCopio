@@ -71,6 +71,9 @@ export interface RawResidentRow {
   nacionalidad?: string; genero?: string; edad?: string|number;
   estudia?: string|number|boolean; trabaja?: string|number|boolean; perdida_trabajo?: string|number|boolean;
   rubro?: string; discapacidad?: string|number|boolean; dependencia?: string|number|boolean;
+  jefe_hogar_rut?: string; // RUT del jefe de hogar (si no viene, la persona será jefe de su propio grupo)
+  activation_id?: string|number; // ID de la activación donde se registra la persona
+  parentesco?: string; // Relación con el jefe de hogar (ej: "Jefe de Hogar", "Cónyuge", "Hijo/a", etc.)
 }
 
 // ASSIGNMENTS

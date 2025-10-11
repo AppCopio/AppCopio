@@ -1,4 +1,4 @@
-rut,nombre,primer_apellido,segundo_apellido,nacionalidad,genero,edad,estudia,trabaja,perdida_trabajo,rubro,discapacidad,dependencia
-18.765.432-1,Ana,Martínez,López,Chilena,F,34,0,1,0,Comercio,0,0
-12.345.678-9,Carlos,Rojas,Silva,Chilena,M,45,0,1,1,Construcción,0,0
-21.987.654-3,Sofía,González,,Venezolana,F,28,1,0,0,Estudiante,0,1
+rut,nombre,primer_apellido,segundo_apellido,nacionalidad,genero,edad,estudia,trabaja,perdida_trabajo,rubro,discapacidad,dependencia,activation_id,parentesco,jefe_hogar_rut
+18.765.432-1,Ana,Martínez,López,CH,F,34,0,1,0,Comercio,0,0,16,"Jefe de Hogar",
+12.345.678-9,Carlos,Martínez,Silva,CH,M,8,1,0,0,,0,1,16,"Hijo/a",18.765.432-1
+21.987.654-3,Sofía,González,,EXT,F,28,1,0,0,Estudiante,0,1,16,"Jefe de Hogar",

@@ -13,6 +13,8 @@ import { createOrUpdateAssignment } from "./assignmentService";
 import { createUpdateRequest } from "./updateService";
 import { getRoleByName } from "./roleService";
 import { getCategoryByName, addCategory } from "./categoryService";
+import { createFamilyGroupInDB } from "./familyService";
+import { createFamilyMemberDB, hasActiveMembershipByRutInActivationDB, findActiveHeadFamilyInActivationByRut } from "./familyMemberService";
 
 // helpers comunes
 const toBool = (v: any) => typeof v === "boolean" ? v : /^(1|true|si|sí)$/i.test(String(v ?? "").trim());
@@ -326,18 +328,38 @@ async function importInventory(db: Db, rows: RawInventoryRow[], uploadedBy?: { u
 /* ========== RESIDENTS (Persons) ========== */
 async function importResidents(db: Db, rows: RawResidentRow[]): Promise<CSVUploadResponse> {
   let created = 0, updated = 0, errors = 0; const detail: any[] = [];
+  
   await db.query("BEGIN");
   try {
+    // Mapa para almacenar family_id por jefe de hogar y activation_id
+    const familyGroupsCache = new Map<string, number>();
+
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
+      
+      // Procesar datos de la persona
       const p = {
-        rut: normRut(r.rut)!, nombre: cleanStr(r.nombre), primer_apellido: cleanStr(r.primer_apellido),
-        segundo_apellido: cleanStr(r.segundo_apellido || ""), nacionalidad: cleanStr(r.nacionalidad),
-        genero: cleanStr(r.genero || ""), edad: toInt(r.edad),
-        estudia: toBool(r.estudia), trabaja: toBool(r.trabaja), perdida_trabajo: toBool(r.perdida_trabajo),
-        rubro: cleanStr(r.rubro || ""), discapacidad: toBool(r.discapacidad), dependencia: toBool(r.dependencia),
+        rut: normRut(r.rut)!, 
+        nombre: cleanStr(r.nombre), 
+        primer_apellido: cleanStr(r.primer_apellido),
+        segundo_apellido: cleanStr(r.segundo_apellido || ""), 
+        nacionalidad: cleanStr(r.nacionalidad),
+        genero: cleanStr(r.genero || ""), 
+        edad: toInt(r.edad),
+        estudia: toBool(r.estudia), 
+        trabaja: toBool(r.trabaja), 
+        perdida_trabajo: toBool(r.perdida_trabajo),
+        rubro: cleanStr(r.rubro || ""), 
+        discapacidad: toBool(r.discapacidad), 
+        dependencia: toBool(r.dependencia),
       };
 
+      // Datos del grupo familiar
+      const activation_id = toInt(r.activation_id);
+      const parentesco = cleanStr(r.parentesco || "");
+      const jefe_hogar_rut = r.jefe_hogar_rut ? normRut(r.jefe_hogar_rut) : null;
+
+      // Validaciones básicas de persona
       const errs = [];
       if (!p.rut) errs.push({ column: "rut", message: "RUT requerido" });
       if (!p.nombre) errs.push({ column: "nombre", message: "Nombre requerido" });
@@ -345,13 +367,36 @@ async function importResidents(db: Db, rows: RawResidentRow[]): Promise<CSVUploa
       if (!p.nacionalidad) errs.push({ column: "nacionalidad", message: "Nacionalidad requerida" });
       if (!p.genero) errs.push({ column: "genero", message: "Género requerido" });
       if (!Number.isInteger(p.edad) || p.edad <= 0) errs.push({ column: "edad", message: "Edad numérica positiva requerida" });
-      if (errs.length) { errors++; errs.forEach(e => detail.push({ row: i + 2, ...e })); continue; }
+      
+      // Validaciones de grupo familiar
+      if (!Number.isInteger(activation_id) || activation_id <= 0) errs.push({ column: "activation_id", message: "activation_id numérico positivo requerido" });
+      if (!parentesco) errs.push({ column: "parentesco", message: "Parentesco requerido" });
 
-      // Verificar si ya existe (solo CREATE, no UPDATE)
-      const existing = await db.query(`SELECT person_id FROM persons WHERE rut=$1 LIMIT 1`, [p.rut]);
-      if (existing.rowCount === 0) {
+      // Validar que activation_id existe y está activo
+      if (Number.isInteger(activation_id) && activation_id > 0) {
+        const activationCheck = await db.query(
+          `SELECT activation_id FROM CentersActivations WHERE activation_id = $1 AND ended_at IS NULL`,
+          [activation_id]
+        );
+        if (activationCheck.rowCount === 0) {
+          errs.push({ column: "activation_id", message: `La activación ${activation_id} no existe o no está activa` });
+        }
+      }
+
+      if (errs.length) { 
+        errors++; 
+        errs.forEach(e => detail.push({ row: i + 2, ...e })); 
+        continue; 
+      }
+
+      // Verificar si la persona ya existe
+      const existingPerson = await db.query(`SELECT person_id FROM persons WHERE rut=$1 LIMIT 1`, [p.rut]);
+      let personId: number;
+
+      if (existingPerson.rowCount === 0) {
+        // Crear nueva persona
         try {
-          await createPersonDB(db, p as any);
+          personId = await createPersonDB(db, p as any);
           created++;
         } catch (createErr) {
           errors++;
@@ -360,18 +405,134 @@ async function importResidents(db: Db, rows: RawResidentRow[]): Promise<CSVUploa
             column: "general", 
             message: `Error al crear persona: ${(createErr as Error).message}` 
           });
+          continue;
         }
       } else {
-        // Solo CREATE, no UPDATE - registrar como duplicado
-        detail.push({ 
-          row: i + 2, 
-          column: "rut", 
-          message: "Persona ya existe con este RUT" 
+        // Persona ya existe, usar el ID existente
+        personId = existingPerson.rows[0].person_id;
+        
+        // Verificar si ya es miembro activo de algún grupo en esta activación
+        const existingMembership = await hasActiveMembershipByRutInActivationDB(db, activation_id, p.rut);
+        if (existingMembership) {
+          detail.push({ 
+            row: i + 2, 
+            column: "rut", 
+            message: `Persona ya pertenece al grupo familiar ${existingMembership.family_id} en esta activación` 
+          });
+          continue;
+        }
+      }
+
+      // Determinar o crear grupo familiar
+      let familyId: number;
+      
+      if (!jefe_hogar_rut || jefe_hogar_rut === p.rut) {
+        // Esta persona será jefe de su propio grupo
+        const cacheKey = `${activation_id}-${p.rut}`;
+        
+        if (familyGroupsCache.has(cacheKey)) {
+          familyId = familyGroupsCache.get(cacheKey)!;
+        } else {
+          // Verificar si ya es jefe de hogar en esta activación
+          const existingHeadship = await findActiveHeadFamilyInActivationByRut(db, activation_id, p.rut);
+          if (existingHeadship) {
+            familyId = existingHeadship.family_id;
+          } else {
+            // Crear nuevo grupo familiar con esta persona como jefe
+            familyId = await createFamilyGroupInDB(db, {
+              activation_id,
+              jefe_hogar_person_id: personId,
+              data: { 
+                fibeFolio: `CSV-${p.rut}`,
+                observations: `Grupo familiar creado automáticamente vía CSV para ${p.nombre} ${p.primer_apellido}`,
+                selectedNeeds: [] 
+              }
+            });
+          }
+          familyGroupsCache.set(cacheKey, familyId);
+        }
+      } else {
+        // Esta persona pertenecerá al grupo del jefe de hogar especificado
+        const cacheKey = `${activation_id}-${jefe_hogar_rut}`;
+        
+        if (familyGroupsCache.has(cacheKey)) {
+          familyId = familyGroupsCache.get(cacheKey)!;
+        } else {
+          // Buscar si el jefe de hogar ya tiene un grupo en esta activación
+          const existingHeadship = await findActiveHeadFamilyInActivationByRut(db, activation_id, jefe_hogar_rut);
+          if (existingHeadship) {
+            familyId = existingHeadship.family_id;
+            familyGroupsCache.set(cacheKey, familyId);
+          } else {
+            // Verificar si el jefe de hogar existe como persona
+            const jefePersonQuery = await db.query(`SELECT person_id FROM persons WHERE rut=$1`, [jefe_hogar_rut]);
+            if (jefePersonQuery.rowCount === 0) {
+              errors++;
+              detail.push({ 
+                row: i + 2, 
+                column: "jefe_hogar_rut", 
+                message: `El jefe de hogar con RUT ${jefe_hogar_rut} no existe. Debe ser creado primero.` 
+              });
+              continue;
+            }
+            
+            const jefePersonId = jefePersonQuery.rows[0].person_id;
+            
+            // Crear nuevo grupo familiar con el jefe especificado
+            familyId = await createFamilyGroupInDB(db, {
+              activation_id,
+              jefe_hogar_person_id: jefePersonId,
+              data: { 
+                fibeFolio: `CSV-${jefe_hogar_rut}`,
+                observations: `Grupo familiar creado automáticamente vía CSV`,
+                selectedNeeds: [] 
+              }
+            });
+            
+            // Agregar al jefe como miembro de su propio grupo
+            await createFamilyMemberDB(db, {
+              family_id: familyId,
+              person_id: jefePersonId,
+              parentesco: "Jefe de Hogar"
+            });
+            
+            familyGroupsCache.set(cacheKey, familyId);
+          }
+        }
+      }
+
+      // Agregar esta persona al grupo familiar
+      try {
+        await createFamilyMemberDB(db, {
+          family_id: familyId,
+          person_id: personId,
+          parentesco
         });
+      } catch (memberErr: any) {
+        if (memberErr?.code === "23505") {
+          // Ya es miembro de este grupo, no es error grave
+          detail.push({ 
+            row: i + 2, 
+            column: "general", 
+            message: `Persona ya es miembro del grupo familiar ${familyId}` 
+          });
+        } else {
+          errors++;
+          detail.push({ 
+            row: i + 2, 
+            column: "general", 
+            message: `Error al agregar a grupo familiar: ${memberErr.message}` 
+          });
+        }
       }
     }
+    
     await db.query("COMMIT");
-  } catch (e) { await db.query("ROLLBACK"); throw e; }
+  } catch (e) { 
+    await db.query("ROLLBACK"); 
+    throw e; 
+  }
+  
   return createResponse(rows.length, created, 0, errors, 0, detail);
 }
 
