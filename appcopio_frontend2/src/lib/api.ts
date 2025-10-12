@@ -42,5 +42,52 @@ apiNoRetry.interceptors.request.use((config) => {
 // Interceptor de errores genérico
 api.interceptors.response.use(
   r => r,
-  e => Promise.reject(e)
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // Si es un error 401 y no hemos intentado renovar el token ya
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      console.warn('[API] 401 detected, attempting token refresh...');
+      
+      try {
+        // Intentar obtener el contexto de auth para renovar el token
+        const refreshTokenValue = localStorage.getItem('appcopio:refresh_token');
+        if (refreshTokenValue) {
+          const { data } = await apiNoRetry.post('/auth/refresh', {
+            refresh_token: refreshTokenValue,
+          });
+          
+          // Actualizar token
+          setAccessToken(data.access_token);
+          localStorage.setItem('appcopio:access_token', data.access_token);
+          
+          if (data.refresh_token) {
+            localStorage.setItem('appcopio:refresh_token', data.refresh_token);
+          }
+          
+          console.log('[API] ✅ Token refreshed, retrying original request');
+          
+          // Reintentar la petición original
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error('[API] ❌ Failed to refresh token:', refreshError);
+        
+        // Si falla el refresh, limpiar tokens y redirigir al login
+        setAccessToken(null);
+        localStorage.removeItem('appcopio:access_token');
+        localStorage.removeItem('appcopio:refresh_token');
+        localStorage.removeItem('appcopio:user');
+        
+        // Redirigir al login si estamos en el navegador
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
+    }
+    
+    return Promise.reject(error);
+  }
 );

@@ -9,7 +9,9 @@ import {
   deleteInventoryItem,
 } from "@/services/inventory.service";
 import { listCategories, createCategory, deleteCategory } from "@/services/categories.service";
+import { getCenterCapacity } from "@/services/centers.service";
 import { getUser } from "@/services/users.service";
+import ResourcesAndNeeds from "@/components/inventory/ResourcesAndNeeds";
 import type {
   InventoryItem,
   GroupedInventory,
@@ -54,6 +56,12 @@ export default function InventoryPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryToDelete, setCategoryToDelete] = useState("");
 
+  // Estados para HdU09: Capacidad del centro y funcionalidad offline
+  const [centerCapacity, setCenterCapacity] = useState<number>(0);
+  const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
+  const [lastSyncTime, setLastSyncTime] = useState<string>("");
+  const [showNeedsSection, setShowNeedsSection] = useState<boolean>(true);
+
   // Permisos
   const [assignedCenters, setAssignedCenters] = useState<string[]>([]);
 
@@ -90,24 +98,87 @@ export default function InventoryPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const [inv, cats] = await Promise.all([
+        const [inv, cats, capacityData] = await Promise.all([
           listCenterInventory(centerId, controller.signal),
           listCategories(controller.signal),
+          getCenterCapacity(centerId, controller.signal),
         ]);
-        setInventory(groupByCategory(inv));
+        const groupedInv = groupByCategory(inv);
+        const capacity = capacityData?.total_capacity || 0;
+        
+        setInventory(groupedInv);
         setCategories(cats);
+        setCenterCapacity(capacity);
+        
+        // Guardar timestamp de sincronización para funcionalidad offline
+        const syncTime = new Date().toLocaleString();
+        setLastSyncTime(syncTime);
+        
+        // HdU09: Guardar datos iniciales en localStorage
+        try {
+          localStorage.setItem(`inventory_${centerId}`, JSON.stringify({
+            inventory: groupedInv,
+            capacity: capacity,
+            timestamp: new Date().toISOString()
+          }));
+        } catch (storageError) {
+          console.warn('No se pudieron guardar los datos offline:', storageError);
+        }
+        
         if (cats.length > 0 && newItemCategory === "") {
           setNewItemCategory(String(cats[0].category_id));
         }
       } catch (e: any) {
         if (!controller.signal.aborted) {
           setError(e?.message ?? "No se pudieron cargar los datos.");
+          
+          // HdU09: Si hay error inicial y estamos offline, intentar cargar datos guardados
+          if (!navigator.onLine) {
+            try {
+              const savedData = localStorage.getItem(`inventory_${centerId}`);
+              if (savedData) {
+                const parsed = JSON.parse(savedData);
+                setInventory(parsed.inventory || {});
+                setCenterCapacity(parsed.capacity || 0);
+                setLastSyncTime(new Date(parsed.timestamp).toLocaleString());
+                setError(`Sin conexión - Mostrando datos guardados del ${new Date(parsed.timestamp).toLocaleString()}`);
+              } else {
+                setError("Sin conexión y no hay datos guardados disponibles.");
+              }
+            } catch (parseError) {
+              console.warn('Error al cargar datos guardados:', parseError);
+              setError("Sin conexión y error al cargar datos guardados.");
+            }
+          }
         }
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
       }
     })();
     return () => controller.abort();
+  }, [centerId]);
+
+  // HdU09: Manejo del estado offline
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      // Recargar datos cuando se recupere la conexión
+      if (centerId) {
+        fetchInventory(false);
+      }
+    };
+    
+    const handleOffline = () => {
+      setIsOffline(true);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [centerId]);
 
   // Helpers
@@ -117,10 +188,41 @@ export default function InventoryPage() {
     try {
       if (showLoading) setIsLoading(true);
       const inv = await listCenterInventory(centerId, controller.signal);
-      setInventory(groupByCategory(inv));
+      const groupedInv = groupByCategory(inv);
+      setInventory(groupedInv);
       setError(null);
+      
+      // HdU09: Guardar datos en localStorage para funcionalidad offline
+      try {
+        localStorage.setItem(`inventory_${centerId}`, JSON.stringify({
+          inventory: groupedInv,
+          capacity: centerCapacity,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (storageError) {
+        console.warn('No se pudieron guardar los datos offline:', storageError);
+      }
+      
     } catch (e: any) {
-      if (!controller.signal.aborted) setError(e?.message ?? "No se pudo refrescar el inventario.");
+      if (!controller.signal.aborted) {
+        setError(e?.message ?? "No se pudo refrescar el inventario.");
+        
+        // HdU09: Si hay error y estamos offline, intentar cargar datos guardados
+        if (!navigator.onLine) {
+          try {
+            const savedData = localStorage.getItem(`inventory_${centerId}`);
+            if (savedData) {
+              const parsed = JSON.parse(savedData);
+              setInventory(parsed.inventory || {});
+              setCenterCapacity(parsed.capacity || 0);
+              setLastSyncTime(new Date(parsed.timestamp).toLocaleString());
+              setError(`Sin conexión - Mostrando datos guardados del ${new Date(parsed.timestamp).toLocaleString()}`);
+            }
+          } catch (parseError) {
+            console.warn('Error al cargar datos guardados:', parseError);
+          }
+        }
+      }
     } finally {
       if (!controller.signal.aborted && showLoading) setIsLoading(false);
     }
@@ -221,6 +323,12 @@ export default function InventoryPage() {
     e.preventDefault();
     const name = newCategoryName.trim();
     if (!name) return alert("El nombre de la categoría no puede estar vacío.");
+    
+    // Verificar token antes de proceder
+    const token = localStorage.getItem('token');
+    console.log('Token disponible:', !!token);
+    console.log('Intentando crear categoría:', name);
+    
     setIsSubmitting(true);
     try {
       const created = await createCategory(name);
@@ -228,9 +336,17 @@ export default function InventoryPage() {
       setNewCategoryName("");
       alert(`Categoría "${name}" añadida con éxito.`);
     } catch (err: any) {
+      console.error('Error al crear categoría:', err);
       const status = err?.response?.status;
-      if (status === 409) alert("La categoría ya existe.");
-      else alert(`Error: ${err?.response?.data?.message || err?.message || "Error del servidor."}`);
+      
+      if (status === 401) {
+        console.error('Error 401 - Token inválido o expirado');
+        alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      } else if (status === 409) {
+        alert("La categoría ya existe.");
+      } else {
+        alert(`Error: ${err?.response?.data?.message || err?.message || "Error del servidor."}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -263,16 +379,35 @@ export default function InventoryPage() {
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
-        {canManage && (
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>+ Añadir Item</button>
-            {isAdminOrSupport && (
-              <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
-            )}
-            <Link to={`/center/${centerId}/inventory/history`} className="action-btn">Ver Historial</Link>
-          </div>
-        )}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button 
+            className={`toggle-needs-btn ${showNeedsSection ? 'active' : ''}`}
+            onClick={() => setShowNeedsSection(!showNeedsSection)}
+            title="Mostrar/Ocultar análisis de necesidades"
+          >
+            {showNeedsSection ? '📊 Ocultar Necesidades' : '📊 Mostrar Necesidades'}
+          </button>
+          {canManage && (
+            <>
+              <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>+ Añadir Item</button>
+              {isAdminOrSupport && (
+                <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
+              )}
+              <Link to={`/center/${centerId}/inventory/history`} className="action-btn">Ver Historial</Link>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* HdU09: Sección de Recursos Disponibles y Necesidades */}
+      {showNeedsSection && centerCapacity > 0 && (
+        <ResourcesAndNeeds
+          inventory={inventory}
+          centerCapacity={centerCapacity}
+          isOffline={isOffline}
+          lastSyncTime={lastSyncTime}
+        />
+      )}
 
       {/* Filtro por categoría */}
       <div className="filter-container" style={{ marginBottom: "20px" }}>

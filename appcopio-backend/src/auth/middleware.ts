@@ -6,7 +6,10 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.get("authorization") ?? "";
   const [scheme, rawToken] = header.split(" ");
 
+  console.log(`[AUTH] ${req.method} ${req.path} - Authorization header: ${header ? 'Present' : 'Missing'}`);
+
   if ((scheme || "").toLowerCase() !== "bearer" || !rawToken?.trim()) {
+    console.log(`[AUTH] Missing token - scheme: "${scheme}", rawToken: "${rawToken}"`);
     res.status(401)
       .set("WWW-Authenticate", 'Bearer error="invalid_request"')
       .json({ error: "Missing token" });
@@ -15,9 +18,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
   try {
     const payload = verifyAccessToken(rawToken.trim());
+    console.log(`[AUTH] Token valid for user ${payload.userId}`);
     req.user = payload;
     next();
   } catch (err: any) {
+    console.log(`[AUTH] Token verification failed:`, err.name, err.message);
     if (err?.name === "TokenExpiredError") {
       res.status(401)
         .set("WWW-Authenticate", 'Bearer error="invalid_token", error_description="expired"')

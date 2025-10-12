@@ -26,10 +26,27 @@ export async function listCategories(signal?: AbortSignal): Promise<Category[]> 
  */
 export async function createCategory(name: string, signal?: AbortSignal): Promise<Category> {
   try {
+    console.log('[Categories] Creating category:', name);
+    
+    // Verificar que tenemos token de autenticación
+    const token = localStorage.getItem('appcopio:access_token');
+    if (!token) {
+      console.error('[Categories] No access token found');
+      throw new Error('No access token available');
+    }
+    
+    console.log('[Categories] Token available, making request...');
     const { data } = await api.post<Category>("/categories", { name }, { signal });
+    console.log('[Categories] ✅ Category created successfully:', data);
     return data;
-  } catch (error) {
-    console.error("Error creating category:", error);
+  } catch (error: any) {
+    console.error('[Categories] ❌ Error creating category:', {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      headers: error.response?.headers
+    });
+    
     // Lanzamos el error de nuevo para que el componente que llamó a la función
     // pueda manejarlo (ej: mostrar un toast de error).
     throw error;

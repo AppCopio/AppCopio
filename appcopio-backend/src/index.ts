@@ -47,6 +47,7 @@ app.use(cookieParser());
 /** Orígenes permitidos */
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://appcopio.vercel.app",
 ];
 

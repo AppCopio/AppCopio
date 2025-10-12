@@ -1,6 +1,6 @@
 // src/contexts/AuthContext.tsx
 import * as React from "react";
-import { setAccessToken,api } from "@/lib/api"; // usa default/named según tu lib
+import { setAccessToken, api } from "@/lib/api";
 import type { User } from "@/types/user";
 
 const STORAGE_TOKEN_KEY = "appcopio:access_token";
