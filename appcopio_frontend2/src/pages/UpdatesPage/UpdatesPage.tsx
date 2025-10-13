@@ -53,17 +53,16 @@ export default function UpdatesPage() {
         setIsLoading(true);
         setError(null);
         
-        // Si es trabajador municipal (sin apoyo admin), filtrar SOLO por:
-        // Actualizaciones asignadas directamente a él (assignedTo)
-        // NO incluir userCentersOnly ya que eso mostraría todas las actualizaciones de sus centros
-        const assignedTo = isMunicipalWorker ? user.user_id : undefined;
+        // Si es trabajador municipal (sin apoyo admin), mostrar actualizaciones de sus centros asignados
+        // Si es admin, mostrar todas las actualizaciones sin filtros adicionales
+        const userCentersOnly = isMunicipalWorker ? user.user_id : undefined;
         
         const data = await listUpdates({ 
           status: filter, 
           page, 
           limit: PAGE_SIZE, 
           centerId, 
-          assignedTo,
+          userCentersOnly,
           signal 
         });
         setRequests(data.requests ?? []);
@@ -191,7 +190,7 @@ export default function UpdatesPage() {
 
   const pageTitle = isAdmin 
     ? "Gestión de Solicitudes de Actualización" 
-    : "Mis Solicitudes de Actualización Asignadas";
+    : "Actualizaciones de Mis Centros Asignados";
 
   return (
     <div className="updates-list-container">
