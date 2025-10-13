@@ -29,6 +29,10 @@ export default function UpdatesPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Filtros adicionales (frontend)
+  const [selectedCenter, setSelectedCenter] = React.useState<string>("all");
+  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">("newest");
+
   // Modal
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedRequest, setSelectedRequest] = React.useState<UpdateRequest | null>(null);
@@ -125,6 +129,32 @@ export default function UpdatesPage() {
     }
   };
 
+  // Filtrar y ordenar requests en el frontend
+  const filteredAndSortedRequests = React.useMemo(() => {
+    let filtered = [...requests];
+
+    // Filtro por centro
+    if (selectedCenter !== "all") {
+      filtered = filtered.filter(req => req.center_name === selectedCenter);
+    }
+
+    // Ordenamiento por fecha
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.registered_at).getTime();
+      const dateB = new Date(b.registered_at).getTime();
+      
+      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  }, [requests, selectedCenter, sortOrder]);
+
+  // Obtener lista única de centros para el dropdown
+  const availableCenters = React.useMemo(() => {
+    const uniqueCenters = [...new Set(requests.map(req => req.center_name))];
+    return uniqueCenters.sort();
+  }, [requests]);
+
   // ---- Acciones: asignar / aprobar / rechazar ----
   const handleUpdateRequest = async (action: "assign" | "approve" | "reject") => {
     if (!selectedRequest) return;
@@ -182,6 +212,7 @@ export default function UpdatesPage() {
   const onChangeFilter = (s: UpdateStatus) => {
     setFilter(s);
     setPage(1);
+    setSelectedCenter("all"); // Reset filtro centro al cambiar estado
   };
 
   // --- Render ---
@@ -196,11 +227,49 @@ export default function UpdatesPage() {
     <div className="updates-list-container">
       <h2>{pageTitle}</h2>
 
+      {requests.length > 0 && (
+        <div className="results-summary">
+          Mostrando {filteredAndSortedRequests.length} de {requests.length} solicitudes
+          {selectedCenter !== "all" && <span> • Filtrado por: {selectedCenter}</span>}
+        </div>
+      )}
+
       <div className="filter-controls">
-        <button onClick={() => onChangeFilter("pending")} className={filter === "pending" ? "active" : ""}>Pendientes</button>
-        <button onClick={() => onChangeFilter("approved")} className={filter === "approved" ? "active" : ""}>Aprobadas</button>
-        <button onClick={() => onChangeFilter("rejected")} className={filter === "rejected" ? "active" : ""}>Rechazadas</button>
+        <div className="status-filters">
+          <button onClick={() => onChangeFilter("pending")} className={filter === "pending" ? "active" : ""}>Pendientes</button>
+          <button onClick={() => onChangeFilter("approved")} className={filter === "approved" ? "active" : ""}>Aprobadas</button>
+          <button onClick={() => onChangeFilter("rejected")} className={filter === "rejected" ? "active" : ""}>Rechazadas</button>
+        </div>
         
+        <div className="additional-filters">
+          <div className="filter-group">
+            <label htmlFor="center-filter">Centro:</label>
+            <select
+              id="center-filter"
+              value={selectedCenter}
+              onChange={(e) => setSelectedCenter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">Todos los centros</option>
+              {availableCenters.map(centerName => (
+                <option key={centerName} value={centerName}>{centerName}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="sort-order">Orden:</label>
+            <select
+              id="sort-order"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")}
+              className="filter-select"
+            >
+              <option value="newest">Más recientes primero</option>
+              <option value="oldest">Más antiguas primero</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <table className="updates-table">
@@ -217,8 +286,8 @@ export default function UpdatesPage() {
           </tr>
         </thead>
         <tbody>
-          {requests.length > 0 ? (
-            requests.map((req) => (
+          {filteredAndSortedRequests.length > 0 ? (
+            filteredAndSortedRequests.map((req) => (
               <tr key={req.request_id}>
                 <td>{new Date(req.registered_at).toLocaleString()}</td>
                 {isAdmin && (
@@ -262,7 +331,12 @@ export default function UpdatesPage() {
               </tr>
             ))
           ) : (
-            <tr><td colSpan={isAdmin ? 7 : (isMunicipalWorker ? 5 : 5)}>No hay solicitudes con el estado seleccionado.</td></tr>
+            <tr><td colSpan={isAdmin ? 7 : (isMunicipalWorker ? 5 : 5)}>
+              {requests.length === 0 
+                ? "No hay solicitudes con el estado seleccionado."
+                : "No hay solicitudes que coincidan con los filtros aplicados."
+              }
+            </td></tr>
           )}
         </tbody>
       </table>
