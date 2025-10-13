@@ -8,20 +8,32 @@ import type { UpdateRequest, UpdateStatus, UpdatesApiResponse, UpdateCreateDTO }
 /**
  * Obtiene una lista paginada y filtrada de solicitudes de actualización.
  * Puede filtrar por centro si se proporciona un centerId.
+ * Puede filtrar por usuario asignado si se proporciona assignedTo.
+ * Puede filtrar por centros asignados al usuario si se proporciona userCentersOnly.
  */
 export async function listUpdates(params: {
   status: UpdateStatus;
   page: number;
   limit: number;
   centerId?: string;
+  assignedTo?: number;
+  userCentersOnly?: number;
   signal?: AbortSignal;
 }): Promise<UpdatesApiResponse> {
-  const { status, page, limit, centerId, signal } = params;
+  const { status, page, limit, centerId, assignedTo, userCentersOnly, signal } = params;
   const url = centerId ? `/updates/center/${centerId}` : "/updates";
   
   try {
+    const queryParams: any = { status, page, limit };
+    if (assignedTo) {
+      queryParams.assignedTo = assignedTo;
+    }
+    if (userCentersOnly) {
+      queryParams.userCentersOnly = userCentersOnly;
+    }
+
     const { data } = await api.get<UpdatesApiResponse>(url, {
-      params: { status, page, limit },
+      params: queryParams,
       signal,
     });
     return data ?? { requests: [], total: 0 };

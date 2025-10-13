@@ -20,20 +20,22 @@ export interface UpdateRequestUpdate {
 const baseSelectQuery = `
     SELECT 
         ur.request_id, ur.center_id, ur.description, ur.status, ur.urgency,
-        ur.registered_at, ur.resolution_comment, c.name AS center_name,
+        ur.registered_at, ur.resolution_comment, ur.resolved_at, c.name AS center_name,
         requester.nombre AS requested_by_name,
-        assignee.nombre AS assigned_to_name
+        assignee.nombre AS assigned_to_name,
+        resolver.nombre AS resolved_by_name
     FROM UpdateRequests ur
     JOIN Centers c ON ur.center_id = c.center_id
     LEFT JOIN Users requester ON ur.requested_by = requester.user_id
     LEFT JOIN Users assignee ON ur.assigned_to = assignee.user_id
+    LEFT JOIN Users resolver ON ur.resolved_by = resolver.user_id
 `;
 
 /**
  * Obtiene una lista paginada de solicitudes de actualización.
  */
-export async function getUpdateRequests(db: Db, filters: { status: string; page: number; limit: number; centerId?: string }) {
-    const { status, page, limit, centerId } = filters;
+export async function getUpdateRequests(db: Db, filters: { status: string; page: number; limit: number; centerId?: string; assignedTo?: number; userCentersOnly?: number }) {
+    const { status, page, limit, centerId, assignedTo, userCentersOnly } = filters;
     const offset = (page - 1) * limit;
     
     let whereClause = `WHERE ur.status = $1`;
@@ -43,13 +45,29 @@ export async function getUpdateRequests(db: Db, filters: { status: string; page:
         whereClause += ` AND ur.center_id = $${queryParams.length + 1}`;
         queryParams.push(centerId);
     }
+
+    if (assignedTo) {
+        whereClause += ` AND ur.assigned_to = $${queryParams.length + 1}`;
+        queryParams.push(assignedTo);
+    }
+
+    // Si userCentersOnly está especificado, filtrar por centros asignados al usuario
+    if (userCentersOnly) {
+        whereClause += ` AND ur.center_id IN (
+            SELECT ca.center_id 
+            FROM centerassignments ca 
+            WHERE ca.user_id = $${queryParams.length + 1} 
+            AND ca.valid_to IS NULL
+        )`;
+        queryParams.push(userCentersOnly);
+    }
     
     const dataQuery = `${baseSelectQuery} ${whereClause} ORDER BY ur.registered_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
     queryParams.push(limit, offset);
 
    
     const countQuery = `SELECT COUNT(*) FROM UpdateRequests ur ${whereClause}`;
-    const countParams = centerId ? [status, centerId] : [status];
+    const countParams = queryParams.slice(0, -2); // Excluir limit y offset para el count
 
     const [dataResult, countResult] = await Promise.all([
         db.query(dataQuery, queryParams),

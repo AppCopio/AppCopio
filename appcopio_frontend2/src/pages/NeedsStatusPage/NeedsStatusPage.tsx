@@ -13,7 +13,7 @@ export default function NeedsStatusPage() {
   const [requests, setRequests] = React.useState<UpdateRequest[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-
+ 
   const load = React.useCallback(async (signal: AbortSignal) => {
     if (!centerId) {
       setError("Centro no encontrado.");

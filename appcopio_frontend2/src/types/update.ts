@@ -9,6 +9,8 @@ export interface UpdateRequest {
   center_name: string;
   requested_by_name: string | null;
   assigned_to_name: string | null;
+  resolved_by_name?: string | null;
+  resolved_at?: string | null;
   resolution_comment?: string | null;
 }
 

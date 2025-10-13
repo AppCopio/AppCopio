@@ -12,3 +12,8 @@ export function isFieldUser(u?: User | null) {
   if (!u) return false;
   return (u.role_id === ROLE_ID_TMO || u.role_id === ROLE_ID_CC) && !u.es_apoyo_admin;
 }
+
+export function isMunicipalWorker(u?: User | null) {
+  if (!u) return false;
+  return u.role_id === ROLE_ID_TMO;
+}

@@ -14,12 +14,14 @@ const router = Router();
  * @description Obtiene todas las solicitudes de actualización, con filtros y paginación.
  */
 const listUpdates: RequestHandler = async (req, res) => {
-    const { status = 'pending', page = 1, limit = 10 } = req.query;
+    const { status = 'pending', page = 1, limit = 10, assignedTo, userCentersOnly } = req.query;
     try {
         const result = await getUpdateRequests(pool, {
             status: status as string,
             page: Number(page),
-            limit: Number(limit)
+            limit: Number(limit),
+            assignedTo: assignedTo ? Number(assignedTo) : undefined,
+            userCentersOnly: userCentersOnly ? Number(userCentersOnly) : undefined
         });
         res.json(result);
     } catch (error) {

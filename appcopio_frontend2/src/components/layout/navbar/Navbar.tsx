@@ -12,7 +12,7 @@ import Person from "@mui/icons-material/Person";
 import VerifiedUser from "@mui/icons-material/VerifiedUser";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { isAdminOrSupport, isFieldUser } from "@/utils/authz";
+import { isAdminOrSupport, isFieldUser, isMunicipalWorker } from "@/utils/authz";
 import { paths } from "@/routes/paths";
 import { OfflineIndicator } from "@/offline/components/OfflineIndicator";
 
@@ -99,8 +99,11 @@ export default function Navbar() {
             <li><NavLink to={paths.admin.users}   className={({ isActive }) => (isActive ? "active-link" : "")}>Gestión Usuarios</NavLink></li>
             <li><NavLink to={paths.admin.updates} className={({ isActive }) => (isActive ? "active-link" : "")}>Actualizaciones</NavLink></li>
             <li><NavLink to={paths.admin.csv} className={({ isActive }) => (isActive ? "active-link" : "")}>Carga CSV</NavLink></li>
-
           </>
+        )}
+
+        {isMunicipalWorker(user) && !isAdminOrSupport(user) && (
+          <li><NavLink to={paths.admin.updates} className={({ isActive }) => (isActive ? "active-link" : "")}>Mis Actualizaciones</NavLink></li>
         )}
 
         {isFieldUser(user) && (

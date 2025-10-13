@@ -34,8 +34,10 @@ export default function UpdatesPage() {
   const [resolutionComment, setResolutionComment] = React.useState<string>("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // Permisos
-  const isAdmin = !!user && (user.role_id === 1 || user.role_id === 2 || user.es_apoyo_admin === true);
+  // Permisos: Solo admin (role_id=1) o apoyo admin pueden gestionar todo
+  const isAdmin = !!user && (user.role_id === 1 || user.es_apoyo_admin === true);
+  // Trabajador municipal sin privilegios de apoyo
+  const isMunicipalWorker = !!user && user.role_id === 2 && !user.es_apoyo_admin;
 
   // ---- Carga de solicitudes (con AbortController) ----
   const loadRequests = React.useCallback(
@@ -48,7 +50,20 @@ export default function UpdatesPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await listUpdates({ status: filter, page, limit: PAGE_SIZE, centerId, signal });
+        
+        // Si es trabajador municipal (sin apoyo admin), filtrar SOLO por:
+        // Actualizaciones asignadas directamente a él (assignedTo)
+        // NO incluir userCentersOnly ya que eso mostraría todas las actualizaciones de sus centros
+        const assignedTo = isMunicipalWorker ? user.user_id : undefined;
+        
+        const data = await listUpdates({ 
+          status: filter, 
+          page, 
+          limit: PAGE_SIZE, 
+          centerId, 
+          assignedTo,
+          signal 
+        });
         setRequests(data.requests ?? []);
         setTotal(data.total ?? 0);
       } catch (e: any) {
@@ -58,7 +73,7 @@ export default function UpdatesPage() {
         if (!signal.aborted) setIsLoading(false);
       }
     },
-    [user, filter, page, centerId]
+    [user, filter, page, centerId, isMunicipalWorker]
   );
 
   React.useEffect(() => {
@@ -104,9 +119,15 @@ export default function UpdatesPage() {
 
   // ---- Acciones: asignar / aprobar / rechazar ----
   const handleUpdateRequest = async (action: "assign" | "approve" | "reject") => {
-    if (!selectedRequest || !isAdmin) return;
+    if (!selectedRequest) return;
+    
+    // Solo admins pueden asignar
+    if (action === "assign" && !isAdmin) return;
+    
+    // Trabajadores y admins pueden aprobar/rechazar
+    if (!isAdmin && !isMunicipalWorker) return;
 
-    // Validaciones (mantenemos UX simple, igual visual)
+    // Validaciones
     if (action === "assign" && !assignedWorkerId) {
       alert("Por favor, selecciona un trabajador.");
       return;
@@ -127,10 +148,12 @@ export default function UpdatesPage() {
       if (action === "approve") {
         body.status = "approved";
         body.resolution_comment = resolutionComment || "Aprobado";
+        body.resolved_by = user.user_id;
       }
       if (action === "reject") {
         body.status = "rejected";
         body.resolution_comment = resolutionComment.trim();
+        body.resolved_by = user.user_id;
       }
 
       await patchUpdateRequest(selectedRequest.request_id, body, controller.signal);
@@ -157,15 +180,19 @@ export default function UpdatesPage() {
   if (isLoading) return <div className="updates-list-container">Cargando solicitudes...</div>;
   if (error) return <div className="updates-list-container error-message">{error}</div>;
 
+  const pageTitle = isAdmin 
+    ? "Gestión de Solicitudes de Actualización" 
+    : "Mis Solicitudes de Actualización Asignadas";
+
   return (
     <div className="updates-list-container">
-      <h2>{isAdmin ? "Gestión de Solicitudes de Actualización" : "Mis Solicitudes de Actualización"}</h2>
+      <h2>{pageTitle}</h2>
 
       <div className="filter-controls">
         <button onClick={() => onChangeFilter("pending")} className={filter === "pending" ? "active" : ""}>Pendientes</button>
         <button onClick={() => onChangeFilter("approved")} className={filter === "approved" ? "active" : ""}>Aprobadas</button>
         <button onClick={() => onChangeFilter("rejected")} className={filter === "rejected" ? "active" : ""}>Rechazadas</button>
-        <button onClick={() => onChangeFilter("canceled")} className={filter === "canceled" ? "active" : ""}>Canceladas</button>
+        
       </div>
 
       <table className="updates-table">
@@ -173,10 +200,11 @@ export default function UpdatesPage() {
           <tr>
             <th>Fecha</th>
             {isAdmin && <th>Centro</th>}
-            <th>Solicitado por</th>
+            {!isMunicipalWorker && <th>Solicitado por</th>}
             <th>Descripción</th>
             <th>Urgencia</th>
             {isAdmin && <th>Asignado a</th>}
+            {isMunicipalWorker && <th>Centro</th>}
             <th>Acciones</th>
           </tr>
         </thead>
@@ -186,13 +214,29 @@ export default function UpdatesPage() {
               <tr key={req.request_id}>
                 <td>{new Date(req.registered_at).toLocaleString()}</td>
                 {isAdmin && <td>{req.center_name}</td>}
-                <td>{req.requested_by_name || "N/A"}</td>
+                {!isMunicipalWorker && <td>{req.requested_by_name || "N/A"}</td>}
                 <td>{req.description}</td>
                 <td><span className={`urgency ${req.urgency.toLowerCase()}`}>{req.urgency}</span></td>
                 {isAdmin && <td>{req.assigned_to_name || "Sin asignar"}</td>}
+                {isMunicipalWorker && <td>{req.center_name}</td>}
                 <td>
-                  {isAdmin && req.status === "pending" ? (
-                    <button onClick={() => openManageModal(req)} className="action-button">Gestionar</button>
+                  {(isAdmin || isMunicipalWorker) && req.status === "pending" ? (
+                    <button onClick={() => openManageModal(req)} className="action-button">
+                      Gestionar
+                    </button>
+                  ) : req.status === "approved" || req.status === "rejected" ? (
+                    <div>
+                      <div><strong>{req.status === "approved" ? "Aprobado" : "Rechazado"}</strong></div>
+                      {req.resolved_by_name && (
+                        <div>por {req.resolved_by_name}</div>
+                      )}
+                      {req.resolved_at && (
+                        <div>el {new Date(req.resolved_at).toLocaleString()}</div>
+                      )}
+                      {req.resolution_comment && (
+                        <div><em>"{req.resolution_comment}"</em></div>
+                      )}
+                    </div>
                   ) : (
                     req.resolution_comment || "N/A"
                   )}
@@ -200,7 +244,7 @@ export default function UpdatesPage() {
               </tr>
             ))
           ) : (
-            <tr><td colSpan={isAdmin ? 7 : 5}>No hay solicitudes con el estado seleccionado.</td></tr>
+            <tr><td colSpan={isAdmin ? 7 : (isMunicipalWorker ? 5 : 5)}>No hay solicitudes con el estado seleccionado.</td></tr>
           )}
         </tbody>
       </table>
@@ -212,7 +256,7 @@ export default function UpdatesPage() {
         <button onClick={() => setPage((p) => p + 1)} disabled={page >= Math.ceil(total / PAGE_SIZE)}>Siguiente</button>
       </div>
 
-      {/* Modal (igual visual) */}
+      {/* Modal para Admin */}
       {isAdmin && isModalOpen && selectedRequest && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -253,6 +297,42 @@ export default function UpdatesPage() {
 
             <div className="modal-actions">
               <button onClick={() => handleUpdateRequest("reject")} className="btn-danger" disabled={isSubmitting}>
+                Rechazar
+              </button>
+              <button onClick={() => handleUpdateRequest("approve")} className="btn-primary" disabled={isSubmitting}>
+                Aprobar
+              </button>
+              <button onClick={closeManageModal} className="btn-secondary" disabled={isSubmitting}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Trabajador Municipal */}
+      {isMunicipalWorker && isModalOpen && selectedRequest && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Resolver Solicitud #{selectedRequest.request_id}</h3>
+            <p><strong>Centro:</strong> {selectedRequest.center_name}</p>
+            <p><strong>Descripción:</strong> {selectedRequest.description}</p>
+            <p><strong>Urgencia:</strong> <span className={`urgency ${selectedRequest.urgency.toLowerCase()}`}>{selectedRequest.urgency}</span></p>
+            <p><strong>Solicitado por:</strong> {selectedRequest.requested_by_name || "N/A"}</p>
+
+            <div className="form-group">
+              <label htmlFor="resolution-comment">Comentario de Resolución:</label>
+              <textarea
+                id="resolution-comment"
+                rows={4}
+                value={resolutionComment}
+                onChange={(e) => setResolutionComment(e.target.value)}
+                placeholder="Ingresa un comentario sobre la resolución..."
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button onClick={() => handleUpdateRequest("reject")} className="btn-danger" disabled={isSubmitting || !resolutionComment.trim()}>
                 Rechazar
               </button>
               <button onClick={() => handleUpdateRequest("approve")} className="btn-primary" disabled={isSubmitting}>
