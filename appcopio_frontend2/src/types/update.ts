@@ -2,6 +2,7 @@ export type UpdateStatus = "pending" | "approved" | "rejected" | "canceled";
 
 export interface UpdateRequest {
   request_id: number;
+  center_id: string;
   description: string;
   status: UpdateStatus;
   urgency: string;

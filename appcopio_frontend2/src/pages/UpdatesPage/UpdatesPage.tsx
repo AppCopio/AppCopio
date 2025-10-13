@@ -1,11 +1,12 @@
 import * as React from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 import { listUpdates, patchUpdateRequest} from "@/services/updates.service";
 import { listActiveUsersByRole} from "@/services/users.service";
 import type { UpdateRequest, UpdateStatus } from "@/types/update";
 import type {User as WorkerUser } from "@/types/user";
+import { paths } from "@/routes/paths";
 import "./UpdatesPage.css";
 
 // IDs de roles (ajusta si cambian)
@@ -17,6 +18,7 @@ const PAGE_SIZE = 10;
 export default function UpdatesPage() {
   const { user } = useAuth();
   const { centerId } = useParams<{ centerId?: string }>();
+  const navigate = useNavigate();
 
   // --- Estado ---
   const [requests, setRequests] = React.useState<UpdateRequest[]>([]);
@@ -117,6 +119,13 @@ export default function UpdatesPage() {
     setResolutionComment("");
   };
 
+  // Navegar a los detalles del centro
+  const handleCenterClick = (centerId: string) => {
+    if (centerId && centerId.trim()) {
+      navigate(paths.center.details(centerId));
+    }
+  };
+
   // ---- Acciones: asignar / aprobar / rechazar ----
   const handleUpdateRequest = async (action: "assign" | "approve" | "reject") => {
     if (!selectedRequest) return;
@@ -213,7 +222,17 @@ export default function UpdatesPage() {
             requests.map((req) => (
               <tr key={req.request_id}>
                 <td>{new Date(req.registered_at).toLocaleString()}</td>
-                {isAdmin && <td>{req.center_name}</td>}
+                {isAdmin && (
+                  <td>
+                    <span 
+                      className="center-link" 
+                      onClick={() => handleCenterClick(req.center_id)}
+                      title="Ir a detalles del centro"
+                    >
+                      {req.center_name}
+                    </span>
+                  </td>
+                )}
                 {!isMunicipalWorker && <td>{req.requested_by_name || "N/A"}</td>}
                 <td>{req.description}</td>
                 <td><span className={`urgency ${req.urgency.toLowerCase()}`}>{req.urgency}</span></td>

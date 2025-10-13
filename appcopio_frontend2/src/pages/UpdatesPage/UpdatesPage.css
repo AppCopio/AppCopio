@@ -129,3 +129,16 @@
     justify-content: flex-end;
     gap: 0.5rem;
 }
+
+/* Estilos para el enlace del centro */
+.center-link {
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.center-link:hover {
+    color: #0056b3;
+    text-decoration: none;
+}
