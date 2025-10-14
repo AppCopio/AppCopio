@@ -87,20 +87,40 @@ const updateRequest: RequestHandler = async (req, res) => {
     // CORRECCIÓN FINAL: Se usa .user_id para que coincida con el objeto del middleware.
     const resolved_by = (req as any).user?.user_id;
     const { status, assigned_to, resolution_comment } = req.body;
-
-    if (isNaN(requestId)) {
-        return res.status(400).json({ error: 'El ID de la solicitud debe ser un número válido.' });
-    }
-    if (!status && !assigned_to && !resolution_comment) {
-        return res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
-    }
-
     try {
         const updatedRequest = await updateRequestById(pool, requestId, { ...req.body, resolved_by });
 
         if (!updatedRequest) {
             return res.status(404).json({ error: 'Solicitud no encontrada o sin campos válidos para actualizar.' });
         }
+
+        // --- Notificaciones al resolver ---
+        // Solo si la solicitud fue aprobada o rechazada
+        if (status === "approved" || status === "rejected") {
+            // Importar aquí para evitar ciclos si es necesario
+            const { sendNotification } = require("../services/notificationService");
+
+            // Notificación al contacto ciudadano
+            if (updatedRequest.requested_by) {
+                await sendNotification(pool, {
+                    center_id: updatedRequest.center_id,
+                    destinatary: updatedRequest.requested_by,
+                    title: `Tu solicitud fue ${status === "approved" ? "aprobada" : "rechazada"}`,
+                    message: `La solicitud "${updatedRequest.description}" fue ${status === "approved" ? "aprobada" : "rechazada"} por el trabajador municipal. Motivo: ${resolution_comment || ""}`,
+                });
+            }
+
+            // Notificación al TM (resolutor)
+            if (resolved_by) {
+                await sendNotification(pool, {
+                    center_id: updatedRequest.center_id,
+                    destinatary: resolved_by,
+                    title: "Notificación enviada al ciudadano",
+                    message: `Se notificó al contacto ciudadano sobre la resolución de la solicitud "${updatedRequest.description}".`,
+                });
+            }
+        }
+
         res.status(200).json(updatedRequest);
     } catch (error: any) {
         if (error.status) {
