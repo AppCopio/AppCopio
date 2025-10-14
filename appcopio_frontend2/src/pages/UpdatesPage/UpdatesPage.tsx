@@ -133,6 +133,14 @@ export default function UpdatesPage() {
   const filteredAndSortedRequests = React.useMemo(() => {
     let filtered = [...requests];
 
+    // Filtro por último mes - solo mostrar actualizaciones del último mes
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    filtered = filtered.filter(req => 
+      new Date(req.registered_at) >= oneMonthAgo
+    );
+
     // Filtro por centro
     if (selectedCenter !== "all") {
       filtered = filtered.filter(req => req.center_name === selectedCenter);
@@ -230,6 +238,7 @@ export default function UpdatesPage() {
       {requests.length > 0 && (
         <div className="results-summary">
           Mostrando {filteredAndSortedRequests.length} de {requests.length} solicitudes
+          <span> • Solo del último mes</span>
           {selectedCenter !== "all" && <span> • Filtrado por: {selectedCenter}</span>}
         </div>
       )}
@@ -282,6 +291,7 @@ export default function UpdatesPage() {
             <th>Urgencia</th>
             {isAdmin && <th>Asignado a</th>}
             {isMunicipalWorker && <th>Centro</th>}
+            {isMunicipalWorker && <th>Solicitado por</th>}
             {isMunicipalWorker && <th>Asignado a</th>}
             <th>Acciones</th>
           </tr>
@@ -317,6 +327,7 @@ export default function UpdatesPage() {
                     </span>
                   </td>
                 )}
+                {isMunicipalWorker && <td>{req.requested_by_name || "N/A"}</td>}
                 {isMunicipalWorker && <td>{req.assigned_to_name || "Sin asignar"}</td>}
                 <td>
                   {(isAdmin || isMunicipalWorker) && req.status === "pending" ? (
@@ -343,7 +354,7 @@ export default function UpdatesPage() {
               </tr>
             ))
           ) : (
-            <tr><td colSpan={isAdmin ? 7 : (isMunicipalWorker ? 6 : 5)}>
+            <tr><td colSpan={isAdmin ? 7 : (isMunicipalWorker ? 7 : 5)}>
               {requests.length === 0 
                 ? "No hay solicitudes con el estado seleccionado."
                 : "No hay solicitudes que coincidan con los filtros aplicados."

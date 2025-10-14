@@ -10,9 +10,19 @@ const PAGE_SIZE = 100; // traemos todas las pendientes como antes
 export default function NeedsStatusPage() {
   const { centerId } = useParams<{ centerId: string }>();
 
-  const [requests, setRequests] = React.useState<UpdateRequest[]>([]);
+  const [allRequests, setAllRequests] = React.useState<UpdateRequest[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Filtrar solo las del último mes
+  const filteredRequests = React.useMemo(() => {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    return allRequests.filter(req => 
+      new Date(req.registered_at) >= oneMonthAgo
+    );
+  }, [allRequests]);
  
   const load = React.useCallback(async (signal: AbortSignal) => {
     if (!centerId) {
@@ -31,7 +41,7 @@ export default function NeedsStatusPage() {
         centerId,
         signal,
       });
-      setRequests(data.requests ?? []);
+      setAllRequests(data.requests ?? []);
     } catch (e) {
       if (!signal.aborted) setError("No se pudieron cargar las actualizaciones. Intente más tarde.");
     } finally {
@@ -55,8 +65,14 @@ export default function NeedsStatusPage() {
         <p className="offline-notice">Estás sin conexión. Mostrando últimos datos guardados.</p>
       )}
 
-      {requests.length === 0 ? (
-        <p>No hay actualizaciones pendientes para este centro.</p>
+      {allRequests.length > 0 && (
+        <p className="filter-info">
+          Mostrando {filteredRequests.length} de {allRequests.length} actualizaciones (solo del último mes)
+        </p>
+      )}
+
+      {filteredRequests.length === 0 ? (
+        <p>No hay actualizaciones pendientes del último mes para este centro.</p>
       ) : (
         <table className="status-table">
           <thead>
@@ -68,7 +84,7 @@ export default function NeedsStatusPage() {
             </tr>
           </thead>
           <tbody>
-            {requests.map((req) => (
+            {filteredRequests.map((req) => (
               <tr key={req.request_id}>
                 <td>{new Date(req.registered_at).toLocaleString()}</td>
                 <td>{req.description}</td>

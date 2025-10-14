@@ -9,6 +9,16 @@
   color: #333;
 }
 
+.filter-info {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #e8f4fd;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
 .status-table {
   width: 100%;
   border-collapse: collapse;
