@@ -2,6 +2,7 @@ import * as React from "react";
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOffline } from "@/offline/OfflineContext";
 import {
   listCenterInventory,
   createInventoryItem,
@@ -9,7 +10,9 @@ import {
   deleteInventoryItem,
 } from "@/services/inventory.service";
 import { listCategories, createCategory, deleteCategory } from "@/services/categories.service";
+import { getCenterCapacity } from "@/services/centers.service";
 import { getUser } from "@/services/users.service";
+import ResourcesAndNeeds from "@/components/inventory/ResourcesAndNeeds";
 import type {
   InventoryItem,
   GroupedInventory,
@@ -29,6 +32,7 @@ const groupByCategory = (items: InventoryItem[]): GroupedInventory =>
 export default function InventoryPage() {
   const { centerId } = useParams<{ centerId: string }>();
   const { user } = useAuth();
+  const { isOnline, lastSync } = useOffline();
 
   // Estado
   const [inventory, setInventory] = useState<GroupedInventory>({});
@@ -53,6 +57,9 @@ export default function InventoryPage() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryToDelete, setCategoryToDelete] = useState("");
+
+  const [centerCapacity, setCenterCapacity] = useState<number>(0);
+  const [showNeedsSection, setShowNeedsSection] = useState<boolean>(true);
 
   // Permisos
   const [assignedCenters, setAssignedCenters] = useState<string[]>([]);
@@ -90,12 +97,18 @@ export default function InventoryPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const [inv, cats] = await Promise.all([
+        const [inv, cats, capacityData] = await Promise.all([
           listCenterInventory(centerId, controller.signal),
           listCategories(controller.signal),
+          getCenterCapacity(centerId, controller.signal),
         ]);
-        setInventory(groupByCategory(inv));
+        const groupedInv = groupByCategory(inv);
+        const capacity = capacityData?.total_capacity || 0;
+        
+        setInventory(groupedInv);
         setCategories(cats);
+        setCenterCapacity(capacity);
+        
         if (cats.length > 0 && newItemCategory === "") {
           setNewItemCategory(String(cats[0].category_id));
         }
@@ -117,10 +130,13 @@ export default function InventoryPage() {
     try {
       if (showLoading) setIsLoading(true);
       const inv = await listCenterInventory(centerId, controller.signal);
-      setInventory(groupByCategory(inv));
+      const groupedInv = groupByCategory(inv);
+      setInventory(groupedInv);
       setError(null);
     } catch (e: any) {
-      if (!controller.signal.aborted) setError(e?.message ?? "No se pudo refrescar el inventario.");
+      if (!controller.signal.aborted) {
+        setError(e?.message ?? "No se pudo refrescar el inventario.");
+      }
     } finally {
       if (!controller.signal.aborted && showLoading) setIsLoading(false);
     }
@@ -221,6 +237,7 @@ export default function InventoryPage() {
     e.preventDefault();
     const name = newCategoryName.trim();
     if (!name) return alert("El nombre de la categoría no puede estar vacío.");
+    
     setIsSubmitting(true);
     try {
       const created = await createCategory(name);
@@ -229,8 +246,12 @@ export default function InventoryPage() {
       alert(`Categoría "${name}" añadida con éxito.`);
     } catch (err: any) {
       const status = err?.response?.status;
-      if (status === 409) alert("La categoría ya existe.");
-      else alert(`Error: ${err?.response?.data?.message || err?.message || "Error del servidor."}`);
+      
+      if (status === 409) {
+        alert("La categoría ya existe.");
+      } else {
+        alert(`Error: ${err?.response?.data?.message || err?.message || "Error del servidor."}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -263,16 +284,35 @@ export default function InventoryPage() {
     <div className="inventory-container">
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
-        {canManage && (
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>+ Añadir Item</button>
-            {isAdminOrSupport && (
-              <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
-            )}
-            <Link to={`/center/${centerId}/inventory/history`} className="action-btn">Ver Historial</Link>
-          </div>
-        )}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button 
+            className={`toggle-needs-btn ${showNeedsSection ? 'active' : ''}`}
+            onClick={() => setShowNeedsSection(!showNeedsSection)}
+            title="Mostrar/Ocultar análisis de necesidades"
+          >
+            {showNeedsSection ? '📊 Ocultar Necesidades' : '📊 Mostrar Necesidades'}
+          </button>
+          {canManage && (
+            <>
+              <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>+ Añadir Item</button>
+              {isAdminOrSupport && (
+                <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
+              )}
+              <Link to={`/center/${centerId}/inventory/history`} className="action-btn">Ver Historial</Link>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* HdU09: Sección de Recursos Disponibles y Necesidades */}
+      {showNeedsSection && centerCapacity > 0 && (
+        <ResourcesAndNeeds
+          inventory={inventory}
+          centerCapacity={centerCapacity}
+          isOffline={!isOnline}
+          lastSyncTime={lastSync ? new Date(lastSync).toLocaleString() : ''}
+        />
+      )}
 
       {/* Filtro por categoría */}
       <div className="filter-container" style={{ marginBottom: "20px" }}>

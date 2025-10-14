@@ -179,3 +179,31 @@
 .btn-clear-filter:hover {
   background-color: #039BE5 !important; /* celeste más fuerte al pasar el mouse */
 }
+
+/* HdU09: Estilos para el botón de toggle de necesidades */
+.toggle-needs-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 15px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toggle-needs-btn:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+}
+
+.toggle-needs-btn.active {
+  background-color: #007bff;
+}
+
+.toggle-needs-btn.active:hover {
+  background-color: #0056b3;
+}
