@@ -4,6 +4,7 @@ import "./CenterLayout.css";
 
 import type { CenterData } from "@/types/center";
 import { getOneCenter } from "@/services/centers.service";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { paths } from "@/routes/paths";
 
@@ -11,6 +12,7 @@ type LayoutCenter = Pick<CenterData, "center_id" | "name" | "address">;
 
 const CenterLayout: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
+  const { user } = useAuth();
   const [center, setCenter] = React.useState<LayoutCenter | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState<string | null>(null);
@@ -44,15 +46,21 @@ const CenterLayout: React.FC = () => {
   }, [centerId]);
 
   const id = centerId ?? "";
-  const links = [
+  
+  // Determinar si el usuario es TM (trabajador municipal sin privilegios de apoyo admin)
+  const isTM = !!user && user.role_id === 2 && !user.es_apoyo_admin;
+  
+  const allLinks = [
     { label: "Inventario",            to: paths.center.inventory(id) },
     { label: "Ver Detalles",          to: paths.center.details(id) },
-    { label: "Crear Solicitud",       to: paths.center.needsNew(id) },
+    { label: "Crear Solicitud",       to: paths.center.needsNew(id), hiddenForTM: true },
     { label: "Estado de Actualizaciones", to: paths.center.updates(id) },
     { label: "Listado de Personas",   to: paths.center.residents(id) },
     { label: "Registros de activación",   to: paths.center.databases(id) },
-
   ];
+
+  // Filtrar enlaces: ocultar "Crear Solicitud" para TMs
+  const links = allLinks.filter(link => !(isTM && link.hiddenForTM));
 
   return (
     <div className="center-layout">
