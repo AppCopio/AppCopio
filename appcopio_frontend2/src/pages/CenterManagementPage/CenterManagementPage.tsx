@@ -338,8 +338,8 @@ const CenterManagementPage: React.FC = () => {
         console.error("Encargados/Usuarios:", e);
         window.alert("No se pudieron incluir los usuarios/encargados del centro.");
     }
-    const usuariosHeaders = ["Fecha","Tipo","Detalle","Cantidad","Unidad","Origen"];
-    const usuariosRows: any[] = [];
+    //const usuariosHeaders = ["Fecha","Tipo","Detalle","Cantidad","Unidad","Origen"];
+    //const usuariosRows: any[] = [];
 
     // Archivos que vamos a generar
     const files: Array<{name: string, csv: string}> = [
@@ -348,7 +348,7 @@ const CenterManagementPage: React.FC = () => {
       { name: `Centro_${center.center_id}__Inventario.csv`,      csv: toCSV(inventoryRows, inventoryHeaders) },
       { name: `Centro_${center.center_id}__Actualizaciones.csv`, csv: toCSV(updatesRows, updatesHeaders) },
       { name: `Centro_${center.center_id}__Encargados.csv`,      csv: toCSV(encargadosRows, encargadosHeaders) },
-      { name: `Centro_${center.center_id}__Usuarios.csv`,      csv: toCSV(usuariosRows, usuariosHeaders) },
+     // { name: `Centro_${center.center_id}__Usuarios.csv`,      csv: toCSV(usuariosRows, usuariosHeaders) },
     ];
 
     // A) Guardar dentro de una carpeta elegida (Chromium)
