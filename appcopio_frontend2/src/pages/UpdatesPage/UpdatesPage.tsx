@@ -282,6 +282,7 @@ export default function UpdatesPage() {
             <th>Urgencia</th>
             {isAdmin && <th>Asignado a</th>}
             {isMunicipalWorker && <th>Centro</th>}
+            {isMunicipalWorker && <th>Asignado a</th>}
             <th>Acciones</th>
           </tr>
         </thead>
@@ -305,7 +306,18 @@ export default function UpdatesPage() {
                 <td>{req.description}</td>
                 <td><span className={`urgency ${req.urgency.toLowerCase()}`}>{req.urgency}</span></td>
                 {isAdmin && <td>{req.assigned_to_name || "Sin asignar"}</td>}
-                {isMunicipalWorker && <td>{req.center_name}</td>}
+                {isMunicipalWorker && (
+                  <td>
+                    <span 
+                      className="center-link" 
+                      onClick={() => handleCenterClick(req.center_id)}
+                      title="Ir a detalles del centro"
+                    >
+                      {req.center_name}
+                    </span>
+                  </td>
+                )}
+                {isMunicipalWorker && <td>{req.assigned_to_name || "Sin asignar"}</td>}
                 <td>
                   {(isAdmin || isMunicipalWorker) && req.status === "pending" ? (
                     <button onClick={() => openManageModal(req)} className="action-button">
@@ -331,7 +343,7 @@ export default function UpdatesPage() {
               </tr>
             ))
           ) : (
-            <tr><td colSpan={isAdmin ? 7 : (isMunicipalWorker ? 5 : 5)}>
+            <tr><td colSpan={isAdmin ? 7 : (isMunicipalWorker ? 6 : 5)}>
               {requests.length === 0 
                 ? "No hay solicitudes con el estado seleccionado."
                 : "No hay solicitudes que coincidan con los filtros aplicados."
