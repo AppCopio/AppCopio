@@ -16,13 +16,16 @@ router.post('/migrate-zones', async (req, res) => {
     }
 
     // OMZ Zonas
-    const omzZonesPath = path.join(__dirname, '../../appcopio_frontend2/public/data/omz_zones.json');
+    // En producción, la ruta es relativa al directorio raíz del proyecto
+    const omzZonesPath = path.join(__dirname, '../../../appcopio_frontend2/public/data/omz_zones.json');
     
     // Verificar si el archivo existe
     if (!fs.existsSync(omzZonesPath)) {
       return res.status(400).json({ 
         error: 'Archivo omz_zones.json no encontrado',
-        path: omzZonesPath 
+        path: omzZonesPath,
+        __dirname,
+        cwd: process.cwd()
       });
     }
 
@@ -44,12 +47,14 @@ router.post('/migrate-zones', async (req, res) => {
     }
 
     // OMZ Offices
-    const omzOfficesPath = path.join(__dirname, '../../appcopio_frontend2/public/data/omz_offices1.json');
+    const omzOfficesPath = path.join(__dirname, '../../../appcopio_frontend2/public/data/omz_offices1.json');
     
     if (!fs.existsSync(omzOfficesPath)) {
       return res.status(400).json({ 
         error: 'Archivo omz_offices1.json no encontrado',
-        path: omzOfficesPath 
+        path: omzOfficesPath,
+        __dirname,
+        cwd: process.cwd()
       });
     }
 
