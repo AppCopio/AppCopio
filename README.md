@@ -3,6 +3,23 @@ Wena,
 
 Bienvenidos al repositorio oficial de AppCopio. Este documento es nuestra guía central para configurar el entorno de desarrollo y empezar a trabajar. El objetivo es que todos podamos levantar el proyecto en nuestras máquinas locales de forma rápida y consistente.
 
+## 📚 Documentación
+
+### Desarrollo Local
+- **[README.md](README.md)** (este archivo) - Guía de desarrollo local
+
+### Despliegue a Producción
+- **[QUICK_START.md](QUICK_START.md)** - ⚡ Guía rápida de despliegue (15 min)
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - 📖 Guía completa paso a paso
+- **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - ✅ Checklist detallado
+- **[COMMANDS.md](COMMANDS.md)** - 🛠️ Comandos útiles de producción
+
+### Scripts de Utilidad
+- **[generate-jwt-secrets.js](appcopio-backend/generate-jwt-secrets.js)** - Generar secretos JWT seguros
+- **[verify-db-connection.js](appcopio-backend/verify-db-connection.js)** - Verificar conexión a base de datos
+
+---
+
 ## 🏗️ Arquitectura del Proyecto
 
 Este repositorio está organizado en un formato de "monorepo", lo que significa que contiene dos proyectos principales en carpetas separadas:
