@@ -59,20 +59,15 @@ Necesitas ejecutar los scripts SQL para crear las tablas. Tienes 2 opciones:
 # Conectarte a la base de datos
 psql <External_Database_URL>
 
-# Ejecutar los scripts en orden
-\i db_init/001_tablas.sql
-\i db_init/002_triggers.sql
-\i db_init/003_datos.sql
+# Inicializar tablas
+psql <DATABASE_URL> -f < db_init/001_tablas.sql
+
+# Crear triggers
+psql <DATABASE_URL> -f < db_init/002_triggers.sql
+
+# Insertar datos iniciales
+psql <DATABASE_URL> -f < db_init/003_datos.sql
 ```
-
-#### Opción B: Usando el Dashboard de Render
-
-1. En Render, ve a tu base de datos
-2. Click en **"Connect"** → **"External Connection"**
-3. Usa un cliente como [DBeaver](https://dbeaver.io/) o [pgAdmin](https://www.pgadmin.org/)
-4. Conecta y ejecuta manualmente los scripts SQL
-
----
 
 ## 2️⃣ DESPLEGAR BACKEND EN RENDER
 
@@ -130,17 +125,8 @@ services:
 En la sección **"Environment"** de tu servicio, agrega:
 
 ```bash
-# Puerto (Render asigna automático, pero puedes especificar)
-PORT=10000
 
-# Base de Datos (usa la Internal Database URL de Render)
-DB_HOST=dpg-xxxxx-a.oregon-postgres.render.com
-DB_PORT=5432
-DB_USER=appcopio_user
-DB_PASSWORD=<tu_password_generado>
-DB_NAME=appcopio_db
-
-# O simplemente usa DATABASE_URL (más simple)
+# DATABASE_URL
 DATABASE_URL=<Internal_Database_URL>
 
 # JWT (genera nuevos secretos para producción)
@@ -162,15 +148,6 @@ SMTP_USER=appcopiogroup@gmail.com
 SMTP_PASS=bkri peoq ytyb jcac
 SMTP_FROM="AppCopio <no-reply@appcopio.cl>"
 ```
-
-### Paso 5: Generar secretos JWT seguros
-
-```bash
-# En tu terminal, genera secretos aleatorios seguros:
-node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"
-```
-
-Ejecuta este comando 2 veces para generar `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET`.
 
 ### Paso 6: Deploy
 
