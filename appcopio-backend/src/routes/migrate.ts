@@ -33,17 +33,25 @@ router.post('/migrate-zones', async (req, res) => {
     
     let omzZonesCount = 0;
     for (const feature of omzZones.features) {
-      await db.query(
-        'INSERT INTO municipal_zones (name, type, geojson, icon, color) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name, type) DO NOTHING',
-        [
-          feature.properties.name,
-          'OMZ',
-          feature,
-          feature.properties.icon || null,
-          feature.properties['icon-color'] || null
-        ]
+      // Verificar si ya existe antes de insertar
+      const existing = await db.query(
+        'SELECT id FROM municipal_zones WHERE name = $1 AND type = $2',
+        [feature.properties.name, 'OMZ']
       );
-      omzZonesCount++;
+      
+      if (existing.rows.length === 0) {
+        await db.query(
+          'INSERT INTO municipal_zones (name, type, geojson, icon, color) VALUES ($1, $2, $3, $4, $5)',
+          [
+            feature.properties.name,
+            'OMZ',
+            feature,
+            feature.properties.icon || null,
+            feature.properties['icon-color'] || null
+          ]
+        );
+        omzZonesCount++;
+      }
     }
 
     // OMZ Offices
@@ -62,17 +70,25 @@ router.post('/migrate-zones', async (req, res) => {
     
     let omzOfficesCount = 0;
     for (const feature of omzOffices.features) {
-      await db.query(
-        'INSERT INTO municipal_zones (name, type, geojson, icon, color) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name, type) DO NOTHING',
-        [
-          feature.properties.name,
-          'OMZ_OFFICE',
-          feature,
-          feature.properties.icon || null,
-          feature.properties['icon-color'] || null
-        ]
+      // Verificar si ya existe antes de insertar
+      const existing = await db.query(
+        'SELECT id FROM municipal_zones WHERE name = $1 AND type = $2',
+        [feature.properties.name, 'OMZ_OFFICE']
       );
-      omzOfficesCount++;
+      
+      if (existing.rows.length === 0) {
+        await db.query(
+          'INSERT INTO municipal_zones (name, type, geojson, icon, color) VALUES ($1, $2, $3, $4, $5)',
+          [
+            feature.properties.name,
+            'OMZ_OFFICE',
+            feature,
+            feature.properties.icon || null,
+            feature.properties['icon-color'] || null
+          ]
+        );
+        omzOfficesCount++;
+      }
     }
 
     res.json({ 
