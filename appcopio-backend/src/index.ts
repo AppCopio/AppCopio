@@ -31,6 +31,7 @@ import recordRoutes from "./routes/recordRoutes";
 import templateRoutes from "./routes/templateRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
 import notificationRoutes from "./routes/notificacionRoutes";
+import migrateRoutes from "./routes/migrate";
 
 dotenv.config();
 
@@ -99,6 +100,7 @@ app.use("/api/database-records", requireAuth, recordRoutes);
 app.use("/api/database-templates", requireAuth, templateRoutes);
 app.use("/api/database-history", requireAuth, auditLogRoutes);
 app.use("/api/notifications", requireAuth, notificationRoutes);
+app.use("/api/migrate", migrateRoutes); // Sin requireAuth para facilitar ejecución inicial
 
 
 
