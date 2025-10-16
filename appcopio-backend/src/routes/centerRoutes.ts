@@ -19,7 +19,8 @@ import {
     addInventoryItem as addInventoryItemService,
     updateInventoryItem as updateInventoryItemService,
     deleteInventoryItem as deleteInventoryItemService,
-    getAssignedUsersByCenter as getAssignedUsersByCenter
+    getAssignedUsersByCenter as getAssignedUsersByCenter,
+    updateCenterFullness as updateCenterFullnessService
 } from '../services/centerService';
 import { sendNotification } from '../services/notificationService';
 
@@ -193,6 +194,28 @@ const setOperationalStatus: RequestHandler = async (req, res) => {
         }
     } catch (error) {
         console.error(`Error en setOperationalStatus (id: ${req.params.id}):`, error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+};
+
+const updateFullness: RequestHandler = async (req, res) => {
+    const { fullnessPercentage } = req.body;
+    
+    // Validación
+    if (typeof fullnessPercentage !== 'number' || fullnessPercentage < 0 || fullnessPercentage > 100) {
+        res.status(400).json({ error: 'fullnessPercentage debe ser un número entre 0 y 100.' });
+        return;
+    }
+    
+    try {
+        const updatedCenter = await updateCenterFullnessService(pool, req.params.id, fullnessPercentage);
+        if (!updatedCenter) {
+            res.status(404).json({ error: 'Centro no encontrado.' });
+        } else {
+            res.json(updatedCenter);
+        }
+    } catch (error) {
+        console.error(`Error en updateFullness (id: ${req.params.id}):`, error);
         res.status(500).json({ error: 'Error interno del servidor.' });
     }
 };
@@ -395,6 +418,7 @@ router.delete('/:id', requireAuth, deleteCenter);
 // --- Rutas de Estado y Activación ---
 router.patch('/:id/status', requireAuth, setActivationStatus);
 router.patch('/:id/operational-status', requireAuth, setOperationalStatus);
+router.patch('/:id/fullness', requireAuth, updateFullness);
 router.get('/status/active', requireAuth, listActiveCenters);
 router.get('/:id/activation', requireAuth, getCenterActiveActivation);
 

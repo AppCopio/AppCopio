@@ -1,6 +1,6 @@
 // src/services/users.service.ts
 import { api } from '@/lib/api';
-import { msgFromError } from '@/lib/errors';
+import { msgFromError, isCancelError } from '@/lib/errors';
 import axios from 'axios';
 import type {
   User,
@@ -178,7 +178,9 @@ export async function listActiveUsersByRole(roleId: number, signal?: AbortSignal
     // CAMBIO CRÍTICO: La ruta ahora es '/users/active/by-role/:roleId'
     const { data } = await api.get<{ users: User[] }>(`/users/active/by-role/${roleId}`, { signal });
     return data?.users ?? [];
-  } catch (error) {
+  } catch (error: any) {
+    // Ignorar errores de cancelación (cuando se aborta la petición)
+    if (isCancelError(error)) return [];
     console.error(`Error fetching active users for role ${roleId}:`, error);
     return [];
   }
@@ -188,7 +190,9 @@ export async function listActiveWorkersByRole(roleId: number, signal?: AbortSign
   try {
     const { data } = await api.get<{ users: WorkerUser[] }>(`/users/active/by-role/${roleId}`, { signal });
     return data?.users ?? [];
-  } catch (error) {
+  } catch (error: any) {
+    // Ignorar errores de cancelación (cuando se aborta la petición)
+    if (isCancelError(error)) return [];
     console.error(`Error fetching active workers for role ${roleId}:`, error);
     return [];
   }

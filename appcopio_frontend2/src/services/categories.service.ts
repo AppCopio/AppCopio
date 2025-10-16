@@ -2,6 +2,7 @@
 //le meti trycatch a las cosas
 
 import { api } from "@/lib/api";
+import { isCancelError } from "@/lib/errors";
 import type { Category } from "@/types/inventory";
 
 /**
@@ -14,6 +15,7 @@ export async function listCategories(signal?: AbortSignal): Promise<Category[]> 
     // MEJORA: Se elimina el .sort() ya que el backend garantiza el orden.
     return data ?? [];
   } catch (error) {
+    if (isCancelError(error)) return [];
     console.error("Error fetching categories:", error);
     // En caso de error, devolvemos un array vacío para que la UI no se rompa.
     return []; 

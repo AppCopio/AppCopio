@@ -6,6 +6,7 @@
 
 // src/services/centers.service.ts (o centerApi.ts)
 import { api } from "@/lib/api";
+import { isCancelError } from "@/lib/errors";
 import type { Center, ActiveActivation, CenterData} from "@/types/center"; 
 import type { InventoryItem } from "@/types/inventory"; 
 import type { User } from "@/types/user"; 
@@ -223,9 +224,10 @@ export function mapStatusToFrontend(status?: string): OperationalStatusUI | unde
  */
 export async function listCenters(signal?: AbortSignal): Promise<Center[]> {
   try {
-    const { data } = await api.get<any[]>("/centers");
+    const { data } = await api.get<any[]>("/centers", { signal });
     return Array.isArray(data) ? data.map(normalizeCenter) : [];
   } catch (error) {
+    if (isCancelError(error)) return [];
     console.error("Error fetching centers:", error);
     return [];
   }
@@ -369,8 +371,24 @@ export async function getCenterCapacity(
         const { data } = await api.get(`/centers/${centerId}/capacity`, { signal });
         return data;
     } catch (error) {
+        if (isCancelError(error)) return null;
         console.error(`Error fetching capacity for center ${centerId}:`, error);
         return null;
+    }
+}
+
+/**
+ * Actualiza el porcentaje de llenado/abastecimiento de un centro.
+ */
+export async function updateCenterFullness(
+    centerId: string,
+    fullnessPercentage: number,
+): Promise<void> {
+    try {
+        await api.patch(`/centers/${centerId}/fullness`, { fullnessPercentage });
+    } catch (error) {
+        console.error(`Error updating fullness for center ${centerId}:`, error);
+        throw error;
     }
 }
 
