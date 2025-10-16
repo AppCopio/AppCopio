@@ -6,7 +6,7 @@ import { sendEmail, prepareEmail } from "../services/emailService";
 export async function sendNotification(db: Db, input: CreateNotificationInput)
 : Promise< { data: CenterNotification; email: { status: EmailStatus; error?: string} } > {
   const notification = await createNotification(db, input);
-  console.log(notification)
+  //console.log(notification)
   let emailStatus: EmailStatus = "skipped";
   let emailError: string | undefined;
 
