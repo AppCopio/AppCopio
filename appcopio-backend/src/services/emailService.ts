@@ -28,10 +28,10 @@ export async function prepareEmail(db: Db,  notif: CenterNotification) : Promise
 
   // además, aquí toma el id del usuario y toma el correo para saner a quien enviarlo
   const destinatary = notif.destinatary_id
-  console.log(destinatary)
+  //console.log(destinatary)
   if(!destinatary) return null;
   const to = await getUserEmailById(db, destinatary);
-  console.log(to)
+  //console.log(to)
   if (!to) return null;
   const subject = notif.title;
   const text = notif.message;
