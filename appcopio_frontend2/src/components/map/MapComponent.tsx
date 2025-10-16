@@ -64,9 +64,6 @@ const getPinStatusClass = (center: Center, isNearby: boolean = false): string =>
 // Función para filtrar centros por estado operativo específico
 const filterCentersByOperationalStatus = (centers: Center[], filters: OperationalStatusFilters): Center[] => {
   return centers.filter(center => {
-    // Si el centro no está activo, no mostrarlo (regla de negocio existente)
-    if (center.is_active === false) return false;
-    
     const status = center.operational_status;
     
     // Si no tiene estado operativo definido, considerarlo como "abierto" por defecto
