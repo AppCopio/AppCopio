@@ -11,18 +11,37 @@ VALUES
 ('admin', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'admin@appcopio.cl', 1, 'Admin AppCopio', '11.111.111-1', TRUE, TRUE),
 ('juan.perez', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'juan.perez@municipalidad.cl', 2, 'Juan Pérez', '22.222.222-2', TRUE, FALSE),
 ('carla.rojas', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'carla.rojas@comunidad.cl', 3, 'Carla Rojas', '33.333.333-3', TRUE, FALSE),
-('martinalina', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'marti@comunidad.cl', 2, 'Martina Tejo', '44.444.444-4', TRUE, FALSE),
+('martinalina', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'martinalinamandarina@gmail.com', 2, 'Martina Tejo', '44.444.444-4', TRUE, TRUE),
+('tito', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'tito.orellana@usm.cl', 2, 'Tito Orellana', '55.333.333-3', TRUE, FALSE),
+('bruno', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'bruno.bonati@usm.cl', 2, 'Bruno Bonati', '55.533.333-3', TRUE, FALSE),
 ('paali', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'pali@comunidad.cl', 3, 'Paula Castillo', '53.333.333-3', TRUE, FALSE),
-('tito', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'tito@comunidad.cl', 2, 'Tito Orellana', '55.333.333-3', TRUE, FALSE),
-('bruno', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'bruno@comunidad.cl', 2, 'Bruno Bonati', '55.533.333-3', TRUE, FALSE),
 ('mati', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'matias@comunidad.cl', 3, 'Matias Godoy', '55.553.333-3', TRUE, FALSE),
-('paulsen', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'paulsen@comunidad.cl', 3, 'Benjamin Paulsen', '55.555.333-3', TRUE, FALSE);
+('paulsen', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'bpaulsenm@gmail.com', 3, 'Benjamin Paulsen', '55.555.333-3', TRUE, FALSE);
+INSERT INTO Users (username, password_hash, email, role_id, nombre, rut, celular, is_active, es_apoyo_admin)
+VALUES
+('maria.saavedra', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'maria.saavedra@comunidad.cl', 3, 'María Saavedra', '12.345.678-5', '987654321', TRUE, FALSE), -- Sede Vecinal Cerro Cordillera
+('rodrigo.pizarro', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'rodrigo.pizarro@daemvalpo.cl', 3, 'Rodrigo Pizarro', '16.789.234-3', '987650001', TRUE, FALSE),-- Escuela Básica Cerro Las Cañas
+('cesar.rojas', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'cesar.rojas@comunidad.cl', 3, 'César Rojas', '14.256.789-2', '987650002', TRUE, FALSE), -- Centro Comunitario El Litre
+('patricia.olivares', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'patricia.olivares@comunidad.cl', 3, 'Patricia Olivares', '13.579.246-1', '987650003', TRUE, FALSE),-- Sede Vecinal Cerro Polanco
+('gonzalo.arancibia', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'gonzalo.arancibia@cultura.cl', 3, 'Gonzalo Arancibia', '18.345.672-9', '987650004', TRUE, FALSE), -- Centro Cultural Playa Ancha
+('hector.munoz', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'hector.munoz@comunidad.cl', 3, 'Héctor Muñoz', '17.234.568-4', '987650005', TRUE, FALSE), -- Sede Juntas de Vecinos Cerro Barón
+('carolina.jeldes', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m',  'carolina.jeldes@daemvalpo.cl', 3, 'Carolina Jeldes', '19.876.543-2', '987650006', TRUE, FALSE), -- Escuela Básica Los Placeres
+('ivan.veliz', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m','ivan.veliz@deportes.cl', 3, 'Iván Véliz', '20.123.456-8', '987650007', TRUE, FALSE); -- Centro Deportivo Rodelillo
 
 INSERT INTO Centers (name, address, type, capacity, latitude, longitude) VALUES
 ('Gimnasio Municipal de Valparaíso', 'Av. Argentina 123', 'albergue', 150, -33.0458, -71.6197),
 ('Liceo Bicentenario', 'Independencia 456', 'albergue comunitario', 80, -33.0465, -71.6212),
 ('Sede Vecinal Cerro Alegre', 'Lautaro Rosas 789', 'albergue comunitario', 50, -33.0401, -71.6285),
-('Escuela República de Uruguay', 'Av. Uruguay 321', 'albergue', 120, -33.0475, -71.6143);
+('Escuela República de Uruguay', 'Av. Uruguay 321', 'albergue', 120, -33.0475, -71.6143),
+('Sede Vecinal Cerro Cordillera', 'Calle Castillo 210, Cerro Cordillera', 'albergue comunitario', 70, -33.0448, -71.6259),
+('Escuela Básica Cerro Las Cañas', 'Av. Alemania 3950, Cerro Las Cañas', 'albergue', 100, -33.0469, -71.5955),
+('Centro Comunitario El Litre', 'San Juan de Dios 950, El Litre', 'albergue comunitario', 80, -33.0462, -71.6135),
+('Sede Vecinal Cerro Polanco', 'Calle Polanco 120, Cerro Polanco', 'albergue', 90, -33.0477, -71.6032), 
+('Centro Cultural Playa Ancha', 'Av. Gran Bretaña 1200', 'albergue', 110, -33.0335, -71.6460),
+('Sede Juntas de Vecinos Cerro Barón', 'Av. Matta 850', 'albergue comunitario', 60, -33.0400, -71.6000),
+('Escuela Básica Los Placeres', 'Av. Los Placeres 200', 'albergue', 20, -33.0450, -71.5740),
+('Centro Deportivo Rodelillo', 'Av. Rodelillo 1500', 'albergue comunitario', 70, -33.0640, -71.5680);
+
 -- Centers Descriptions
 INSERT INTO CentersDescription (
     center_id,
@@ -235,6 +254,230 @@ INSERT INTO CentersDescription (
     TRUE,
     TRUE,
     TRUE
+);
+
+-- 1) Sede Vecinal Cerro Cordillera
+INSERT INTO CentersDescription (
+    center_id, nombre_organizacion, nombre_dirigente, cargo_dirigente, telefono_contacto,
+    tipo_inmueble, numero_habitaciones, estado_conservacion,
+    muro_hormigon, piso_radier, techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable, electricidad, alcantarillado,
+    estado_banos, wc_proporcion_personas, duchas_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones, separacion_familias, observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_con_refrigerador,
+    sistema_evacuacion_definido, observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro, existe_lugar_animales_fuera, observaciones_dimension_animal,
+    existen_extintores, existen_generadores, existen_luces_emergencias
+) VALUES (
+    (SELECT center_id FROM Centers WHERE name='Sede Vecinal Cerro Cordillera'),
+    'Junta de Vecinos Cerro Cordillera', 'María Saavedra', 'Presidenta', '987654321',
+    'Sede social de dos pisos', 6, 3,
+    TRUE, TRUE, FALSE,
+    'Salón multiuso con ventilación cruzada; patio pequeño apto para cocina comunitaria.',
+    4, 4, 3,
+    3, 3, 2, 'Baños funcionales, requieren refuerzo en ventilación.',
+    3, 3, 'Habitaciones divididas con biombos y paneles livianos.',
+    4, 3, 2,
+    3, 'Vías de evacuación señalizadas en primer piso; plan básico impreso.',
+    1, 3, 'Se habilita espacio exterior techado para mascotas.',
+    TRUE, FALSE, TRUE
+);
+
+-- 2) Escuela Básica Cerro Las Cañas
+INSERT INTO CentersDescription (
+    center_id, nombre_organizacion, nombre_dirigente, cargo_dirigente, telefono_contacto,
+    tipo_inmueble, numero_habitaciones, estado_conservacion,
+    muro_hormigon, piso_radier, techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable, electricidad, alcantarillado,
+    estado_banos, wc_proporcion_personas, duchas_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones, separacion_familias, observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_con_refrigerador,
+    sistema_evacuacion_definido, observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro, existe_lugar_animales_fuera, observaciones_dimension_animal,
+    existen_extintores, existen_generadores, existen_luces_emergencias
+) VALUES (
+    (SELECT center_id FROM Centers WHERE name='Escuela Básica Cerro Las Cañas'),
+    'DAEM Valparaíso', 'Rodrigo Pizarro', 'Director', '987650001',
+    'Establecimiento educacional', 12, 4,
+    TRUE, TRUE, TRUE,
+    'Patios amplios, gimnasio techado y salas con acceso universal en primer piso.',
+    5, 5, 5,
+    4, 4, 4, 'Baños separados por género y accesibles; duchas en camarines del gimnasio.',
+    3, 4, 'Salas reconvertidas en dormitorios por familia; buen control de aforo.',
+    5, 4, 4,
+    5, 'Rutas de evacuación y puntos de encuentro señalizados; simulacros semestrales.',
+    1, 4, 'Sector de canchas habilitado para mascotas con jaulas y bebederos.',
+    TRUE, TRUE, TRUE
+);
+
+-- 3) Centro Comunitario El Litre
+INSERT INTO CentersDescription (
+    center_id, nombre_organizacion, nombre_dirigente, cargo_dirigente, telefono_contacto,
+    tipo_inmueble, numero_habitaciones, estado_conservacion,
+    muro_hormigon, piso_radier, techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable, electricidad, alcantarillado,
+    estado_banos, wc_proporcion_personas, duchas_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones, separacion_familias, observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_con_refrigerador,
+    sistema_evacuacion_definido, observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro, existe_lugar_animales_fuera, observaciones_dimension_animal,
+    existen_extintores, existen_generadores, existen_luces_emergencias
+) VALUES (
+    (SELECT center_id FROM Centers WHERE name='Centro Comunitario El Litre'),
+    'Organización Comunitaria El Litre', 'César Rojas', 'Coordinador', '987650002',
+    'Centro comunitario', 5, 3,
+    FALSE, TRUE, FALSE,
+    'Salón central con cocina abierta; acceso por rampa lateral.',
+    4, 4, 4,
+    3, 3, 2, 'Duchas portátiles instaladas en patio trasero.',
+    2, 2, 'Dormitorios temporales en carpas interiores con paneles de privacidad.',
+    4, 3, 2,
+    3, 'Plan de evacuación básico; requiere más señalética fotoluminiscente.',
+    1, 2, 'Se usan corrales modulares en exterior.',
+    TRUE, FALSE, TRUE
+);
+
+-- 4) Sede Vecinal Cerro Polanco
+INSERT INTO CentersDescription (
+    center_id, nombre_organizacion, nombre_dirigente, cargo_dirigente, telefono_contacto,
+    tipo_inmueble, numero_habitaciones, estado_conservacion,
+    muro_hormigon, piso_radier, techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable, electricidad, alcantarillado,
+    estado_banos, wc_proporcion_personas, duchas_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones, separacion_familias, observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_con_refrigerador,
+    sistema_evacuacion_definido, observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro, existe_lugar_animales_fuera, observaciones_dimension_animal,
+    existen_extintores, existen_generadores, existen_luces_emergencias
+) VALUES (
+    (SELECT center_id FROM Centers WHERE name='Sede Vecinal Cerro Polanco'),
+    'Junta de Vecinos Cerro Polanco', 'Patricia Olivares', 'Encargada sede', '987650003',
+    'Sede social', 6, 3,
+    TRUE, TRUE, FALSE,
+    'Salón principal con buena iluminación; conexión cercana a transporte.',
+    4, 4, 3,
+    3, 3, 2, 'Requiere refuerzo de agua caliente en duchas.',
+    3, 3, 'División por módulos apilables, priorizando familias con NNA.',
+    4, 3, 2,
+    3, 'Vías de evacuación libres y punto de encuentro exterior.',
+    1, 2, 'Área exterior techada admite animales con correa.',
+    TRUE, FALSE, TRUE
+);
+
+-- 5) Centro Cultural Playa Ancha
+INSERT INTO CentersDescription (
+    center_id, nombre_organizacion, nombre_dirigente, cargo_dirigente, telefono_contacto,
+    tipo_inmueble, numero_habitaciones, estado_conservacion,
+    muro_hormigon, piso_radier, techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable, electricidad, alcantarillado,
+    estado_banos, wc_proporcion_personas, duchas_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones, separacion_familias, observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_con_refrigerador,
+    sistema_evacuacion_definido, observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro, existe_lugar_animales_fuera, observaciones_dimension_animal,
+    existen_extintores, existen_generadores, existen_luces_emergencias
+) VALUES (
+    (SELECT center_id FROM Centers WHERE name='Centro Cultural Playa Ancha'),
+    'Corporación Cultural Playa Ancha', 'Gonzalo Arancibia', 'Administrador', '987650004',
+    'Centro cultural/gimnasio', 10, 4,
+    TRUE, TRUE, TRUE,
+    'Gimnasio multiuso y foyer amplio; accesibilidad por rampas y baños inclusivos.',
+    5, 5, 5,
+    4, 4, 4, 'Camarines con duchas operativas; incluyen dispensadores y papeleros.',
+    3, 4, 'Dormitorios en sala de ensayo y camarines, separados por familia.',
+    5, 4, 4,
+    5, 'Plan de evacuación completo con croquis y radios VHF.',
+    1, 4, 'Zona perimetral para mascotas con jaulas; registro de animales.',
+    TRUE, TRUE, TRUE
+);
+
+-- 6) Sede Juntas de Vecinos Cerro Barón
+INSERT INTO CentersDescription (
+    center_id, nombre_organizacion, nombre_dirigente, cargo_dirigente, telefono_contacto,
+    tipo_inmueble, numero_habitaciones, estado_conservacion,
+    muro_hormigon, piso_radier, techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable, electricidad, alcantarillado,
+    estado_banos, wc_proporcion_personas, duchas_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones, separacion_familias, observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_con_refrigerador,
+    sistema_evacuacion_definido, observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro, existe_lugar_animales_fuera, observaciones_dimension_animal,
+    existen_extintores, existen_generadores, existen_luces_emergencias
+) VALUES (
+    (SELECT center_id FROM Centers WHERE name='Sede Juntas de Vecinos Cerro Barón'),
+    'Junta de Vecinos Cerro Barón', 'Héctor Muñoz', 'Coordinador', '987650005',
+    'Sede social', 4, 3,
+    FALSE, TRUE, FALSE,
+    'Salón y cocina pequeña; acceso por escalera y rampa portátil.',
+    4, 4, 3,
+    3, 3, 1, 'Baños en buen estado; se planifican duchas portátiles según afluencia.',
+    2, 2, 'Se prioriza separación por género y familias con NNA.',
+    4, 3, 2,
+    3, 'Señalética básica instalada; simulacro interno realizado.',
+    1, 2, 'Patio interior permite animales bajo supervisión.',
+    TRUE, FALSE, TRUE
+);
+
+-- 7) Escuela Básica Los Placeres (capacidad 20 => dotación más acotada)
+INSERT INTO CentersDescription (
+    center_id, nombre_organizacion, nombre_dirigente, cargo_dirigente, telefono_contacto,
+    tipo_inmueble, numero_habitaciones, estado_conservacion,
+    muro_hormigon, piso_radier, techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable, electricidad, alcantarillado,
+    estado_banos, wc_proporcion_personas, duchas_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones, separacion_familias, observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_con_refrigerador,
+    sistema_evacuacion_definido, observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro, existe_lugar_animales_fuera, observaciones_dimension_animal,
+    existen_extintores, existen_generadores, existen_luces_emergencias
+) VALUES (
+    (SELECT center_id FROM Centers WHERE name='Escuela Básica Los Placeres'),
+    'DAEM Valparaíso', 'Carolina Jeldes', 'Jefa UTP', '987650006',
+    'Establecimiento educacional', 3, 4,
+    TRUE, TRUE, TRUE,
+    'Uso de biblioteca y sala de computación como dormitorios; patio seguro.',
+    5, 5, 5,
+    4, 3, 2, 'Baños en excelente estado; duchas disponibles sólo en camarín de profesores.',
+    2, 3, 'Se separan familias en salas distintas; aforo bajo por capacidad.',
+    5, 4, 3,
+    5, 'Evacuación a patio principal; señalética clara.',
+    1, 2, 'Espacio exterior delimitado para mascotas.',
+    TRUE, FALSE, TRUE
+);
+
+-- 8) Centro Deportivo Rodelillo
+INSERT INTO CentersDescription (
+    center_id, nombre_organizacion, nombre_dirigente, cargo_dirigente, telefono_contacto,
+    tipo_inmueble, numero_habitaciones, estado_conservacion,
+    muro_hormigon, piso_radier, techo_losa,
+    observaciones_espacios_comunes,
+    agua_potable, electricidad, alcantarillado,
+    estado_banos, wc_proporcion_personas, duchas_proporcion_personas, observaciones_banos_y_servicios_higienicos,
+    posee_habitaciones, separacion_familias, observaciones_distribucion_habitaciones,
+    cuenta_con_mesas_sillas, cocina_comedor_adecuados, cuenta_con_refrigerador,
+    sistema_evacuacion_definido, observaciones_condiciones_seguridad_proteccion_generales,
+    existe_lugar_animales_dentro, existe_lugar_animales_fuera, observaciones_dimension_animal,
+    existen_extintores, existen_generadores, existen_luces_emergencias
+) VALUES (
+    (SELECT center_id FROM Centers WHERE name='Centro Deportivo Rodelillo'),
+    'Corporación de Deportes Valparaíso', 'Iván Véliz', 'Administrador recinto', '987650007',
+    'Polideportivo', 8, 4,
+    TRUE, TRUE, TRUE,
+    'Cancha techada convertible en área de catres; comedor en sala multiuso.',
+    5, 5, 4,
+    4, 4, 4, 'Camarines con duchas y agua caliente; buena reposición de insumos.',
+    3, 4, 'Sectorizado por familias con paneles modulares y carpas interiores.',
+    5, 4, 4,
+    5, 'Plan y rutas de evacuación visibles; megáfonos y radios disponibles.',
+    1, 4, 'Corral perimetral techado y bebederos para mascotas.',
+    TRUE, TRUE, TRUE
 );
 
 -- Categorías de productos
