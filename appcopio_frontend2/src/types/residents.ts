@@ -7,6 +7,13 @@ export interface ResidentGroup {
   fecha_ingreso?: string;
   fecha_salida?: string;
   created_at?: string;
+  tipo_vivienda?: string;
+  material_vivienda?: string;
+  estado_vivienda?: string;
+  ingreso_mensual?: number;
+  recibe_subsidios?: boolean;
+  necesidades_especiales?: string;
+  apoyo_requerido?: string;
 }
 
 
@@ -26,6 +33,7 @@ export interface Person {
   rubro: string;
   discapacidad: boolean;
   dependencia: boolean;
+  parentesco?: string; // Viene del join con FamilyGroupMembers
 }
 
 export interface ActiveCenter {

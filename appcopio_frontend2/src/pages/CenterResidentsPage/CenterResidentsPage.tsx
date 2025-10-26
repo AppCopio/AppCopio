@@ -316,7 +316,7 @@ const exportToPDF = async () => {
         fecha_ingreso: resident.fecha_ingreso,
         fecha_formatted: formatCL(resident.fecha_ingreso),
         fecha_con_created: formatCL(resident.fecha_ingreso || resident.created_at),
-        fecha_alternativa: formatCL(resident.createdAt || resident.created_at),
+        fecha_alternativa: formatCL(resident.created_at),
       });
       setSelectedFamily(resident);
       console.log('Datos del grupo familiar:', {
