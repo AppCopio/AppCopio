@@ -33,7 +33,7 @@ const toISODate = (s?: string) => {
 const formatCL = (s?: string) => {
   if (!s) return "";
   const d = new Date(s);
-  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CL", { timeZone: "UTC" });
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CL");
 };
 const CenterResidentsPage: React.FC = () => {
   const { centerId } = useParams<{ centerId: string }>();
@@ -55,9 +55,12 @@ const CenterResidentsPage: React.FC = () => {
   });
 
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [exitReason, setExitReason] = useState<"" | DepartureReason>("");
   const [exitDate, setExitDate] = useState("");
   const [residentToExit, setResidentToExit] = useState<ResidentGroup | null>(null);
+  const [selectedFamily, setSelectedFamily] = useState<ResidentGroup | null>(null);
+  const [selectedFamilyMembers, setSelectedFamilyMembers] = useState<Person[]>([]);
   const [destinationActivationId, setDestinationActivationId] = useState("");
   const [activeCenters, setActiveCenters] = useState<ActiveCenter[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -305,6 +308,31 @@ const exportToPDF = async () => {
   }, [centerId, JSON.stringify(filters)]);
 
   // ---------- EXIT MODAL ----------
+  const handleOpenDetailsModal = async (resident: ResidentGroup) => {
+    try {
+      // Debug de datos
+      console.log('Datos completos del residente:', resident);
+      console.log('Datos de fecha:', {
+        fecha_ingreso: resident.fecha_ingreso,
+        fecha_formatted: formatCL(resident.fecha_ingreso),
+        fecha_con_created: formatCL(resident.fecha_ingreso || resident.created_at),
+        fecha_alternativa: formatCL(resident.createdAt || resident.created_at),
+      });
+      setSelectedFamily(resident);
+      console.log('Datos del grupo familiar:', {
+        resident,
+        fecha_ingreso: resident.fecha_ingreso,
+        fecha_formateada: resident.fecha_ingreso ? formatCL(resident.fecha_ingreso) : null
+      });
+      const members = await listPeopleByCenter(centerId!, { familyId: resident.family_id });
+      setSelectedFamilyMembers(members);
+      setIsDetailsModalOpen(true);
+    } catch (error) {
+      console.error('Error cargando los detalles de la familia:', error);
+      window.alert('No se pudieron cargar los detalles de la familia');
+    }
+  };
+
   const handleOpenExitModal = (resident: ResidentGroup) => {
     setResidentToExit(resident);
     setIsExitModalOpen(true);
@@ -453,7 +481,7 @@ const exportToPDF = async () => {
                   <th>Nombre Jefe/a de Hogar</th>
                   <th>RUT</th>
                   <th>Nº Integrantes</th>
-                  <th>Acción</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -462,7 +490,13 @@ const exportToPDF = async () => {
                     <td>{resident.nombre_completo}</td>
                     <td>{resident.rut}</td>
                     <td>{resident.integrantes_grupo}</td>
-                    <td>
+                    <td className="action-buttons">
+                      <button 
+                        onClick={() => handleOpenDetailsModal(resident)} 
+                        className="action-btn view-details-btn"
+                      >
+                        Ver Detalles
+                      </button>
                       <button onClick={() => handleOpenExitModal(resident)} className="action-btn">
                         Registrar Salida
                       </button>
@@ -632,6 +666,117 @@ const exportToPDF = async () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isDetailsModalOpen && selectedFamily && (
+        <div className="modal-overlay">
+          <div className="modal-content details-modal">
+            <div className="modal-header">
+              <h3>Detalles del Grupo Familiar</h3>
+              <button onClick={() => setIsDetailsModalOpen(false)} className="close-button">×</button>
+            </div>
+
+            {/* Información básica */}
+            <section className="details-section">
+              <h4>Información General</h4>
+              <div className="details-grid">
+                <div className="details-item">
+                  <strong>Jefe/a de Hogar:</strong> {selectedFamily.nombre_completo}
+                </div>
+                <div className="details-item">
+                  <strong>RUT:</strong> {selectedFamily.rut}
+                </div>
+                <div className="details-item">
+                  <strong>Número de Integrantes:</strong> {selectedFamily.integrantes_grupo}
+                </div>
+                <div className="details-item">
+                  <strong>Fecha de Ingreso:</strong> {selectedFamily.fecha_ingreso ? formatCL(selectedFamily.fecha_ingreso) : 'No especificada'}
+                </div>
+                <div className="details-item">
+                  <strong>Fecha de Salida:</strong> {formatCL(selectedFamily.fecha_salida)}
+                </div>
+              </div>
+            </section>
+
+            {/* Información FIBE */}
+            <section className="details-section">
+              <h4>Información FIBE</h4>
+              <div className="details-grid">
+                <div className="details-group">
+                  <h5>Condiciones de la Vivienda</h5>
+                  <div className="details-item">
+                    <strong>Tipo de Vivienda:</strong> {selectedFamily.tipo_vivienda || 'No especificado'}
+                  </div>
+                  <div className="details-item">
+                    <strong>Material Predominante:</strong> {selectedFamily.material_vivienda || 'No especificado'}
+                  </div>
+                  <div className="details-item">
+                    <strong>Estado:</strong> {selectedFamily.estado_vivienda || 'No especificado'}
+                  </div>
+                </div>
+
+                <div className="details-group">
+                  <h5>Situación Económica</h5>
+                  <div className="details-item">
+                    <strong>Ingreso Mensual:</strong> {selectedFamily.ingreso_mensual ? `$${selectedFamily.ingreso_mensual.toLocaleString('es-CL')}` : 'No especificado'}
+                  </div>
+                  <div className="details-item">
+                    <strong>Recibe Subsidios:</strong> {selectedFamily.recibe_subsidios ? 'Sí' : 'No'}
+                  </div>
+                </div>
+
+                <div className="details-group">
+                  <h5>Necesidades Específicas</h5>
+                  <div className="details-item">
+                    <strong>Necesidades Especiales:</strong> {selectedFamily.necesidades_especiales || 'Ninguna reportada'}
+                  </div>
+                  <div className="details-item">
+                    <strong>Apoyo Requerido:</strong> {selectedFamily.apoyo_requerido || 'No especificado'}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Lista de integrantes */}
+            <section className="details-section">
+              <h4>Integrantes del Grupo Familiar</h4>
+              {selectedFamilyMembers.length === 0 ? (
+                <p>No hay integrantes registrados</p>
+              ) : (
+                <div className="table-container">
+                  <table className="members-table">
+                    <thead>
+                      <tr>
+                        <th>Nombre</th>
+                        <th>RUT</th>
+                        <th>Edad</th>
+                        <th>Género</th>
+                        <th>Parentesco</th>
+                        <th>Estudia</th>
+                        <th>Trabaja</th>
+                        <th>Discapacidad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedFamilyMembers.map((member) => (
+                        <tr key={member.rut}>
+                          <td>{`${member.nombre} ${member.primer_apellido} ${member.segundo_apellido || ''}`.trim()}</td>
+                          <td>{member.rut}</td>
+                          <td>{member.edad}</td>
+                          <td>{member.genero}</td>
+                          <td>{member.parentesco || 'No especificado'}</td>
+                          <td>{member.estudia ? 'Sí' : 'No'}</td>
+                          <td>{member.trabaja ? 'Sí' : 'No'}</td>
+                          <td>{member.discapacidad ? 'Sí' : 'No'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
         </div>
       )}

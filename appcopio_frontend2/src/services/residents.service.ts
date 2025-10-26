@@ -52,6 +52,32 @@ export async function listPeopleByCenter(centerId: string, params?: Record<strin
   }
 }
 /**
+ * Obtiene los detalles completos de un grupo familiar específico
+ */
+export async function getFamilyDetails(familyId: string, signal?: AbortSignal): Promise<ResidentGroup> {
+  try {
+    const { data } = await api.get<ResidentGroup>(`/families/${familyId}`, { signal });
+    return data;
+  } catch (error) {
+    console.error(`Error fetching family details for family ${familyId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene la lista de miembros de un grupo familiar específico
+ */
+export async function getFamilyMembers(familyId: string, signal?: AbortSignal): Promise<Person[]> {
+  try {
+    const { data } = await api.get<Person[]>(`/families/${familyId}/members`, { signal });
+    return data ?? [];
+  } catch (error) {
+    console.error(`Error fetching family members for family ${familyId}:`, error);
+    throw error;
+  }
+}
+
+/**
 export async function listPeopleByCenter(
   centerId: string,
   params: {

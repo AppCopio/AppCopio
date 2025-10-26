@@ -4,7 +4,11 @@ export interface ResidentGroup {
   nombre_completo: string;
   integrantes_grupo: number;
   family_id: number;
+  fecha_ingreso?: string;
+  fecha_salida?: string;
+  created_at?: string;
 }
+
 
 export interface Person {
   rut: string;
