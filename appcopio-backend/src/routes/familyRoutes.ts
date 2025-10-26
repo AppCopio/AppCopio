@@ -123,6 +123,33 @@ const getFamilyById: RequestHandler = async (req, res) => {
 };
 
 /**
+ * @controller GET /api/families/:id/members
+ * @description Obtiene los miembros de un grupo familiar específico (persona + parentesco)
+ */
+const getFamilyMembersByFamilyId: RequestHandler = async (req, res) => {
+  const familyId = parseInt(req.params.id, 10);
+  if (isNaN(familyId)) {
+    res.status(400).json({ error: "El ID de la familia debe ser un número válido." });
+    return;
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.*, fgm.parentesco
+       FROM FamilyGroupMembers fgm
+       JOIN Persons p ON p.person_id = fgm.person_id
+       WHERE fgm.family_id = $1
+       ORDER BY fgm.member_id ASC`,
+      [familyId]
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error(`Error en getFamilyMembersByFamilyId (id: ${familyId}):`, e);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+};
+
+/**
  * @controller POST /api/families
  * @description Crea un nuevo grupo familiar.
  */
@@ -418,6 +445,7 @@ const departFamilyGroupHandler: RequestHandler = async (req, res) => {
 router.get("/", listFamilies);
 router.post("/", createFamily);
 router.get("/:id", getFamilyById);
+router.get("/:id/members", getFamilyMembersByFamilyId);
 router.put("/:id", updateFamily);
 router.patch('/:familyId/depart', departFamilyGroup);
 

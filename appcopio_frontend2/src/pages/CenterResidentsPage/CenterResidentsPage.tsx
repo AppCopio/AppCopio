@@ -18,6 +18,7 @@ import {
   getCenterCapacity,
   listResidentGroups,
   listPeopleByCenter,
+  getFamilyMembers,
   listActiveCenters,
   registerFamilyDeparture,
 } from "@/services/residents.service";
@@ -310,22 +311,33 @@ const exportToPDF = async () => {
   // ---------- EXIT MODAL ----------
   const handleOpenDetailsModal = async (resident: ResidentGroup) => {
     try {
-      // Debug de datos
-      console.log('Datos completos del residente:', resident);
-      console.log('Datos de fecha:', {
-        fecha_ingreso: resident.fecha_ingreso,
-        fecha_formatted: formatCL(resident.fecha_ingreso),
-        fecha_con_created: formatCL(resident.fecha_ingreso || resident.created_at),
-        fecha_alternativa: formatCL(resident.created_at),
-      });
+      if (!resident.family_id) {
+        window.alert('No se pudo cargar la familia: falta el identificador de grupo.');
+        setSelectedFamily(null);
+        setSelectedFamilyMembers([]);
+        return;
+      }
+
       setSelectedFamily(resident);
-      console.log('Datos del grupo familiar:', {
-        resident,
-        fecha_ingreso: resident.fecha_ingreso,
-        fecha_formateada: resident.fecha_ingreso ? formatCL(resident.fecha_ingreso) : null
-      });
-      const members = await listPeopleByCenter(centerId!, { familyId: resident.family_id });
-      setSelectedFamilyMembers(members);
+
+      // Intentamos obtener los miembros específicos del family_id desde el endpoint dedicado.
+      try {
+        const members = await getFamilyMembers(String(resident.family_id));
+        setSelectedFamilyMembers(Array.isArray(members) ? members : []);
+      } catch (err) {
+        // Si falla, hacemos un fallback a la ruta por centro filtrando por familyId (si el backend lo soporta)
+        console.warn('getFamilyMembers falló, intentando fallback a listPeopleByCenter', err);
+        try {
+          const fallback = await listPeopleByCenter(centerId!, { familyId: resident.family_id });
+          const filtered = (Array.isArray(fallback) ? fallback : []).filter((p: any) => p.family_id === resident.family_id || p.family_id === String(resident.family_id));
+          setSelectedFamilyMembers(filtered as Person[]);
+        } catch (fbErr) {
+          console.error('Error en fallback al cargar integrantes de la familia:', fbErr);
+          window.alert('No se pudieron cargar los integrantes de la familia.');
+          setSelectedFamilyMembers([]);
+        }
+      }
+
       setIsDetailsModalOpen(true);
     } catch (error) {
       console.error('Error cargando los detalles de la familia:', error);
@@ -680,7 +692,7 @@ const exportToPDF = async () => {
 
             {/* Información básica */}
             <section className="details-section">
-              <h4>Información General</h4>
+              <h4>Información FIBE</h4>
               <div className="details-grid">
                 <div className="details-item">
                   <strong>Jefe/a de Hogar:</strong> {selectedFamily.nombre_completo}
@@ -696,45 +708,6 @@ const exportToPDF = async () => {
                 </div>
                 <div className="details-item">
                   <strong>Fecha de Salida:</strong> {formatCL(selectedFamily.fecha_salida)}
-                </div>
-              </div>
-            </section>
-
-            {/* Información FIBE */}
-            <section className="details-section">
-              <h4>Información FIBE</h4>
-              <div className="details-grid">
-                <div className="details-group">
-                  <h5>Condiciones de la Vivienda</h5>
-                  <div className="details-item">
-                    <strong>Tipo de Vivienda:</strong> {selectedFamily.tipo_vivienda || 'No especificado'}
-                  </div>
-                  <div className="details-item">
-                    <strong>Material Predominante:</strong> {selectedFamily.material_vivienda || 'No especificado'}
-                  </div>
-                  <div className="details-item">
-                    <strong>Estado:</strong> {selectedFamily.estado_vivienda || 'No especificado'}
-                  </div>
-                </div>
-
-                <div className="details-group">
-                  <h5>Situación Económica</h5>
-                  <div className="details-item">
-                    <strong>Ingreso Mensual:</strong> {selectedFamily.ingreso_mensual ? `$${selectedFamily.ingreso_mensual.toLocaleString('es-CL')}` : 'No especificado'}
-                  </div>
-                  <div className="details-item">
-                    <strong>Recibe Subsidios:</strong> {selectedFamily.recibe_subsidios ? 'Sí' : 'No'}
-                  </div>
-                </div>
-
-                <div className="details-group">
-                  <h5>Necesidades Específicas</h5>
-                  <div className="details-item">
-                    <strong>Necesidades Especiales:</strong> {selectedFamily.necesidades_especiales || 'Ninguna reportada'}
-                  </div>
-                  <div className="details-item">
-                    <strong>Apoyo Requerido:</strong> {selectedFamily.apoyo_requerido || 'No especificado'}
-                  </div>
                 </div>
               </div>
             </section>

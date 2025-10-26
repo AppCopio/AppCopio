@@ -56,7 +56,7 @@ export async function listPeopleByCenter(centerId: string, params?: Record<strin
  */
 export async function getFamilyDetails(familyId: string, signal?: AbortSignal): Promise<ResidentGroup> {
   try {
-    const { data } = await api.get<ResidentGroup>(`/families/${familyId}`, { signal });
+    const { data } = await api.get<ResidentGroup>(`/family/${familyId}`, { signal });
     return data;
   } catch (error) {
     console.error(`Error fetching family details for family ${familyId}:`, error);
@@ -69,7 +69,7 @@ export async function getFamilyDetails(familyId: string, signal?: AbortSignal): 
  */
 export async function getFamilyMembers(familyId: string, signal?: AbortSignal): Promise<Person[]> {
   try {
-    const { data } = await api.get<Person[]>(`/families/${familyId}/members`, { signal });
+    const { data } = await api.get<Person[]>(`/family/${familyId}/members`, { signal });
     return data ?? [];
   } catch (error) {
     console.error(`Error fetching family members for family ${familyId}:`, error);
