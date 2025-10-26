@@ -114,8 +114,16 @@ CREATE TABLE InventoryLog (
     reason TEXT,
     notes TEXT,
     created_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    family_id INT REFERENCES FamilyGroups(family_id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Índice para mejorar rendimiento de consultas por familia
+CREATE INDEX IF NOT EXISTS idx_inventorylog_family_id 
+ON InventoryLog(family_id) 
+WHERE family_id IS NOT NULL;
+
+COMMENT ON COLUMN InventoryLog.family_id IS 'ID del grupo familiar destinatario en caso de salidas (SUB). NULL para entradas y ajustes.';
 
 -- Guarda el historial de asignaciones de cada centro: el registro vàlido actualmente es el que tiene valid_to IS NULL
 CREATE TABLE CenterAssignments (
