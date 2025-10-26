@@ -64,10 +64,14 @@ const createCenter: RequestHandler = async (req, res) => {
         return;
     }
     
+    // Normalizar el tipo de centro
+    const normalizedType = type.toLowerCase() === 'acopio' ? 'acopio' : 'albergue';
+    const bodyWithNormalizedType = { ...req.body, type: normalizedType };
+    
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const newCenter = await createCenterService(client, req.body);
+        const newCenter = await createCenterService(client, bodyWithNormalizedType);
         await client.query('COMMIT');
         res.status(201).json(newCenter);
     } catch (error) {
