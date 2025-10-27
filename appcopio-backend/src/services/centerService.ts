@@ -260,10 +260,19 @@ export async function deleteInventoryItem(client: PoolClient, centerId: string, 
         throw { status: 404, message: 'Ítem no encontrado en el inventario.' };
     }
     
+    const currentQuantity = itemData.rows[0].quantity;
+
+    if (currentQuantity > 0) {
+        throw { 
+            status: 400, 
+            message: `No se puede eliminar un recurso que aún tiene stock. Stock actual: ${currentQuantity}` 
+        };
+    }
+    
     await client.query(
         `INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, created_by, notes)
-         VALUES ($1, $2, 'SUB', $3, $4, 'Eliminación completa del stock')`,
-        [centerId, itemId, itemData.rows[0].quantity, userId]
+         VALUES ($1, $2, 'SUB', $3, $4, 'Eliminación de ítem del inventario (stock en 0)')`,
+        [centerId, itemId, 0, userId]
     );
 
    
