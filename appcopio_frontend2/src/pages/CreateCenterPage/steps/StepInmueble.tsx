@@ -13,8 +13,23 @@ const StepInmueble = React.forwardRef<any, StepInmuebleProps>(({ value, onChange
     const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
-        const { name, value: newValue } = event.target;
-        onChange(name as keyof CenterData, newValue);
+        const target = event.target as HTMLInputElement;
+        const { name, value: newValue, type } = target;
+        
+        let processedValue: any = newValue;
+        
+        // Convertir valores numéricos
+        if (type === 'number') {
+            if (newValue === '' || newValue === null || newValue === undefined) {
+                processedValue = null;
+            } else {
+                const numValue = Number(newValue);
+                processedValue = isNaN(numValue) ? null : numValue;
+            }
+        }
+        
+        onChange(name as keyof CenterData, processedValue);
+        
         if (fieldErrors[name as string]) {
             setFieldErrors(prev => ({ ...prev, [name as string]: '' }));
         }

@@ -64,10 +64,28 @@ export async function getCenterById(db: Db, id: string) {
 
 export async function createCenter(client: PoolClient, body: any) {
     const { name, latitude, longitude, type, ...restOfBody } = body;
+    
+    // Validación de campos requeridos básicos
+    if (!name || typeof latitude !== 'number' || typeof longitude !== 'number' || !type) {
+        throw new Error('Campos requeridos: name, type, latitude, longitude.');
+    }
+    
     const centerQuery = `
         INSERT INTO Centers (name, address, type, capacity, is_active, latitude, longitude, should_be_active, comunity_charge_id, municipal_manager_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING center_id`;
-    const centerValues = [name, restOfBody.address, type, restOfBody.capacity || 0, false, latitude, longitude, restOfBody.should_be_active, restOfBody.comunity_charge_id, restOfBody.municipal_manager_id];
+    const centerValues = [
+        name, 
+        restOfBody.address || null, 
+        type, 
+        restOfBody.capacity || 0, 
+        false, // is_active siempre false al crear
+        latitude, 
+        longitude, 
+        restOfBody.should_be_active || false, 
+        restOfBody.comunity_charge_id || null, 
+        restOfBody.municipal_manager_id || null
+    ];
+    
     const centerResult = await client.query(centerQuery, centerValues);
     const newCenterId = centerResult.rows[0].center_id;
 
@@ -80,6 +98,7 @@ export async function createCenter(client: PoolClient, body: any) {
         const catastroQuery = `INSERT INTO CentersDescription (${catastroColumns.join(', ')}) VALUES (${placeholders})`;
         await client.query(catastroQuery, catastroValues);
     }
+    
     return { center_id: newCenterId, name: name };
 }
 

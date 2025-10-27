@@ -42,5 +42,5 @@ apiNoRetry.interceptors.request.use((config) => {
 // Interceptor de errores genérico
 api.interceptors.response.use(
   r => r,
-  e => Promise.reject(e)
+  error => Promise.reject(error)
 );

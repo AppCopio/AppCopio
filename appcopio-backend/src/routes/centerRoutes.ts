@@ -60,15 +60,29 @@ const getCenter: RequestHandler = async (req, res) => {
 
 const createCenter: RequestHandler = async (req, res) => {
     const { name, latitude, longitude, type } = req.body;
+    
+    // Validación de campos requeridos
     if (!name || typeof latitude !== 'number' || typeof longitude !== 'number' || !type) {
+        console.log('CREATE CENTER - Validación fallida:', {
+            hasName: !!name,
+            latitudeType: typeof latitude,
+            longitudeType: typeof longitude,
+            hasType: !!type,
+            latitude_value: latitude,
+            longitude_value: longitude
+        });
         res.status(400).json({ error: 'Campos requeridos: name, type, latitude, longitude.' });
         return;
     }
     
+    // Normalizar el tipo de centro
+    const normalizedType = type.toLowerCase() === 'acopio' ? 'acopio' : 'albergue';
+    const bodyWithNormalizedType = { ...req.body, type: normalizedType };
+    
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const newCenter = await createCenterService(client, req.body);
+        const newCenter = await createCenterService(client, bodyWithNormalizedType);
         await client.query('COMMIT');
         res.status(201).json(newCenter);
     } catch (error) {
