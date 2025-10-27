@@ -1,0 +1,224 @@
+// src/components/center/OperationalFunctions.tsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  People as PeopleIcon,
+  Groups as GroupsIcon,
+  Inventory as InventoryIcon,
+  Assessment as AssessmentIcon,
+  Assignment as AssignmentIcon,
+  Refresh as RefreshIcon
+} from '@mui/icons-material';
+import { IconButton, Tooltip, CircularProgress } from '@mui/material';
+import { getCenterCapacity } from '@/services/centers.service';
+import { listCenterInventory } from '@/services/inventory.service';
+import './OperationalFunctions.css';
+
+interface OperationalFunctionsProps {
+  centerId: string;
+  isActive: boolean;
+  onRefresh?: () => void;
+}
+
+interface Stats {
+  capacity: {
+    total_capacity: number;
+    current_capacity: number;
+    available_capacity: number;
+  } | null;
+  inventoryCount: number;
+  loading: boolean;
+}
+
+const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
+  centerId,
+  isActive,
+  onRefresh
+}) => {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState<Stats>({
+    capacity: null,
+    inventoryCount: 0,
+    loading: true
+  });
+
+  const loadStats = async () => {
+    setStats(prev => ({ ...prev, loading: true }));
+    try {
+      const [capacityData, inventoryData] = await Promise.all([
+        getCenterCapacity(centerId),
+        listCenterInventory(centerId)
+      ]);
+      
+      setStats({
+        capacity: capacityData,
+        inventoryCount: inventoryData?.length || 0,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      setStats(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (isActive) {
+      loadStats();
+    }
+  }, [centerId, isActive]);
+
+  const handleRefresh = () => {
+    loadStats();
+    onRefresh?.();
+  };
+
+  if (!isActive) {
+    return (
+      <div className="operational-functions-container">
+        <div className="operational-header">
+          <h3>Funcionalidades Operativas</h3>
+        </div>
+        <div className="inactive-message">
+          <p>⚠️ El centro debe estar activo para acceder a las funcionalidades operativas</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="operational-functions-container">
+      <div className="operational-header">
+        <h3>Funcionalidades Operativas</h3>
+        <Tooltip title="Actualizar datos">
+          <IconButton 
+            onClick={handleRefresh} 
+            size="small"
+            disabled={stats.loading}
+          >
+            {stats.loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+          </IconButton>
+        </Tooltip>
+      </div>
+
+      <div className="operational-cards">
+        {/* Card: Capacidad */}
+        <div 
+          className="operational-card capacity-card"
+          onClick={() => navigate(`/center/${centerId}/capacity`)}
+        >
+          <div className="card-icon capacity-icon">
+            <AssessmentIcon fontSize="large" />
+          </div>
+          <div className="card-content">
+            <h4>Capacidad</h4>
+            {stats.loading ? (
+              <p className="card-loading">Cargando...</p>
+            ) : stats.capacity ? (
+              <>
+                <p className="card-stat">
+                  <span className="stat-current">{stats.capacity.current_capacity}</span>
+                  <span className="stat-separator">/</span>
+                  <span className="stat-total">{stats.capacity.total_capacity}</span>
+                </p>
+                <p className="card-label">Personas</p>
+                <div className="capacity-bar">
+                  <div 
+                    className="capacity-fill"
+                    style={{ 
+                      width: `${(stats.capacity.current_capacity / stats.capacity.total_capacity) * 100}%` 
+                    }}
+                  />
+                </div>
+                <p className="card-sublabel">
+                  {stats.capacity.available_capacity} espacios disponibles
+                </p>
+              </>
+            ) : (
+              <p className="card-error">No disponible</p>
+            )}
+          </div>
+        </div>
+
+        {/* Card: Personas Registradas */}
+        <div 
+          className="operational-card people-card"
+          onClick={() => navigate(`/center/${centerId}/people`)}
+        >
+          <div className="card-icon people-icon">
+            <PeopleIcon fontSize="large" />
+          </div>
+          <div className="card-content">
+            <h4>Personas Registradas</h4>
+            {stats.loading ? (
+              <p className="card-loading">Cargando...</p>
+            ) : stats.capacity ? (
+              <>
+                <p className="card-stat">{stats.capacity.current_capacity}</p>
+                <p className="card-label">Personas totales</p>
+              </>
+            ) : (
+              <p className="card-error">No disponible</p>
+            )}
+          </div>
+        </div>
+
+        {/* Card: Grupos Familiares */}
+        <div 
+          className="operational-card groups-card"
+          onClick={() => navigate(`/center/${centerId}/groups`)}
+        >
+          <div className="card-icon groups-icon">
+            <GroupsIcon fontSize="large" />
+          </div>
+          <div className="card-content">
+            <h4>Grupos Familiares</h4>
+            <p className="card-stat">
+              <span className="coming-soon">Por implementar</span>
+            </p>
+            <p className="card-label">Ver todos los grupos</p>
+          </div>
+        </div>
+
+        {/* Card: Inventario */}
+        <div 
+          className="operational-card inventory-card"
+          onClick={() => navigate(`/center/${centerId}/inventory`)}
+        >
+          <div className="card-icon inventory-icon">
+            <InventoryIcon fontSize="large" />
+          </div>
+          <div className="card-content">
+            <h4>Inventario</h4>
+            {stats.loading ? (
+              <p className="card-loading">Cargando...</p>
+            ) : (
+              <>
+                <p className="card-stat">{stats.inventoryCount}</p>
+                <p className="card-label">Ítems registrados</p>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Card: Formulario FIBE */}
+        <div 
+          className="operational-card fibe-card"
+          onClick={() => navigate(`/center/${centerId}/fibe`)}
+        >
+          <div className="card-icon fibe-icon">
+            <AssignmentIcon fontSize="large" />
+          </div>
+          <div className="card-content">
+            <h4>Formulario FIBE</h4>
+            <p className="card-stat">
+              <span className="action-label">Registrar familia</span>
+            </p>
+            <p className="card-label">Llenar ficha</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OperationalFunctions;
