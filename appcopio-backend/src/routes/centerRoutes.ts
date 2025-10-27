@@ -59,7 +59,17 @@ const getCenter: RequestHandler = async (req, res) => {
 
 const createCenter: RequestHandler = async (req, res) => {
     const { name, latitude, longitude, type } = req.body;
+    
+    // Validación de campos requeridos
     if (!name || typeof latitude !== 'number' || typeof longitude !== 'number' || !type) {
+        console.log('CREATE CENTER - Validación fallida:', {
+            hasName: !!name,
+            latitudeType: typeof latitude,
+            longitudeType: typeof longitude,
+            hasType: !!type,
+            latitude_value: latitude,
+            longitude_value: longitude
+        });
         res.status(400).json({ error: 'Campos requeridos: name, type, latitude, longitude.' });
         return;
     }

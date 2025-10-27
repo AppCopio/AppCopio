@@ -56,7 +56,51 @@ const MultiStepCenterForm: React.FC = () => {
     setError(null);
     
     try {
-      const created = await createCenter(formData); // POST directo
+      // Sanitizar datos: asegurar que los números sean números
+      const latitude = formData.latitude !== null && formData.latitude !== undefined 
+        ? (typeof formData.latitude === 'number' ? formData.latitude : parseFloat(String(formData.latitude)))
+        : null;
+        
+      const longitude = formData.longitude !== null && formData.longitude !== undefined
+        ? (typeof formData.longitude === 'number' ? formData.longitude : parseFloat(String(formData.longitude)))
+        : null;
+        
+      const capacity = formData.capacity !== null && formData.capacity !== undefined
+        ? (typeof formData.capacity === 'number' ? formData.capacity : parseInt(String(formData.capacity), 10))
+        : null;
+      
+      const numero_habitaciones = formData.numero_habitaciones !== null && formData.numero_habitaciones !== undefined
+        ? (typeof formData.numero_habitaciones === 'number' ? formData.numero_habitaciones : parseInt(String(formData.numero_habitaciones), 10))
+        : null;
+      
+      // Verificar que los valores críticos sean válidos
+      if (latitude === null || isNaN(latitude)) {
+        setError('La latitud debe ser un número válido.');
+        setIsSaving(false);
+        return;
+      }
+      
+      if (longitude === null || isNaN(longitude)) {
+        setError('La longitud debe ser un número válido.');
+        setIsSaving(false);
+        return;
+      }
+      
+      if (capacity === null || isNaN(capacity) || capacity <= 0) {
+        setError('La capacidad debe ser un número válido mayor a 0.');
+        setIsSaving(false);
+        return;
+      }
+      
+      const sanitizedData = {
+        ...formData,
+        latitude,
+        longitude,
+        capacity,
+        numero_habitaciones,
+      };
+      
+      const created = await createCenter(sanitizedData);
       alert(`Centro "${created.name}" creado con éxito.`);
       navigate("/admin/centers");
     } catch (err: any) {

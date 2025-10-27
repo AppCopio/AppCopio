@@ -27,9 +27,9 @@ export interface CenterData {
     address: string;
     type: 'Albergue' | 'Acopio' | 'Albergue Comunitario' | 'acopio' | 'albergue' | ''; //type: CenterTypeName
     folio: string;
-    capacity: number;
-    latitude: number;
-    longitude: number;
+    capacity: number | null;
+    latitude: number | null;
+    longitude: number | null;
     should_be_active: boolean;
     comunity_charge_id: number | null; //esto no se si se está pocupabndo
     municipal_manager_id: number | null;
