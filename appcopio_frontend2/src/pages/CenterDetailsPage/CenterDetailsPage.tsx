@@ -90,9 +90,14 @@ const CenterDetailsPage: React.FC = () => {
     }
   }, [centerId]);
 
-  const handleSendTestNotification = async () => {
+  const handleTestNotification = async () => {
     if (!center?.comunity_charge_id) {
       alert('No hay encargado asignado a este centro');
+      return;
+    }
+
+    if (!center.center_id) {
+      alert('ID del centro no disponible');
       return;
     }
 
@@ -122,6 +127,12 @@ const CenterDetailsPage: React.FC = () => {
   const handleOperationalStatusChange = useCallback(
   async (newStatus: OperationalStatusUI, publicNote?: string) => {
     if (!center || isUpdatingOperationalStatus) return;
+    
+    if (!center.center_id) {
+      alert('ID del centro no disponible');
+      return;
+    }
+    
     setIsUpdatingOperationalStatus(true);
     try {
       await updateOperationalStatus(center.center_id, newStatus, publicNote);
@@ -348,7 +359,7 @@ const fullnessPercentage = useMemo(() => {
                 } catch {}
               }}
             />
-            {activation && (
+            {activation && center.center_id && (
               <Button variant="contained" onClick={() => navigate(`/center/${center.center_id}/fibe`)}>
                 Formulario FIBE
               </Button>
