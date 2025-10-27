@@ -284,9 +284,33 @@
 
 .details-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 25px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.details-grid .details-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.details-grid .needs-list {
+  margin-top: 0.5rem;
+}
+
+.details-grid .needs-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.details-grid .needs-list li {
+  background-color: #f0f0f0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.9em;
 }
 
 .details-group {
@@ -450,4 +474,44 @@
 .filters-card.filters-compact .filter-field select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37,99,235,0.10);
+}
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    /* Ajusta el espaciado si es necesario */
+}
+
+/* Para que las secciones de observaciones y necesidades ocupen todo el ancho */
+.details-grid-full .full-width {
+    grid-column: 1 / -1; 
+}
+
+/* Estilos para los tags de Necesidades */
+.needs-tags-container {
+    margin-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.need-tag {
+    display: inline-block;
+    padding: 4px 8px;
+    background-color: #e0f7fa;
+    color: #00796b; 
+    border: 1px solid #00bcd4; 
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* Estilos para la caja de Observaciones */
+.observation-box p {
+    margin-top: 5px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+    white-space: pre-wrap; /* Mantiene saltos de línea */
 }

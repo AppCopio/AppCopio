@@ -2,7 +2,7 @@
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
 import { Person, FibePersonData } from '../types/person';
-import { getPersons, getPersonById, createPersonDB, updatePersonById } from '../services/personService';
+import { getPersons, getPersonById, createPersonDB, updatePersonById,getPeopleByCenterDB } from '../services/personService';
 
 const router = Router();
 
@@ -106,6 +106,26 @@ const updatePerson: RequestHandler = async (req, res) => {
         }
     }
 };
+/**
+ * @controller GET /api/persons/centers/:centerId/people
+ * @description Obtiene todas las personas activas en un centro, incluyendo su family_id.
+ */
+const listPeopleByCenter: RequestHandler = async (req, res) => {
+    const { centerId } = req.params; // Capturamos el ID del centro
+    
+    if (!centerId) {
+        return res.status(400).json({ error: "Falta el ID del centro." });
+    }
+
+    try {
+        // 2. Usamos la nueva función de servicio
+        const people = await getPeopleByCenterDB(pool, centerId); 
+        res.json(people);
+    } catch (e) {
+        console.error(`Error en listPeopleByCenter (centro: ${centerId}):`, e);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+};
 
 // =================================================================
 // 2. SECCIÓN DE RUTAS (Endpoints)
@@ -115,5 +135,6 @@ router.get('/', listPersons);
 router.post('/', createPerson);
 router.get('/:id', getPerson);
 router.put('/:id', updatePerson);
+router.get('/centers/:centerId/people', listPeopleByCenter);
 
 export default router;

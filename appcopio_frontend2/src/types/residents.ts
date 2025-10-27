@@ -14,6 +14,10 @@ export interface ResidentGroup {
   recibe_subsidios?: boolean;
   necesidades_especiales?: string;
   apoyo_requerido?: string;
+  // Campos FIBE de la tabla FamilyGroups
+  observaciones?: string;
+  necesidades_basicas?: number[];
+  
 }
 
 
@@ -34,6 +38,7 @@ export interface Person {
   discapacidad: boolean;
   dependencia: boolean;
   parentesco?: string; // Viene del join con FamilyGroupMembers
+  family_id?: number; // Viene del join con FamilyGroupMembers
 }
 
 export interface ActiveCenter {

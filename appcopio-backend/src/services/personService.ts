@@ -106,3 +106,49 @@ export async function updatePersonById(db: Db, id: number, p: Person): Promise<P
     const { rows, rowCount } = await db.query(sql, params);
     return rowCount > 0 ? rows[0] : null;
 }
+
+/**
+ * Obtiene una lista de personas activas en un centro, incluyendo family_id, 
+ * fecha de ingreso y fecha de salida.
+ * @param db Pool de conexión a la base de datos.
+ * @param centerId El ID del centro (ej: 'C001').
+ * @returns Un array de objetos Person extendidos con family_id.
+ */
+export async function getPeopleByCenterDB(db: Db, centerId: string): Promise<any[]> {
+    const sql = `
+        SELECT
+            p.person_id,
+            p.rut,
+            p.nombre,
+            p.primer_apellido,
+            p.segundo_apellido,
+            p.nacionalidad,
+            p.genero,
+            p.edad,
+            p.estudia,
+            p.trabaja,
+            p.perdida_trabajo,
+            p.rubro,
+            p.discapacidad,
+            p.dependencia,
+            fgm.parentesco,
+            fg.family_id,   -- <<< CAMPO CLAVE
+            ca.started_at AS fecha_ingreso,
+            fg.departure_date AS fecha_salida
+        FROM 
+            Persons p
+        JOIN 
+            FamilyGroupMembers fgm ON p.person_id = fgm.person_id
+        JOIN 
+            FamilyGroups fg ON fgm.family_id = fg.family_id
+        JOIN
+            CentersActivations ca ON fg.activation_id = ca.activation_id
+        WHERE
+            ca.center_id = $1
+            AND fg.status = 'activo'
+        ORDER BY 
+            p.primer_apellido, p.nombre;
+    `;
+    const { rows } = await db.query(sql, [centerId]);
+    return rows;
+}

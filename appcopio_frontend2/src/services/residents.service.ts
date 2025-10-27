@@ -44,7 +44,7 @@ export async function listResidentGroups(centerId: string, signal?: AbortSignal)
 export async function listPeopleByCenter(centerId: string, params?: Record<string, any>, signal?: AbortSignal): Promise<Person[]> {
   try {
     // Nota: El backend actualmente no implementa los filtros, pero la estructura está lista para cuando lo haga.
-    const { data } = await api.get<Person[]>(`/centers/${centerId}/people`, { params, signal });
+    const { data } = await api.get<Person[]>(`/centers/${centerId}/residents`, { params, signal });
     return data ?? [];
   } catch (error) {
     console.error(`Error fetching people for center ${centerId}:`, error);
