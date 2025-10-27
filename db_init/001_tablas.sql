@@ -154,6 +154,18 @@ CREATE TABLE CentersActivations (
     notes TEXT
 );
 
+CREATE TABLE ActivationAssignments (
+    assignment_id SERIAL PRIMARY KEY,
+    activation_id INT NOT NULL REFERENCES CentersActivations(activation_id) ON DELETE CASCADE,
+    user_id INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    start_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    end_date TIMESTAMPTZ NULL,
+    ended_by INT REFERENCES Users(user_id) ON DELETE SET NULL
+);
+CREATE UNIQUE INDEX idx_unique_active_user ON ActivationAssignments(user_id) WHERE (end_date IS NULL); 
+
+
 -- CREATE INDEX IF NOT EXISTS idx_centersactivations_active
 --   ON "CentersActivations"(center_id)
 --   WHERE ended_at IS NULL;

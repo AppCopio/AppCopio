@@ -2,7 +2,7 @@
 import { PoolClient } from "pg";
 import { Db } from "../types/db";
 import { AssignmentRole } from "../types/user";
-
+import { ActivationAssignment, CreateActivationAssignmentInput, ActivationAssignmentDB, EndActivationAssignmentInput } from '../types/assignment';
 // --- Helpers específicos para este servicio ---
 
 const centersPointerColumn = (role: AssignmentRole): 'municipal_manager_id' | 'comunity_charge_id' => {
@@ -10,7 +10,6 @@ const centersPointerColumn = (role: AssignmentRole): 'municipal_manager_id' | 'c
 };
 
 // --- Funciones del Servicio ---
-
 /**
  * Obtiene las asignaciones activas de un usuario para un rol específico.
  */
@@ -149,4 +148,207 @@ export async function removeAssignment(client: PoolClient, data: {
     }
     
     return closeRs.rowCount;
+}
+
+export async function createActivationAssignment(
+  db: Db,
+  input: CreateActivationAssignmentInput
+): Promise<ActivationAssignment> {
+  const {
+    activation_id,
+    user_id,
+    started_by
+  } = input;
+
+    // ¿Es TM?
+  const roleCheckQ = `
+    SELECT u.role_id
+    FROM Users u
+    WHERE u.user_id = $1;
+  `;
+  const { rows: roleRows } = await db.query(roleCheckQ, [user_id]);
+
+  if (roleRows.length === 0) {
+    const err = new Error('Usuario no encontrado.') as any;
+    err.status = 404; // Not Found
+    throw err;
+  }
+
+  const userRole = roleRows[0].role_id;
+  
+  // (Ajusta 'trabajador municipal' si el nombre exacto en tu BD es otro)
+  if (userRole !== 2) {
+    const err = new Error('Error: Solo los usuarios con rol "trabajador municipal" pueden ser asignados como encargados de albergue.') as any;
+    err.status = 403; 
+    throw err;
+  }
+
+  // Chequeo de asignación activa previa
+  const checkQ = `
+    SELECT assignment_id FROM ActivationAssignments
+    WHERE user_id = $1 AND end_date IS NULL;
+  `;
+  const { rows: checkRows } = await db.query(checkQ, [user_id]);
+
+  if (checkRows.length > 0) {
+    const err = new Error('Conflicto: Este usuario ya está asignado a otro centro activo.') as any;
+    err.status = 409;
+    throw err;
+  }
+
+  // Crear asignación
+  const q = `
+    INSERT INTO ActivationAssignments
+      (activation_id, user_id, start_date, started_by)
+    VALUES ($1, $2, NOW(), $3)
+    RETURNING *;
+  `;
+  const { rows } = await db.query(q, [
+    activation_id,
+    user_id,
+    started_by,
+  ]);
+
+  const r: ActivationAssignmentDB = rows[0];
+
+  const out: ActivationAssignment = {
+    assignment_id: r.assignment_id,
+    activation_id: r.activation_id,
+    user_id: r.user_id,
+    user_name: undefined, 
+    start_date: r.start_date, 
+    started_by_name: undefined,
+    end_date: r.end_date,
+    ended_by_name: undefined,
+  };
+
+  return out;
+}
+
+export async function listActiveAssignmentsByActivation(
+  db: Db, 
+  activation_id: number
+): Promise<ActivationAssignment[]> {
+
+  const q = `
+    SELECT 
+      a.assignment_id,
+      a.activation_id,
+      a.user_id,
+      u.nombre as user_name, -- Nombre del usuario asignado
+      a.start_date,
+      s.nombre as started_by_name, -- Nombre de quién lo asignó
+      a.end_date,
+      e.nombre as ended_by_name -- Nombre de quién lo terminó
+    FROM 
+      ActivationAssignments a
+    LEFT JOIN 
+      Users u ON a.user_id = u.user_id
+    LEFT JOIN 
+      Users s ON a.started_by = s.user_id
+    LEFT JOIN 
+      Users e ON a.ended_by = e.user_id
+    WHERE 
+      a.activation_id = $1 
+      AND a.end_date IS NULL -- Solo las activas
+    ORDER BY 
+      a.start_date DESC;
+  `;
+
+  const { rows } = await db.query(q, [activation_id]);
+
+  // Mapeamos los resultados de la BD al tipo de dominio
+  const results: ActivationAssignment[] = rows.map(r => ({
+    assignment_id: r.assignment_id,
+    activation_id: r.activation_id,
+    user_id: r.user_id,
+    user_name: r.user_name || undefined, // Asigna el nombre si existe
+    start_date: r.start_date,
+    started_by_name: r.started_by_name || undefined,
+    end_date: r.end_date, // Será null por el WHERE
+    ended_by_name: r.ended_by_name || undefined,
+  }));
+
+  return results;
+}
+
+export async function endActivationAssignment(
+  db: Db, 
+  input: EndActivationAssignmentInput
+): Promise<ActivationAssignment> {
+  
+  const {
+    activation_id,
+    user_id,
+    ended_by,
+  } = input;
+
+
+  // ¿Centro aún está activo?
+  const checkActivationQ = `
+    SELECT ca.activation_id
+    FROM CentersActivations ca
+    JOIN Centers c ON ca.center_id = c.center_id
+    WHERE ca.activation_id = $1 AND ca.ended_at IS NULL AND c.is_active = TRUE;
+  `;
+  const { rows: activeRows } = await db.query(checkActivationQ, [activation_id]);
+
+  if (activeRows.length === 0) {
+    const err = new Error('La asignación no se puede terminar porque el centro no está activo o la activación ha finalizado.') as any;
+    err.status = 400;
+    throw err;
+  }
+
+  // Buscar la asignación activa
+  const findQ = `
+    SELECT * FROM ActivationAssignments
+    WHERE user_id = $1 AND activation_id = $2 AND end_date IS NULL;
+  `;
+  const { rows: findRows } = await db.query(findQ, [user_id, activation_id]);
+
+  if (findRows.length === 0) {
+    const err = new Error('No se encontró una asignación activa para este usuario en la activación especificada.') as any;
+    err.status = 404;
+    throw err;
+  }
+
+  const assignment: ActivationAssignmentDB = findRows[0];
+  const assignment_id = assignment.assignment_id;
+
+  // No quitar al último encargado
+  const countQ = `
+    SELECT COUNT(*) FROM ActivationAssignments
+    WHERE activation_id = $1 AND end_date IS NULL;
+  `;
+  const { rows: countRows } = await db.query(countQ, [activation_id]);
+  
+  if (parseInt(countRows[0].count, 10) <= 1) {
+    const err = new Error('No se puede quitar el último encargado de una activación activa.') as any;
+    err.status = 400;
+    throw err;
+  }
+
+  // Cerrar la asignación
+  const q = `
+    UPDATE ActivationAssignments
+    SET 
+      end_date = NOW(),
+      ended_by = $1
+    WHERE 
+      assignment_id = $2
+    RETURNING *;
+  `;
+  const { rows } = await db.query(q, [ended_by, assignment_id]);
+
+  const r: ActivationAssignmentDB = rows[0];
+
+  const out: ActivationAssignment = {
+    assignment_id: r.assignment_id,
+    activation_id: r.activation_id,
+    user_id: r.user_id,
+    start_date: r.start_date,
+    end_date: r.end_date,
+  };
+
+  return out;
 }
