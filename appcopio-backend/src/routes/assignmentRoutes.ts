@@ -4,7 +4,7 @@ import pool from "../config/db";
 import { AssignmentRole } from "../types/user";
 import { CreateActivationAssignmentInput, EndActivationAssignmentInput } from '../types/assignment';
 import { getActiveAssignments, createOrUpdateAssignment, removeAssignment as removeAssignmentService, 
-    createActivationAssignment, listActiveAssignmentsByActivation,  endActivationAssignment, } from '../services/assignmentService';
+    createActivationAssignment, listActiveAssignmentsByActivation,  endActivationAssignment, listHistoryOfActiveAssignmentsByActivation } from '../services/assignmentService';
 import { requireUser } from "../auth/requireUser";
 import { requireAuth } from "../auth/middleware";
 
@@ -239,6 +239,23 @@ const endActivationAssignmentHandler: RequestHandler = async (req, res)  => {
 };
 
 
+const listHistoryOfActivationAssignmentsHandler: RequestHandler = async (req, res)  => {
+  const activation_id = parseInt(req.params.activation_id);
+
+  if (isNaN(activation_id)) {
+    return res.status(400).json({ error: "Se requiere un 'activation_id' numérico en la URL." });
+  }
+
+  try {
+    const assignments = await listHistoryOfActiveAssignmentsByActivation(pool, activation_id);
+    res.json(assignments);
+
+  } catch (error: any) {
+    console.error(`Error en listActivationAssignmentsHandler (id: ${activation_id}):`, error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+};
+
 // =================================================================
 // 3. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
@@ -248,6 +265,7 @@ router.post("/", createAssignment);
 router.delete("/", removeAssignment);
 router.post('/activations', requireAuth, createActivationAssignmentHandler);
 router.get('/activations/:activation_id', requireAuth, listActivationAssignmentsHandler);
+router.get('/activations/history/:activation_id', requireAuth, listHistoryOfActivationAssignmentsHandler);
 router.put('/activations/end', requireAuth, endActivationAssignmentHandler);
 
 export default router;

@@ -352,3 +352,48 @@ export async function endActivationAssignment(
 
   return out;
 }
+
+export async function listHistoryOfActiveAssignmentsByActivation(
+  db: Db, 
+  activation_id: number
+): Promise<ActivationAssignment[]> {
+
+  const q = `
+    SELECT 
+      a.assignment_id,
+      a.activation_id,
+      a.user_id,
+      u.nombre as user_name, -- Nombre del usuario asignado
+      a.start_date,
+      s.nombre as started_by_name, -- Nombre de quién lo asignó
+      a.end_date,
+      e.nombre as ended_by_name -- Nombre de quién lo terminó
+    FROM 
+      ActivationAssignments a
+    LEFT JOIN 
+      Users u ON a.user_id = u.user_id
+    LEFT JOIN 
+      Users s ON a.started_by = s.user_id
+    LEFT JOIN 
+      Users e ON a.ended_by = e.user_id
+    WHERE 
+      a.activation_id = $1
+    ORDER BY 
+      a.start_date DESC;
+  `;
+
+  const { rows } = await db.query(q, [activation_id]);
+
+  const results: ActivationAssignment[] = rows.map(r => ({
+    assignment_id: r.assignment_id,
+    activation_id: r.activation_id,
+    user_id: r.user_id,
+    user_name: r.user_name || undefined, 
+    start_date: r.start_date,
+    started_by_name: r.started_by_name || undefined,
+    end_date: r.end_date || undefined,
+    ended_by_name: r.ended_by_name || undefined,
+  }));
+
+  return results;
+}
