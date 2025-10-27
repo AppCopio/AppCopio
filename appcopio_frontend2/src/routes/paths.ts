@@ -32,6 +32,7 @@ export const paths = {
     details: (centerId: string | number) => `/center/${centerId}/details`,
     inventory: (centerId: string | number) => `/center/${centerId}/inventory`,
     inventoryHistory: (centerId: string | number) => `/center/${centerId}/inventory/history`,
+    movementsHistory: (centerId: string | number) => `/center/${centerId}/movements/history`,
     needsNew: (centerId: string | number) => `/center/${centerId}/needs/new`,
     needsStatus: (centerId: string | number) => `/center/${centerId}/needs/status`,
     residents: (centerId: string | number) => `/center/${centerId}/residents`,

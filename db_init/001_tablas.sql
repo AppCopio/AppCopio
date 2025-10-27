@@ -571,8 +571,88 @@ CREATE TABLE municipal_zones (
 );
 
 
+-- ==========================================================
+-- HdU11: TABLAS PARA MOVIMIENTOS DE INVENTARIO
+-- ==========================================================
+
+-- Tabla para movimientos de inventario (entradas y salidas)
+CREATE TABLE InventoryMovements (
+    movement_id SERIAL PRIMARY KEY,
+    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
+    movement_type TEXT NOT NULL CHECK (movement_type IN ('ENTRY', 'EXIT', 'ADJUSTMENT')),
+    reason TEXT NOT NULL,
+    recipient TEXT, -- Para salidas: a quién se entrega
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INT REFERENCES Users(user_id) ON DELETE SET NULL
+);
+
+-- Tabla para los items de cada movimiento
+CREATE TABLE MovementItems (
+    movement_item_id SERIAL PRIMARY KEY,
+    movement_id INT NOT NULL REFERENCES InventoryMovements(movement_id) ON DELETE CASCADE,
+    item_id INT REFERENCES Products(item_id) ON DELETE SET NULL,
+    item_name TEXT NOT NULL,
+    category_id INT REFERENCES Categories(category_id) ON DELETE SET NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    unit TEXT NOT NULL,
+    unit_cost DECIMAL(10,2), -- Costo unitario opcional
+    total_cost DECIMAL(10,2) -- Costo total opcional
+);
+
+-- Tabla para cajas de recursos (templates para entradas masivas)
+CREATE TABLE ResourceBoxes (
+    box_id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INT REFERENCES Users(user_id) ON DELETE SET NULL
+);
+
+-- Tabla para los items template de cada caja
+CREATE TABLE BoxItemTemplates (
+    template_id SERIAL PRIMARY KEY,
+    box_id INT NOT NULL REFERENCES ResourceBoxes(box_id) ON DELETE CASCADE,
+    item_name TEXT NOT NULL,
+    category_id INT REFERENCES Categories(category_id) ON DELETE SET NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    unit TEXT NOT NULL,
+    notes TEXT
+);
+
+-- Actualización de la tabla Products para incluir información adicional
+ALTER TABLE Products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE Products ADD COLUMN IF NOT EXISTS updated_by_user_id INT REFERENCES Users(user_id) ON DELETE SET NULL;
+
+-- Actualización de la tabla InventoryLog para incluir más información
+ALTER TABLE InventoryLog ADD COLUMN IF NOT EXISTS user_name TEXT;
+ALTER TABLE InventoryLog ADD COLUMN IF NOT EXISTS product_name TEXT;
+
+-- Vista para facilitar consultas de inventario con información de productos
+CREATE OR REPLACE VIEW InventoryView AS
+SELECT 
+    ci.center_id,
+    ci.item_id,
+    p.name,
+    c.name as category,
+    ci.quantity,
+    p.unit,
+    ci.updated_at,
+    u.username as updated_by_user
+FROM CenterInventoryItems ci
+LEFT JOIN Products p ON ci.item_id = p.item_id
+LEFT JOIN Categories c ON p.category_id = c.category_id
+LEFT JOIN Users u ON ci.updated_by = u.user_id;
+
 -- Índices útiles
 CREATE INDEX idx_centernotif_center_eventat ON CenterNotifications (center_id, event_at DESC);
 CREATE INDEX idx_centernotif_activation     ON CenterNotifications (activation_id);
 CREATE INDEX idx_centernotif_recipient      ON CenterNotifications (destinatary);
 CREATE INDEX idx_centernotif_status_queued  ON CenterNotifications (status) WHERE status = 'queued';
+
+-- Índices para las nuevas tablas de movimientos
+CREATE INDEX idx_movements_center_date ON InventoryMovements (center_id, created_at DESC);
+CREATE INDEX idx_movements_type ON InventoryMovements (movement_type);
+CREATE INDEX idx_movement_items_movement ON MovementItems (movement_id);
+CREATE INDEX idx_movement_items_item ON MovementItems (item_id);
+CREATE INDEX idx_box_items_box ON BoxItemTemplates (box_id);

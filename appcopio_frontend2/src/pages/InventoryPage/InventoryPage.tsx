@@ -12,7 +12,14 @@ import {
 import { listCategories, createCategory, deleteCategory } from "@/services/categories.service";
 import { getCenterCapacity } from "@/services/centers.service";
 import { getUser } from "@/services/users.service";
+import { validateItemDeletion } from "@/services/movements.service";
+import { startAutoSync } from "@/services/movements.service";
 import ResourcesAndNeeds from "@/components/inventory/ResourcesAndNeeds";
+import EntryForm from "@/components/inventory/EntryForm";
+import ExitForm from "@/components/inventory/ExitForm";
+import ResourceBoxManager from "@/components/inventory/ResourceBoxManager";
+import OfflineOperationsManager from "@/components/inventory/OfflineOperationsManager";
+import ConnectionStatus from "@/components/common/ConnectionStatus";
 import type {
   InventoryItem,
   GroupedInventory,
@@ -44,6 +51,11 @@ export default function InventoryPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+
+  // HdU11: Modales para movimientos
+  const [isEntryFormOpen, setIsEntryFormOpen] = useState(false);
+  const [isExitFormOpen, setIsExitFormOpen] = useState(false);
+  const [isResourceBoxManagerOpen, setIsResourceBoxManagerOpen] = useState(false);
 
   // Filtros y forms
   const [categoriaFiltrada, setCategoriaFiltrada] = useState<string>("");
@@ -121,6 +133,20 @@ export default function InventoryPage() {
       }
     })();
     return () => controller.abort();
+  }, [centerId]);
+
+  // HdU11: Auto-sync de operaciones offline
+  useEffect(() => {
+    if (!centerId) return;
+
+    const cleanup = startAutoSync(centerId, (results) => {
+      if (results.synced > 0) {
+        fetchInventory(false); // Refrescar inventario después de sync exitoso
+        console.log(`Auto-sync completed: ${results.synced} operations synced, ${results.failed} failed`);
+      }
+    });
+
+    return cleanup;
   }, [centerId]);
 
   // Helpers
@@ -214,19 +240,44 @@ export default function InventoryPage() {
     }
   };
 
-  // Eliminar item (sin optimistic UI)
+  // Eliminar item con validaciones HdU11
   const handleDeleteItem = async () => {
     if (!editingItem || !centerId) return;
-    if (!window.confirm(`¿Seguro que quieres eliminar "${editingItem.name}"?`)) return;
 
-    const itemId = editingItem.item_id;
     setIsSubmitting(true);
     try {
+      // HdU11: Validar si el item puede ser eliminado
+      const validation = await validateItemDeletion(centerId, editingItem.item_id);
+      
+      if (!validation.can_delete) {
+        alert(
+          `No se puede eliminar "${validation.item_name}" porque tiene stock actual de ${validation.current_stock}.\n\n` +
+          "Para eliminar este item, primero debes registrar una salida para reducir el stock a 0."
+        );
+        return;
+      }
+
+      // Confirmar eliminación si no hay stock
+      if (!window.confirm(
+        `¿Seguro que quieres eliminar "${validation.item_name}"?\n\n` +
+        "Esta acción no se puede deshacer."
+      )) {
+        return;
+      }
+
+      const itemId = editingItem.item_id;
       await deleteInventoryItem(centerId, itemId);
       await fetchInventory(false);
       handleCloseEditModal();
-    } catch (err) {
-      alert("No se pudo eliminar el item.");
+      
+      alert(`Item "${validation.item_name}" eliminado exitosamente.`);
+    } catch (err: any) {
+      console.error('Error deleting item:', err);
+      alert(
+        err.response?.data?.error || 
+        err.message || 
+        "No se pudo eliminar el item. Intenta de nuevo más tarde."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -282,6 +333,9 @@ export default function InventoryPage() {
 
   return (
     <div className="inventory-container">
+      {/* Indicador de estado de conexión */}
+      <ConnectionStatus />
+      
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -295,10 +349,23 @@ export default function InventoryPage() {
           {canManage && (
             <>
               <button className="add-item-btn" onClick={() => setIsAddModalOpen(true)}>+ Añadir Item</button>
+              
+              {/* HdU11: Botones para movimientos de inventario */}
+              <button className="movement-btn entry-btn" onClick={() => setIsEntryFormOpen(true)}>
+                📥 Registrar Entrada
+              </button>
+              <button className="movement-btn exit-btn" onClick={() => setIsExitFormOpen(true)}>
+                📤 Registrar Salida
+              </button>
+              <button className="movement-btn box-btn" onClick={() => setIsResourceBoxManagerOpen(true)}>
+                📦 Gestionar Cajas
+              </button>
+              
               {isAdminOrSupport && (
                 <button className="action-btn" onClick={() => setIsCategoryModalOpen(true)}>Gestionar Categorías</button>
               )}
               <Link to={`/center/${centerId}/inventory/history`} className="action-btn">Ver Historial</Link>
+              <Link to={`/center/${centerId}/movements/history`} className="action-btn">Ver Movimientos</Link>
             </>
           )}
         </div>
@@ -311,6 +378,14 @@ export default function InventoryPage() {
           centerCapacity={centerCapacity}
           isOffline={!isOnline}
           lastSyncTime={lastSync ? new Date(lastSync).toLocaleString() : ''}
+        />
+      )}
+
+      {/* HdU11: Gestor de operaciones offline */}
+      {centerId && (
+        <OfflineOperationsManager 
+          centerId={centerId}
+          onSync={() => fetchInventory(false)}
         />
       )}
 
@@ -549,9 +624,21 @@ export default function InventoryPage() {
                         </td>
                         {canManage && (
                           <td>
-                            <button className="action-btn" onClick={() => handleOpenEditModal(item)}>
-                              Editar
-                            </button>
+                            <div className="item-actions">
+                              <button className="action-btn" onClick={() => handleOpenEditModal(item)}>
+                                Editar
+                              </button>
+                              {item.quantity > 0 && (
+                                <span className="delete-warning" title="No se puede eliminar: tiene stock">
+                                  🔒 Stock: {item.quantity}
+                                </span>
+                              )}
+                              {item.quantity === 0 && (
+                                <span className="can-delete" title="Se puede eliminar: sin stock">
+                                  ✅ Sin stock
+                                </span>
+                              )}
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -563,6 +650,45 @@ export default function InventoryPage() {
           );
         });
       })()}
+
+      {/* HdU11: Modales para movimientos de inventario */}
+      {isEntryFormOpen && centerId && (
+        <EntryForm
+          centerId={centerId}
+          currentInventory={Object.values(inventory).flat()}
+          isOffline={!isOnline}
+          onClose={() => setIsEntryFormOpen(false)}
+          onSuccess={() => {
+            fetchInventory(false);
+            setIsEntryFormOpen(false);
+          }}
+        />
+      )}
+
+      {isExitFormOpen && centerId && (
+        <ExitForm
+          centerId={centerId}
+          currentInventory={Object.values(inventory).flat()}
+          isOffline={!isOnline}
+          onClose={() => setIsExitFormOpen(false)}
+          onSuccess={() => {
+            fetchInventory(false);
+            setIsExitFormOpen(false);
+          }}
+        />
+      )}
+
+      {isResourceBoxManagerOpen && centerId && (
+        <ResourceBoxManager
+          centerId={centerId}
+          isOffline={!isOnline}
+          onClose={() => setIsResourceBoxManagerOpen(false)}
+          onSuccess={() => {
+            fetchInventory(false);
+            setIsResourceBoxManagerOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

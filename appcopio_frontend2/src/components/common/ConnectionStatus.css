@@ -1,0 +1,60 @@
+/* src/components/common/ConnectionStatus.css */
+.connection-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  transition: all 0.3s ease;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 180px;
+}
+
+.connection-status.online {
+  border-left: 4px solid #28a745;
+}
+
+.connection-status.offline {
+  border-left: 4px solid #dc3545;
+  background: rgba(248, 215, 218, 0.95);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-icon {
+  font-size: 0.9em;
+}
+
+.status-text {
+  font-weight: 600;
+  color: #333;
+}
+
+.last-sync {
+  font-size: 0.75em;
+  color: #6c757d;
+  line-height: 1.3;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .connection-status {
+    position: relative;
+    top: auto;
+    right: auto;
+    margin: 10px 0;
+    border-radius: 4px;
+  }
+}

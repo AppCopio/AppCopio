@@ -207,3 +207,105 @@
 .toggle-needs-btn.active:hover {
   background-color: #0056b3;
 }
+
+/* HdU11: Estilos para botones de movimientos */
+.movement-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 10px 15px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.movement-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.entry-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.entry-btn:hover {
+  background-color: #218838;
+}
+
+.exit-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.exit-btn:hover {
+  background-color: #c82333;
+}
+
+.box-btn {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.box-btn:hover {
+  background-color: #5a369c;
+}
+
+/* Responsive para la header */
+@media (max-width: 768px) {
+  .inventory-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .inventory-header > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  
+  .movement-btn,
+  .add-item-btn,
+  .action-btn,
+  .toggle-needs-btn {
+    flex: 1;
+    min-width: 140px;
+    justify-content: center;
+  }
+}
+
+/* HdU11: Estilos para indicadores de eliminación */
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+.delete-warning {
+  font-size: 0.8em;
+  color: #dc3545;
+  font-weight: 600;
+  padding: 2px 6px;
+  background-color: #f8d7da;
+  border-radius: 3px;
+  border: 1px solid #f5c6cb;
+  cursor: help;
+}
+
+.can-delete {
+  font-size: 0.8em;
+  color: #28a745;
+  font-weight: 600;
+  padding: 2px 6px;
+  background-color: #d4edda;
+  border-radius: 3px;
+  border: 1px solid #c3e6cb;
+  cursor: help;
+}
