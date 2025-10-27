@@ -28,6 +28,7 @@ import { Button } from "@mui/material";
 import CenterCatastroDetails from "./CenterCatastroDetails";
 import "./CenterCatastroDetails.css";
 import OperationalFunctions from '@/components/center/OperationalFunctions';
+import ActivationPanel from '@/components/center/ActivationPanel';
 
 type Resource = { item_id: string | number; name: string; category: string; quantity: number };
 type AssignRole = "trabajador municipal" | "contacto ciudadano";
@@ -324,6 +325,12 @@ const fullnessPercentage = useMemo(() => {
         {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
         {/* @ts-ignore - backend trae props del catastro fuera de Center UI */}
         <CenterCatastroDetails centerData={center as any} />
+
+        {/* Panel de Activación */}
+        <ActivationPanel 
+          centerId={centerId!}
+          isActive={center.is_active}
+        />
             
         {/* Sección de Funcionalidades Operativas */}
         <OperationalFunctions 
