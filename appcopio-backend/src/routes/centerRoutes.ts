@@ -134,8 +134,9 @@ const deleteCenter: RequestHandler = async (req, res) => {
 // =================================================================
 
 const setActivationStatus: RequestHandler = async (req, res) => {
-    const { isActive } = req.body;
+    const { isActive, notes, assignedUserId } = req.body;
     const userId = requireUser(req).user_id;
+    
     if (typeof isActive !== 'boolean') {
         res.status(400).json({ error: 'Se requiere el campo "isActive" (boolean).' });
         return;
@@ -144,36 +145,46 @@ const setActivationStatus: RequestHandler = async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const updatedCenter = await updateActivationStatus(client, req.params.id, isActive, userId);
+        
+        const updatedCenter = await updateActivationStatus(
+            client, 
+            req.params.id, 
+            isActive, 
+            userId,
+            notes,
+            assignedUserId
+        );
+        
         if (!updatedCenter) {
             await client.query("ROLLBACK");
             res.status(404).json({ error: 'Centro no encontrado.' });
+            return;
         }
+        
         const title = `Centro ${isActive ? "activado" : "desactivado"}: ${updatedCenter.name}`;
         const message = isActive
-        ? `El centro "${updatedCenter.name}" ha sido ACTIVADO por el usuario ${userId}.`
-        : `El centro "${updatedCenter.name}" ha sido DESACTIVADO por el usuario ${userId}.`;
+            ? `El centro "${updatedCenter.name}" ha sido ACTIVADO.${notes ? ` Motivo: ${notes}` : ''}`
+            : `El centro "${updatedCenter.name}" ha sido DESACTIVADO.`;
 
-        // Destinatarios: municipal_manager_id y comunity_charge_id (evitando duplicados y nulos)
-        const recipients  = [
+        const recipients = [
             updatedCenter.municipal_manager_id ?? null,
             updatedCenter.comunity_charge_id ?? null,
-        ].filter((x) => x != null);
+            assignedUserId ?? null,
+        ].filter((x, idx, arr) => x != null && arr.indexOf(x) === idx);
         
         const notifications: Record<string, any> = {};
 
         for (const rec of recipients) {
             const role =
-                rec === updatedCenter.municipal_manager_id
-                ? "municipal_manager"
-                : rec === updatedCenter.comunity_charge_id
-                ? "comunity_charge"
+                rec === updatedCenter.municipal_manager_id ? "municipal_manager"
+                : rec === updatedCenter.comunity_charge_id ? "comunity_charge"
+                : rec === assignedUserId ? "assigned_manager"
                 : "recipient";
 
             notifications[role] = await sendNotification(client, {
                 center_id: updatedCenter.center_id,
                 activation_id: updatedCenter.activation_id ?? null,
-                destinatary: rec, // id del usuario destinatario
+                destinatary: rec,
                 title,
                 message,
                 channel: "ctrStatus_change",
@@ -184,7 +195,7 @@ const setActivationStatus: RequestHandler = async (req, res) => {
         return res.json({ ...updatedCenter, notifications });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error(`Error en setActivationStatus (id: ${req.params.id}):`, error);
+        console.error(`Error en setActivationStatus:`, error);
         res.status(500).json({ error: 'Error interno del servidor.' });
     } finally {
         client.release();

@@ -329,11 +329,33 @@ export async function deleteCenter(centerId: string, signal?: AbortSignal): Prom
 /**
  * Activa o desactiva un centro.
  */
-export async function updateCenterStatus(centerId: string, isActive: boolean, userId: number, signal?: AbortSignal): Promise<void> {
+export async function updateCenterStatus(
+  centerId: string,
+  isActive: boolean,
+  userId: number,
+  options?: {
+    notes?: string;
+    assignedUserId?: number;
+  },
+  signal?: AbortSignal
+): Promise<Center> {
   try {
-    await api.patch(`/centers/${centerId}/status`, { isActive, userId }, { signal });
+    const payload: any = { isActive, userId };
+    
+    // Si se está activando y hay opciones adicionales, incluirlas
+    if (isActive && options) {
+      if (options.notes) payload.notes = options.notes;
+      if (options.assignedUserId) payload.assignedUserId = options.assignedUserId;
+    }
+
+    const { data } = await api.patch(
+      `/centers/${centerId}/status`,
+      payload,
+      { signal }
+    );
+    return normalizeCenter(data);
   } catch (error) {
-    console.error(`Error updating status for center ${centerId}:`, error);
+    console.error(`Error updating center status ${centerId}:`, error);
     throw error;
   }
 }

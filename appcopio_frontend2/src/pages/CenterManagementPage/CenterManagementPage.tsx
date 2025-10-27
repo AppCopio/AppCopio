@@ -14,6 +14,7 @@ import { listCenterInventory } from "@/services/inventory.service";
 import { listUpdates } from "@/services/updates.service";
 import { listAssignedUsersToCenter } from "@/services/centers.service";
 import type { User } from "@/types/user"; // Usaremos este tipo
+import ActivateCenterDialog from '@/components/center/ActiveCenterDialog';
 
 // Formatea RUT y lo fuerza a texto para Excel
 const formatRut = (raw: any, { withDots = true, forceExcelText = false } = {}) => {
@@ -65,19 +66,50 @@ const utf16leArrayBuffer = (text: string) => {
 
 const StatusSwitch: React.FC<{
   center: Center;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, isActive: boolean, options?: { notes?: string; assignedUserId?: number }) => void;
   disabled: boolean;
 }> = ({ center, onToggle, disabled }) => {
+  const [showActivateDialog, setShowActivateDialog] = useState(false);
+
+  const handleToggle = () => {
+    if (!center.is_active) {
+      // Si va a ACTIVAR, mostrar el modal
+      setShowActivateDialog(true);
+    } else {
+      // Si va a DESACTIVAR, confirmar directamente
+      if (window.confirm(`¿Deseas desactivar el centro "${center.name}"?`)) {
+        onToggle(center.center_id, false);
+      }
+    }
+  };
+
+  const handleConfirmActivation = async (data: { notes: string; assignedUserId: number }) => {
+    await onToggle(center.center_id, true, data);
+    setShowActivateDialog(false);
+  };
+
   return (
-    <label className="switch">
-      <input
-        type="checkbox"
-        checked={center.is_active}
-        onChange={() => onToggle(center.center_id)}
-        disabled={disabled}
+    <>
+      <label className="switch">
+        <input
+          type="checkbox"
+          checked={center.is_active}
+          onChange={handleToggle}
+          disabled={disabled}
+        />
+        <span className="slider round"></span>
+      </label>
+
+      {/* Modal de activación */}
+      <ActivateCenterDialog
+        open={showActivateDialog}
+        onClose={() => setShowActivateDialog(false)}
+        centerId={center.center_id}
+        centerName={center.name}
+        //defaultManagerId={center.municipal_manager_id}
+        onConfirm={handleConfirmActivation}
       />
-      <span className="slider round"></span>
-    </label>
+    </>
   );
 };
 
@@ -149,26 +181,27 @@ const CenterManagementPage: React.FC = () => {
     setFilteredCenters(filtered);
   }, [centers, statusFilter, typeFilter, locationFilter]);
 
-  const handleToggleActive = useCallback(
-    async (id: string) => {
-      const snapshot = [...centers];
-      const target = centers.find((c) => c.center_id === id);
-      if (!target) return;
+  const handleToggleActive = async (
+    centerId: string, 
+    isActive: boolean, 
+    options?: { notes?: string; assignedUserId?: number }
+  ) => {
+    if (!user) return;
 
-      const newStatus = !target.is_active;
-      // Optimista
-      setCenters((prev) => prev.map((c) => (c.center_id === id ? { ...c, is_active: newStatus } : c)));
-
-      try {
-  await updateCenterStatus(id, newStatus, user?.user_id ?? 0);
-      } catch (err: any) {
-        // Revertir si falla
-        setCenters(snapshot);
-        window.alert(err?.response?.data?.message || err?.message || "No se pudo actualizar el estado del centro.");
-      }
-    },
-    [centers, user]
-  );
+    try {
+      // Usar la nueva firma de updateCenterStatus
+      await updateCenterStatus(centerId, isActive, user.user_id, options);
+      
+      // Recargar los centros
+      await fetchCenters(false);
+      
+      // Mostrar mensaje de éxito
+      alert(isActive ? 'Centro activado correctamente' : 'Centro desactivado correctamente');
+    } catch (error: any) {
+      console.error('Error al cambiar estado del centro:', error);
+      alert(error?.message || 'Error al cambiar el estado del centro');
+    }
+  };
 
   // Eliminación
   const handleDeleteClick = (centerId: string) => {

@@ -145,15 +145,32 @@ export async function deleteCenterById(db: Db, id: string): Promise<number> {
 // SECCIÓN 2: ESTADO Y ACTIVACIÓN
 // =================================================================
 
-export async function updateActivationStatus(client: PoolClient, id: string, isActive: boolean, userId: number) {
+export async function updateActivationStatus(client: PoolClient, id: string, isActive: boolean, userId: number, notes?: string, assignedUserId?: number) {
     const centerResult = await client.query('UPDATE Centers SET is_active = $1, updated_at = NOW() WHERE center_id = $2 RETURNING *', [isActive, id]);
     if (centerResult.rowCount === 0) return null;
 
     if (isActive) {
-        await client.query('INSERT INTO CentersActivations (center_id, activated_by, notes) VALUES ($1, $2, $3)', [id, userId, 'Activación del centro.']);
-    } else {
-        await client.query('UPDATE CentersActivations SET ended_at = NOW(), deactivated_by = $2 WHERE center_id = $1 AND ended_at IS NULL', [id, userId]);
-    }
+        const activationNotes = notes || 'Activación del centro.';
+            const { rows: activationRows } = await client.query(
+                'INSERT INTO CentersActivations (center_id, activated_by, notes) VALUES ($1, $2, $3) RETURNING activation_id', 
+                [id, userId, activationNotes]
+            );
+            
+            const activationId = activationRows[0].activation_id;
+            
+            // Si se especificó un encargado, crear la asignación
+            if (assignedUserId) {
+                await client.query(
+                    'INSERT INTO ActivationAssignments (activation_id, user_id, started_by) VALUES ($1, $2, $3)',
+                    [activationId, assignedUserId, userId]
+                );
+            }
+        } else {
+        await client.query(
+            'UPDATE CentersActivations SET ended_at = NOW(), deactivated_by = $2 WHERE center_id = $1 AND ended_at IS NULL', 
+            [id, userId]
+        );   
+     }
     return centerResult.rows[0];
 }
 
