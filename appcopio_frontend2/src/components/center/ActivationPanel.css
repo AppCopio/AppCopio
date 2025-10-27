@@ -1,16 +1,10 @@
-/* src/components/center/ActivationPanel.css */
-
-/* * Estilos actualizados para coincidir 
- * con la estética de 'OperationalFunctions.css'
- */
 
 .activation-panel {
   background: white;
-  border-radius: 12px; /* Coincide con .operational-functions-container */
+  border-radius: 12px; 
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Coincide con .operational-functions-container */
-  /* Se elimina el borde del contenedor principal para un look más limpio */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); 
   border: none; 
   transition: all 0.3s ease;
 }
