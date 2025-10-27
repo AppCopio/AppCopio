@@ -1,4 +1,4 @@
-// src/components/center/ActivationPanel.tsx
+
 import React, { useState, useEffect } from 'react';
 import { 
   PowerSettingsNew,
@@ -144,8 +144,10 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
     <div className="activation-panel active">
       <div className="panel-header">
         <div className="status-indicator active-indicator">
-          <div className="pulse-ring" />
-          <CheckIcon className="status-icon active-icon" />
+          <div className="icon-with-pulse">
+
+            <CheckIcon className="status-icon active-icon" />
+          </div>
           <h3>Centro Activo</h3>
         </div>
         <Chip 

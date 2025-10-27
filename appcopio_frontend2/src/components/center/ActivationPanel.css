@@ -1,28 +1,35 @@
 /* src/components/center/ActivationPanel.css */
 
+/* * Estilos actualizados para coincidir 
+ * con la estética de 'OperationalFunctions.css'
+ */
+
 .activation-panel {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px; /* Coincide con .operational-functions-container */
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 2px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Coincide con .operational-functions-container */
+  /* Se elimina el borde del contenedor principal para un look más limpio */
+  border: none; 
   transition: all 0.3s ease;
 }
 
+/* * Se eliminan los estilos .active y .inactive del panel principal 
+ * ya que el nuevo estilo no los usa en el contenedor.
+ * La distinción se hace adentro.
+ */
 .activation-panel.active {
-  border-color: #10b981;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
 }
 
 .activation-panel.inactive {
-  border-color: #9ca3af;
-  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  background: #f9fafb;
 }
 
 .activation-panel.error {
-  border-color: #fca5a5;
-  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+  border: 2px solid #fca5a5;
+  background: #fef2f2;
 }
 
 .activation-panel.loading {
@@ -37,36 +44,49 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 24px; /* Coincide con .operational-header */
+  padding-bottom: 16px; /* Coincide con .operational-header */
+  border-bottom: 2px solid #e0e0e0; /* Coincide con .operational-header */
 }
 
 .panel-header.inactive-header {
-  border-bottom-color: #d1d5db;
+  border-bottom-color: #e0e0e0;
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
   gap: 12px;
-  position: relative;
+  min-width: 0;
 }
 
 .status-indicator h3 {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 1.5rem; /* Coincide con .operational-header h3 */
+  font-weight: 600; /* Coincide con .operational-header h3 */
+  color: #1a1a1a; /* Coincide con .operational-header h3 */
+  white-space: nowrap;
+  line-height: 1.3;         /* 1. Para centrar verticalmente el texto */
+  text-overflow: ellipsis;  /* 3. Para mostrar '...' */
+  min-width: 0;             /* 4. Para permitir que el texto se encoja */
 }
 
 .status-icon {
   font-size: 32px !important;
 }
 
+.icon-with-pulse {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
 /* Active Indicator */
 .active-indicator .status-icon {
-  color: #10b981;
+  color: #10b981; /* Mantenemos el verde para 'Activo' */
   position: relative;
   z-index: 2;
 }
@@ -81,6 +101,8 @@
   opacity: 0.3;
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   z-index: 1;
+  top: 0;
+  left: 0;
 }
 
 @keyframes pulse {
@@ -98,6 +120,11 @@
 .inactive-indicator .status-icon {
   color: #6b7280;
 }
+.inactive-indicator h3 {
+  color: #6b7280;
+  font-weight: 600;
+}
+
 
 .activation-id-chip {
   background: #e5e7eb !important;
@@ -119,13 +146,23 @@
   color: #6b7280;
 }
 
+/* Mensaje Inactivo estilizado como .inactive-message */
 .inactive-message {
   text-align: center;
-  color: #6b7280;
-  font-size: 1rem;
-  padding: 20px 0;
-  margin: 0;
+  padding: 40px 20px;
+  background: #fff3cd; /* Coincide con .inactive-message */
+  border: 2px dashed #ffc107; /* Coincide con .inactive-message */
+  border-radius: 8px; /* Coincide con .inactive-message */
+  margin: 16px 0;
 }
+
+.inactive-message p {
+  margin: 0;
+  font-size: 1rem;
+  color: #856404; /* Coincide con .inactive-message p */
+  font-weight: 500; /* Coincide con .inactive-message p */
+}
+
 
 .error-message {
   text-align: center;
@@ -139,60 +176,93 @@
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  gap: 20px; /* Coincide con .operational-cards gap */
   margin-bottom: 16px;
 }
 
+/* Estilo de tarjeta coincidente con .operational-card */
 .info-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
-  background: white;
-  border-radius: 12px;
-  border: 2px solid #f3f4f6;
-  transition: all 0.3s ease;
+  padding: 24px; /* Coincide con .operational-card */
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%); /* Coincide con .operational-card */
+  border-radius: 12px; /* Coincide con .operational-card */
+  border: 2px solid #e0e0e0; /* Coincide con .operational-card */
+  transition: all 0.3s ease; /* Coincide con .operational-card */
+  position: relative; /* Para el borde superior en hover */
+  overflow: hidden; /* Para el borde superior en hover */
+}
+
+/* Borde superior en hover de .operational-card */
+.info-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .info-card:hover {
-  border-color: #10b981;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+  transform: translateY(-4px); /* Coincide con .operational-card:hover */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); /* Coincide con .operational-card:hover */
+  border-color: #667eea; /* Coincide con .operational-card:hover */
+}
+
+.info-card:hover::before {
+  opacity: 1; /* Coincide con .operational-card:hover::before */
 }
 
 .info-card.full-width {
   grid-column: 1 / -1;
 }
 
+/* Estilo de ícono coincidente con .card-icon */
 .card-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 60px; /* Coincide con .card-icon */
+  height: 60px; /* Coincide con .card-icon */
+  border-radius: 50%; /* Coincide con .card-icon */
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: transform 0.3s ease;
 }
 
+.info-card:hover .card-icon-wrapper {
+  transform: scale(1.1); /* Coincide con .operational-card:hover .card-icon */
+}
+
+
+/* Colores de íconos tomados de .operational-functions.css */
 .start-icon {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  /* .groups-icon */
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   color: white;
 }
 
 .duration-icon {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  /* .capacity-icon */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 
 .person-icon {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  /* .people-icon */
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
 }
 
 .team-icon {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  /* .inventory-icon */
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
   color: white;
 }
+
 
 .card-info {
   flex: 1;
@@ -201,17 +271,19 @@
   gap: 4px;
 }
 
+/* Estilo de .card-label de .operational-functions.css */
 .card-label {
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: 0.9rem;
+  color: #666;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: none; /* Eliminado uppercase */
+  letter-spacing: normal; /* Eliminado letter-spacing */
 }
 
+/* Estilo de .card-value (basado en .card-content h4) */
 .card-value {
-  font-size: 1.125rem;
-  color: #1f2937;
+  font-size: 1.1rem;
+  color: #333;
   font-weight: 600;
   cursor: default;
 }
@@ -234,7 +306,7 @@
 
 .user-chip:hover {
   background: #e5e7eb !important;
-  border-color: #10b981 !important;
+  border-color: #667eea !important; /* Color de hover actualizado */
   transform: translateY(-1px);
 }
 
@@ -242,7 +314,8 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  /* Usamos el color primario del nuevo tema */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -252,10 +325,19 @@
 }
 
 /* Duration Badges */
-.duration-badge {
-  margin-top: 16px;
-  display: flex;
+.duration-badge-card {
   justify-content: center;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-color: #e0e0e0;
+}
+
+.duration-badge-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #e0e0e0;
+  cursor: default;
 }
 
 .warning-badge,
@@ -267,18 +349,19 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  border: none; /* Quitamos bordes, como en .coming-soon */
 }
 
+/* Estilo .warning-badge basado en .coming-soon */
 .warning-badge {
-  background: #fef3c7;
-  color: #92400e;
-  border: 2px solid #fbbf24;
+  background: #fff3cd;
+  color: #856404; /* Mejor contraste que el amarillo puro */
 }
 
+/* Estilo .new-badge basado en color primario */
 .new-badge {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 2px solid #3b82f6;
+  background: #eef2ff; /* Light purple/blue */
+  color: #667eea;
 }
 
 /* Responsive */
@@ -293,28 +376,22 @@
     padding: 16px;
   }
 
-  .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .status-indicator h3 {
-    font-size: 1.25rem;
+  .panel-header h3 {
+    font-size: 1.3rem; /* Coincide con .operational-header h3 responsive */
   }
 
   .info-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 16px; /* Coincide con .operational-cards responsive */
   }
 
   .info-card {
-    padding: 12px;
+    padding: 20px; /* Coincide con .operational-card responsive */
   }
 
   .card-icon-wrapper {
-    width: 40px;
-    height: 40px;
+    width: 50px; /* Coincide con .card-icon responsive */
+    height: 50px;
   }
 
   .card-value {
@@ -332,6 +409,12 @@
 }
 
 @media (max-width: 480px) {
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
   .status-icon {
     font-size: 24px !important;
   }
@@ -340,13 +423,22 @@
     width: 32px;
     height: 32px;
   }
+  
+  .icon-with-pulse {
+    position: relative; /* Esta es la nueva ancla para el pulso */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32x; /* Coincide con el tamaño del pulse-ring */
+    height: 32px;
+    }
 
   .card-label {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
   }
 
   .card-value {
-    font-size: 0.875rem;
+    font-size: 1rem; /* Coincide con .card-content h4 responsive */
   }
 }
 
@@ -358,10 +450,29 @@
   }
 
   .pulse-ring {
-    display: none;
-  }
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #10b981;
+  opacity: 0.3;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  z-index: 1;
+  /* MODIFICADO: Añadido top/left para asegurar centrado en el nuevo padre */
+  top: 0;
+  left: 0;
+}
 
   .user-chip:hover {
     transform: none;
+  }
+  
+  .info-card {
+    box-shadow: none;
+    border: 2px solid #e0e0e0;
+  }
+  
+  .info-card::before {
+    display: none;
   }
 }
