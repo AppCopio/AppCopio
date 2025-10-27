@@ -162,12 +162,13 @@ export default function EntryForm({ centerId, currentInventory, isOffline = fals
   });
 
   return (
-    <div className="entry-form-container">
-      <div className="entry-form-header">
-        <h3>Registrar Entrada de Recursos</h3>
-        {isOffline && <span className="offline-indicator">📡 Sin conexión - Se guardará offline</span>}
-        <button className="close-btn" onClick={onClose}>×</button>
-      </div>
+    <div className="entry-form-overlay">
+      <div className="entry-form-modal">
+        <div className="entry-form-header">
+          <h3>📥 Registrar Entrada de Recursos</h3>
+          {isOffline && <span className="offline-indicator">📡 Sin conexión - Se guardará offline</span>}
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
 
       <form onSubmit={handleSubmit} className="entry-form">
         <div className="form-section">
@@ -407,6 +408,7 @@ export default function EntryForm({ centerId, currentInventory, isOffline = fals
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

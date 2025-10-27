@@ -27,6 +27,8 @@ export default function InventoryHistoryPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('🔍 InventoryHistoryPage: useEffect ejecutado, centerId:', centerId);
+    
     if (!centerId) {
       setIsLoading(false);
       setError("No se ha especificado un centro.");
@@ -39,11 +41,13 @@ export default function InventoryHistoryPage() {
       setIsLoading(true);
       setError(null);
       try {
+        console.log('🚀 InventoryHistoryPage: Llamando a listInventoryLogs...');
         const data = await listInventoryLogs(centerId, controller.signal);
+        console.log('📊 InventoryHistoryPage: Datos recibidos:', data);
         setLogs(data || []);
       } catch (e: any) {
         if (!controller.signal.aborted) {
-          console.error("Error cargando el historial de inventario:", e);
+          console.error("❌ InventoryHistoryPage: Error cargando el historial:", e);
           setError("No se pudo cargar el historial. Por favor, intente de nuevo más tarde.");
         }
       } finally {
@@ -65,7 +69,7 @@ export default function InventoryHistoryPage() {
   return (
     <div className="history-container">
       <h2>Historial de Movimientos del Centro {centerId}</h2>
-      <table className="history-table">
+            <table className="inventory-history-table">
         <thead>
           <tr>
             <th>Fecha</th>
@@ -78,20 +82,23 @@ export default function InventoryHistoryPage() {
         </thead>
         <tbody>
           {logs.length > 0 ? (
-            logs.map((log) => (
-              <tr key={log.log_id}>
-                <td>{new Date(log.created_at).toLocaleString()}</td>
-                <td>{log.user_name || "Sistema"}</td>
-                <td>{formatActionType(log.action_type)}</td>
-                <td>{log.product_name}</td>
-                <td>{log.quantity}</td>
-                <td>
-                  {log.reason && <strong>{log.reason}</strong>}
-                  {log.reason && log.notes && <br />}
-                  {log.notes}
-                </td>
-              </tr>
-            ))
+            logs.map((log) => {
+              console.log('🔄 InventoryHistoryPage: Renderizando log:', log);
+              return (
+                <tr key={log.log_id}>
+                  <td>{new Date(log.created_at).toLocaleString()}</td>
+                  <td>{log.user_name || "Sistema"}</td>
+                  <td>{formatActionType(log.action_type)}</td>
+                  <td>{log.product_name}</td>
+                  <td>{log.quantity}</td>
+                  <td>
+                    {log.reason && <strong>{log.reason}</strong>}
+                    {log.reason && log.notes && <br />}
+                    {log.notes}
+                  </td>
+                </tr>
+              );
+            })
           ) : (
             <tr>
               <td colSpan={6}>No hay historial de movimientos disponible para este centro.</td>

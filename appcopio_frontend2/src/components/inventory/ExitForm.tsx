@@ -1,8 +1,9 @@
 // src/components/inventory/ExitForm.tsx
 import React, { useState, useEffect } from 'react';
 import type { InventoryItem } from '@/types/inventory';
-import type { ExitMovementCreateDTO, ExitItemCreateDTO, StockValidation } from '@/types/movements';
-import { createExitMovement, validateStock as validateStockAPI, savePendingOperation } from '@/services/movements.service';
+import type { ExitMovementCreateDTO, ExitItemCreateDTO, StockValidation, BackendExitRequest } from '@/types/movements';
+import { createExitMovement, createBulkExitMovement, validateStock as validateStockAPI, savePendingOperation } from '@/services/movements.service';
+import { familyService, type FamilyGroup } from '@/services/family.service';
 import './ExitForm.css';
 
 interface ExitFormProps {
@@ -32,6 +33,10 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stockValidation, setStockValidation] = useState<StockValidation | null>(null);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  
+  // Estado para familias
+  const [families, setFamilies] = useState<FamilyGroup[]>([]);
+  const [selectedFamilyId, setSelectedFamilyId] = useState<number | null>(null);
 
   // Estados para agregar item
   const [showAddItem, setShowAddItem] = useState(false);
@@ -40,6 +45,25 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
 
   // Filtrar solo items con stock > 0
   const availableItems = currentInventory.filter(item => item.quantity > 0);
+
+  // Cargar familias al inicializar
+  useEffect(() => {
+    const loadFamilies = async () => {
+      try {
+        const familyList = await familyService.list();
+        setFamilies(familyList);
+        if (familyList.length > 0) {
+          setSelectedFamilyId(familyList[0].family_id);
+        }
+      } catch (error) {
+        console.error('Error loading families:', error);
+      }
+    };
+    
+    if (!isOffline) {
+      loadFamilies();
+    }
+  }, [isOffline]);
 
   // Validar stock cuando cambian los items
   useEffect(() => {
@@ -134,6 +158,11 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
       return;
     }
 
+    if (!selectedFamilyId) {
+      alert('Debes seleccionar una familia destinataria');
+      return;
+    }
+
     if (items.length === 0) {
       alert('Debes agregar al menos un item a la salida');
       return;
@@ -169,7 +198,31 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
         });
         alert('Salida guardada offline. Se sincronizará cuando recuperes conexión.');
       } else {
-        await createExitMovement(centerId, exitData);
+        // Si hay múltiples items, usar endpoint de salidas múltiples
+        if (items.length > 1) {
+          // Para múltiples items, crear una salida por cada item
+          const exits: BackendExitRequest[] = items.map(item => ({
+            itemId: item.item_id,
+            quantity: item.requested_quantity,
+            familyId: selectedFamilyId!,
+            reason: reason.trim(),
+            notes: `${recipient.trim()}${notes.trim() ? ` - ${notes.trim()}` : ''}`
+          }));
+          
+          await createBulkExitMovement(centerId, { exits });
+        } else {
+          // Para un solo item, usar endpoint individual
+          const singleExit: BackendExitRequest = {
+            itemId: items[0].item_id,
+            quantity: items[0].requested_quantity,
+            familyId: selectedFamilyId!,
+            reason: reason.trim(),
+            notes: `${recipient.trim()}${notes.trim() ? ` - ${notes.trim()}` : ''}`
+          };
+          
+          await createExitMovement(centerId, singleExit);
+        }
+        
         alert('Salida registrada exitosamente');
       }
       
@@ -215,6 +268,23 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
                 placeholder="Ej: Entrega a familia Rodriguez, Distribución semanal..."
                 required
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="family">Familia destinataria *</label>
+              <select
+                id="family"
+                value={selectedFamilyId || ''}
+                onChange={(e) => setSelectedFamilyId(e.target.value ? Number(e.target.value) : null)}
+                required
+              >
+                <option value="">Selecciona una familia</option>
+                {families.map(family => (
+                  <option key={family.family_id} value={family.family_id}>
+                    {familyService.getDisplayName(family)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">

@@ -170,14 +170,13 @@ export async function createEntryMovement(db: Pool, data: MovementCreateData): P
                 // 4. Crear log para trazabilidad
             const logQuery = `
                 INSERT INTO InventoryLog 
-                (center_id, item_id, product_name, quantity, action_type, created_by, reason, notes)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                (center_id, item_id, quantity, action_type, created_by, reason, notes)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
             `;
             
             await client.query(logQuery, [
                 data.center_id,
                 item_id,
-                item.item_name,
                 item.quantity,
                 'ADD',
                 data.user_id,
@@ -290,14 +289,13 @@ export async function createExitMovement(db: Pool, data: MovementCreateData): Pr
             // Crear log para trazabilidad
             const logQuery = `
                 INSERT INTO InventoryLog 
-                (center_id, item_id, product_name, quantity, action_type, created_by, reason, notes)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                (center_id, item_id, quantity, action_type, created_by, reason, notes)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
             `;
             
             await client.query(logQuery, [
                 data.center_id,
                 item.item_id,
-                name,
                 item.quantity,
                 'SUB',
                 data.user_id,
@@ -323,29 +321,34 @@ export async function createExitMovement(db: Pool, data: MovementCreateData): Pr
 export async function getMovementHistory(db: Pool, center_id: string): Promise<any[]> {
     const query = `
         SELECT 
-            m.movement_id,
-            m.movement_type,
-            m.created_at,
-            m.reason,
-            m.recipient,
-            m.notes,
+            il.log_id as movement_id,
+            il.action_type as movement_type,
+            il.created_at,
+            il.reason,
+            CASE 
+                WHEN il.action_type = 'SUB' AND fg.family_id IS NOT NULL 
+                THEN CONCAT('Familia #', fg.family_id)
+                ELSE 'Sistema'
+            END as recipient,
+            il.notes,
             u.username as created_by_user_name,
             json_agg(
                 json_build_object(
-                    'item_name', mi.item_name,
+                    'item_name', p.name,
                     'category_name', c.name,
-                    'quantity', mi.quantity,
-                    'unit', mi.unit,
-                    'unit_cost', mi.unit_cost
-                ) ORDER BY mi.item_name
+                    'quantity', il.quantity,
+                    'unit', p.unit,
+                    'unit_cost', NULL
+                )
             ) as items
-        FROM InventoryMovements m
-        LEFT JOIN Users u ON m.created_by_user_id = u.user_id
-        LEFT JOIN MovementItems mi ON m.movement_id = mi.movement_id
-        LEFT JOIN Categories c ON mi.category_id = c.category_id
-        WHERE m.center_id = $1
-        GROUP BY m.movement_id, m.movement_type, m.created_at, m.reason, m.recipient, m.notes, u.username
-        ORDER BY m.created_at DESC
+        FROM InventoryLog il
+        LEFT JOIN Users u ON il.created_by = u.user_id
+        LEFT JOIN Products p ON il.item_id = p.item_id
+        LEFT JOIN Categories c ON p.category_id = c.category_id
+        LEFT JOIN FamilyGroups fg ON il.family_id = fg.family_id
+        WHERE il.center_id = $1
+        GROUP BY il.log_id, il.action_type, il.created_at, il.reason, il.notes, u.username, fg.family_id
+        ORDER BY il.created_at DESC
     `;
     
     const result = await db.query(query, [center_id]);

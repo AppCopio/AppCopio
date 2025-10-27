@@ -652,7 +652,7 @@ export default function InventoryPage() {
       })()}
 
       {/* HdU11: Modales para movimientos de inventario */}
-      {isEntryFormOpen && centerId && (
+      {isEntryFormOpen && centerId ? (
         <EntryForm
           centerId={centerId}
           currentInventory={Object.values(inventory).flat()}
@@ -663,7 +663,7 @@ export default function InventoryPage() {
             setIsEntryFormOpen(false);
           }}
         />
-      )}
+      ) : null}
 
       {isExitFormOpen && centerId && (
         <ExitForm
@@ -678,7 +678,7 @@ export default function InventoryPage() {
         />
       )}
 
-      {isResourceBoxManagerOpen && centerId && (
+      {isResourceBoxManagerOpen && centerId ? (
         <ResourceBoxManager
           centerId={centerId}
           isOffline={!isOnline}
@@ -688,7 +688,7 @@ export default function InventoryPage() {
             setIsResourceBoxManagerOpen(false);
           }}
         />
-      )}
+      ) : null}
     </div>
   );
 }

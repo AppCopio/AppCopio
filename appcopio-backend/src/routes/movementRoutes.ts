@@ -9,6 +9,7 @@ import {
     validateStockForExit,
     validateItemDeletion
 } from '../services/movementService';
+import { getLogsByCenterId } from '../services/inventoryService';
 
 const router = Router();
 
@@ -166,13 +167,16 @@ const validateStock: RequestHandler = async (req, res) => {
 const getHistory: RequestHandler = async (req, res) => {
     try {
         const { centerId } = req.params;
+        console.log(`🔍 Backend: Solicitando historial para centro ${centerId}`);
         
-        const history = await getMovementHistory(pool, centerId);
+        const history = await getLogsByCenterId(pool, centerId);
+        console.log(`📊 Backend: Se encontraron ${history.length} registros de historial`);
+        console.log(`📝 Backend: Datos a enviar:`, history);
         
         res.json(history);
 
     } catch (error: any) {
-        console.error('Error fetching movement history:', error);
+        console.error('❌ Backend: Error fetching movement history:', error);
         res.status(500).json({ 
             error: 'Error interno del servidor' 
         });

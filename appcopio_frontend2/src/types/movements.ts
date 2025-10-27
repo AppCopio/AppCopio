@@ -54,6 +54,15 @@ export interface ExitMovementCreateDTO {
   items: ExitItemCreateDTO[];
 }
 
+// Nuevo: Estructura específica para el backend de salidas individuales
+export interface BackendExitRequest {
+  itemId: number;
+  quantity: number;
+  familyId?: number | null;
+  reason: string;
+  notes?: string;
+}
+
 // DTO para crear un item en una salida
 export interface ExitItemCreateDTO {
   item_id: number; // debe existir

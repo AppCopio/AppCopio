@@ -83,10 +83,29 @@ export async function listInventoryLogs(
   signal?: AbortSignal
 ): Promise<InventoryLog[]> {
   try {
-    const { data } = await api.get<InventoryLog[]>(`/inventory/log/${centerId}`, { signal });
-    return data ?? [];
+    console.log(`🔍 Llamando al endpoint de historial: /centers/${centerId}/movements/history`);
+    
+    // Usar el endpoint correcto implementado por tu compañero
+    const { data } = await api.get<any[]>(`/centers/${centerId}/movements/history`, { signal });
+    
+    console.log('📊 Datos recibidos del backend:', data);
+    
+    // Los datos ya vienen en el formato correcto desde getLogsByCenterId
+    const logs: InventoryLog[] = (data || []).map(log => ({
+      log_id: log.log_id,
+      product_name: log.product_name,
+      quantity: log.quantity,
+      action_type: log.action_type, // Ya viene como ADD, SUB, ADJUST
+      created_at: log.created_at,
+      user_name: log.user_name || 'Sistema',
+      reason: log.reason,
+      notes: log.notes || null
+    }));
+    
+    console.log('✅ Logs procesados:', logs);
+    return logs;
   } catch (error) {
-    console.error(`Error fetching inventory logs for center ${centerId}:`, error);
+    console.error(`❌ Error fetching inventory logs for center ${centerId}:`, error);
     return [];
   }
 }

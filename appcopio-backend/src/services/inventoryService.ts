@@ -78,11 +78,14 @@ export async function getLogsByCenterId(db: Db, centerId: string): Promise<any[]
             p.unit AS product_unit,
             u.nombre AS user_name,
             cat.name AS category_name,
-            fg.family_name
+            CASE 
+                WHEN fg.family_id IS NOT NULL THEN CONCAT('Familia #', fg.family_id)
+                ELSE NULL 
+            END AS family_name
         FROM InventoryLog AS log
         JOIN Products AS p ON log.item_id = p.item_id
         LEFT JOIN Categories cat ON p.category_id = cat.category_id
-        LEFT JOIN users AS u ON log.created_by = u.user_id
+        LEFT JOIN Users AS u ON log.created_by = u.user_id
         LEFT JOIN FamilyGroups fg ON log.family_id = fg.family_id
         WHERE log.center_id = $1
         ORDER BY log.created_at DESC`;

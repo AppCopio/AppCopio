@@ -23,7 +23,6 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
   const [categories, setCategories] = useState<Category[]>([]);
   const [resourceBoxes, setResourceBoxes] = useState<ResourceBox[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showUseBox, setShowUseBox] = useState(false);
   const [selectedBox, setSelectedBox] = useState<ResourceBox | null>(null);
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -52,12 +51,12 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [cats, boxes] = await Promise.all([
-        listCategories(),
-        getResourceBoxes()
-      ]);
-      
+      // Cargar categorías desde el backend
+      const cats = await listCategories();
       setCategories(cats);
+      
+      // Cargar cajas desde localStorage (ya que no hay tabla en el backend)
+      const boxes = await getResourceBoxes();
       setResourceBoxes(boxes);
       
       if (cats.length > 0) {
@@ -174,12 +173,13 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
   }
 
   return (
-    <div className="box-manager-container">
-      <div className="box-manager-header">
-        <h3>Gestión de Cajas de Recursos</h3>
-        {isOffline && <span className="offline-indicator">📡 Sin conexión</span>}
-        <button className="close-btn" onClick={onClose}>×</button>
-      </div>
+    <div className="box-manager-overlay">
+      <div className="box-manager-modal">
+        <div className="box-manager-header">
+          <h3>📦 Gestión de Cajas de Recursos</h3>
+          {isOffline && <span className="offline-indicator">📡 Sin conexión</span>}
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
 
       <div className="box-manager-content">
         <div className="action-buttons">
@@ -188,13 +188,6 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
             onClick={() => setShowCreateForm(true)}
           >
             + Crear Nueva Caja
-          </button>
-          <button 
-            className="btn-secondary" 
-            onClick={() => setShowUseBox(true)}
-            disabled={resourceBoxes.length === 0}
-          >
-            📦 Usar Caja Existente
           </button>
         </div>
 
@@ -223,7 +216,6 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
                   className="use-box-btn"
                   onClick={() => {
                     setSelectedBox(box);
-                    setShowUseBox(true);
                   }}
                 >
                   Usar Esta Caja
@@ -412,7 +404,7 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
       )}
 
       {/* Modal para usar caja */}
-      {showUseBox && selectedBox && (
+      {selectedBox && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h4>Usar Caja: {selectedBox.name}</h4>
@@ -462,7 +454,6 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
                 type="button"
                 className="btn-secondary"
                 onClick={() => {
-                  setShowUseBox(false);
                   setSelectedBox(null);
                   setReason('');
                   setNotes('');
@@ -482,6 +473,7 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
