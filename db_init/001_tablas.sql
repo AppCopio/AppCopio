@@ -58,7 +58,7 @@ CREATE TABLE Centers (
     capacity INT DEFAULT 0,
     is_active BOOLEAN DEFAULT FALSE,
     fullness_percentage INT DEFAULT 0,
-    operational_status TEXT DEFAULT 'abierto', 
+    operational_status TEXT DEFAULT 'abierto',
     public_note TEXT,
     should_be_active BOOLEAN DEFAULT FALSE,
     comunity_charge_id INT REFERENCES Users(user_id) ON DELETE SET NULL,
@@ -117,7 +117,7 @@ CREATE TABLE InventoryLog (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Guarda el historial de asignaciones de cada centro: el registro vàlido actualmente es el que tiene valid_to IS NULL
+-- Guarda el historial de asignaciones de cada centro: el registro válido actualmente es el que tiene valid_to IS NULL
 CREATE TABLE CenterAssignments (
     assignment_id SERIAL PRIMARY KEY,
     center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,

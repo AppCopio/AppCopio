@@ -1,8 +1,6 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
-import { sendEmail, getUserEmailById } from "../services/emailService";
 import {
-  createNotification as createNotificationService,
   updateStatus as updateStatusService,
   markRead,
   listByUser,
