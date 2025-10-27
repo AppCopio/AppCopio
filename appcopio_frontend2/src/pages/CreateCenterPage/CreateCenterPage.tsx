@@ -67,11 +67,10 @@ const LikertScaleInput: React.FC<{
 const CreateCenterPage: React.FC = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState<CenterData>({
-        // Campos de la tabla Centers
-center_id: '',
+        // Campos de la tabla Centers - center_id se omite, será autogenerado
     name: '',
     address: '',
-    type: 'Albergue',
+    type: 'albergue', // Usar lowercase consistente 
     folio: '',
     capacity: 0,
     latitude: 0,
@@ -214,7 +213,7 @@ center_id: '',
     const validateForm = () => {
         const errors: string[] = [];
         const requiredFields: (keyof CenterData)[] = [
-            'center_id', 'name', 'address', 'type', 'capacity', 'latitude', 'longitude',
+            'name', 'address', 'type', 'capacity', 'latitude', 'longitude',  // Remover center_id
             'tipo_inmueble', 'numero_habitaciones', 'estado_conservacion',
             'espacio_10_afectados', 'diversidad_funcional', 'areas_comunes_accesibles', 'espacio_recreacion',
             'agua_potable', 'agua_estanques', 'electricidad', 'calefaccion', 'alcantarillado',
@@ -298,8 +297,6 @@ center_id: '',
                         </Typography>
                         <Grid container spacing={2}>
 
-                                <TextField fullWidth label="ID del Centro" name="center_id" value={formData.center_id} onChange={handleChange} required />
-
                                 <TextField fullWidth label="Nombre de la organización" name="name" value={formData.name} onChange={handleChange} required /> 
 
                                 <TextField fullWidth label="Dirección" name="address" value={formData.address} onChange={handleChange} required />
@@ -315,7 +312,7 @@ center_id: '',
                                     <InputLabel>Tipo de Centro</InputLabel>
                                     <Select name="type" value={formData.type} label="Tipo de Centro" onChange={handleChange as any}>
                                         <MenuItem value="albergue">Albergue</MenuItem>
-                                        <MenuItem value="acopio">Albergue comunitario</MenuItem>
+                                        <MenuItem value="acopio">Acopio</MenuItem>
                                     </Select>
                                 </FormControl>
 

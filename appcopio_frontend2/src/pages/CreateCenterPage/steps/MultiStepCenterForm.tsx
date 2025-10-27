@@ -53,12 +53,21 @@ const MultiStepCenterForm: React.FC = () => {
 
   const handleFormSubmit = async () => {
     setIsSaving(true);
+    setError(null);
+    
     try {
       const created = await createCenter(formData); // POST directo
       alert(`Centro "${created.name}" creado con éxito.`);
       navigate("/admin/centers");
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Error al registrar el centro.");
+      // Manejo específico de errores
+      if (err?.response?.status === 401) {
+        setError("Error de autenticación. Por favor, inicia sesión nuevamente.");
+      } else if (err?.response?.status === 400) {
+        setError(`Error de validación: ${err?.response?.data?.error || 'Datos inválidos'}`);
+      } else {
+        setError(err?.response?.data?.message || err?.message || "Error al registrar el centro.");
+      }
     } finally {
       setIsSaving(false);
       setIsConfirmationOpen(false);

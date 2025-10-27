@@ -56,10 +56,10 @@ export function getValidDescriptionColumns(): string[] {
 export function mapCatastroDataFromRequest(centerId: string, requestBody: any): { [key: string]: any } {
     return {
         center_id: centerId,
-        nombre_organizacion: requestBody.organizationName || null,
-        nombre_dirigente: requestBody.directorName || null,
-        cargo_dirigente: requestBody.directorRole || null,
-        telefono_contacto: requestBody.contactPhones || null,
+        nombre_organizacion: requestBody.name || null,  // El frontend envía 'name', no 'organizationName'
+        nombre_dirigente: requestBody.nombre_dirigente || null,  // Usar el campo correcto del frontend
+        cargo_dirigente: requestBody.cargo_dirigente || null,  // Usar el campo correcto del frontend  
+        telefono_contacto: requestBody.telefono_contacto || null,  // Usar el campo correcto del frontend
         tipo_inmueble: requestBody.tipo_inmueble || null,
         numero_habitaciones: requestBody.numero_habitaciones || null,
         estado_conservacion: requestBody.estado_conservacion || null,
