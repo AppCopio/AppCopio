@@ -106,3 +106,109 @@ export async function updatePersonById(db: Db, id: number, p: Person): Promise<P
     const { rows, rowCount } = await db.query(sql, params);
     return rowCount > 0 ? rows[0] : null;
 }
+
+/**
+ * Tipos para búsqueda de personas
+ */
+export interface PersonSearchFilters {
+    rut?: string;
+    nombre?: string;
+    center_id?: string;
+}
+
+export interface PersonSearchResult {
+    person_id: number;
+    rut: string;
+    nombre: string;
+    primer_apellido: string;
+    segundo_apellido: string | null;
+    nacionalidad: string;
+    genero: string;
+    edad: number;
+    estudia: boolean;
+    trabaja: boolean;
+    perdida_trabajo: boolean;
+    rubro: string | null;
+    discapacidad: boolean;
+    dependencia: boolean;
+    // Familia
+    family_id: number | null;
+    observaciones: string | null;
+    necesidades_basicas: number[] | null;
+    family_status: string | null;
+    parentesco: string | null;
+    // Centro
+    center_id: string | null;
+    center_name: string | null;
+    activation_id: number | null;
+}
+
+/**
+ * Busca personas en la base de datos con filtros opcionales.
+ * Retorna información completa incluyendo familia y centro actual.
+ * 
+ * @param db Pool de conexión a la base de datos.
+ * @param filters Filtros de búsqueda (rut, nombre, center_id).
+ * @returns Array de personas que coinciden con los criterios.
+ */
+export async function searchPersons(
+    db: Db,
+    filters: PersonSearchFilters
+): Promise<PersonSearchResult[]> {
+    const sql = `
+        SELECT DISTINCT
+            p.person_id,
+            p.rut,
+            p.nombre,
+            p.primer_apellido,
+            p.segundo_apellido,
+            p.nacionalidad,
+            p.genero,
+            p.edad,
+            p.estudia,
+            p.trabaja,
+            p.perdida_trabajo,
+            p.rubro,
+            p.discapacidad,
+            p.dependencia,
+            -- Datos de familia
+            fg.family_id,
+            fg.observaciones,
+            fg.necesidades_basicas,
+            fg.status as family_status,
+            -- Parentesco
+            fgm.parentesco,
+            -- Datos del centro actual
+            c.center_id,
+            c.name as center_name,
+            ca.activation_id
+        FROM Persons p
+        LEFT JOIN FamilyGroupMembers fgm ON fgm.person_id = p.person_id
+        LEFT JOIN FamilyGroups fg ON fg.family_id = fgm.family_id AND fg.status = 'activo'
+        LEFT JOIN CentersActivations ca ON ca.activation_id = fg.activation_id AND ca.ended_at IS NULL
+        LEFT JOIN Centers c ON c.center_id = ca.center_id
+        WHERE 
+            (
+                $1::TEXT IS NULL 
+                OR REPLACE(REPLACE(REPLACE(p.rut, '.', ''), '-', ''), ' ', '') ILIKE '%' || REPLACE(REPLACE(REPLACE($1, '.', ''), '-', ''), ' ', '') || '%'
+            )
+            AND (
+                $2::TEXT IS NULL 
+                OR LOWER(p.nombre || ' ' || p.primer_apellido || ' ' || COALESCE(p.segundo_apellido, '')) LIKE LOWER('%' || $2 || '%')
+            )
+            AND (
+                $3::VARCHAR IS NULL 
+                OR ca.center_id = $3
+            )
+        ORDER BY p.nombre, p.primer_apellido
+        LIMIT 100`;
+
+    const params = [
+        filters.rut || null,
+        filters.nombre || null,
+        filters.center_id || null
+    ];
+
+    const { rows } = await db.query(sql, params);
+    return rows;
+}

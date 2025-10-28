@@ -30,6 +30,12 @@ import pool from '../config/db';
 import type { HouseholdData } from '../types/family';
 import { NEEDS_OPTIONS } from "../types/fibe";
 import { Db } from '../types/db';
+import { requireUser } from '../auth/requireUser';
+import { 
+    getFullFamily, 
+    updateFullFamily, 
+    UpdateFullFamilyData 
+} from '../services/familyService';
 
 const router = Router();
 
@@ -410,6 +416,89 @@ const departFamilyGroupHandler: RequestHandler = async (req, res) => {
 };
  */
 
+// =================================================================
+// NUEVOS CONTROLADORES PARA HdU31 - GESTIÓN DE PERSONAS
+// =================================================================
+
+/**
+ * @controller GET /api/families/:id/full
+ * @description Obtiene una familia completa con todos sus miembros y datos del centro.
+ */
+const getFullFamilyHandler: RequestHandler = async (req, res) => {
+    const familyId = parseInt(req.params.id, 10);
+    
+    if (isNaN(familyId)) {
+        res.status(400).json({ error: "El ID de la familia debe ser un número válido." });
+        return;
+    }
+
+    try {
+        const fullFamily = await getFullFamily(pool, familyId);
+        
+        if (!fullFamily) {
+            res.status(404).json({ error: "Grupo familiar no encontrado." });
+            return;
+        }
+
+        res.json(fullFamily);
+    } catch (error) {
+        console.error(`Error en getFullFamily (id: ${familyId}):`, error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+};
+
+/**
+ * @controller PUT /api/families/:id/full
+ * @description Actualiza una familia completa de forma transaccional.
+ */
+const updateFullFamilyHandler: RequestHandler = async (req, res) => {
+    const familyId = parseInt(req.params.id, 10);
+    
+    if (isNaN(familyId)) {
+        res.status(400).json({ error: "El ID de la familia debe ser un número válido." });
+        return;
+    }
+
+    const updateData: UpdateFullFamilyData = req.body;
+    
+    // Validaciones básicas
+    if (!updateData.observaciones && updateData.observaciones !== '') {
+        res.status(400).json({ error: "El campo 'observaciones' es requerido." });
+        return;
+    }
+
+    if (!Array.isArray(updateData.necesidades_basicas) || updateData.necesidades_basicas.length !== 14) {
+        res.status(400).json({ error: "El campo 'necesidades_basicas' debe ser un array de 14 enteros." });
+        return;
+    }
+
+    if (!Array.isArray(updateData.miembros) || updateData.miembros.length === 0) {
+        res.status(400).json({ error: "El campo 'miembros' debe ser un array con al menos un miembro." });
+        return;
+    }
+
+    const userId = requireUser(req).user_id;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+        
+        await updateFullFamily(client, familyId, updateData, userId);
+        
+        await client.query('COMMIT');
+        
+        res.json({ 
+            message: "Familia actualizada exitosamente.",
+            family_id: familyId 
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(`Error en updateFullFamily (id: ${familyId}):`, error);
+        res.status(500).json({ error: "Error interno del servidor al actualizar la familia." });
+    } finally {
+        client.release();
+    }
+};
 
 // =================================================================
 // 3. SECCIÓN DE RUTAS (Endpoints)
@@ -417,7 +506,9 @@ const departFamilyGroupHandler: RequestHandler = async (req, res) => {
 
 router.get("/", listFamilies);
 router.post("/", createFamily);
+router.get("/:id/full", getFullFamilyHandler); // NUEVO: Debe ir ANTES de "/:id"
 router.get("/:id", getFamilyById);
+router.put("/:id/full", updateFullFamilyHandler); // NUEVO: Debe ir ANTES de "/:id"
 router.put("/:id", updateFamily);
 router.patch('/:familyId/depart', departFamilyGroup);
 
