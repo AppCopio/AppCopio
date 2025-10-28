@@ -1,5 +1,7 @@
 import { api } from "@/lib/api";
 
+export type Gender = 'F' | 'M' | 'Otro';
+
 export interface Person {
   // --- CLAVES Y METADATOS (Obligatorios y NO opcionales) ---
   person_id: number;
@@ -21,7 +23,7 @@ export interface Person {
   fecha_ingreso: string | null;    // 💡 CRÍTICO: Fija el error TS2345.
   fecha_salida: string | null;
   edad: number | null;
-  genero: string | null;
+  genero: Gender | null;
   nacionalidad: string | null;
   rubro: string | null;
 }
