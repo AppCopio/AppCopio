@@ -1,0 +1,453 @@
+/* ---------- Layout general ---------- */
+.residents-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.residents-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.back-button {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.back-button:hover { background-color: #0056b3; }
+
+/* ---------- Panel de capacidad ---------- */
+.capacity-info {
+  background-color: #f0f0f0;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.capacity-info p {
+  margin: 5px 0;
+  font-size: 1rem;
+}
+
+/* ---------- Exportar ---------- */
+.export-buttons {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+}
+.export-btn {
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.export-btn:hover { background-color: #0056b3; }
+
+/* ---------- Botones de acción ---------- */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.action-btn.view-details-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.action-btn.view-details-btn:hover {
+  background-color: #218838;
+}
+
+.action-btn:not(.view-details-btn) {
+  background-color: #dc3545;
+  color: white;
+}
+
+.action-btn:not(.view-details-btn):hover {
+  background-color: #c82333;
+}
+
+/* ---------- Toggle de vistas ---------- */
+.navigate-button { margin-bottom: 20px; }
+.navigate-btn {
+  background-color: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.navigate-btn:hover { background-color: #218838; }
+
+/* ---------- Tablas ---------- */
+.residents-table,
+.people-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+.residents-table th,
+.people-table th,
+.residents-table td,
+.people-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+.residents-table th,
+.people-table th {
+  background-color: #f5f5f5;
+}
+.table-container { overflow-x: auto; }
+
+/* ---------- (Antiguo) Bloque de filtros: oculto ---------- */
+.person-filters { display: none; }
+
+/* ---------- NUEVO: Card de filtros ---------- */
+.filters-card {
+  background: #ffffff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 18px 0 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+
+/* Header de la card: título + acciones */
+.filters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.filters-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+.filters-actions { display: flex; gap: 8px; }
+.btn-secondary-outlined {
+  background: transparent;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-secondary-outlined:hover { background: rgba(37,99,235,0.08); }
+
+/* Grid responsiva de campos */
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+}
+
+/* Cada campo ocupa 12 cols en móvil, 6 en tablet, 4 en desktop */
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  grid-column: span 12;
+}
+@media (min-width: 640px) {
+  .filter-field { grid-column: span 6; }
+}
+@media (min-width: 1024px) {
+  .filter-field { grid-column: span 4; }
+}
+
+/* Etiquetas e inputs */
+.filter-field > span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+.filter-field input,
+.filter-field select {
+  height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-size: 0.95rem;
+}
+.filter-field input::placeholder { color: #9ca3af; }
+/* Estado de foco */
+.filter-field input:focus,
+.filter-field select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+/* ---------- Botones genéricos (modales, etc.) ---------- */
+.filter-button,
+.modal-actions button {
+  background-color: #007bff;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.filter-button:hover,
+.modal-actions button:hover { background-color: #0056b3; }
+.modal-actions { display: flex; gap: 10px; margin-top: 10px; }
+
+/* ---------- Modal y Detalles ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 95%;
+  max-width: 1400px;
+  margin: 20px auto;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.details-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.details-modal .modal-header h3 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.details-modal .close-button {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 5px;
+  line-height: 1;
+}
+
+.details-modal .close-button:hover {
+  color: #343a40;
+}
+
+.details-section {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 25px;
+}
+
+.details-section h4 {
+  color: #2c3e50;
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e9ecef;
+  font-size: 1.2rem;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 25px;
+  margin-bottom: 20px;
+}
+
+.details-group {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.details-group h5 {
+  color: #495057;
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.details-item {
+  margin-bottom: 12px;
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.details-item strong {
+  color: #495057;
+  min-width: 160px;
+  margin-right: 10px;
+}
+
+.table-container {
+  overflow-x: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-top: 15px;
+}
+
+.members-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.members-table th {
+  background-color: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.members-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #dee2e6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Columna específica para la fecha */
+.members-table td.date-column {
+  min-width: 120px;
+  width: 120px;
+}
+
+.members-table .date {
+  font-family: monospace;
+  color: #666;
+}
+
+.members-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Tooltip para fechas largas */
+.members-table td[title] {
+  cursor: help;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+/* ======= Ultra compacto ======= */
+.filters-card.filters-compact {
+  padding: 8px 10px;         /* antes 10x12 */
+  margin: 8px 0;             /* menos margen */
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+
+.filters-card.filters-compact .filters-header {
+  margin-bottom: 4px;
+}
+.filters-card.filters-compact .filters-header h3 {
+  font-size: 0.9rem;         /* más chico */
+}
+.filters-card.filters-compact .btn-secondary-outlined {
+  padding: 2px 8px;          /* botón chiquito */
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+/* Grid con MUY poco gap y más campos por fila */
+.filters-card.filters-compact .filters-grid {
+  gap: 6px;
+  grid-template-columns: repeat(12, 1fr);
+}
+.filters-card.filters-compact .filter-field {
+  grid-column: span 12;      /* móvil: 1 por fila */
+}
+
+/* tablet: 3 por fila */
+@media (min-width: 640px) {
+  .filters-card.filters-compact .filter-field { grid-column: span 4; }
+}
+
+/* desktop: 6 por fila (todos en una línea) */
+@media (min-width: 1024px) {
+  .filters-card.filters-compact .filter-field { grid-column: span 2; }
+  /* en desktop ocultamos labels para ganar altura; usamos placeholder */
+  .filters-card.filters-compact .filter-field > span { display: none; }
+}
+
+.filters-card.filters-compact .filter-field > span {
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+  color: #556070;
+}
+
+/* Inputs realmente pequeños */
+.filters-card.filters-compact .filter-field input,
+.filters-card.filters-compact .filter-field select {
+  height: 28px;              /* antes 30-38px */
+  padding: 4px 6px;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #d8dde6;
+}
+.filters-card.filters-compact .filter-field input::placeholder {
+  font-size: 0.84rem;
+  color: #9aa3b2;
+}
+.filters-card.filters-compact .filter-field input:focus,
+.filters-card.filters-compact .filter-field select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.10);
+}

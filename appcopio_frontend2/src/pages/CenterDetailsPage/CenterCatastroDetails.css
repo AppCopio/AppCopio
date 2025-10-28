@@ -1,0 +1,76 @@
+/* Estilos para la nueva sección de detalles del catastro */
+.catastro-details-section {
+    margin-bottom: 25px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.catastro-details-section h3 {
+    margin: 0 0 20px 0;
+    color: #337ab7;
+    font-size: 1.5em;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+}
+
+.info-grid-catastro {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.info-grid-catastro .info-item label {
+    font-weight: bold;
+    color: #666;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-grid-catastro .info-item span,
+.info-grid-catastro .info-item .chips-container {
+    font-size: 1em;
+    color: #333;
+    margin-top: 5px;
+    display: block;
+}
+
+.chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px !important;
+}
+
+.MuiChip-root {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.MuiChip-root.MuiChip-outlined {
+    background-color: transparent;
+    color: #6c757d;
+    border-color: #6c757d;
+}
+
+.observation-box {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+}
+
+.observation-box p {
+    margin: 0;
+    font-size: 0.9em;
+    color: #495057;
+    line-height: 1.5;
+}
+
+.observation-box p:not(:last-child) {
+    margin-bottom: 10px;
+}

@@ -1,0 +1,236 @@
+.csv-upload-page {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.csv-upload-header {
+  margin-bottom: 2rem;
+}
+
+.csv-upload-header h1 {
+  margin-bottom: 0.5rem;
+  color: #1976d2;
+}
+
+.csv-upload-header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.module-selector-chip {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #1976d2;
+}
+
+.change-module-btn {
+  background: #fff;
+  border: 1px solid #1976d2;
+  color: #1976d2;
+  transition: all 0.2s ease;
+}
+
+.change-module-btn:hover {
+  background: #1976d2;
+  color: #fff;
+}
+
+.navigation-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1rem 0;
+  gap: 1rem;
+}
+
+.back-button {
+  background: transparent;
+  border: 1px solid #ddd;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: #f5f5f5;
+  border-color: #1976d2;
+  color: #1976d2;
+}
+
+.module-selector {
+  margin-bottom: 2rem;
+}
+
+.module-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+.module-card:hover {
+  border-color: #1976d2;
+  background: #f8f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.1);
+}
+
+.module-card.selected {
+  border-color: #1976d2;
+  background: #e3f2fd;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+}
+
+.module-card h3 {
+  margin: 0 0 0.5rem 0;
+  color: #1976d2;
+  font-size: 1.2rem;
+}
+
+.module-card p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.required-columns {
+  margin-top: auto;
+  padding-top: 0.75rem;
+}
+
+.required-columns small {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.required-columns .chips {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.required-columns .chip {
+  background: #e3f2fd;
+  color: #1976d2;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid #bbdefb;
+}
+
+.upload-section {
+  margin-bottom: 2rem;
+}
+
+.template-actions {
+  margin: 1rem 0;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.preview-section {
+  margin-top: 2rem;
+}
+
+.upload-actions {
+  margin: 2rem 0;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.results-section {
+  margin-top: 2rem;
+}
+
+.results-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.result-card {
+  padding: 1rem;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e0e0e0;
+}
+
+.result-card.success {
+  border-color: #4caf50;
+  background: #f1f8e9;
+}
+
+.result-card.error {
+  border-color: #f44336;
+  background: #ffebee;
+}
+
+.result-card.warning {
+  border-color: #ff9800;
+  background: #fff3e0;
+}
+
+.result-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.result-card .value {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.result-card.success .value {
+  color: #4caf50;
+}
+
+.result-card.error .value {
+  color: #f44336;
+}
+
+.result-card.warning .value {
+  color: #ff9800;
+}
+
+@media (max-width: 768px) {
+  .csv-upload-page {
+    padding: 1rem;
+  }
+  
+  .csv-upload-header .MuiBox-root {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .template-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .upload-actions {
+    flex-direction: column;
+  }
+  
+  .navigation-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .results-summary {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}

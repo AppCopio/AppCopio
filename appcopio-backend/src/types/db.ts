@@ -1,0 +1,1 @@
+export type Db = { query: (q: string, p?: any[]) => Promise<{ rows: any[]; rowCount: number }> };
