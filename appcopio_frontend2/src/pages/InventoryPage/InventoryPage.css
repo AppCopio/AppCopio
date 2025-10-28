@@ -39,36 +39,170 @@
   margin-bottom: 10px;
 }
 
+/* Filtros horizontales */
+.filters-horizontal-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-container label {
+  white-space: nowrap;
+  font-weight: 600;
+  color: #495057;
+}
+
+.filter-container select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  min-width: 180px;
+}
+
+.filter-container select:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Inventory table with fixed columns */
 .inventory-table {
   width: 100%;
   border-collapse: collapse;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  table-layout: fixed;
 }
 
 .inventory-table th, .inventory-table td {
   border: 1px solid #ddd;
   padding: 12px;
   text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Fixed column widths for perfect alignment */
+.inventory-table th:nth-child(1), 
+.inventory-table td:nth-child(1) {
+  width: 35%;
+  font-weight: 500;
+}
+
+.inventory-table th:nth-child(2), 
+.inventory-table td:nth-child(2) {
+  width: 20%;
+  text-align: center;
+}
+
+.inventory-table th:nth-child(3), 
+.inventory-table td:nth-child(3) {
+  width: 25%;
+  text-align: center;
+  font-size: 13px;
+}
+
+.inventory-table th:nth-child(4), 
+.inventory-table td:nth-child(4) {
+  width: 20%;
+  text-align: center;
 }
 
 .inventory-table th {
   background-color: #f9f9f9;
   font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 
 
-.action-btn {
-  background-color: #ffc107;
-  color: #333;
+/* Estilos estandarizados para todos los botones principales */
+.action-btn,
+.movement-btn {
   border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.8em;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  text-decoration: none;
+  min-height: 44px;
+  min-width: 160px;
+}
+
+.action-btn:hover,
+.movement-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Colores específicos para movement-btn */
+.entry-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.entry-btn:hover {
+  background-color: #218838;
+}
+
+.exit-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.exit-btn:hover {
+  background-color: #c82333;
+}
+
+.box-btn {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.box-btn:hover {
+  background-color: #5a32a3;
+}
+
+/* Colores específicos para action-btn */
+.action-btn {
+  background-color: #007bff;
+  color: white;
 }
 
 .action-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Colores específicos para botones de historial (amarillo original) */
+.action-btn.history-btn {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.action-btn.history-btn:hover {
   background-color: #e0a800;
 } 
 
@@ -180,7 +314,14 @@
   background-color: #039BE5 !important; /* celeste más fuerte al pasar el mouse */
 }
 
-/* HdU09: Estilos para el botón de toggle de necesidades */
+/* HdU09: Estilos para los botones de toggle */
+.toggle-buttons-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .toggle-needs-btn {
   background-color: #6c757d;
   color: white;
@@ -208,75 +349,63 @@
   background-color: #0056b3;
 }
 
-/* HdU11: Estilos para botones de movimientos */
-.movement-btn {
-  border: none;
-  border-radius: 6px;
-  padding: 10px 15px;
-  font-size: 0.9em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+/* Estilos específicos para el contenedor de botones */
+.actions-container {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-}
-
-.movement-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.entry-btn {
-  background-color: #28a745;
-  color: white;
-}
-
-.entry-btn:hover {
-  background-color: #218838;
-}
-
-.exit-btn {
-  background-color: #dc3545;
-  color: white;
-}
-
-.exit-btn:hover {
-  background-color: #c82333;
-}
-
-.box-btn {
-  background-color: #6f42c1;
-  color: white;
-}
-
-.box-btn:hover {
-  background-color: #5a369c;
+  margin-bottom: 20px;
 }
 
 /* Responsive para la header */
 @media (max-width: 768px) {
   .inventory-header {
     flex-direction: column;
+    align-items: flex-start;
     gap: 15px;
-    align-items: stretch;
   }
   
-  .inventory-header > div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
+  .actions-container {
+    flex-direction: column;
+    width: 100%;
   }
   
-  .movement-btn,
-  .add-item-btn,
-  .action-btn,
-  .toggle-needs-btn {
-    flex: 1;
-    min-width: 140px;
-    justify-content: center;
+  .filters-horizontal-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .filter-container {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .filter-container select {
+    min-width: 100%;
+  }
+  
+  /* Responsive table columns */
+  .inventory-table th:nth-child(1), 
+  .inventory-table td:nth-child(1) {
+    width: 40%;
+  }
+  
+  .inventory-table th:nth-child(2), 
+  .inventory-table td:nth-child(2) {
+    width: 15%;
+  }
+  
+  .inventory-table th:nth-child(3), 
+  .inventory-table td:nth-child(3) {
+    width: 25%;
+  }
+  
+  .inventory-table th:nth-child(4), 
+  .inventory-table td:nth-child(4) {
+    width: 20%;
   }
 }
 

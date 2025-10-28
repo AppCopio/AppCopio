@@ -83,14 +83,13 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
       setStockValidation(validation);
 
       // Actualizar estado de validación en items
-      const updatedItems = items.map(item => {
+      setItems(prevItems => prevItems.map(item => {
         const error = validation.errors?.find((err: any) => err.item_id === item.item_id);
         return {
           ...item,
           is_valid: !error
         };
-      });
-      setItems(updatedItems);
+      }));
     } catch (error) {
       console.error('Error validating stock:', error);
     }
@@ -132,13 +131,18 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
   };
 
   const removeItemFromExit = (itemId: string) => {
-    setItems(items.filter(item => item.id !== itemId));
+    console.log('Removing item with ID:', itemId);
+    setItems(prevItems => {
+      const filteredItems = prevItems.filter(item => item.id !== itemId);
+      console.log('Items before filter:', prevItems.length, 'Items after filter:', filteredItems.length);
+      return filteredItems;
+    });
   };
 
   const updateItemQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) return;
 
-    setItems(items.map(item => {
+    setItems(prevItems => prevItems.map(item => {
       if (item.id === itemId) {
         return {
           ...item,
@@ -352,32 +356,37 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
                       <div className="item-stock">
                         Stock disponible: {item.available_stock} {item.unit}
                       </div>
+                      {!item.is_valid && (
+                        <div className="validation-error">
+                          ❌ Stock insuficiente
+                        </div>
+                      )}
                     </div>
                     
                     <div className="item-quantity">
                       <label>Cantidad a entregar:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max={item.available_stock}
-                        value={item.requested_quantity}
-                        onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
-                      />
-                      <span className="unit">{item.unit}</span>
-                    </div>
-
-                    {!item.is_valid && (
-                      <div className="validation-error">
-                        ❌ Stock insuficiente
+                      <div className="quantity-input-container">
+                        <input
+                          type="number"
+                          min="1"
+                          max={item.available_stock}
+                          value={item.requested_quantity}
+                          onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                        />
+                        <span className="unit">{item.unit}</span>
                       </div>
-                    )}
+                    </div>
 
                     <button
                       type="button"
                       className="remove-item-btn"
-                      onClick={() => removeItemFromExit(item.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeItemFromExit(item.id);
+                      }}
                     >
-                      Eliminar
+                      🗑️
                     </button>
                   </div>
                 ))}

@@ -159,15 +159,15 @@
 
 
 .item-row {
-  display: grid;
-  grid-template-columns: 1fr 200px 120px 80px;
-  gap: 15px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 6px;
   background-color: white;
   margin-bottom: 10px;
+  gap: 15px;
 }
 
 .item-row.invalid {
@@ -179,6 +179,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  text-align: center;
+  flex: 1;
 }
 
 .item-name {
@@ -209,6 +211,12 @@
   margin-bottom: 0;
 }
 
+.quantity-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .item-quantity input {
   width: 80px;
   padding: 5px 8px;
@@ -220,29 +228,43 @@
 .item-quantity .unit {
   font-size: 0.85em;
   color: #666;
-  margin-left: 5px;
+  font-weight: 500;
 }
 
 .validation-error {
-  color: #dc3545;
-  font-size: 0.85em;
-  font-weight: 600;
+  color: #856404;
+  font-size: 0.8em;
+  font-weight: 500;
   text-align: center;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
 }
 
 .remove-item-btn {
-  background-color: #dc3545;
-  color: white;
+  background: #6c757d;
   border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 0.85em;
   cursor: pointer;
-  white-space: nowrap;
+  padding: 12px;
+  border-radius: 50%;
+  font-size: 20px;
+  color: white;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  z-index: 10;
+  position: relative;
 }
 
 .remove-item-btn:hover {
-  background-color: #c82333;
+  background: #dc3545;
+  transform: scale(1.1);
 }
 
 /* Add item section */

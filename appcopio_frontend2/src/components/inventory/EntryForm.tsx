@@ -60,14 +60,28 @@ export default function EntryForm({ centerId, currentInventory, isOffline = fals
   }, []);
 
   const addItemToList = () => {
-    if (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim()) {
-      alert('Todos los campos son requeridos y la cantidad debe ser mayor a 0');
-      return;
-    }
-
     const existingItem = !isNewItem && selectedExistingItem 
       ? currentInventory.find(item => item.item_id === selectedExistingItem)
       : null;
+
+    // Validación diferente para items nuevos vs existentes
+    if (isNewItem) {
+      // Para items nuevos, todos los campos son requeridos
+      if (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim()) {
+        alert('Todos los campos son requeridos y la cantidad debe ser mayor a 0');
+        return;
+      }
+    } else {
+      // Para items existentes, solo validar que se haya seleccionado un item y la cantidad
+      if (!selectedExistingItem || newItemQuantity <= 0) {
+        alert('Debe seleccionar un item existente y la cantidad debe ser mayor a 0');
+        return;
+      }
+      if (!existingItem) {
+        alert('El item seleccionado no es válido');
+        return;
+      }
+    }
 
     // Si es item existente, buscar su category_id basado en el nombre de categoría
     let categoryId = newItemCategory;
