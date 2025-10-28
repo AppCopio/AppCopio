@@ -614,7 +614,6 @@ const CenterResidentsPage: React.FC = () => {
 
                             {familyDetails && (
                               <div className="family-details-card-v2">
-                                {console.log("Miembros del grupo para buscar Jefe:", familyDetails.miembros)}
                                 <header className="card-header-v2">
                                   <div className="header-meta-v2">
                                     {(() => {
