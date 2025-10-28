@@ -23,7 +23,7 @@ export interface Person {
   fecha_ingreso: string | null;    // 💡 CRÍTICO: Fija el error TS2345.
   fecha_salida: string | null;
   edad: number | null;
-  genero: Gender | null;
+  genero: Gender;
   nacionalidad: string | null;
   rubro: string | null;
 }
