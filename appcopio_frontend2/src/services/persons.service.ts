@@ -1,16 +1,23 @@
 import { api } from "@/lib/api";
 
 export interface Person {
-  person_id: number;
+  person_id: number;                // 🆕 agregado (clave primaria del registro)
   rut: string;
   nombre: string;
   primer_apellido: string;
-  segundo_apellido: string;
-  nacionalidad: string;
-  genero: string;
-  edad: number;
-  created_at: string;
-  updated_at: string;
+  segundo_apellido?: string;        // opcional, algunas personas pueden no tener
+  fecha_ingreso?: string;           // opcional (algunas filas no tienen)
+  fecha_salida?: string;            // opcional
+  edad?: number;
+  genero?: string;
+  nacionalidad?: string;
+  estudia?: boolean;
+  trabaja?: boolean;
+  perdida_trabajo?: boolean;
+  rubro?: string;
+  discapacidad?: boolean;
+  dependencia?: boolean;
+  created_at?: string;              // 🆕 para mostrar “Ingreso al Centro”
 }
 
 export interface FamilyMembership {
