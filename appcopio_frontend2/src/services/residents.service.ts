@@ -100,3 +100,31 @@ export async function registerFamilyDeparture(input: {
     throw error;
   }
 }
+
+
+/**
+ * Obtiene los detalles completos de una familia (HdU30: Ver Detalles).
+ * Llama al endpoint GET /api/families/:familyId/details.
+ * @param familyId ID del grupo familiar
+ * @returns Los datos completos del FIBE, jefe de hogar y la lista de miembros, o null si hay un error.
+ */
+export async function getFamilyDetails(familyId: number): Promise<any | null> {
+    try {
+        // ¡CORRECCIÓN CLAVE! Usar 'family' en singular para coincidir con el endpoint de egreso.
+        const { data } = await api.get<any>(`/family/${familyId}/details`);
+        return data;
+    } catch (error) {
+        console.error(`Error fetching family details for family ${familyId}:`, error);
+        // Manejo el 404 devolviendo null
+        return null; 
+    }
+}
+
+
+// ... otras funciones
+export const getPersonDetailsEnriched = async (personId: number): Promise<PersonDetailsEnriched> => {
+    // Llama al nuevo endpoint: GET /api/persons/:id/details
+    const response = await api.get(`/persons/${personId}/details`);
+    return response.data;
+};
+// ...

@@ -271,3 +271,274 @@
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37,99,235,0.10);
 }
+
+
+/* --- Estilos de la Tarjeta (Versión 2: Estética Mejorada) --- */
+
+.family-details-card-v2 {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
+    margin-bottom: 25px;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente moderna */
+}
+
+/* --- Encabezado de la Tarjeta --- */
+.card-header-v2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f0f4f8; /* Fondo sutilmente azulado */
+    padding: 20px 30px;
+}
+
+/* 1. Sección de Identificación (Nombre y Rol) */
+.id-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-basis: 30%;
+}
+
+.icon-badge {
+    background-color: #3f51b5; /* Azul primario */
+    color: white;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.name-title-v2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #212121;
+}
+
+.role-tag-v2 {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #3f51b5; /* Color de rol destacado */
+}
+
+/* 2. Sección de Datos Clave */
+.data-key-section {
+    display: flex;
+    gap: 30px;
+    flex-basis: 45%;
+}
+
+.data-item-v2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.data-icon {
+    color: #3f51b5; /* Íconos azules */
+    font-size: 1rem;
+}
+
+.data-label-v2 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #757575;
+    text-transform: uppercase;
+}
+
+.data-value-v2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Estilo para el Tag de Estado */
+.status-tag-v2 {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-activo {
+    background-color: #e8f5e9; /* Fondo verde claro */
+    color: #4caf50; /* Texto verde */
+}
+
+.status-inactivo {
+    background-color: #fbecec; /* Fondo rojo claro */
+    color: #f44336; /* Texto rojo */
+}
+
+/* 3. Sección de Acciones */
+.actions-section-v2 {
+    display: flex;
+    gap: 10px;
+    flex-basis: 25%;
+    justify-content: flex-end;
+}
+
+.btn-action-v2 {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    font-size: 0.9rem;
+}
+
+.btn-action-v2 i {
+    margin-right: 5px;
+}
+
+.btn-edit {
+    background-color: #ff9800; /* Naranja/Ámbar para editar */
+    color: white;
+}
+
+.btn-exit {
+    background-color: #f44336; /* Rojo para egreso/acción crítica */
+    color: white;
+}
+
+.btn-action-v2:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* --- Cuerpo de la Tarjeta --- */
+.card-body-v2 {
+    padding: 20px 30px 30px;
+}
+
+
+.section-title-v2 {
+    font-size: 1.1rem;
+    color: #3f51b5;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.observations-text-v2 {
+    background-color: #fcfcfc;
+    border-left: 4px solid #3f51b5;
+    padding: 10px 15px;
+    font-style: italic;
+    color: #555;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.members-title {
+    margin-top: 25px;
+    border-bottom-color: #4caf50; /* Cambiamos el color para diferenciar la sección */
+    color: #4caf50;
+}
+
+.members-table-v2 {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 0.95rem;
+}
+
+.members-table-v2 th, 
+.members-table-v2 td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.members-table-v2 th {
+    background-color: #f7f7f7;
+    color: #555;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+/* Fila especial para el Jefe de Hogar */
+.members-table-v2 tr.is-head {
+    background-color: #e3f2fd; /* Fondo azul muy claro */
+    font-weight: 600;
+    border-top: 2px solid #3f51b5;
+}
+
+.head-badge {
+    background-color: #3f51b5;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.member-badge {
+    color: #555;
+    font-weight: 400;
+    font-size: 0.9rem;
+}
+
+/* 1. Contenedor de todos los metadatos (necesario si quieres más de uno) */
+.header-meta-v2 {
+    /* Si estás usando la estructura card-header-v2, este div está dentro, 
+       y debe alinearse con la sección de ID y Acciones. */
+    display: flex;
+    gap: 30px; /* Espacio entre items (RUT, Teléfono, Fecha de Ingreso) */
+    flex-wrap: wrap; 
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Aumentamos un poco el espacio */
+    font-size: 1rem; /* ✅ AUMENTAMOS el tamaño base a 1rem */
+    color: #333;
+}
+
+/* 2. Estilo del ícono (calendario) */
+.meta-icon {
+    color: #3f51b5; 
+    font-size: 1.2rem; /* ✅ AUMENTAMOS el ícono para que sea visible */
+    flex-shrink: 0;
+}
+
+/* 3. Etiqueta (Ingreso al Centro:) */
+.meta-label {
+    font-size: 0.9rem; /* Un poco más grande para la etiqueta */
+    font-weight: 600;
+    color: #555; /* Lo hacemos un poco más oscuro */
+    text-transform: uppercase;
+}
+
+/* 4. Valor (la fecha formateada) */
+.meta-value {
+    font-size: 1.1rem; /* ✅ ¡EL MÁS GRANDE! Destacamos la fecha */
+    font-weight: 700; /* Hacemos el valor más negrita */
+    color: #212121; /* Texto casi negro para mejor contraste */
+    background-color: #e8eaf6; /* Fondo sutil para destacarlo del resto del encabezado */
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+.family-Persons-details-card-v2 {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
+    margin-bottom: 25px;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente moderna */
+}

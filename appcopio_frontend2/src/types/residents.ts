@@ -36,4 +36,19 @@ export interface CapacityInfo {
   available_capacity: number;
 }
 
+// Define el tipo para la respuesta del nuevo endpoint
+export interface FamilyMembership {
+  family_id: number;
+  family_name: string;
+  is_head: boolean;
+  relationship: string; // Parentesco
+  // ... otros campos
+}
+
+export interface PersonDetailsEnriched {
+    person_details: Person; // La persona principal (Person ya debe estar definido)
+    family_memberships: FamilyMembership[]; // Los grupos familiares a los que pertenece
+}
+// ...
+
 export type DepartureReason = "traslado" | "regreso" | "reubicacion";

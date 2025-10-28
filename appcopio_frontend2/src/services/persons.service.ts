@@ -13,6 +13,18 @@ export interface Person {
   updated_at: string;
 }
 
+export interface FamilyMembership {
+  family_id: number;
+  parentesco: string;
+  family_status: string;
+  activation_id: number;
+  es_jefe_hogar: boolean;
+}
+export interface PersonDetailsEnriched {
+  person_details: Person;
+  family_memberships: FamilyMembership[];
+}
+
 export const personsService = {
   async list(signal?: AbortSignal): Promise<Person[]> {
     const r = await api.get(`/persons`, { signal });
@@ -24,6 +36,13 @@ export const personsService = {
     return r.data ?? null;
   },
 
+   
+  async getDetailsEnriched(id: number, signal?: AbortSignal): Promise<PersonDetailsEnriched | null> {
+    const r = await api.get(`/persons/${id}`, { signal });
+    // Dado que el backend ya fue configurado para devolver la estructura enriquecida 
+    // en esta ruta, simplemente devolvemos la respuesta completa.
+    return r.data ?? null; 
+  },
   /**
    * Devuelve un "display name" para mostrar en el UI
    */

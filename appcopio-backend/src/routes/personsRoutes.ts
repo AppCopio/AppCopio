@@ -2,7 +2,7 @@
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
 import { Person, FibePersonData } from '../types/person';
-import { getPersons, getPersonById, createPersonDB, updatePersonById } from '../services/personService';
+import { getPersons, getPersonById, createPersonDB, updatePersonById,getPersonDetailsWithFamily } from '../services/personService';
 
 const router = Router();
 
@@ -107,6 +107,34 @@ const updatePerson: RequestHandler = async (req, res) => {
     }
 };
 
+
+/**
+ * @controller GET /api/persons/:id/details
+ * @description Obtiene una persona por su ID, incluyendo detalles familiares y fecha de ingreso (Versión enriquecida).
+ */
+const getPersonDetailsEnriched: RequestHandler = async (req, res) => {
+    const personId = parseInt(req.params.id, 10);
+    if (isNaN(personId)) {
+        res.status(400).json({ error: "El ID debe ser un número válido." });
+        return;
+    }
+
+    try {
+        // ⚠️ Usa el nuevo servicio enriquecido que devuelve persona + familias
+        const details = await getPersonDetailsWithFamily(pool, personId);
+        
+        if (!details.person_details) {
+            res.status(404).json({ error: 'Persona no encontrada.' });
+        } else {
+            // Devuelve la respuesta completa: { person_details: {...}, family_memberships: [...] }
+            res.json(details); 
+        }
+    } catch (error) {
+        console.error(`Error en getPersonDetailsEnriched (id: ${personId}):`, error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+};
+
 // =================================================================
 // 2. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
@@ -115,5 +143,6 @@ router.get('/', listPersons);
 router.post('/', createPerson);
 router.get('/:id', getPerson);
 router.put('/:id', updatePerson);
+router.get('/:id/details', getPersonDetailsEnriched); 
 
 export default router;
