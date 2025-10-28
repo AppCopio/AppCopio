@@ -4,6 +4,8 @@
 
 // src/services/residents.service.ts
 import {api} from "@/lib/api";
+import type { PersonDetailsEnriched } from "@/services/persons.service";
+
 import {
   ActiveCenter,
   CapacityInfo,
