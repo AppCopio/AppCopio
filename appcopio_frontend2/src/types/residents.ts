@@ -1,3 +1,4 @@
+import type { Person, PersonDetailsEnriched } from "@/services/persons.service";
 // src/types/residents.ts
 export interface ResidentGroup {
   rut: string;
@@ -6,23 +7,6 @@ export interface ResidentGroup {
   family_id: number;
 }
 
-export interface Person {
-  rut: string;
-  nombre: string;
-  fecha_ingreso: string;
-  fecha_salida: string;
-  edad: number;
-  genero: string;
-  primer_apellido: string;
-  segundo_apellido: string;
-  nacionalidad: string;
-  estudia: boolean;
-  trabaja: boolean;
-  perdida_trabajo: boolean;
-  rubro: string;
-  discapacidad: boolean;
-  dependencia: boolean;
-}
 
 export interface ActiveCenter {
   activation_id: number;
@@ -45,10 +29,7 @@ export interface FamilyMembership {
   // ... otros campos
 }
 
-export interface PersonDetailsEnriched {
-    person_details: Person; // La persona principal (Person ya debe estar definido)
-    family_memberships: FamilyMembership[]; // Los grupos familiares a los que pertenece
-}
-// ...
 
 export type DepartureReason = "traslado" | "regreso" | "reubicacion";
+
+export type { Person, PersonDetailsEnriched };

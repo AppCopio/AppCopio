@@ -1,23 +1,29 @@
 import { api } from "@/lib/api";
 
 export interface Person {
-  person_id: number;                // 🆕 agregado (clave primaria del registro)
+  // --- CLAVES Y METADATOS (Obligatorios y NO opcionales) ---
+  person_id: number;
   rut: string;
   nombre: string;
   primer_apellido: string;
-  segundo_apellido?: string;        // opcional, algunas personas pueden no tener
-  fecha_ingreso?: string;           // opcional (algunas filas no tienen)
-  fecha_salida?: string;            // opcional
-  edad?: number;
-  genero?: string;
-  nacionalidad?: string;
-  estudia?: boolean;
-  trabaja?: boolean;
-  perdida_trabajo?: boolean;
-  rubro?: string;
-  discapacidad?: boolean;
-  dependencia?: boolean;
-  created_at?: string;              // 🆕 para mostrar “Ingreso al Centro”
+  created_at: string; // 💡 CRÍTICO: Debe ser obligatorio. Fija error TS2339.
+  updated_at: string; // 💡 CRÍTICO: Debe ser obligatorio.
+  
+  // --- BOOLEANOS (Asumidos NOT NULL, deben ser obligatorios) ---
+  estudia: boolean;
+  trabaja: boolean;
+  perdida_trabajo: boolean;
+  discapacidad: boolean;
+  dependencia: boolean;
+
+  // --- CAMPOS OPCIONALES EN BD (Usamos '| null' para corregir TS2345) ---
+  segundo_apellido: string | null; // 💡 CRÍTICO: Usar '| null' para valor de SQL NULL.
+  fecha_ingreso: string | null;    // 💡 CRÍTICO: Fija el error TS2345.
+  fecha_salida: string | null;
+  edad: number | null;
+  genero: string | null;
+  nacionalidad: string | null;
+  rubro: string | null;
 }
 
 export interface FamilyMembership {
