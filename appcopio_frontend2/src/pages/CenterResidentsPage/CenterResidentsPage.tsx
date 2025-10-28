@@ -831,7 +831,7 @@ const CenterResidentsPage: React.FC = () => {
                         <td>{person.fecha_ingreso ? formatCL(person.fecha_ingreso) : "-"}</td>
                         <td>{person.fecha_salida ? formatCL(person.fecha_salida) : "-"}</td>
                         <td>{person.edad || "-"}</td>
-                        <td>{person.genero ?? "-"}</td>
+                        <td>{(person.genero as string) || "-"}</td>
                         <td>{person.nacionalidad || "-"}</td>
                         <td>{person.estudia ? "Sí" : "No"}</td>
                         <td>{person.trabaja ? "Sí" : "No"}</td>
