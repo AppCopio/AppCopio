@@ -130,6 +130,16 @@
 /* Content */
 .panel-content {
   padding: 8px 0;
+  display: flex; /* Usar flexbox para organizar las secciones verticalmente */
+  flex-direction: column;
+  gap: 24px; /* Espacio entre la rejilla superior, encargados y badges */
+}
+
+.top-info-grid {
+  display: grid;
+  /* Por defecto 3 columnas en pantallas grandes */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px; /* Mismo gap que el .info-grid original */
 }
 
 .loading-content {
@@ -210,10 +220,10 @@
 .info-card:hover::before {
   opacity: 1; /* Coincide con .operational-card:hover::before */
 }
-
+/*
 .info-card.full-width {
   grid-column: 1 / -1;
-}
+}*/
 
 /* Estilo de ícono coincidente con .card-icon */
 .card-icon-wrapper {
@@ -251,6 +261,11 @@
   color: white;
 }
 
+.reason-icon { /* Motivo (Nuevo) */
+  background: linear-gradient(135deg, #ff9a8b 0%, #ff6a88 100%); /* Ejemplo: Gradiente coral */
+  color: white;
+}
+
 .team-icon {
   /* .inventory-icon */
   background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
@@ -263,6 +278,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 /* Estilo de .card-label de .operational-functions.css */
@@ -270,8 +286,6 @@
   font-size: 0.9rem;
   color: #666;
   font-weight: 500;
-  text-transform: none; /* Eliminado uppercase */
-  letter-spacing: normal; /* Eliminado letter-spacing */
 }
 
 /* Estilo de .card-value (basado en .card-content h4) */
@@ -279,7 +293,10 @@
   font-size: 1.1rem;
   color: #333;
   font-weight: 600;
-  cursor: default;
+  cursor: default; /* Opcional */
+  white-space: nowrap; /* Para evitar saltos de línea en valores cortos */
+  overflow: hidden; /* Ocultar desbordamiento */
+  text-overflow: ellipsis; /* Mostrar '...' */
 }
 
 /* Assigned Users */
@@ -334,6 +351,13 @@
   cursor: default;
 }
 
+.duration-badge-container {
+    display: flex;
+    justify-content: flex-end; /* Alinea los badges a la derecha */
+    gap: 12px;
+    margin-top: 8px; /* Ajusta espacio si es necesario */
+}
+
 .warning-badge,
 .new-badge {
   padding: 8px 16px;
@@ -360,80 +384,42 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .info-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  /* En pantallas medianas, la rejilla superior pasa a 2 columnas */
+  .top-info-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .activation-panel {
-    padding: 16px;
-  }
+  .activation-panel { padding: 16px; }
+  .panel-header h3 { font-size: 1.3rem; }
 
-  .panel-header h3 {
-    font-size: 1.3rem; /* Coincide con .operational-header h3 responsive */
-  }
-
-  .info-grid {
+  /* En pantallas pequeñas, la rejilla superior pasa a 1 columna */
+  .top-info-grid {
     grid-template-columns: 1fr;
-    gap: 16px; /* Coincide con .operational-cards responsive */
+    gap: 16px;
   }
 
-  .info-card {
-    padding: 20px; /* Coincide con .operational-card responsive */
-  }
+  .info-card { padding: 20px; }
+  .card-icon-wrapper { width: 50px; height: 50px; }
+  .card-value { font-size: 1rem; }
 
-  .card-icon-wrapper {
-    width: 50px; /* Coincide con .card-icon responsive */
-    height: 50px;
+  /* Aseguramos que la sección de usuarios use ancho completo */
+  .assigned-users-section .info-card {
+      /* No necesita grid-column aquí */
   }
-
-  .card-value {
-    font-size: 1rem;
-  }
-
-  .assigned-users {
-    flex-direction: column;
-  }
-
-  .user-chip {
-    width: 100%;
-    justify-content: flex-start;
-  }
+  .assigned-users { flex-direction: column; }
+  .user-chip { width: 100%; justify-content: flex-start; }
 }
 
 @media (max-width: 480px) {
-  .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  
-  .status-icon {
-    font-size: 24px !important;
-  }
-
-  .pulse-ring {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .icon-with-pulse {
-    position: relative; /* Esta es la nueva ancla para el pulso */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32x; /* Coincide con el tamaño del pulse-ring */
-    height: 32px;
-    }
-
-  .card-label {
-    font-size: 0.85rem;
-  }
-
-  .card-value {
-    font-size: 1rem; /* Coincide con .card-content h4 responsive */
-  }
+  .panel-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .status-icon { font-size: 24px !important; }
+  .icon-with-pulse { width: 32px; height: 32px; }
+  .pulse-ring { width: 32px; height: 32px; }
+  .card-label { font-size: 0.85rem; }
+  .card-value { font-size: 1rem; }
+  .duration-badge-container { justify-content: center; } /* Centrar badges en móvil */
 }
 
 /* Print styles */

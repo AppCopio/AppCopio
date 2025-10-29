@@ -27,7 +27,7 @@ interface ActivateCenterDialogProps {
 
 // Tipos comunes de emergencia para botones rápidos
 const EMERGENCY_TYPES = [
-  { label: "Incendio Forestal", icon: "🔥" },
+  { label: "Incendio", icon: "🔥" },
   { label: "Inundación", icon: "💧" },
   { label: "Terremoto", icon: "🌋" },
   { label: "Temporal", icon: "🌪️" },

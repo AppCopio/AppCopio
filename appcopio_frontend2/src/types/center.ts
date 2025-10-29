@@ -289,4 +289,5 @@ export type ActiveActivation = {
   center_id: string;
   started_at: string;
   ended_at: string | null;
+  notes?:string;
 };

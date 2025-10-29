@@ -1,15 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
-  PowerSettingsNew,
   Schedule as ScheduleIcon,
   Person as PersonIcon,
   People as PeopleIcon,
   CalendarToday as CalendarIcon,
-  CheckCircle as CheckIcon
+  CheckCircle as CheckIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
-import { Chip, Tooltip, CircularProgress } from '@mui/material';
+import { Chip, Tooltip, CircularProgress, Typography } from '@mui/material';
 import { getActiveActivation } from '@/services/centers.service';
+import { listActivationAssignments } from '@/services/assignments.service'; // NUEVO
 import type { ActiveActivation } from '@/types/center';
 import './ActivationPanel.css';
 
@@ -18,7 +18,6 @@ interface ActivationPanelProps {
   isActive: boolean;
 }
 
-// Extender ActiveActivation con campos opcionales que podrían venir del backend mejorado
 interface ActivationInfo extends ActiveActivation {
   duration?: string;
   durationDays?: number;
@@ -28,6 +27,7 @@ interface ActivationInfo extends ActiveActivation {
     user_id: number;
     nombre?: string;
   }>;
+  notes?: string;
 }
 
 const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive }) => {
@@ -38,9 +38,19 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
     const loadActivation = async () => {
       setLoading(true);
       try {
+        // 1. Obtener la activación
         const data = await getActiveActivation(centerId);
         
         if (data) {
+          // 2. Obtener los encargados asignados usando el endpoint existente
+          const assignments = await listActivationAssignments(data.activation_id);
+          
+          // 3. Mapear assignments a formato simple
+          const assigned_users = assignments.map(a => ({
+            user_id: a.user_id,
+            nombre: a.user_name || undefined
+          }));
+          
           // Calcular duración
           const startDate = new Date(data.started_at);
           const now = new Date();
@@ -60,11 +70,13 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
             const diffMinutes = Math.floor(diffMs / (1000 * 60));
             duration = `${diffMinutes} minuto${diffMinutes !== 1 ? 's' : ''}`;
           }
-
+          
+          // 4. Combinar todo
           setActivation({
             ...data,
             duration,
-            durationDays: diffDays
+            durationDays: diffDays,
+            assigned_users // NUEVO: Agregamos los encargados
           });
         } else {
           setActivation(null);
@@ -79,44 +91,35 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
 
     if (isActive) {
       loadActivation();
-      // Actualizar cada minuto para la duración
-      const interval = setInterval(loadActivation, 60000);
-      return () => clearInterval(interval);
     } else {
-      setLoading(false);
       setActivation(null);
+      setLoading(false);
     }
   }, [centerId, isActive]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString('es-CL', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString('es-CL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
   };
 
+  // Si el centro no está activo
   if (!isActive) {
     return (
       <div className="activation-panel inactive">
-        <div className="panel-header inactive-header">
-          <div className="status-indicator inactive-indicator">
-            <PowerSettingsNew className="status-icon" />
-            <h3>Centro Inactivo</h3>
-          </div>
-        </div>
         <div className="panel-content">
           <p className="inactive-message">
-            Este centro no está actualmente activado para responder a una emergencia.
+            Este centro no está activo actualmente
           </p>
         </div>
       </div>
     );
   }
 
+  // Mientras carga
   if (loading) {
     return (
       <div className="activation-panel loading">
@@ -128,6 +131,7 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
     );
   }
 
+  // Si no hay activación (error)
   if (!activation) {
     return (
       <div className="activation-panel error">
@@ -142,23 +146,27 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
 
   return (
     <div className="activation-panel active">
+      {/* --- Cabecera (sin cambios) --- */}
       <div className="panel-header">
         <div className="status-indicator active-indicator">
           <div className="icon-with-pulse">
-
             <CheckIcon className="status-icon active-icon" />
+            <div className="pulse-ring"></div> {/* Pulso añadido aquí */}
           </div>
           <h3>Centro Activo</h3>
         </div>
-        <Chip 
-          label={`ID: ${activation.activation_id}`}
+        <Chip
+          label={`ID Act: ${activation.activation_id}`}
           size="small"
           className="activation-id-chip"
         />
       </div>
 
+      {/* --- Contenido Principal (Reestructurado) --- */}
       <div className="panel-content">
-        <div className="info-grid">
+
+        {/* --- 2. Rejilla Superior Fija (Nueva) --- */}
+        <div className="top-info-grid">
           {/* Fecha de Activación */}
           <div className="info-card">
             <div className="card-icon-wrapper start-icon">
@@ -181,24 +189,32 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
             </div>
           </div>
 
-          {/* Activado Por */}
-          {activation.activated_by_name && (
-            <div className="info-card">
-              <div className="card-icon-wrapper person-icon">
-                <PersonIcon />
-              </div>
-              <div className="card-info">
-                <span className="card-label">Activado por</span>
-                <Tooltip title={`Usuario ID: ${activation.activated_by}`}>
-                  <span className="card-value">{activation.activated_by_name}</span>
-                </Tooltip>
-              </div>
+          {/* Motivo de Activación (Nuevo) */}
+          <div className="info-card">
+            <div className="card-icon-wrapper reason-icon"> {/* Nueva clase CSS */}
+              <InfoIcon />
             </div>
-          )}
+            <div className="card-info">
+              <span className="card-label">Motivo Activación</span>
+              <Tooltip title={activation.notes || 'No especificado'}>
+                <Typography
+                  variant="body2"
+                  className="card-value" // Usamos clase card-value para consistencia
+                  noWrap // Evita que el texto largo rompa el layout
+                  sx={{ fontWeight: 600, cursor: 'default' }} // Estilo similar a card-value
+                >
+                  {activation.notes || 'No especificado'}
+                </Typography>
+              </Tooltip>
+            </div>
+          </div>
+        </div> {/* Fin de top-info-grid */}
 
-          {/* Encargados Actuales */}
+        {/* --- Sección Encargados (Ahora separada) --- */}
+        <div className="assigned-users-section">
           {activation.assigned_users && activation.assigned_users.length > 0 && (
-            <div className="info-card full-width">
+            // Ya no necesita 'full-width' porque está fuera de la rejilla principal
+            <div className="info-card">
               <div className="card-icon-wrapper team-icon">
                 <PeopleIcon />
               </div>
@@ -222,10 +238,10 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
               </div>
             </div>
           )}
-        </div>
+        </div> {/* Fin de assigned-users-section */}
 
-        {/* Badge de tiempo activo */}
-        <div className="duration-badge">
+        {/* --- Badges de Duración (sin cambios en su posición relativa al final) --- */}
+        <div className="duration-badge-container"> {/* Contenedor opcional para badges */}
           {activation.durationDays !== undefined && activation.durationDays >= 7 && (
             <Tooltip title="Este centro lleva más de una semana activo">
               <div className="warning-badge">
@@ -239,7 +255,8 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
             </div>
           )}
         </div>
-      </div>
+
+      </div> {/* Fin de panel-content */}
     </div>
   );
 };
