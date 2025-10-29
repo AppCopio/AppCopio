@@ -435,13 +435,12 @@ const CenterResidentsPage: React.FC = () => {
       setIsDetailsLoading(false);
     }
   };
-
- const togglePersonDetails = async (personId: number | undefined) => {
+const togglePersonDetails = async (personId: number | undefined) => {
   console.log("🔘 togglePersonDetails called with:", personId);
-  console.log("Current openDetailsPersonId:", openDetailsPersonId);
+  
   if (!personId) return;
 
-  // Cerrar si es el mismo
+  // 1. Lógica de cierre si ya estaba abierto
   if (openDetailsPersonId === personId) {
     setOpenDetailsPersonId(null);
     setPersonDetails(null);
@@ -450,7 +449,7 @@ const CenterResidentsPage: React.FC = () => {
     return;
   }
 
-  // Abrir nuevo
+  // 2. Lógica de apertura
   setOpenDetailsPersonId(personId);
   setPersonDetails(null);
   setPersonDetailsError(null);
@@ -458,25 +457,31 @@ const CenterResidentsPage: React.FC = () => {
   setIsPersonDetailsLoading(true);
 
   try {
-    console.log("Fetching details for:", personId);
-    const details = await getPersonDetailsEnriched(personId); // tu servicio que llama /api/persons/:id/details
-    console.log("🧾 Received person details:", details);
+    const details = await getPersonDetailsEnriched(personId);
     setPersonDetails(details);
 
-    // Si hay memberships, cargar detalles completos de cada family (getFamilyDetails ya existe)
-    if (details?.family_memberships && Array.isArray(details.family_memberships) && details.family_memberships.length > 0) {
+    // 🛑 SOLUCIÓN CONFIRMADA: Obtener el último objeto de family_memberships.
+    const memberships = details?.family_memberships;
+
+    const lastMembership = memberships && memberships.length > 0 
+        ? memberships[memberships.length - 1] 
+        : null;
+
+    const uniqueFamilyIdToLoad = lastMembership ? lastMembership.family_id : null;
+
+
+    if (uniqueFamilyIdToLoad) {
       const map: Record<number, any> = {};
-      await Promise.all(
-        details.family_memberships.map(async (fm: any) => {
-          try {
-            const fd = await getFamilyDetails(fm.family_id); // servicio que ya tienes
-            map[fm.family_id] = fd;
-          } catch (err) {
-            console.error("Error cargando family details for", fm.family_id, err);
-            map[fm.family_id] = null;
-          }
-        })
-      );
+      const familyId = uniqueFamilyIdToLoad; // Este es el único ID que cargaremos
+
+      // Cargar los detalles de la ÚNICA familia reciente
+      try {
+        const fd = await getFamilyDetails(familyId);
+        map[familyId] = fd;
+      } catch (err) {
+        console.error("Error cargando family details for", familyId, err);
+        map[familyId] = null;
+      }
       setFamilyDetailsMap(map);
     }
   } catch (e: any) {
@@ -486,7 +491,6 @@ const CenterResidentsPage: React.FC = () => {
     setIsPersonDetailsLoading(false);
   }
 };
-
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
@@ -922,17 +926,33 @@ const CenterResidentsPage: React.FC = () => {
                                       })()}
                                     </div>
 
-                                    {/* Miembros del Grupo Familiar (reutiliza fd si existe) */}
-                                    {Array.isArray(personDetails.family_memberships) && personDetails.family_memberships.length > 0 ? (
-                                      personDetails.family_memberships.map((fm: any) => {
-                                        const fd = familyDetailsMap[fm.family_id];
-                                        return (
-                                          <div key={fm.family_id} style={{ marginBottom: 16 }}>
-                                            <h4 className="section-title-v2 members-title">
-                                              Miembros del Grupo Familiar ({(fd?.miembros || []).length})
-                                            </h4>
+                                    {/* 💡 SOLUCIÓN: Miembros del Grupo Familiar (Solo se renderiza la ÚLTIMA familia activa/reciente) */}
+                                      {(() => {
+                                        const memberships = personDetails.family_memberships;
 
-                                            {fd ? (
+                                        // 1. Verificar si hay membresías
+                                        if (!Array.isArray(memberships) || memberships.length === 0) {
+                                          return <p>No pertenece a ningún grupo familiar.</p>;
+                                        }
+
+                                        // 2. Obtener la ÚLTIMA membresía de la persona (la que se cargó en familyDetailsMap)
+                                        const lastMembership = memberships[memberships.length - 1];
+
+                                        if (!lastMembership) {
+                                          return <p>No se pudo encontrar la membresía familiar más reciente.</p>;
+                                        }
+
+                                        // 3. Obtener los detalles de la ÚNICA familia cargada en el estado
+                                        const fd = familyDetailsMap[lastMembership.family_id];
+
+                                        // 4. Renderizar solo si los detalles están cargados
+                                        if (fd) {
+                                          return (
+                                            <div key={lastMembership.family_id} style={{ marginBottom: 16 }}>
+                                              <h4 className="section-title-v2 members-title">
+                                                Miembros del Grupo Familiar ({(fd.miembros || []).length})
+                                              </h4>
+                                              
                                               <div style={{ overflowX: "auto" }}>
                                                 <table className="members-table-v2" style={{ minWidth: "1000px" }}>
                                                   <thead>
@@ -953,6 +973,7 @@ const CenterResidentsPage: React.FC = () => {
                                                     </tr>
                                                   </thead>
                                                   <tbody>
+                                                    {/* Iterar sobre los miembros reales de la familia cargada (fd.miembros) */}
                                                     {(fd.miembros || []).map((mi: any) => (
                                                       <tr key={mi.person_id} className={mi.es_jefe_hogar ? "is-head" : ""}>
                                                         <td>{mi.nombre} {mi.primer_apellido} {mi.segundo_apellido}</td>
@@ -973,16 +994,14 @@ const CenterResidentsPage: React.FC = () => {
                                                   </tbody>
                                                 </table>
                                               </div>
-                                            ) : (
-                                              <p> Cargando información de la familia {fm.family_id}... </p>
-                                            )}
-                                          </div>
-                                        );
-                                      })
-                                    ) : (
-                                      <p>No pertenece a ningún grupo familiar.</p>
-                                    )}
-                                  </div>
+                                            </div>
+                                          );
+                                        }
+
+                                        // Mostrar mensaje de carga mientras se obtienen los detalles de la única familia
+                                        return <p>Cargando información de la familia {lastMembership.family_id}...</p>;
+                                      })()}
+                                                                        </div>
                                 </div>
                               )}
                               {/* -------------------------------------------------------------------------------- */}
