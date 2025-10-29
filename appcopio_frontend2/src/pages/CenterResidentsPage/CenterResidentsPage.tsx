@@ -426,7 +426,6 @@ const CenterResidentsPage: React.FC = () => {
     }
   };
 const togglePersonDetails = async (personId: number | undefined) => {
-  console.log("🔘 togglePersonDetails called with:", personId);
   
   if (!personId) return;
 
@@ -888,41 +887,67 @@ const togglePersonDetails = async (personId: number | undefined) => {
                                     </div>
                                   </header>
 
-                                   <div className="card-body-v2">
-                                    {/* Observaciones y Necesidades (tomadas desde familyDetailsMap si existe) */}
+                                  <div className="card-body-v2">
                                     <h4 className="section-title-v2">Observaciones y Necesidades Básicas</h4>
+                                          
+                                    {(() => {
+                                      // 1️⃣ Buscar la familia activa (o usar la primera si no hay activa)
+                                      const fm =
+                                        personDetails.family_memberships?.find((f) => f.family_status === "activo") ??
+                                        personDetails.family_memberships?.[0];
 
-                                    {/* Observaciones: mostramos la observación de la primera familia asociada si está disponible */}
-                                    {personDetails.family_memberships?.[0] && familyDetailsMap[personDetails.family_memberships[0].family_id] ? (
-                                      <p className="observations-text-v2" style={{ marginBottom: 15 }}>
-                                        {familyDetailsMap[personDetails.family_memberships[0].family_id].observaciones ||
-                                          "No hay observaciones registradas."}
-                                      </p>
-                                    ) : personDetails.family_memberships?.length > 0 ? (
-                                      <p>Cargando observaciones de la familia...</p>
-                                    ) : (
-                                      <p className="observations-text-v2">No hay observaciones registradas.</p>
-                                    )}
+                                      if (!fm)
+                                        return (
+                                          <p className="observations-text-v2">No hay observaciones registradas.</p>
+                                        );
 
-                                    {/* Necesidades: buscamos en la misma familyDetailsMap (igual que familias) */}
-                                    <div className="needs-list-v2" style={{ marginBottom: 12 }}>
-                                      {(() => {
-                                        const fm = personDetails.family_memberships?.[0];
-                                        const fd = fm ? familyDetailsMap[fm.family_id] : null;
-                                        const needsToDisplay = fd?.necesidades_basicas
-                                          ? fd.necesidades_basicas.filter((need: number) => need > 0)
-                                          : [];
-                                        if (needsToDisplay.length > 0) {
-                                          return needsToDisplay.map((need: number, i: number) => (
-                                            <span key={i} className="need-badge">
-                                              {translateNeedCode(need)}
-                                            </span>
-                                          ));
-                                        } else {
-                                          return <p className="no-needs-text">No se registraron necesidades básicas urgentes.</p>;
-                                        }
-                                      })()}
-                                    </div>
+                                      // 2️⃣ Buscar detalles de la familia en el mapa
+                                      const fd = familyDetailsMap[fm.family_id];
+
+                                      // 4️⃣ Si no hay detalles aún (posiblemente cargando)
+                                      if (!fd)
+                                        return <p className="no-needs-text">Cargando observaciones de la familia...</p>;
+
+                                      // 5️⃣ Obtener observaciones y necesidades
+                                      const observaciones = fd.observaciones?.trim()
+                                        ? fd.observaciones
+                                        : "No hay observaciones registradas.";
+
+                                      const rawNeeds = fd.necesidades_basicas || [];
+                                      const needsArray = rawNeeds.map((n) => Number(n));
+
+                                      // 6️⃣ Filtrar necesidades activas (valor = 1)
+                                      const activeNeeds = needsArray
+                                        .map((value, index) => ({ value, index }))
+                                        .filter((item) => item.value === 1);
+
+                                      // 7️⃣ Renderizar observaciones + necesidades
+                                      return (
+                                        <>
+                                          <p className="observations-text-v2" style={{ marginBottom: 12 }}>
+                                            {observaciones}
+                                          </p>
+
+                                          <div className="needs-list-v2" style={{ marginBottom: 12 }}>
+                                            {activeNeeds.length === 0 ? (
+                                              <p className="no-needs-text">
+                                                No se registraron necesidades básicas urgentes.
+                                              </p>
+                                            ) : (
+                                              activeNeeds.map((item) => (
+                                                <span
+                                                  key={item.index}
+                                                  className="need-badge"
+                                                  style={{ marginRight: 6 }}
+                                                >
+                                                  {translateNeedCode(item.index + 1)}
+                                                </span>
+                                              ))
+                                            )}
+                                          </div>
+                                        </>
+                                      );
+                                    })()}
 
                                     {/* 💡 SOLUCIÓN: Miembros del Grupo Familiar (Solo se renderiza la ÚLTIMA familia activa/reciente) */}
                                       {(() => {
