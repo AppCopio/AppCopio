@@ -26,7 +26,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import './CreateCenterPage.css';
 import { createCenter } from '@/services/centers.service';
 import { CenterData } from '@/types/center'; 
-
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 // Opciones para la escala de Likert
 const likertOptions = [
     { value: 1, label: 'No existe' },
@@ -65,6 +65,7 @@ const LikertScaleInput: React.FC<{
 
 
 const CreateCenterPage: React.FC = () => {
+    useScrollToTop({ behavior: 'smooth' });
     const navigate = useNavigate();
     const [formData, setFormData] = useState<CenterData>({
         // Campos de la tabla Centers - center_id se omite, será autogenerado

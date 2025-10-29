@@ -40,8 +40,10 @@ import {
 import { getActivationDetail } from '@/services/centers.service';
 import { paths } from '@/routes/paths';
 import type { ActivationDetail } from '@/types/center';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 export default function ActivationDetailPage() {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId, activationId } = useParams<{ centerId: string; activationId: string }>();
   const navigate = useNavigate();
   

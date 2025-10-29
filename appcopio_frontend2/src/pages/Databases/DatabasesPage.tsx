@@ -12,8 +12,10 @@ import { templatesService } from "@/services/template.service";
 import { fieldsService } from "@/services/fields.service";
 import { TEMPLATES, TemplateItem } from "@/types/template";
 import { ListSubheader } from "@mui/material";
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 export default function DatabasesPage() {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId = "" } = useParams<{ centerId: string }>();
   const { loading: actLoading, activation} = useActivation();
   const navigate = useNavigate();

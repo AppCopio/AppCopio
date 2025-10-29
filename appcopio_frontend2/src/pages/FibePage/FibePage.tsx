@@ -8,8 +8,10 @@ import "./FibePage.css";
 import { createFibeSubmission } from "@/services/fibe.service";
 import type { FibeFormData, CreateFibeSubmissionDTO } from "@/types/fibe";
 import { useActivation } from "@/contexts/ActivationContext";
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 export default function FibePage() {
+  useScrollToTop({ behavior: 'smooth' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 1) Intentamos sacar el activation_id desde el contexto

@@ -29,6 +29,7 @@ import CenterCatastroDetails from "./CenterCatastroDetails";
 import "./CenterCatastroDetails.css";
 import OperationalFunctions from '@/components/center/OperationalFunctions';
 import ActivationPanel from '@/components/center/ActivationPanel';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 type Resource = { item_id: string | number; name: string; category: string; quantity: number };
 type AssignRole = "trabajador municipal" | "contacto ciudadano";
@@ -45,6 +46,7 @@ const getOperationalStatusClass = (status: OperationalStatusUI | undefined) => {
 };
 
 const CenterDetailsPage: React.FC = () => {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId } = useParams<{ centerId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();

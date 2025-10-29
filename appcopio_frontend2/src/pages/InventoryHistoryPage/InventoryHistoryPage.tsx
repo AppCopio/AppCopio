@@ -5,6 +5,7 @@ import "./InventoryHistoryPage.css";
 
 import { listInventoryLogs } from "@/services/inventory.service";
 import type { InventoryLog } from "@/types/inventory";
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 const formatActionType = (action: InventoryLog["action_type"]) => {
   switch (action) {
@@ -20,6 +21,7 @@ const formatActionType = (action: InventoryLog["action_type"]) => {
 };
 
 export default function InventoryHistoryPage() {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId } = useParams<{ centerId: string }>();
 
   const [logs, setLogs] = useState<InventoryLog[]>([]);

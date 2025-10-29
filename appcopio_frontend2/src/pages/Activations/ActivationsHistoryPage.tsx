@@ -33,8 +33,10 @@ import {
 import { getCenterActivationsHistory } from '@/services/centers.service';
 import { paths } from '@/routes/paths';
 import type { ActivationHistoryItem } from '@/types/center';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 export default function ActivationsHistoryPage() {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId } = useParams<{ centerId: string }>();
   const navigate = useNavigate();
   
