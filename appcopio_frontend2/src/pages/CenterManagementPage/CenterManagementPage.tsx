@@ -15,6 +15,7 @@ import { listUpdates } from "@/services/updates.service";
 import { listAssignedUsersToCenter } from "@/services/centers.service";
 import type { User } from "@/types/user"; // Usaremos este tipo
 import ActivateCenterDialog from '@/components/center/ActiveCenterDialog';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 // Formatea RUT y lo fuerza a texto para Excel
 const formatRut = (raw: any, { withDots = true, forceExcelText = false } = {}) => {
@@ -113,6 +114,7 @@ const handleConfirmActivation = async (data: { notes: string; assignedUserIds: n
 };
 
 const CenterManagementPage: React.FC = () => {
+  useScrollToTop({ behavior: 'smooth' });
   const { user, loadingAuth: isAuthLoading } = useAuth();
   const navigate = useNavigate();
 

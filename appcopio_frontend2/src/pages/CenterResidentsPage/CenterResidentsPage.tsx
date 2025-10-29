@@ -6,6 +6,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { saveAs } from "file-saver";
 import Papa from "papaparse";
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 import {
   ActiveCenter,
@@ -36,6 +37,7 @@ const formatCL = (s?: string) => {
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CL", { timeZone: "UTC" });
 };
 const CenterResidentsPage: React.FC = () => {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId } = useParams<{ centerId: string }>();
   const navigate = useNavigate();
 
