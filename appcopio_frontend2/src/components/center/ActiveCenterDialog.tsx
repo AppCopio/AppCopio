@@ -22,10 +22,12 @@ interface ActivateCenterDialogProps {
   centerId: string;
   centerName: string;
   defaultManagerId?: number | null;
-  onConfirm: (data: { notes: string; assignedUserId: number }) => Promise<void>;
+  onConfirm: (data: { 
+    notes: string; 
+    assignedUserIds: number[];  // ← CAMBIO: Array en vez de singular
+  }) => Promise<void>;
 }
 
-// Tipos comunes de emergencia para botones rápidos
 const EMERGENCY_TYPES = [
   { label: "Incendio", icon: "🔥" },
   { label: "Inundación", icon: "💧" },
@@ -43,12 +45,12 @@ export default function ActivateCenterDialog({
   onConfirm,
 }: ActivateCenterDialogProps) {
   const [notes, setNotes] = React.useState("");
-  const [assignedUser, setAssignedUser] = React.useState<User | null>(null);
+  const [assignedUsers, setAssignedUsers] = React.useState<User[]>([]);  // ← CAMBIO: Array
   const [availableUsers, setAvailableUsers] = React.useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
-  // Cargar usuarios disponibles (Trabajadores Municipales)
+  // Cargar usuarios disponibles
   React.useEffect(() => {
     if (!open) return;
 
@@ -56,16 +58,15 @@ export default function ActivateCenterDialog({
     (async () => {
       setLoadingUsers(true);
       try {
-        // Rol ID 2 = Trabajador Municipal
         const users = await listActiveUsersByRole(2);
         if (alive) {
           setAvailableUsers(users || []);
 
-          // Si hay un TM asignado por defecto, seleccionarlo
+          // Si hay un TM asignado por defecto, pre-seleccionarlo
           if (defaultManagerId) {
             const defaultUser = users.find((u) => u.user_id === defaultManagerId);
             if (defaultUser) {
-              setAssignedUser(defaultUser);
+              setAssignedUsers([defaultUser]);  // ← Array con 1 elemento
             }
           }
         }
@@ -85,7 +86,7 @@ export default function ActivateCenterDialog({
   React.useEffect(() => {
     if (!open) {
       setNotes("");
-      setAssignedUser(null);
+      setAssignedUsers([]);
     }
   }, [open]);
 
@@ -99,8 +100,8 @@ export default function ActivateCenterDialog({
   };
 
   const handleConfirm = async () => {
-    if (!assignedUser) {
-      alert("Debes seleccionar un encargado para activar el centro");
+    if (assignedUsers.length === 0) {  // ← CAMBIO: Verificar array
+      alert("Debes seleccionar al menos un encargado para activar el centro");
       return;
     }
 
@@ -113,7 +114,7 @@ export default function ActivateCenterDialog({
       setSaving(true);
       await onConfirm({
         notes: notes.trim(),
-        assignedUserId: assignedUser.user_id,
+        assignedUserIds: assignedUsers.map(u => u.user_id),  // ← CAMBIO: Array de IDs
       });
       onClose();
     } catch (error: any) {
@@ -124,7 +125,7 @@ export default function ActivateCenterDialog({
     }
   };
 
-  return (
+ return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         <Typography variant="h6" component="div" fontWeight={700}>
@@ -146,7 +147,6 @@ export default function ActivateCenterDialog({
               Describe la situación que requiere activar este centro
             </Typography>
 
-            {/* Botones rápidos */}
             <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1, mb: 2, gap: 1 }}>
               {EMERGENCY_TYPES.map((type) => (
                 <Chip
@@ -160,32 +160,32 @@ export default function ActivateCenterDialog({
               ))}
             </Stack>
 
-            {/* Campo de texto */}
             <TextField
               fullWidth
               multiline
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ej: Incendio forestal en sector alto del cerro, Temporal con inundaciones en zona baja..."
+              placeholder="Ej: Incendio forestal en sector alto del cerro..."
               required
             />
           </Box>
 
-          {/* Sección 2: Encargado */}
+          {/* Sección 2: Encargados - CAMBIO PRINCIPAL */}
           <Box>
             <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-              2. Selecciona el encargado del centro *
+              2. Selecciona los encargados del centro *
             </Typography>
             <Typography variant="caption" color="text.secondary" gutterBottom>
               {defaultManagerId
-                ? "Por defecto se seleccionó el Trabajador Municipal asignado"
-                : "Escoge quién será responsable de este centro"}
+                ? "Por defecto se pre-seleccionó el Trabajador Municipal. Puedes agregar más encargados."
+                : "Selecciona uno o más encargados para este centro"}
             </Typography>
 
             <Autocomplete
-              value={assignedUser}
-              onChange={(_, newValue) => setAssignedUser(newValue)}
+              multiple  // ← CAMBIO: Habilitar selección múltiple
+              value={assignedUsers}
+              onChange={(_, newValue) => setAssignedUsers(newValue)}
               options={availableUsers}
               loading={loadingUsers}
               getOptionLabel={(option) => option?.nombre || option?.username || ""}
@@ -200,7 +200,11 @@ export default function ActivateCenterDialog({
                       </Typography>
                     </Box>
                     {option.active_assignments ? (
-                      <Chip label={`${option.active_assignments} asign.`} size="small" />
+                      <Chip 
+                        label={`${option.active_assignments} asign.`} 
+                        size="small" 
+                        color="warning"
+                      />
                     ) : null}
                   </Box>
                 </li>
@@ -208,8 +212,9 @@ export default function ActivateCenterDialog({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Encargado"
+                  label="Encargados"
                   required
+                  placeholder="Selecciona uno o más encargados..."
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -222,14 +227,33 @@ export default function ActivateCenterDialog({
                 />
               )}
             />
+
+            {/* Mostrar resumen de seleccionados */}
+            {assignedUsers.length > 0 && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: "success.lighter", borderRadius: 1 }}>
+                <Typography variant="caption" fontWeight={600} gutterBottom>
+                  ✓ {assignedUsers.length} encargado{assignedUsers.length !== 1 ? 's' : ''} seleccionado{assignedUsers.length !== 1 ? 's' : ''}:
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1, gap: 1 }}>
+                  {assignedUsers.map(user => (
+                    <Chip
+                      key={user.user_id}
+                      label={user.nombre || user.username}
+                      size="small"
+                      color="success"
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            )}
           </Box>
 
           {/* Sección 3: Confirmación */}
           <Box sx={{ bgcolor: "info.lighter", p: 2, borderRadius: 1 }}>
             <Typography variant="caption" color="text.secondary">
               <strong>⚠️ Importante:</strong> Al activar este centro se creará un nuevo registro en el
-              historial de activaciones y se asignará el encargado seleccionado. El centro quedará disponible
-              para recibir personas y gestionar recursos.
+              historial de activaciones y se asignarán {assignedUsers.length || 0} encargado{assignedUsers.length !== 1 ? 's' : ''}. 
+              El centro quedará disponible para recibir personas y gestionar recursos.
             </Typography>
           </Box>
         </Stack>
@@ -239,8 +263,12 @@ export default function ActivateCenterDialog({
         <Button onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button onClick={handleConfirm} variant="contained" disabled={saving || !assignedUser || !notes.trim()}>
-          {saving ? "Activando..." : "Confirmar Activación"}
+        <Button 
+          onClick={handleConfirm} 
+          variant="contained" 
+          disabled={saving || assignedUsers.length === 0 || !notes.trim()}
+        >
+          {saving ? "Activando..." : `Confirmar Activación (${assignedUsers.length} encargados)`}
         </Button>
       </DialogActions>
     </Dialog>

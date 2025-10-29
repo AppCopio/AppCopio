@@ -335,25 +335,47 @@ export async function updateCenterStatus(
   userId: number,
   options?: {
     notes?: string;
-    assignedUserId?: number;
+    assignedUserIds?: number[];  // ← CAMBIO: Ahora es array
   },
   signal?: AbortSignal
-): Promise<Center> {
+) {
   try {
-    const payload: any = { isActive, userId };
-    
-    // Si se está activando y hay opciones adicionales, incluirlas
+    const payload: any = {
+      isActive,
+    };
+
     if (isActive && options) {
-      if (options.notes) payload.notes = options.notes;
-      if (options.assignedUserId) payload.assignedUserId = options.assignedUserId;
+      payload.notes = options.notes;
+      
+      // CAMBIO: Si hay múltiples IDs, enviar el primero como assignedUserId
+      // y los demás los asignaremos después
+      if (options.assignedUserIds && options.assignedUserIds.length > 0) {
+        payload.assignedUserId = options.assignedUserIds[0];
+      }
     }
 
-    const { data } = await api.patch(
-      `/centers/${centerId}/status`,
-      payload,
-      { signal }
-    );
-    return normalizeCenter(data);
+    const { data } = await api.patch(`/centers/${centerId}/status`, payload, { signal });
+    
+    // Si hay más encargados, asignarlos después de la activación
+    if (isActive && options?.assignedUserIds && options.assignedUserIds.length > 1) {
+      const activationId = data.activation_id;
+      
+      if (activationId) {
+        // Importar la función desde assignments.service
+        const { createActivationAssignment } = await import('./assignments.service');
+        
+        // Asignar los encargados restantes (desde el índice 1)
+        for (let i = 1; i < options.assignedUserIds.length; i++) {
+          try {
+            await createActivationAssignment(activationId, options.assignedUserIds[i]);
+          } catch (err) {
+            console.error(`Error asignando usuario ${options.assignedUserIds[i]}:`, err);
+          }
+        }
+      }
+    }
+    
+    return data;
   } catch (error) {
     console.error(`Error updating center status ${centerId}:`, error);
     throw error;

@@ -83,7 +83,7 @@ const StatusSwitch: React.FC<{
     }
   };
 
-  const handleConfirmActivation = async (data: { notes: string; assignedUserId: number }) => {
+const handleConfirmActivation = async (data: { notes: string; assignedUserIds: number[] }) => {
     await onToggle(center.center_id, true, data);
     setShowActivateDialog(false);
   };
@@ -106,7 +106,6 @@ const StatusSwitch: React.FC<{
         onClose={() => setShowActivateDialog(false)}
         centerId={center.center_id}
         centerName={center.name}
-        //defaultManagerId={center.municipal_manager_id}
         onConfirm={handleConfirmActivation}
       />
     </>
