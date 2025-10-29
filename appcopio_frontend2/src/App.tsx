@@ -41,6 +41,9 @@ import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
 import OfflineTestPage from '@/pages/System/OfflineTestPage';
 import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
 
+import ActivationsHistoryPage from '@/pages/Activations/ActivationsHistoryPage';
+import ActivationDetailPage from '@/pages/Activations/ActivationDetailPage';
+
 
 export default function App() {
   return (
@@ -86,6 +89,9 @@ export default function App() {
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
+                  <Route path="activations" element={<ActivationsHistoryPage />} />
+                  <Route path="activations/:activationId" element={<ActivationDetailPage />} />
+
 
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>

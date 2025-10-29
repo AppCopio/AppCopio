@@ -38,5 +38,8 @@ export const paths = {
     updates: (centerId: string | number) => `/center/${centerId}/updates`,
     fibe: (centerId: string | number) => `/center/${centerId}/fibe`,
     databases: (centerId: string | number) => `/center/${centerId}/databases`,
+    activationsHistory: (centerId: string | number) => `/center/${centerId}/activations`,
+    activationDetail: (centerId: string | number, activationId: number) => 
+      `/center/${centerId}/activations/${activationId}`,
   },
 } as const;
