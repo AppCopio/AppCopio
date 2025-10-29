@@ -24,6 +24,7 @@ import {
   getFamilyDetails,
   getPersonDetailsEnriched,
 } from "@/services/residents.service";
+import { NEEDS_OPTIONS } from "@/types/fibe";
 
 const toISODate = (s?: string) => {
   if (!s) return "";
@@ -391,23 +392,12 @@ const CenterResidentsPage: React.FC = () => {
   };
 
   const translateNeedCode = (code: number): string => {
-    const needsMap: { [key: number]: string } = {
-      1: "Alimentación (Canasta de víveres)",
-      2: "Abrigo (Ropa de cama, frazadas)",
-      3: "X",
-      4: "XX",
-      5: "XXX",
-      6: "XXXX",
-      7: "XXXXX",
-      8: "XXXXXX",
-      9: "XXXXXXX",
-      10: "XXXXXXX",
-      11: "XXXXXXXX",
-      12: "XXXXXXXXX",
-      13: "XXXXXXXXXX",
-      14: "Otro (Especificar en Observaciones)",
-    };
-    return needsMap[code] || `Código Desconocido (${code})`;
+    // Ajustamos porque en la base de datos probablemente los códigos van del 1 al 14
+    const index = code - 1;
+    if (index >= 0 && index < NEEDS_OPTIONS.length) {
+      return NEEDS_OPTIONS[index];
+    }
+    return `Código Desconocido (${code})`;
   };
 
   const toggleDetails = async (familyId: number | undefined) => { 
@@ -643,27 +633,35 @@ const togglePersonDetails = async (personId: number | undefined) => {
                                   <p className="observations-text-v2">
                                     {familyDetails.observaciones || "No hay observaciones registradas."}
                                   </p>
-
                                   <div className="needs-list-v2">
                                     {(() => {
-                                      const needsToDisplay = familyDetails.necesidades_basicas
-                                        ? familyDetails.necesidades_basicas.filter((need: number) => need > 0)
-                                        : [];
+                                      const rawNeeds = familyDetails?.necesidades_basicas || [];
+                                      // Convertimos strings a números
+                                      const needsArray = rawNeeds.map((n: string | number) => Number(n));
 
-                                      if (needsToDisplay.length > 0) {
-                                        return needsToDisplay.map((need: number, index: number) => (
-                                          <span key={index} className="need-badge">
-                                            {translateNeedCode(need)}
-                                          </span>
-                                        ));
-                                      } else {
-                                        return <p className="no-needs-text">No se registraron necesidades básicas urgentes.</p>;
+                                      // Filtramos solo los activos (1)
+                                      const activeNeeds = needsArray
+                                        .map((value, index) => ({ value, index }))
+                                        .filter((item) => item.value === 1);
+
+                                      if (activeNeeds.length === 0) {
+                                        return (
+                                          <p className="no-needs-text">
+                                            No se registraron necesidades básicas urgentes.
+                                          </p>
+                                        );
                                       }
+
+                                      return activeNeeds.map((item) => (
+                                        <span key={item.index} className="need-badge">
+                                          {translateNeedCode(item.index + 1)}{" "}
+                                        </span>
+                                      ));
                                     })()}
                                   </div>
 
                                   <h4 className="section-title-v2 members-title">
-                                    Miembros del Grupo Familiar ({(familyDetails.miembros || []).length})
+                                      Miembros del Grupo Familiar ({(familyDetails.miembros || []).length}) - ID Familia: {familyDetails.family_id}
                                   </h4>
 
                                   <div style={{ overflowX: "auto" }}>
@@ -890,7 +888,7 @@ const togglePersonDetails = async (personId: number | undefined) => {
                                     </div>
                                   </header>
 
-                                  <div className="card-body-v2">
+                                   <div className="card-body-v2">
                                     {/* Observaciones y Necesidades (tomadas desde familyDetailsMap si existe) */}
                                     <h4 className="section-title-v2">Observaciones y Necesidades Básicas</h4>
 
@@ -950,7 +948,7 @@ const togglePersonDetails = async (personId: number | undefined) => {
                                           return (
                                             <div key={lastMembership.family_id} style={{ marginBottom: 16 }}>
                                               <h4 className="section-title-v2 members-title">
-                                                Miembros del Grupo Familiar ({(fd.miembros || []).length})
+                                                  Miembros del Grupo Familiar ({(fd.miembros || []).length}) - ID Familia: {fd.family_id}
                                               </h4>
                                               
                                               <div style={{ overflowX: "auto" }}>

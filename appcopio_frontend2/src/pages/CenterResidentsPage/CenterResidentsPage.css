@@ -542,3 +542,6 @@
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente moderna */
 }
+.need-badge {
+  margin-right: 0.6rem; /* o el espacio que quieras */
+}
