@@ -7,7 +7,8 @@ import {
   Inventory as InventoryIcon,
   Assessment as AssessmentIcon,
   Assignment as AssignmentIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Storage as StorageIcon
 } from '@mui/icons-material';
 import { IconButton, Tooltip, CircularProgress } from '@mui/material';
 import { getCenterCapacity } from '@/services/centers.service';
@@ -101,16 +102,16 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
       </div>
 
       <div className="operational-cards">
-        {/* Card: Capacidad */}
+        {/* Card: Personas Registradas (fusionado con capacidad) */}
         <div 
-          className="operational-card capacity-card"
-          onClick={() => navigate(`/center/${centerId}/capacity`)}
+          className="operational-card people-card"
+          onClick={() => navigate(`/center/${centerId}/residents`)}
         >
-          <div className="card-icon capacity-icon">
-            <AssessmentIcon fontSize="large" />
+          <div className="card-icon people-icon">
+            <PeopleIcon fontSize="large" />
           </div>
           <div className="card-content">
-            <h4>Capacidad</h4>
+            <h4>Personas Registradas</h4>
             {stats.loading ? (
               <p className="card-loading">Cargando...</p>
             ) : stats.capacity ? (
@@ -139,43 +140,17 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
           </div>
         </div>
 
-        {/* Card: Personas Registradas */}
+        {/* Card: Grupos Familiares (pendiente) */}
         <div 
-          className="operational-card people-card"
-          onClick={() => navigate(`/center/${centerId}/people`)}
-        >
-          <div className="card-icon people-icon">
-            <PeopleIcon fontSize="large" />
-          </div>
-          <div className="card-content">
-            <h4>Personas Registradas</h4>
-            {stats.loading ? (
-              <p className="card-loading">Cargando...</p>
-            ) : stats.capacity ? (
-              <>
-                <p className="card-stat">{stats.capacity.current_capacity}</p>
-                <p className="card-label">Personas totales</p>
-              </>
-            ) : (
-              <p className="card-error">No disponible</p>
-            )}
-          </div>
-        </div>
-
-        {/* Card: Grupos Familiares */}
-        <div 
-          className="operational-card groups-card"
-          onClick={() => navigate(`/center/${centerId}/groups`)}
+          className="operational-card groups-card disabled"
+          title="Funcionalidad pendiente de implementación"
         >
           <div className="card-icon groups-icon">
             <GroupsIcon fontSize="large" />
           </div>
           <div className="card-content">
             <h4>Grupos Familiares</h4>
-            <p className="card-stat">
-              <span className="coming-soon">Por implementar</span>
-            </p>
-            <p className="card-label">Ver todos los grupos</p>
+            <p className="card-pending">Pendiente</p>
           </div>
         </div>
 
@@ -193,8 +168,10 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
               <p className="card-loading">Cargando...</p>
             ) : (
               <>
-                <p className="card-stat">{stats.inventoryCount}</p>
-                <p className="card-label">Ítems registrados</p>
+                <p className="card-stat">
+                  <span className="stat-current">{stats.inventoryCount}</span>
+                </p>
+                <p className="card-label">Artículos registrados</p>
               </>
             )}
           </div>
@@ -210,10 +187,21 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
           </div>
           <div className="card-content">
             <h4>Formulario FIBE</h4>
-            <p className="card-stat">
-              <span className="action-label">Registrar familia</span>
-            </p>
-            <p className="card-label">Llenar ficha</p>
+            <p className="card-sublabel">Ficha de Información Básica de Emergencia</p>
+          </div>
+        </div>
+
+        {/* Card: Registros de Activación */}
+        <div 
+          className="operational-card databases-card"
+          onClick={() => navigate(`/center/${centerId}/databases`)}
+        >
+          <div className="card-icon databases-icon">
+            <StorageIcon fontSize="large" />
+          </div>
+          <div className="card-content">
+            <h4>Registros de Activación</h4>
+            <p className="card-sublabel">Bases de datos por activación</p>
           </div>
         </div>
       </div>

@@ -350,22 +350,6 @@ const ActivationPanel: React.FC<ActivationPanelProps> = ({ centerId, isActive })
               </div>
             </div>
 
-          <div className="duration-badge">
-            {activation.durationDays !== undefined && activation.durationDays >= 7 && (
-              <Tooltip title="Este centro lleva más de una semana activo">
-                <div className="warning-badge">
-                  ⚠️ Activación prolongada
-                </div>
-              </Tooltip>
-            )}
-            {activation.durationDays !== undefined && activation.durationDays < 1 && (
-              <div className="new-badge">
-                🆕 Activación reciente
-              </div>
-            )}
-          </div>
-
-
       {/* Diálogo para agregar encargado */}
       <Dialog open={addDialogOpen} onClose={handleCloseAddDialog} maxWidth="sm" fullWidth>
         <DialogTitle>Agregar Encargado</DialogTitle>
