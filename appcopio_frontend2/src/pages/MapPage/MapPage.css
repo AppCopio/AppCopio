@@ -1,9 +1,9 @@
-/* src/pages/MapPage/MapPage.css */
 .map-page-container {
   width: 100%;
   height: calc(100vh - 100px); /* Ajusta según sea necesario, restando navbar y padding */
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* El mapa no debe tener scroll, debe ocupar exactamente su espacio */
 }
 
 .map-page-container.error-message {
@@ -22,12 +22,18 @@
 /* Responsividad */
 @media (max-width: 768px) {
   .map-page-container {
-    height: calc(100vh - 80px);
+    height: calc(100vh - 64px);
   }
 }
 
 @media (max-width: 480px) {
   .map-page-container {
-    height: calc(100vh - 60px);
+    height: calc(100vh - 64px);
   }
 }
+
+
+
+
+
+

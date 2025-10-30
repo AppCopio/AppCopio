@@ -415,7 +415,122 @@ const departFamilyGroupHandler: RequestHandler = async (req, res) => {
     }
 };
  */
+/**
+ * @controller GET /api/families/:familyId/details
+ * @description Obtiene los detalles completos de una familia y todos sus miembros.
+ */
+export const getFamilyDetails: RequestHandler = async (req , res) => {
+    const familyId = parseInt(req.params.familyId, 10);
+    if (isNaN(familyId)) {
+        return res.status(400).json({ error: "ID de familia inválido." });
+    }
+    const db = await pool.connect();
+    try {
+        // 1. Consulta Principal: Detalles del Grupo Familiar (FIBE) y Jefe de Hogar
+        const mainQuery = `
+            SELECT 
+                fg.family_id, 
+                fg.observaciones, 
+                fg.necesidades_basicas, 
+                fg.status,
+                fg.departure_date,
+                fg.departure_reason,
+                p.person_id AS jefe_hogar_person_id, 
+                p.rut AS jefe_hogar_rut, 
+                p.nombre AS jefe_hogar_nombre, 
+                p.primer_apellido AS jefe_hogar_primer_apellido, 
+                p.segundo_apellido AS jefe_hogar_segundo_apellido,
+                -- *** CORRECCIÓN: USAMOS created_at de Persons como fecha de ingreso de la familia ***
+                p.created_at AS fecha_ingreso 
+            FROM 
+                FamilyGroups fg
+            JOIN 
+                Persons p ON fg.jefe_hogar_person_id = p.person_id
+            WHERE 
+                fg.family_id = $1;
+        `;
 
+        const mainResult = await db.query(mainQuery, [familyId]);
+        const familyData = mainResult.rows[0];
+
+        if (!familyData) {
+            return res.status(404).json({ error: "Grupo familiar no encontrado." });
+        }
+        
+        // 2. Consulta Miembros: Obtiene todos los miembros del grupo familiar
+        const membersQuery = `
+            SELECT
+                p.person_id, 
+                p.rut, 
+                p.nombre, 
+                p.primer_apellido, 
+                p.segundo_apellido, 
+                p.edad,           
+                p.genero,         
+                p.estudia,         
+                p.trabaja,         
+                p.perdida_trabajo,
+                p.rubro,         
+                p.discapacidad, 
+                p.nacionalidad,   
+                p.dependencia,
+                created_at,    
+                fgm.parentesco
+            FROM
+                FamilyGroupMembers fgm
+            JOIN 
+                Persons p ON fgm.person_id = p.person_id
+            WHERE 
+                fgm.family_id = $1;
+        `;
+
+        const membersResult = await db.query(membersQuery, [familyId]);
+        const miembros = membersResult.rows;
+
+        // 3. Formatear y preparar la respuesta
+        const jefeHogar = {
+            person_id: familyData.jefe_hogar_person_id,
+            rut: familyData.jefe_hogar_rut,
+            nombre: familyData.jefe_hogar_nombre,
+            primer_apellido: familyData.jefe_hogar_primer_apellido,
+            segundo_apellido: familyData.jefe_hogar_segundo_apellido,
+            // Agregamos el campo es_jefe_hogar directamente al objeto de miembros para fácil uso en el frontend
+            es_jefe_hogar: true,
+            parentesco: "Jefe/a de Hogar"
+        };
+        
+        // Aseguramos que la lista de miembros incluya al jefe de hogar (siempre y cuando la persona exista en Persons)
+        const miembrosConJefe = miembros.map(m => ({
+            ...m,
+            es_jefe_hogar: m.person_id === jefeHogar.person_id,
+        }));
+        
+        // El frontend espera 'necesidades_basicas' como un array de strings si es PostgreSQL Array
+        const necesidadesFormateadas = Array.isArray(familyData.necesidades_basicas) 
+            ? familyData.necesidades_basicas.map(String) 
+            : [];
+
+        const responseData = {
+            family_id: familyData.family_id,
+            observaciones: familyData.observaciones,
+            necesidades_basicas: necesidadesFormateadas,
+            fecha_ingreso: familyData.fecha_ingreso,
+            status: familyData.status,
+            jefe_hogar: jefeHogar,
+            miembros: miembrosConJefe, // Lista completa, incluyendo el jefe de hogar
+        };
+
+        return res.json(responseData);
+
+    } catch (error) {
+        console.error(`Error en getFamilyDetails (id: ${familyId}):`, error);
+        // El código de error 42703 (columna inexistente) se maneja aquí antes de llegar al cliente
+        return res.status(500).json({ 
+            error: "Error interno del servidor al obtener detalles de la familia.",
+            details: error instanceof Error ? error.message : "Desconocido"
+        });
+    }
+};
 // =================================================================
 // NUEVOS CONTROLADORES PARA HdU31 - GESTIÓN DE PERSONAS
 // =================================================================
@@ -511,5 +626,6 @@ router.get("/:id", getFamilyById);
 router.put("/:id/full", updateFullFamilyHandler); // NUEVO: Debe ir ANTES de "/:id"
 router.put("/:id", updateFamily);
 router.patch('/:familyId/depart', departFamilyGroup);
+router.get("/:familyId/details", getFamilyDetails);
 
 export default router;

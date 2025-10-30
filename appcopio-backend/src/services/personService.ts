@@ -5,6 +5,11 @@ import type { Db } from "../types/db";
 
 const normalizeRut = (v: string) => (v || "").replace(/[^0-9kK]/g, "").toUpperCase();
 
+interface PersonDetailsResponse {
+    person_details: any | null; // Usar tu tipo 'Person' aquí
+    family_memberships: any[]; // Usar tu tipo 'FamilyMembership' aquí
+}
+
 /**
  * Obtiene una lista de las últimas 100 personas de la base de datos.
  * @param db Pool de conexión a la base de datos.
@@ -211,4 +216,40 @@ export async function searchPersons(
 
     const { rows } = await db.query(sql, params);
     return rows;
+}
+
+/**
+ * Obtiene el detalle completo de una persona, incluyendo su fecha de ingreso 
+ * y todas las asociaciones a grupos familiares.
+ * @param db Pool de conexión a la base de datos.
+ * @param personId ID de la persona a buscar.
+ */
+export async function getPersonDetailsWithFamily(db: Db, personId: number): Promise<PersonDetailsResponse> {
+    
+    // 1. Obtener detalles básicos de la persona (Reutilizando el servicio existente)
+    const personDetails = await getPersonById(db, personId); // Asumiendo que getPersonById existe
+
+    if (!personDetails) {
+        return { person_details: null, family_memberships: [] };
+    }
+
+    // 2. Obtener los grupos familiares a los que pertenece
+    const familyMembershipQuery = `
+        SELECT 
+            fgm.family_id,
+            fgm.parentesco,
+            fg.status AS family_status,
+            fg.activation_id,
+            (fg.jefe_hogar_person_id = $1) AS es_jefe_hogar
+        FROM FamilyGroupMembers fgm
+        JOIN FamilyGroups fg ON fgm.family_id = fg.family_id
+        WHERE fgm.person_id = $1;
+    `;
+    
+    const familyMembershipsResult = await db.query(familyMembershipQuery, [personId]);
+    
+    return {
+        person_details: personDetails,
+        family_memberships: familyMembershipsResult.rows
+    };
 }

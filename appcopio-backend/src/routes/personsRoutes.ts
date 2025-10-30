@@ -7,6 +7,7 @@ import {
     getPersonById, 
     createPersonDB, 
     updatePersonById,
+    getPersonDetailsWithFamily,
     searchPersons,
     PersonSearchFilters
 } from '../services/personService';
@@ -114,6 +115,34 @@ const updatePerson: RequestHandler = async (req, res) => {
     }
 };
 
+
+/**
+ * @controller GET /api/persons/:id/details
+ * @description Obtiene una persona por su ID, incluyendo detalles familiares y fecha de ingreso (Versión enriquecida).
+ */
+const getPersonDetailsEnriched: RequestHandler = async (req, res) => {
+    const personId = parseInt(req.params.id, 10);
+    if (isNaN(personId)) {
+        res.status(400).json({ error: "El ID debe ser un número válido." });
+        return;
+    }
+
+    try {
+        // ⚠️ Usa el nuevo servicio enriquecido que devuelve persona + familias
+        const details = await getPersonDetailsWithFamily(pool, personId);
+        
+        if (!details.person_details) {
+            res.status(404).json({ error: 'Persona no encontrada.' });
+        } else {
+            // Devuelve la respuesta completa: { person_details: {...}, family_memberships: [...] }
+            res.json(details); 
+        }
+    } catch (error) {
+        console.error(`Error en getPersonDetailsEnriched (id: ${personId}):`, error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+};
+
 /**
  * @controller GET /api/persons/search
  * @description Busca personas por RUT, nombre o centro.
@@ -152,5 +181,6 @@ router.get('/', listPersons);
 router.post('/', createPerson);
 router.get('/:id', getPerson);
 router.put('/:id', updatePerson);
+router.get('/:id/details', getPersonDetailsEnriched); 
 
 export default router;
