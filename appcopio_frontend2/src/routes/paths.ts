@@ -39,7 +39,7 @@ export const paths = {
     fibe: (centerId: string | number) => `/center/${centerId}/fibe`,
     databases: (centerId: string | number) => `/center/${centerId}/databases`,
     activationsHistory: (centerId: string | number) => `/center/${centerId}/activations`,
-    activationDetail: (centerId: string | number, activationId: number) => 
-      `/center/${centerId}/activations/${activationId}`,
+    activationDetail: (centerId: string | number, activationId: number) =>  `/center/${centerId}/activations/${activationId}`,
+    centerVolunteersById: (centerId: string) => `/center/${centerId}/volunteers`,
   },
 } as const;

@@ -8,7 +8,8 @@ import {
   Assessment as AssessmentIcon,
   Assignment as AssignmentIcon,
   Refresh as RefreshIcon,
-  Storage as StorageIcon
+  Storage as StorageIcon,
+  QuestionAnswer as QuestionAnswerIcon 
 } from '@mui/icons-material';
 import { IconButton, Tooltip, CircularProgress } from '@mui/material';
 import { getCenterCapacity } from '@/services/centers.service';
@@ -202,6 +203,20 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
           <div className="card-content">
             <h4>Registros de Activación</h4>
             <p className="card-sublabel">Bases de datos por activación</p>
+          </div>
+        </div>
+
+        {/* Card: Voluntarios */}
+        <div 
+          className="operational-card volunteer-card"
+          onClick={() => navigate(`/center/${centerId}/volunteers`)}
+        >
+          <div className="card-icon volunteer-icon">
+            <QuestionAnswerIcon fontSize="large" />
+          </div>
+          <div className="card-content">
+            <h4>Servicios Voluntarios</h4>
+            <p className="card-sublabel">Respuestas a formulario de contacto</p>
           </div>
         </div>
       </div>

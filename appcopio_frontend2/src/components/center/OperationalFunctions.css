@@ -106,6 +106,10 @@
 }
 
 .databases-icon {
+  background: linear-gradient(135deg, #e9dc1e 0%, #ebf062 100%);
+  color: white;
+}
+.volunteer-icon {
   background: linear-gradient(135deg, #e91e63 0%, #f06292 100%);
   color: white;
 }

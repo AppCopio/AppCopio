@@ -43,6 +43,7 @@ import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
 
 import ActivationsHistoryPage from '@/pages/Activations/ActivationsHistoryPage';
 import ActivationDetailPage from '@/pages/Activations/ActivationDetailPage';
+import CenterVolunteersPage from '@/pages/CenterVolunteersPage/CenterVolunteersPage';
 
 
 export default function App() {
@@ -98,6 +99,7 @@ export default function App() {
                     <Route path="fibe" element={<FibePage />} />
                     <Route path="databases" element={<DatabasesPage />} />
                     <Route path="databases/:id" element={<DatabaseDetailPage/>} />
+                    <Route path="volunteers" element={<CenterVolunteersPage/>} />
                   </Route>
                 </Route>
               </Route>
