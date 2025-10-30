@@ -709,37 +709,39 @@ const CenterResidentsPage: React.FC = () => {
                                 </header>
 
                                 <div className="card-body-v2">
-                                  <h4 className="section-title-v2">Observaciones y Necesidades Básicas</h4>
+                                  <h4 className="section-title-v2">Observaciones y Necesidades Básicas</h4>
 
-                                  <p className="observations-text-v2">
-                                    {familyDetails.observaciones || "No hay observaciones registradas."}
-                                  </p>
-                                  <div className="needs-list-v2">
-                                    {(() => {
-                                      const rawNeeds = familyDetails?.necesidades_basicas || [];
-                                      // Convertimos strings a números
-                                      const needsArray = rawNeeds.map((n: string | number) => Number(n));
+                                  <p className="observations-text-v2">
+                                    {familyDetails.observaciones || "No hay observaciones registradas."}
+                                  </p>
 
-                                      // Filtramos solo los activos (1)
-                                      const activeNeeds = needsArray
-                                        .map((value, index) => ({ value, index }))
-                                        .filter((item) => item.value === 1);
+                                  <div className="needs-list-v2">
+                                    {(() => {
+                                      const rawNeeds = familyDetails?.necesidades_basicas || [];
 
-                                      if (activeNeeds.length === 0) {
-                                        return (
-                                          <p className="no-needs-text">
-                                            No se registraron necesidades básicas urgentes.
-                                          </p>
-                                        );
-                                      }
+                                      // Convertimos strings a números
+                                      const needsArray = rawNeeds.map((n: string | number): number => Number(n));
 
-                                      return activeNeeds.map((item) => (
-                                        <span key={item.index} className="need-badge">
-                                          {translateNeedCode(item.index + 1)}{" "}
-                                        </span>
-                                      ));
-                                    })()}
-                                  </div>
+                                      // Filtramos solo los activos (1)
+                                      const activeNeeds = needsArray
+                                        .map((value: number, index: number) => ({ value, index }))
+                                        .filter((item: { value: number; index: number }) => item.value === 1);
+
+                                      if (activeNeeds.length === 0) {
+                                        return (
+                                          <p className="no-needs-text">
+                                            No se registraron necesidades básicas urgentes.
+                                          </p>
+                                        );
+                                      }
+
+                                      return activeNeeds.map((item: { value: number; index: number }) => (
+                                        <span key={item.index} className="need-badge">
+                                          {translateNeedCode(item.index + 1)}{" "}
+                                        </span>
+                                      ));
+                                    })()}
+                                  </div>
 
                                   <h4 className="section-title-v2 members-title">
                                       Miembros del Grupo Familiar ({(familyDetails.miembros || []).length}) - ID Familia: {familyDetails.family_id}
