@@ -276,12 +276,10 @@ export default function MapComponent({ centers }: MapComponentProps) {
   }, []);
    React.useEffect(() => {
     if (selectedCenter?.id) {
-      console.log("🔍 Obteniendo capacidad de centro:", selectedCenter.center_id);
       const controller = new AbortController();
 
       getCenterCapacity(selectedCenter.center_id.toString(), controller.signal)
         .then((data) => {
-          console.log("✅ Capacidad recibida:", data);
           setCenterCapacity(data);
         })
         .catch((err) => {
@@ -295,10 +293,8 @@ export default function MapComponent({ centers }: MapComponentProps) {
   }, [selectedCenter]);
 
   async function fetchCenterCapacity(centerId: string) {
-    console.log("🔍 Obteniendo capacidad del centro:", centerId);
     try {
       const data = await getCenterCapacity(centerId);
-      console.log("✅ Capacidad obtenida:", data);
       setCenterCapacity(data);
     } catch (error) {
       console.error("❌ Error al obtener capacidad:", error);
@@ -445,11 +441,9 @@ export default function MapComponent({ centers }: MapComponentProps) {
                     {Number(selectedCenter.fullnessPercentage ?? 0).toFixed(0)}%
                   </p>
                   <Button
-                    variant="outlined"
-                    size="small"
+                    className="view-details-btn"
                     onClick={() => {
                       if (selectedCenter?.center_id) {
-                        console.log("🟦 Click en Ver más, abriendo panel y obteniendo capacidad...");
                         fetchCenterCapacity(selectedCenter.center_id);
                         setIsPanelOpen(true);
                       } else {
@@ -458,6 +452,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
                     }}
                   >
                     Ver más
+                    <span className="icon-detail">➡️</span>
                   </Button>
                 </div>
               </InfoWindow>
@@ -483,7 +478,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
         </div>
         <SidePanel open={isPanelOpen} onClose={() => setIsPanelOpen(false)}>
           <h3>{selectedCenter?.name}</h3>
-          
+          <p><strong>Centro de :</strong> {selectedCenter?.type || 'No disponible'} </p>
           <p><strong>Dirección:</strong> {selectedCenter?.address || 'No disponible'} </p>
           <p><strong>Activo:</strong> {selectedCenter?.is_active ? '✅ Sí' : '❌ No'}</p>
           <p><strong>Capacidad total:</strong> {centerCapacity?.total_capacity ?? 'Cargando...'} </p>
@@ -492,7 +487,10 @@ export default function MapComponent({ centers }: MapComponentProps) {
 
 
                 {/* ... (otros detalles) ... */}
-          <p>Aquí irá la información de "Recursos urgentes".</p>
+          <div className="resources-title-separator">
+              <hr className="separator-line" />
+              <h4 className="resources-section-title">📦 Recursos Solicitados por el Albergue</h4>
+          </div>
         </SidePanel>
       </APIProvider>
     </div>

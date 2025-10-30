@@ -437,7 +437,7 @@ router.get('/status/active', requireAuth, listActiveCenters);
 router.get('/:id/activation', requireAuth, getCenterActiveActivation);
 
 // --- Rutas de Datos Específicos del Centro ---
-router.get('/:centerId/capacity', requireAuth, getCapacity);
+router.get('/:centerId/capacity',  getCapacity);
 router.get('/:centerId/people', requireAuth, listPeople);
 router.get('/:centerID/residents', requireAuth, listGroups)
 // --- Rutas de Inventario ---
