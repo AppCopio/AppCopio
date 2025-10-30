@@ -9,8 +9,7 @@ import "./MapComponent.css";
 import { Button } from "@mui/material";
 import SidePanel from "./SidePanel";
 import { getCenterCapacity } from "@/services/centers.service";
-
-
+import type { Category, InventoryItem } from "@/types/inventory";
 type MapComponentProps = {
   centers: Center[];
 };
@@ -274,23 +273,6 @@ export default function MapComponent({ centers }: MapComponentProps) {
       console.warn('No se pudieron cargar configuraciones guardadas:', error);
     }
   }, []);
-   React.useEffect(() => {
-    if (selectedCenter?.id) {
-      const controller = new AbortController();
-
-      getCenterCapacity(selectedCenter.center_id.toString(), controller.signal)
-        .then((data) => {
-          setCenterCapacity(data);
-        })
-        .catch((err) => {
-          console.error("❌ Error al obtener capacidad:", err);
-        });
-
-      return () => controller.abort();
-    } else {
-      setCenterCapacity(null);
-    }
-  }, [selectedCenter]);
 
   async function fetchCenterCapacity(centerId: string) {
     try {
