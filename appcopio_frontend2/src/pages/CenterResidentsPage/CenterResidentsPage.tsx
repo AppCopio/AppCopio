@@ -21,11 +21,11 @@ import {
   listPeopleByCenter,
   listActiveCenters,
   registerFamilyDeparture,
-  getFamilyDetails,
-  getPersonDetailsEnriched,
+  getFamilyDetails,
+  getPersonDetailsEnriched,
 } from "@/services/residents.service";
 import { NEEDS_OPTIONS } from "@/types/fibe";
-
+import PersonEditModal from "@/components/center/PersonEditModal";
 const toISODate = (s?: string) => {
   if (!s) return "";
   const iso = s.includes(" ") ? s.replace(" ", "T") : s; // "YYYY-MM-DDTHH:mm:ssZ"
@@ -81,32 +81,34 @@ const CenterResidentsPage: React.FC = () => {
   const [personDetails, setPersonDetails] = useState<PersonDetailsEnriched | null>(null);
   const [isPersonDetailsLoading, setIsPersonDetailsLoading] = useState(false);
   const [personDetailsError, setPersonDetailsError] = useState<string | null>(null);
-  const [familyDetailsMap, setFamilyDetailsMap] = useState<Record<number, any>>({});
-  
-  const [isAnyDetailsLoading, setIsAnyDetailsLoading] = useState(false);
+  const [familyDetailsMap, setFamilyDetailsMap] = useState<Record<number, any>>({});
+  
+  const [isAnyDetailsLoading, setIsAnyDetailsLoading] = useState(false);
 
-  // EXPORTS
-  const LOGO_PATH = "/logoMuni/munilogo.png"; // dentro de /public
+  // Estados para modal de edición - HdU31
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingFamilyId, setEditingFamilyId] = useState<number | null>(null);
 
-  async function addLogo(doc: jsPDF) {
-    const img = new Image();
-    img.src = LOGO_PATH;
-    try {
-      if ((img as any).decode) {
-        await img.decode();
-      } else {
-        await new Promise((res, rej) => {
-          img.onload = () => res(null);
-          img.onerror = rej;
-        });
-      }
-      doc.addImage(img, "PNG", 12, 10, 16, 16);
-    } catch {
-      // seguir sin logo si falla
-    }
-  }
+  // EXPORTS
+  const LOGO_PATH = "/logoMuni/munilogo.png"; // dentro de /public
 
-  const exportToPDF = async () => {
+  async function addLogo(doc: jsPDF) {
+    try {
+      const img = new Image();
+      img.src = LOGO_PATH;
+      if ((img as any).decode) {
+        await img.decode();
+      } else {
+        await new Promise((res, rej) => {
+          img.onload = () => res(null);
+          img.onerror = rej;
+        });
+      }
+      doc.addImage(img, "PNG", 12, 10, 16, 16);
+    } catch {
+      // seguir sin logo si falla
+    }
+  }  const exportToPDF = async () => {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
     await addLogo(doc);
@@ -392,6 +394,45 @@ const CenterResidentsPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Handlers para modal de edici�n - HdU31
+  const handleOpenEditModal = (familyId: number) => {
+    setEditingFamilyId(familyId);
+    setEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setEditingFamilyId(null);
+  };
+
+  const handleSaveSuccess = async () => {
+    // Recargar datos del acorde�n despu�s de guardar
+    if (centerId) {
+      try {
+        if (showFamilies) {
+          // Modo familias: recargar lista y detalles si est� abierto
+          const grps = await listResidentGroups(centerId);
+          setGroups(grps);
+          if (openDetailsFamilyId) {
+            const details = await getFamilyDetails(openDetailsFamilyId);
+            setFamilyDetails(details);
+          }
+        } else {
+          // Modo personas: recargar lista y detalles si est� abierto
+          const ppl = await listPeopleByCenter(centerId, filters);
+          setPeople(ppl);
+          if (editingFamilyId && familyDetailsMap[editingFamilyId]) {
+            const details = await getFamilyDetails(editingFamilyId);
+            setFamilyDetailsMap({ ...familyDetailsMap, [editingFamilyId]: details });
+          }
+        }
+      } catch (err) {
+        console.error("Error recargando datos tras edici�n:", err);
+      }
+    }
+    handleCloseEditModal();
+  };
 
   const translateNeedCode = (code: number): string => {
     // Ajustamos porque en la base de datos probablemente los códigos van del 1 al 14
@@ -813,6 +854,25 @@ const CenterResidentsPage: React.FC = () => {
                                       </tbody>
                                     </table>
                                   </div>
+
+                                  {/* Boton Editar Familia - HdU31 */}
+                                  <div style={{ marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #ddd", textAlign: "right" }}>
+                                    <button
+                                      onClick={() => handleOpenEditModal(resident.family_id)}
+                                      className="action-btn"
+                                      style={{
+                                        backgroundColor: "#28a745",
+                                        color: "white",
+                                        padding: "10px 20px",
+                                        border: "none",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                       Editar Familia
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -1078,6 +1138,25 @@ const CenterResidentsPage: React.FC = () => {
                                                   </tbody>
                                                 </table>
                                               </div>
+
+                                              {/* Bot�n Editar Familia - HdU31 (desde persona) */}
+                                              <div style={{ marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #ddd", textAlign: "right" }}>
+                                                <button
+                                                  onClick={() => handleOpenEditModal(lastMembership.family_id)}
+                                                  className="action-btn"
+                                                  style={{
+                                                    backgroundColor: "#28a745",
+                                                    color: "white",
+                                                    padding: "10px 20px",
+                                                    border: "none",
+                                                    borderRadius: "4px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "bold",
+                                                  }}
+                                                >
+                                                   Editar Familia
+                                                </button>
+                                              </div>
                                             </div>
                                           );
                                         }
@@ -1155,11 +1234,19 @@ const CenterResidentsPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+          </div>
+        </div>
+      )}
 
-export default CenterResidentsPage;
+      {/* Modal de edición - HdU31 */}
+      {editModalOpen && editingFamilyId && (
+        <PersonEditModal
+          open={editModalOpen}
+          onClose={handleCloseEditModal}
+          familyId={editingFamilyId}
+          onSaveSuccess={handleSaveSuccess}
+        />
+      )}
+    </div>
+  );
+};export default CenterResidentsPage;

@@ -92,7 +92,7 @@ export const familyService = {
 
   /**
    * Convierte array de necesidades [1,0,1,...] a nombres seleccionados
-   * @param arr Array de 14 enteros (0 o 1)
+   * @param arr Array de 13 enteros (0 o 1)
    * @returns Array de strings con nombres de necesidades
    */
   needsArrayToSelected(arr: number[]): string[] {
@@ -108,7 +108,7 @@ export const familyService = {
   /**
    * Convierte nombres seleccionados a array [1,0,1,...]
    * @param selected Array de strings con nombres de necesidades
-   * @returns Array de 14 enteros (0 o 1)
+   * @returns Array de 13 enteros (0 o 1)
    */
   selectedToNeedsArray(selected: string[]): number[] {
     const arr = new Array(NEEDS_OPTIONS.length).fill(0);

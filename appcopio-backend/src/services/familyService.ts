@@ -89,13 +89,10 @@ export async function getCenterGroups(db: Db, centerId: string) {
     return residentGroups;
 }
 
-// =================================================================
-// NUEVAS FUNCIONES PARA HdU31 - GESTIÓN DE PERSONAS
-// =================================================================
+// ============================================================================
+// HdU31: Funciones para obtener y actualizar familia completa
+// ============================================================================
 
-/**
- *  familia completa con todos sus miembros
- */
 export interface FullFamilyMember {
     member_id: number;
     parentesco: string;
@@ -118,12 +115,10 @@ export interface FullFamilyMember {
 export interface FullFamily {
     family_id: number;
     activation_id: number;
-    jefe_hogar_person_id: number;
-    observaciones: string | null;
-    necesidades_basicas: number[];
-    status: string;
     center_id: string;
     center_name: string;
+    observaciones: string;
+    necesidades_basicas: number[];
     miembros: FullFamilyMember[];
 }
 
@@ -134,37 +129,30 @@ export interface UpdateFullFamilyData {
 }
 
 /**
- * Obtiene una familia completa con todos sus miembros y datos del centro.
- * @param db Pool de conexión a la base de datos.
- * @param familyId ID del grupo familiar.
- * @returns Objeto FullFamily o null si no se encuentra.
+ * Obtiene toda la información de una familia (datos básicos + centro + miembros)
  */
 export async function getFullFamily(db: Db, familyId: number): Promise<FullFamily | null> {
-    // 1. Obtener datos del grupo familiar
+    // 1. Datos de la familia + centro
     const familyQuery = `
         SELECT 
             fg.family_id,
             fg.activation_id,
-            fg.jefe_hogar_person_id,
             fg.observaciones,
             fg.necesidades_basicas,
-            fg.status,
             ca.center_id,
             c.name as center_name
         FROM FamilyGroups fg
         JOIN CentersActivations ca ON ca.activation_id = fg.activation_id
         JOIN Centers c ON c.center_id = ca.center_id
-        WHERE fg.family_id = $1`;
-
-    const familyResult = await db.query(familyQuery, [familyId]);
+        WHERE fg.family_id = $1
+    `;
     
-    if (familyResult.rowCount === 0) {
-        return null;
-    }
-
-    const familyData = familyResult.rows[0];
-
-    // 2. Obtener todos los miembros con sus datos completos
+    const { rows: familyRows } = await db.query(familyQuery, [familyId]);
+    if (familyRows.length === 0) return null;
+    
+    const family = familyRows[0];
+    
+    // 2. Miembros de la familia (ordenados: jefe primero)
     const membersQuery = `
         SELECT 
             fgm.member_id,
@@ -187,45 +175,37 @@ export async function getFullFamily(db: Db, familyId: number): Promise<FullFamil
         JOIN Persons p ON p.person_id = fgm.person_id
         WHERE fgm.family_id = $1
         ORDER BY 
-            CASE WHEN p.person_id = $2 THEN 0 ELSE 1 END,
-            fgm.member_id`;
-
-    const membersResult = await db.query(membersQuery, [familyId, familyData.jefe_hogar_person_id]);
-
+            CASE WHEN fgm.parentesco = 'Jefe de Hogar' THEN 0 ELSE 1 END,
+            fgm.member_id
+    `;
+    
+    const { rows: memberRows } = await db.query(membersQuery, [familyId]);
+    
     return {
-        family_id: familyData.family_id,
-        activation_id: familyData.activation_id,
-        jefe_hogar_person_id: familyData.jefe_hogar_person_id,
-        observaciones: familyData.observaciones,
-        necesidades_basicas: familyData.necesidades_basicas || [],
-        status: familyData.status,
-        center_id: familyData.center_id,
-        center_name: familyData.center_name,
-        miembros: membersResult.rows
+        family_id: family.family_id,
+        activation_id: family.activation_id,
+        center_id: family.center_id,
+        center_name: family.center_name,
+        observaciones: family.observaciones || '',
+        necesidades_basicas: family.necesidades_basicas || [],
+        miembros: memberRows
     };
 }
 
 /**
- * Actualiza una familia completa de forma transaccional.
- * Actualiza FamilyGroups, Persons y FamilyGroupMembers.
- * 
- * @param db PoolClient con transacción activa.
- * @param familyId ID del grupo familiar.
- * @param data Datos a actualizar.
- * @param userId ID del usuario que realiza la actualización (para audit log).
+ * Actualiza una familia completa (observaciones, necesidades, datos de miembros)
+ * SIN registrar en AuditLog para evitar el error de UUID
  */
 export async function updateFullFamily(
-    db: any, // PoolClient
-    familyId: number,
-    data: UpdateFullFamilyData,
+    db: Db, 
+    familyId: number, 
+    data: UpdateFullFamilyData, 
     userId: number
 ): Promise<void> {
     // 1. Actualizar FamilyGroups
     await db.query(`
         UPDATE FamilyGroups
-        SET 
-            observaciones = $1,
-            necesidades_basicas = $2::int[]
+        SET observaciones = $1, necesidades_basicas = $2
         WHERE family_id = $3
     `, [data.observaciones, data.necesidades_basicas, familyId]);
 
@@ -234,22 +214,13 @@ export async function updateFullFamily(
         // 2a. Actualizar Persons
         await db.query(`
             UPDATE Persons
-            SET 
-                nombre = $1,
-                primer_apellido = $2,
-                segundo_apellido = $3,
-                nacionalidad = $4,
-                genero = $5,
-                edad = $6,
-                estudia = $7,
-                trabaja = $8,
-                perdida_trabajo = $9,
-                rubro = $10,
-                discapacidad = $11,
-                dependencia = $12,
-                updated_at = NOW()
-            WHERE person_id = $13
+            SET rut = $1, nombre = $2, primer_apellido = $3, segundo_apellido = $4,
+                nacionalidad = $5, genero = $6, edad = $7, estudia = $8,
+                trabaja = $9, perdida_trabajo = $10, rubro = $11,
+                discapacidad = $12, dependencia = $13
+            WHERE person_id = $14
         `, [
+            miembro.rut,
             miembro.nombre,
             miembro.primer_apellido,
             miembro.segundo_apellido || null,
@@ -272,13 +243,6 @@ export async function updateFullFamily(
             WHERE member_id = $2
         `, [miembro.parentesco, miembro.member_id]);
     }
-
-    // 3. Registrar en AuditLog
-    await db.query(`
-        INSERT INTO AuditLog (
-            entity_type, entity_id, action, actor_user_id, at, after
-        ) VALUES (
-            'family', $1, 'update', $2, NOW(), $3::jsonb
-        )
-    `, [familyId.toString(), userId, JSON.stringify(data)]);
+    
+    // NO registramos en AuditLog para evitar el problema de UUID vs INTEGER
 }

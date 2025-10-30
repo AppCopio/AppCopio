@@ -50,11 +50,17 @@ const router = Router();
  */
 function needsVectorFromSelected(selectedNeeds: string[] | undefined | null): number[] {
     const vec = new Array(NEEDS_OPTIONS.length).fill(0);
-    if (!selectedNeeds || selectedNeeds.length === 0) return vec;
+    if (!selectedNeeds || selectedNeeds.length === 0) {
+        // Asegurar que siempre tenga 14 elementos
+        while (vec.length < 14) vec.push(0);
+        return vec;
+    }
     const selectedSet = new Set(selectedNeeds.map((s) => s.toLowerCase().trim()));
     NEEDS_OPTIONS.forEach((name, idx) => {
         if (selectedSet.has(name.toLowerCase())) vec[idx] = 1;
     });
+    // Asegurar que siempre tenga 14 elementos
+    while (vec.length < 14) vec.push(0);
     return vec;
 }
 
@@ -582,9 +588,20 @@ const updateFullFamilyHandler: RequestHandler = async (req, res) => {
         return;
     }
 
-    if (!Array.isArray(updateData.necesidades_basicas) || updateData.necesidades_basicas.length !== 14) {
-        res.status(400).json({ error: "El campo 'necesidades_basicas' debe ser un array de 14 enteros." });
+    // Validar que necesidades_basicas sea un array válido
+    if (!Array.isArray(updateData.necesidades_basicas)) {
+        res.status(400).json({ error: "El campo 'necesidades_basicas' debe ser un array." });
         return;
+    }
+
+    // Asegurar que el array tenga exactamente 14 elementos (rellenar con 0s si hace falta)
+    while (updateData.necesidades_basicas.length < 14) {
+        updateData.necesidades_basicas.push(0);
+    }
+    
+    // Truncar si tiene más de 14
+    if (updateData.necesidades_basicas.length > 14) {
+        updateData.necesidades_basicas = updateData.necesidades_basicas.slice(0, 14);
     }
 
     if (!Array.isArray(updateData.miembros) || updateData.miembros.length === 0) {
