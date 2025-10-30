@@ -7,6 +7,8 @@ import type { Center } from "@/types/center";
 import MapFilters, { type OperationalStatusFilters } from "./MapFilters";
 import "./MapComponent.css";
 import { Button } from "@mui/material";
+import SidePanel from "./SidePanel";
+import { getCenterCapacity } from "@/services/centers.service";
 
 
 type MapComponentProps = {
@@ -177,6 +179,7 @@ const OMZLayer: React.FC<{ visible: boolean }> = ({ visible }) => {
 
 
 export default function MapComponent({ centers }: MapComponentProps) {
+  const [isPanelOpen, setIsPanelOpen] = React.useState(false);
   const { isAuthenticated } = useAuth();
   const [selectedCenterId, setSelectedCenterId] = React.useState<string | null>(null);
   const [showOMZ, setShowOMZ] = React.useState(false); // Estado para controlar la visibilidad de la capa OMZ
@@ -186,7 +189,11 @@ export default function MapComponent({ centers }: MapComponentProps) {
     showMaxCapacity: true,
   });
   const [isFiltersCollapsed, setIsFiltersCollapsed] = React.useState<boolean>(true); // Comenzar colapsado
-
+  const [centerCapacity, setCenterCapacity] = React.useState<{
+    total_capacity: number;
+    current_capacity: number;
+    available_capacity: number;
+  } | null>(null);
   // Hook de geolocalización
   const {
     location: userLocation,
@@ -267,6 +274,37 @@ export default function MapComponent({ centers }: MapComponentProps) {
       console.warn('No se pudieron cargar configuraciones guardadas:', error);
     }
   }, []);
+   React.useEffect(() => {
+    if (selectedCenter?.id) {
+      console.log("🔍 Obteniendo capacidad de centro:", selectedCenter.center_id);
+      const controller = new AbortController();
+
+      getCenterCapacity(selectedCenter.center_id.toString(), controller.signal)
+        .then((data) => {
+          console.log("✅ Capacidad recibida:", data);
+          setCenterCapacity(data);
+        })
+        .catch((err) => {
+          console.error("❌ Error al obtener capacidad:", err);
+        });
+
+      return () => controller.abort();
+    } else {
+      setCenterCapacity(null);
+    }
+  }, [selectedCenter]);
+
+  async function fetchCenterCapacity(centerId: string) {
+    console.log("🔍 Obteniendo capacidad del centro:", centerId);
+    try {
+      const data = await getCenterCapacity(centerId);
+      console.log("✅ Capacidad obtenida:", data);
+      setCenterCapacity(data);
+    } catch (error) {
+      console.error("❌ Error al obtener capacidad:", error);
+    }
+  }
+
 
   // Función para manejar el toggle del colapso
   const handleToggleCollapse = (collapsed: boolean) => {
@@ -406,6 +444,21 @@ export default function MapComponent({ centers }: MapComponentProps) {
                     <strong>Nivel de Abastecimiento:</strong>{" "}
                     {Number(selectedCenter.fullnessPercentage ?? 0).toFixed(0)}%
                   </p>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      if (selectedCenter?.center_id) {
+                        console.log("🟦 Click en Ver más, abriendo panel y obteniendo capacidad...");
+                        fetchCenterCapacity(selectedCenter.center_id);
+                        setIsPanelOpen(true);
+                      } else {
+                        console.warn("⚠️ selectedCenter.center_id no está definido");
+                      }
+                    }}
+                  >
+                    Ver más
+                  </Button>
                 </div>
               </InfoWindow>
             )}
@@ -428,6 +481,19 @@ export default function MapComponent({ centers }: MapComponentProps) {
 
 
         </div>
+        <SidePanel open={isPanelOpen} onClose={() => setIsPanelOpen(false)}>
+          <h3>{selectedCenter?.name}</h3>
+          
+          <p><strong>Dirección:</strong> {selectedCenter?.address || 'No disponible'} </p>
+          <p><strong>Activo:</strong> {selectedCenter?.is_active ? '✅ Sí' : '❌ No'}</p>
+          <p><strong>Capacidad total:</strong> {centerCapacity?.total_capacity ?? 'Cargando...'} </p>
+          <p><strong>Capacidad actual:</strong> {centerCapacity?.current_capacity ?? 'Cargando...'} </p>
+          <p><strong>Capacidad disponible:</strong> {centerCapacity?.available_capacity ?? 'Cargando...'} </p>
+
+
+                {/* ... (otros detalles) ... */}
+          <p>Aquí irá la información de "Recursos urgentes".</p>
+        </SidePanel>
       </APIProvider>
     </div>
   );

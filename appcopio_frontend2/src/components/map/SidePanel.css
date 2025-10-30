@@ -1,0 +1,65 @@
+.sidepanel {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 350px;
+  height: 100%;
+  background-color: #fff;
+  box-shadow: -3px 0 10px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+  transition: right 0.35s ease-in-out;
+  z-index: 2000;
+}
+
+.sidepanel.open {
+  right: 0;
+}
+
+.sidepanel-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 🔵 Encabezado azul con título */
+.sidepanel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #007bff;
+  color: white;
+  padding: 15px 20px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 🔹 Aquí se mostrará el nombre del centro (con fondo azul más suave) */
+.sidepanel-body h3 {
+  background-color: #e6f0ff;
+  color: #0047b3;
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.sidepanel-body {
+  padding: 20px;
+}
+
+.close-btn {
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.sidepanel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 1500;
+}
