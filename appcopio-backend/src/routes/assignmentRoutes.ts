@@ -50,7 +50,6 @@ const listActiveAssignments: RequestHandler = async (req, res) => {
     }
 
     try {
-        // CAMBIO: El controlador llama al servicio para obtener los datos.
         const assignments = await getActiveAssignments(pool, userId, role, excludeCenterId);
         res.json({ assignments: assignments, count: assignments.length });
     } catch (e) {
@@ -78,7 +77,6 @@ const createAssignment: RequestHandler = async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // CAMBIO: El controlador llama al servicio para ejecutar la lógica de negocio.
         const result = await createOrUpdateAssignment(client, { user_id, center_id, normRole, changed_by });
 
         await client.query('COMMIT');
@@ -122,7 +120,6 @@ const removeAssignment: RequestHandler = async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // CAMBIO: El controlador llama al servicio para ejecutar la lógica.
         await removeAssignmentService(client, { user_id, center_id, normRole, changed_by });
 
         await client.query('COMMIT');
@@ -171,7 +168,7 @@ const createActivationAssignmentHandler: RequestHandler = async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
   finally {
-    client.release(); // <-- No olvides liberar el cliente
+    client.release();
   }
 };
 
@@ -202,7 +199,6 @@ const listActivationAssignmentsHandler: RequestHandler = async (req, res)  => {
  */
 const endActivationAssignmentHandler: RequestHandler = async (req, res)  => {
   const { activation_id, user_id } = req.body;
-
   const ended_by = requireUser(req).user_id;
 
   if (typeof activation_id !== 'number' || typeof user_id !== 'number' || !ended_by) {
@@ -218,6 +214,7 @@ const endActivationAssignmentHandler: RequestHandler = async (req, res)  => {
       activation_id,
       user_id,
       ended_by,
+      close_all: req.body.close_all,
     };
     
     // Llamamos al servicio con el pool

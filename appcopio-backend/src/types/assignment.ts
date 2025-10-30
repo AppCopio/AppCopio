@@ -29,4 +29,5 @@ export type EndActivationAssignmentInput = {
     activation_id: number;
     user_id: number;     // El user_id del encargado que queremos des-asignar
     ended_by: number;    // El user_id del admin/coordinador que realiza la acción
+    close_all?: boolean;
 }

@@ -281,6 +281,7 @@ export async function endActivationAssignment(
     activation_id,
     user_id,
     ended_by,
+    close_all = false
   } = input;
 
 
@@ -316,17 +317,20 @@ export async function endActivationAssignment(
   const assignment_id = assignment.assignment_id;
 
   // No quitar al último encargado
-  const countQ = `
-    SELECT COUNT(*) FROM ActivationAssignments
-    WHERE activation_id = $1 AND end_date IS NULL;
-  `;
-  const { rows: countRows } = await db.query(countQ, [activation_id]);
-  
-  if (parseInt(countRows[0].count, 10) <= 1) {
-    const err = new Error('No se puede quitar el último encargado de una activación activa.') as any;
-    err.status = 400;
-    throw err;
+  if(!close_all) {
+    const countQ = `
+      SELECT COUNT(*) FROM ActivationAssignments
+      WHERE activation_id = $1 AND end_date IS NULL;
+    `;
+    const { rows: countRows } = await db.query(countQ, [activation_id]);
+    
+    if (parseInt(countRows[0].count, 10) <= 1) {
+      const err = new Error('No se puede quitar el último encargado de una activación activa.') as any;
+      err.status = 400;
+      throw err;
+    }
   }
+  
 
   // Cerrar la asignación
   const q = `

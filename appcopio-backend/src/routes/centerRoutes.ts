@@ -20,7 +20,9 @@ import {
     updateInventoryItem as updateInventoryItemService,
     deleteInventoryItem as deleteInventoryItemService,
     getAssignedUsersByCenter as getAssignedUsersByCenter,
-    updateCenterFullness as updateCenterFullnessService
+    updateCenterFullness as updateCenterFullnessService,
+    getAllActivationsByCenter,
+    getActivationDetail
 } from '../services/centerService';
 import { sendNotification } from '../services/notificationService';
 
@@ -320,8 +322,6 @@ const listGroups: RequestHandler = async (req, res) => {
 };
 
 
-
-
 const getInventory: RequestHandler = async (req, res) => {
     try {
         const inventory = await getInventoryByCenterId(pool, req.params.centerId);
@@ -429,6 +429,50 @@ const listAssignedUsers: RequestHandler = async (req, res) => {
     }
 };
 
+/**
+ * @route GET /centers/:centerId/activations
+ * @desc Lista todas las activaciones (historial completo) de un centro
+ */
+const listCenterActivations: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    
+    try {
+        const activations = await getAllActivationsByCenter(pool, centerId);
+        res.json(activations);
+    } catch (error) {
+        console.error(`Error en listCenterActivations (centerId: ${centerId}):`, error);
+        res.status(500).json({ error: 'Error interno del servidor al obtener el historial de activaciones.' });
+    }
+};
+
+/**
+ * @route GET /centers/:centerId/activations/:activationId
+ * @desc Obtiene el detalle completo de una activación específica
+ */
+const getCenterActivationDetail: RequestHandler = async (req, res) => {
+    const { activationId } = req.params;
+    const activationIdNum = parseInt(activationId, 10);
+    
+    if (isNaN(activationIdNum)) {
+        res.status(400).json({ error: 'El activation_id debe ser un número válido.' });
+        return;
+    }
+    
+    try {
+        const detail = await getActivationDetail(pool, activationIdNum);
+        
+        if (!detail) {
+            res.status(404).json({ error: 'Activación no encontrada.' });
+            return;
+        }
+        
+        res.json(detail);
+    } catch (error) {
+        console.error(`Error en getCenterActivationDetail (activationId: ${activationId}):`, error);
+        res.status(500).json({ error: 'Error interno del servidor al obtener el detalle de la activación.' });
+    }
+};
+
 // =================================================================
 // 4. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
@@ -446,6 +490,8 @@ router.patch('/:id/operational-status', requireAuth, setOperationalStatus);
 router.patch('/:id/fullness', requireAuth, updateFullness);
 router.get('/status/active', requireAuth, listActiveCenters);
 router.get('/:id/activation', requireAuth, getCenterActiveActivation);
+router.get('/:centerId/activations', requireAuth, listCenterActivations);
+router.get('/:centerId/activations/:activationId', requireAuth, getCenterActivationDetail);
 
 // --- Rutas de Datos Específicos del Centro ---
 router.get('/:centerId/capacity', requireAuth, getCapacity);

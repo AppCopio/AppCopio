@@ -410,16 +410,3 @@ export interface ActivationDetail {
   inventory_stats: ActivationInventoryStats;
   summary: ActivationSummary;
 }
-
-/**
- * Estadísticas agregadas del historial completo de un centro
- */
-export interface CenterActivationStats {
-  total_activations: number;
-  active_count: number;
-  avg_duration_days: number | null;
-  last_deactivation_date: string | null;
-  first_activation_date: string | null;
-  total_people_served: number;
-  total_families_served: number;
-}

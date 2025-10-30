@@ -1,8 +1,7 @@
 // src/services/centerService.ts
 import { PoolClient } from "pg";
-import pool from "../config/db";
 import { Db } from "../types/db";
-import { ActiveActivationRow } from "../types/center";
+import { ActiveActivationRow, ActivationHistoryItem, ActivationDetail } from "../types/center";
 import { getValidDescriptionColumns, mapCatastroDataFromRequest } from '../utils/centerHelpers';
 
 // --- Helpers Internos del Servicio ---
@@ -200,6 +199,212 @@ export async function getActiveActivation(db: Db, centerId: string): Promise<Act
     return rows.length > 0 ? rows[0] as ActiveActivationRow : null;
 }
 
+export async function getAllActivationsByCenter(db: Db, centerId: string) : Promise<ActivationHistoryItem[]> {
+  const result = await db.query(
+    `SELECT 
+      ca.activation_id,
+      ca.center_id,
+      ca.started_at,
+      ca.ended_at,
+      ca.notes,
+      u1.nombre as activated_by_name,
+      u1.user_id as activated_by,
+      u2.nombre as deactivated_by_name,
+      u2.user_id as deactivated_by,
+      
+      -- Duración de la activación en días
+      CASE 
+        WHEN ca.ended_at IS NOT NULL THEN 
+          EXTRACT(EPOCH FROM (ca.ended_at - ca.started_at)) / 86400
+        ELSE 
+          EXTRACT(EPOCH FROM (NOW() - ca.started_at)) / 86400
+      END as duration_days,
+      
+      -- Estadísticas: Contar familias
+      (SELECT COUNT(*) 
+       FROM FamilyGroups fg 
+       WHERE fg.activation_id = ca.activation_id) as total_families,
+      
+      -- Estadísticas: Contar personas totales
+      (SELECT COUNT(DISTINCT fgm.person_id) 
+       FROM FamilyGroups fg 
+       JOIN FamilyGroupMembers fgm ON fg.family_id = fgm.family_id 
+       WHERE fg.activation_id = ca.activation_id) as total_people,
+      
+      -- Estadísticas: Contar encargados únicos (activos + históricos)
+      (SELECT COUNT(DISTINCT aa.user_id) 
+       FROM ActivationAssignments aa 
+       WHERE aa.activation_id = ca.activation_id) as total_managers,
+       
+      -- Estadísticas: Contar bases de datos creadas
+      (SELECT COUNT(*) 
+       FROM Datasets ds 
+       WHERE ds.activation_id = ca.activation_id) as total_databases
+       
+    FROM CentersActivations ca
+    LEFT JOIN Users u1 ON ca.activated_by = u1.user_id
+    LEFT JOIN Users u2 ON ca.deactivated_by = u2.user_id
+    WHERE ca.center_id = $1
+    ORDER BY ca.started_at DESC`,
+    [centerId]
+  );
+  
+  return result.rows;
+}
+
+/**
+ * Obtiene el detalle completo de UNA activación específica
+ * Incluye toda la información relacionada: familias, encargados, bases de datos
+ */
+// En appcopio-backend/src/services/centerService.ts
+
+// ... (importaciones y otras funciones)
+
+/**
+ * Obtiene el detalle completo de UNA activación específica
+ * Incluye toda la información relacionada: familias, encargados, bases de datos
+ */
+export async function getActivationDetail(db: Db, activationId: number) {
+  // 1. Información básica de la activación (Sin cambios, esta consulta estaba bien)
+  const activationResult = await db.query(
+    `SELECT 
+       ca.activation_id,
+       ca.center_id,
+       ca.started_at,
+       ca.ended_at,
+       ca.notes,
+       c.name as center_name,
+       c.address as center_address,
+       c.type as center_type,
+       c.capacity as center_capacity,
+       u1.nombre as activated_by_name,
+       u1.user_id as activated_by,
+       u2.nombre as deactivated_by_name,
+       u2.user_id as deactivated_by,
+       
+       -- Duración
+       CASE 
+         WHEN ca.ended_at IS NOT NULL THEN 
+           EXTRACT(EPOCH FROM (ca.ended_at - ca.started_at)) / 86400
+         ELSE 
+           EXTRACT(EPOCH FROM (NOW() - ca.started_at)) / 86400
+       END as duration_days
+       
+     FROM CentersActivations ca
+     JOIN Centers c ON ca.center_id = c.center_id
+     LEFT JOIN Users u1 ON ca.activated_by = u1.user_id
+     LEFT JOIN Users u2 ON ca.deactivated_by = u2.user_id
+     WHERE ca.activation_id = $1`,
+    [activationId]
+  );
+  
+  if (activationResult.rowCount === 0) {
+    return null;
+  }
+  
+  // 2. Familias de esta activación con conteo de miembros
+  const familiesResult = await db.query(
+    `SELECT 
+       fg.family_id,
+       fg.activation_id,
+       fg.observaciones,
+       fg.status,
+       fg.departure_date,
+       fg.departure_reason,
+       p.person_id as head_person_id,
+       p.nombre as head_nombre,
+       p.primer_apellido as head_apellido,
+       p.rut as head_rut,
+       COUNT(fgm.person_id) as members_count
+     FROM FamilyGroups fg
+     LEFT JOIN Persons p ON fg.jefe_hogar_person_id = p.person_id
+     LEFT JOIN FamilyGroupMembers fgm ON fg.family_id = fgm.family_id
+     WHERE fg.activation_id = $1
+     -- CORRECCIÓN: Agregamos todas las columnas no agregadas al GROUP BY
+     GROUP BY fg.family_id, p.person_id, p.nombre, p.primer_apellido, p.rut 
+     ORDER BY fg.family_id`,
+    [activationId]
+  );
+  
+  // 3. Encargados (Sin cambios, esta consulta estaba bien)
+  const managersResult = await db.query(
+    `SELECT 
+       aa.assignment_id,
+       aa.user_id,
+       u.nombre as user_name,
+       u.rut as user_rut,
+       u.celular as user_phone,
+       aa.start_date,
+       aa.end_date,
+       su.nombre as started_by_name,
+       eu.nombre as ended_by_name
+     FROM ActivationAssignments aa
+     JOIN Users u ON aa.user_id = u.user_id
+     LEFT JOIN Users su ON aa.started_by = su.user_id
+     LEFT JOIN Users eu ON aa.ended_by = eu.user_id
+     WHERE aa.activation_id = $1
+     ORDER BY aa.start_date DESC`,
+    [activationId]
+  );
+  
+  // 4. Bases de datos creadas en esta activación
+  const databasesResult = await db.query(
+    `SELECT 
+       ds.dataset_id,
+       ds.name as database_name,
+       -- CORRECCIÓN: 'description' no existe, la sacamos del JSON 'config'
+       ds.config->>'description' as description, 
+       ds.created_at,
+       u.nombre as created_by_name,
+       (SELECT COUNT(*) 
+        FROM DatasetRecords dr 
+        WHERE dr.dataset_id = ds.dataset_id 
+          -- No es necesario filtrar por activation_id aquí, ya que ds.dataset_id es único
+          AND dr.deleted_at IS NULL) as records_count
+     FROM Datasets ds
+     LEFT JOIN Users u ON ds.created_by = u.user_id
+     WHERE ds.activation_id = $1
+       AND ds.deleted_at IS NULL
+     ORDER BY ds.created_at DESC`,
+    [activationId]
+  );
+  
+  // 5. Estadísticas de inventario (Sin cambios, esta consulta estaba bien)
+  const inventoryStatsResult = await db.query(
+    `SELECT 
+       COUNT(*) as total_movements,
+       SUM(CASE WHEN il.action_type = 'ADD' THEN 1 ELSE 0 END) as additions,
+       SUM(CASE WHEN il.action_type = 'SUB' THEN 1 ELSE 0 END) as subtractions,
+       SUM(CASE WHEN il.action_type = 'ADJUST' THEN 1 ELSE 0 END) as adjustments
+     FROM InventoryLog il
+     JOIN CentersActivations ca ON il.center_id = ca.center_id
+     WHERE ca.activation_id = $1
+       AND il.created_at >= ca.started_at
+       AND (ca.ended_at IS NULL OR il.created_at <= ca.ended_at)`,
+    [activationId]
+  );
+  
+  // 6. Ensamblaje (Sin cambios, estaba bien)
+  return {
+    activation: activationResult.rows[0],
+    families: familiesResult.rows,
+    managers: managersResult.rows,
+    databases: databasesResult.rows,
+    inventory_stats: inventoryStatsResult.rows[0] || {
+      total_movements: 0,
+      additions: 0,
+      subtractions: 0,
+      adjustments: 0
+    },
+    summary: {
+      total_families: familiesResult.rowCount || 0,
+      total_people: familiesResult.rows.reduce((sum, f) => sum + parseInt(f.members_count || 0), 0),
+      total_managers: managersResult.rowCount || 0,
+      total_databases: databasesResult.rowCount || 0,
+      active_managers: managersResult.rows.filter(m => !m.end_date).length
+    }
+  };
+}
 
 // =================================================================
 // SECCIÓN 3: RESIDENTES Y CAPACIDAD
