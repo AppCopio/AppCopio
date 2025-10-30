@@ -13,9 +13,11 @@ import {
   TextField,
   Autocomplete,
   Dialog,
-  AppBar,
-  Toolbar,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -193,70 +195,84 @@ export default function PersonEditModal({
   };
 
   return (
-    <Dialog fullScreen open={open} onClose={handleClose}>
-      <AppBar sx={{ position: 'relative', bgcolor: '#1976d2' }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={handleClose}
-            disabled={saving}
-            aria-label="cerrar"
-          >
-            <CloseIcon />
-          </IconButton>
-          <Typography variant="h6" sx={{ flex: 1, ml: 2 }}>
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: {
+          minHeight: '80vh',
+          maxHeight: '90vh',
+          borderRadius: 2
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        bgcolor: '#212121', 
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        pb: 2
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h6">
             Editar Información de Familia #{family?.family_id || familyId}
           </Typography>
           {family?.status && (
             <Chip 
               label={family.status} 
+              size="small"
               sx={{ 
                 bgcolor: 'rgba(255, 255, 255, 0.2)', 
-                color: 'white',
-                mr: 2 
+                color: 'white'
               }} 
             />
           )}
-          <Button
-            color="inherit"
-            onClick={handleSave}
-            disabled={saving || success}
-            startIcon={<SaveIcon />}
-            sx={{ 
-              bgcolor: 'rgba(255, 255, 255, 0.1)',
-              '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.2)' }
-            }}
-          >
-            {saving ? 'Guardando...' : 'Guardar'}
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="lg" sx={{ py: 4, pb: 8 }}>
-        {loading ? (
-          <Box sx={{ mt: 4 }}>
-            <LinearProgress />
-            <Typography sx={{ mt: 2, textAlign: 'center' }}>
-              Cargando información de la familia...
-            </Typography>
+        </Box>
+        <IconButton
+          edge="end"
+          color="inherit"
+          onClick={handleClose}
+          disabled={saving}
+          aria-label="cerrar"
+          sx={{ ml: 2 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      
+      <DialogContent sx={{ pt: 3, pb: 2 }}>
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Cargando información de la familia...</Typography>
           </Box>
-        ) : error && !family ? (
-          <Alert severity="error" sx={{ mt: 4 }}>
+        )}
+
+        {error && !loading && (
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
-        ) : (
+        )}
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Cambios guardados correctamente
+          </Alert>
+        )}
+
+        {!loading && family && (
           <>
             {/* Info del Centro */}
-            {family?.center_name && (
-              <Paper sx={{ p: 2, mb: 3, bgcolor: 'info.light' }}>
+            {family.center_name && (
+              <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.100', border: 1, borderColor: 'grey.300' }}>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Centro:</strong> {family.center_name}
                 </Typography>
               </Paper>
             )}
-
-            {/* Alerts */}
             {error && (
               <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
                 {error}
@@ -330,37 +346,27 @@ export default function PersonEditModal({
                 ))}
               </Stack>
             </Paper>
-
-            {/* Botón Guardar flotante inferior (adicional) */}
-            <Box
-              sx={{
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                bgcolor: 'background.paper',
-                borderTop: 1,
-                borderColor: 'divider',
-                p: 2,
-                display: 'flex',
-                justifyContent: 'center',
-                zIndex: 1000,
-              }}
-            >
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                disabled={saving || success}
-                sx={{ minWidth: 200 }}
-              >
-                {saving ? 'Guardando...' : 'Guardar Cambios'}
-              </Button>
-            </Box>
           </>
         )}
-      </Container>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, py: 2, bgcolor: 'grey.50' }}>
+        <Button 
+          onClick={handleClose} 
+          disabled={saving}
+          color="inherit"
+        >
+          Cancelar
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<SaveIcon />}
+          onClick={handleSave}
+          disabled={saving || success || loading}
+        >
+          {saving ? 'Guardando...' : 'Guardar Cambios'}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }
