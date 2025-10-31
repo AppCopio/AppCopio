@@ -1,8 +1,3 @@
-// =======================================================
-// COMPONENTE: Detalle de Activación
-// Ubicación: appcopio_frontend2/src/pages/activations/ActivationDetailPage.tsx
-// =======================================================
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -41,6 +36,7 @@ import { getActivationDetail } from '@/services/centers.service';
 import { paths } from '@/routes/paths';
 import type { ActivationDetail } from '@/types/center';
 import { useScrollToTop } from '@/hooks/useScrollToTop';
+import { isCancelError } from "@/lib/errors";
 
 export default function ActivationDetailPage() {
   useScrollToTop({ behavior: 'smooth' });
@@ -62,27 +58,29 @@ export default function ActivationDetailPage() {
   }, [centerId, activationId]);
 
   const loadDetail = async (signal?: AbortSignal) => {
-    if (!centerId || !activationId) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const data = await getActivationDetail(centerId, parseInt(activationId), signal);
-      if (data) {
-        setDetail(data);
-      } else {
-        setError('Activación no encontrada');
-      }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        setError('Error al cargar el detalle de la activación');
-        console.error('Error loading activation detail:', err);
-      }
-    } finally {
-      setLoading(false);
+  if (!centerId || !activationId) return;
+  
+  setLoading(true);
+  setError(null);
+  
+  try {
+    const data = await getActivationDetail(centerId, parseInt(activationId), signal);
+    if (data) {
+      setDetail(data);
+    } else {
+      setError('Activación no encontrada');
     }
-  };
+  } catch (err: any) {
+    // Ignorar errores de cancelación (AbortError o CanceledError)
+     if (isCancelError(err)) {
+      return;
+    }
+    setError('Error al cargar el detalle de la activación');
+    console.error('Error loading activation detail:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleBack = () => {
     navigate(paths.center.activationsHistory(centerId!));

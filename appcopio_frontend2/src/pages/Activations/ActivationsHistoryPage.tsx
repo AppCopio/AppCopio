@@ -73,8 +73,14 @@ export default function ActivationsHistoryPage() {
   };
 
   const handleViewDetail = (activationId: number) => {
-    navigate(paths.center.activationDetail(centerId!, activationId));
-  };
+  console.log('=== NAVEGANDO A DETALLE ===');
+  console.log('centerId:', centerId);
+  console.log('activationId:', activationId);
+  console.log('activationId type:', typeof activationId);
+  const url = paths.center.activationDetail(centerId!, activationId);
+  console.log('URL generada:', url);
+  navigate(url);
+};
 
   const handleBack = () => {
     navigate(paths.center.details(centerId!));

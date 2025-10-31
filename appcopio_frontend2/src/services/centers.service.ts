@@ -470,7 +470,6 @@ export async function listAssignedUsersToCenter(centerId: string, signal?: Abort
 import type { 
   ActivationHistoryItem, 
   ActivationDetail, 
-  CenterActivationStats 
 } from "@/types/center";
 
 /**
@@ -516,7 +515,9 @@ export async function getActivationDetail(
     );
     return data || null;
   } catch (error) {
-    if (isCancelError(error)) return null;
+    if (isCancelError(error)){
+      throw error;
+    }
     console.error(`Error fetching activation detail ${activationId}:`, error);
     return null;
   }
@@ -529,22 +530,7 @@ export async function getActivationDetail(
  * @param signal - AbortSignal para cancelar la petición
  * @returns Estadísticas del historial o null si hay error
  */
-export async function getCenterActivationStats(
-  centerId: string,
-  signal?: AbortSignal
-): Promise<CenterActivationStats | null> {
-  try {
-    const { data } = await api.get<CenterActivationStats>(
-      `/centers/${centerId}/activations/stats`,
-      { signal }
-    );
-    return data || null;
-  } catch (error) {
-    if (isCancelError(error)) return null;
-    console.error(`Error fetching activation stats for center ${centerId}:`, error);
-    return null;
-  }
-}
+
 
 // =======================================================
 // HELPERS / UTILIDADES
