@@ -20,7 +20,8 @@ import type {
   InventoryCreateDTO,
 } from "@/types/inventory";
 import "./InventoryPage.css";
-import { getPrioritiesByCenter, upsertPriority, Priority, CenterPriority } from "@/services/priorities.service";
+import { getPrioritiesByCenter, upsertPriority } from "@/services/priorities.service";
+import type { Priority, CenterPriority } from "@/types/priorities";
 
 const groupByCategory = (items: InventoryItem[]): GroupedInventory =>
   (items ?? []).reduce((acc, item) => {
@@ -149,14 +150,14 @@ export default function InventoryPage() {
     }
   };
   const getItemPriority = (itemId: string) =>
-    priorities.find(p => p.item_id === itemId)?.priority ?? 'bajo';
+    priorities.find((p) => String(p.item_id) === String(itemId))?.priority ?? 'bajo';
 
   const handlePriorityChange = async (itemId: string, newPriority: Priority) => {
     if (!user?.user_id || !centerId) return;
     try {
       setSavingPriorityItemId(itemId);
       const updated = await upsertPriority(centerId, itemId, newPriority);
-      setPriorities(prev => prev.filter(p => p.item_id !== itemId).concat(updated));
+  setPriorities((prev: CenterPriority[]) => prev.filter((p: CenterPriority) => String(p.item_id) !== String(itemId)).concat(updated));
     } catch (err) {
       console.error("Error al actualizar prioridad:", err);
     } finally {
@@ -180,7 +181,7 @@ export default function InventoryPage() {
   const handleSortByDate = (order: string) => {
     const sorted = { ...inventory };
     for (const category in sorted) {
-      sorted[category] = sorted[category].slice().sort((a, b) => {
+      sorted[category] = sorted[category].slice().sort((a: InventoryItem, b: InventoryItem) => {
         const da = new Date(a.updated_at).getTime();
         const db = new Date(b.updated_at).getTime();
         if (Number.isNaN(da) || Number.isNaN(db)) return 0;
@@ -275,7 +276,7 @@ export default function InventoryPage() {
     setIsSubmitting(true);
     try {
       const created = await createCategory(name);
-      setCategories((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+  setCategories((prev: Category[]) => [...prev, created].sort((a: Category, b: Category) => a.name.localeCompare(b.name)));
       setNewCategoryName("");
       alert(`Categoría "${name}" añadida con éxito.`);
     } catch (err: any) {
@@ -297,7 +298,7 @@ export default function InventoryPage() {
     setIsSubmitting(true);
     try {
       await deleteCategory(categoryToDelete);
-      setCategories((prev) => prev.filter((c) => String(c.category_id) !== categoryToDelete));
+  setCategories((prev: Category[]) => prev.filter((c: Category) => String(c.category_id) !== categoryToDelete));
       setCategoryToDelete("");
       alert("Categoría eliminada con éxito.");
     } catch (err: any) {
@@ -588,10 +589,10 @@ export default function InventoryPage() {
                               Editar
                             </button>
                             <select
-                              value={getItemPriority(item.item_id)}
-                              onChange={(e) => handlePriorityChange(item.item_id, e.target.value as Priority)}
-                              disabled={savingPriorityItemId === item.item_id}
-                              className={`priority-select priority-${getItemPriority(item.item_id)}`}
+                              value={getItemPriority(String(item.item_id))}
+                              onChange={(e) => handlePriorityChange(String(item.item_id), e.target.value as Priority)}
+                              disabled={savingPriorityItemId === String(item.item_id)}
+                              className={`priority-select priority-${getItemPriority(String(item.item_id))}`}
                             >
                               <option value="bajo">Prioridad Baja</option>
                               <option value="medio">Prioridad Media</option>
