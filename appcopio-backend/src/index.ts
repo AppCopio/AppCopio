@@ -22,6 +22,7 @@ import familyMembersRoutes from "./routes/familyMembersRoutes";
 import fibeRoutes from "./routes/fibeRoutes";
 import roleRoutes from "./routes/roleRoutes";
 import zoneRoutes from "./routes/zoneRoutes";
+import shiftRoutes from "./routes/shiftRoutes";
 import {requireAuth} from "./auth/middleware";
 import csvRoutes from "./routes/csvRoutes";
 
@@ -93,6 +94,7 @@ app.use("/api/fibe", requireAuth, fibeRoutes);
 app.use("/api/roles", requireAuth, roleRoutes);
 app.use("/api/csv/upload", requireAuth, csvRoutes);
 app.use("/api/zones", requireAuth, zoneRoutes); 
+app.use("/api/shifts", requireAuth, shiftRoutes);
 
 app.use("/api/database", requireAuth, databaseRoutes);
 app.use("/api/database-fields", requireAuth, fieldRoutes);
