@@ -1,15 +1,6 @@
 // src/services/priorities.service.ts
 import { api } from "@/lib/api";
-
-export type Priority = 'bajo' | 'medio' | 'alto';
-
-export interface CenterPriority {
-  center_id: string;
-  item_id: string;
-  priority: Priority;
-  updated_at: string;
-  updated_by_user: string;
-}
+import type { Priority, CenterPriority, InventoryPriorityItem } from "@/types/priorities";
 
 /**
  * Obtiene todas las prioridades de un centro
@@ -39,7 +30,8 @@ export async function deletePriority(centerId: string, itemId: string): Promise<
 }
 
 
-export async function getInventoryWithPriorities(centerId: string): Promise<CenterPriority[]> {
+export async function getInventoryWithPriorities(centerId: string): Promise<InventoryPriorityItem[]> {
   const res = await api.get(`/centers/${centerId}/itemsPriorities`);
   return res.data;
 }
+

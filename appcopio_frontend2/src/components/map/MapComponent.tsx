@@ -10,14 +10,9 @@ import { Button } from "@mui/material";
 import SidePanel from "./SidePanel";
 import { getCenterCapacity } from "@/services/centers.service";
 import type { Category, InventoryItem } from "@/types/inventory";
+import type { InventoryPriorityItem } from "@/types/priorities";
 type MapComponentProps = {
   centers: Center[];
-};
-type PriorityItem = {
-  item_id: number;
-  item_name: string;
-  priority: string;
-  category_name?: string; // opcional si puede ser null
 };
 
 import { getInventoryWithPriorities } from "@/services/priorities.service";
@@ -202,7 +197,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
     current_capacity: number;
     available_capacity: number;
   } | null>(null);
-  const [priorities, setPriorities] = React.useState<PriorityItem[]>([]);
+  const [priorities, setPriorities] = React.useState<InventoryPriorityItem[]>([]);
 
   // Hook de geolocalización
   const {
@@ -545,7 +540,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
               const levelItems = priorities.filter(p => p.priority === level);
               if (!levelItems.length) return null;
 
-              const itemsByCategory: Record<string, PriorityItem[]> = {};
+              const itemsByCategory: Record<string, InventoryPriorityItem[]> = {};
               levelItems.forEach(item => {
                 const cat = item.category_name ?? "Sin Categoría";
                 if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
