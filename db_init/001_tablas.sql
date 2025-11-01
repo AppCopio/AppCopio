@@ -576,3 +576,64 @@ CREATE INDEX idx_centernotif_center_eventat ON CenterNotifications (center_id, e
 CREATE INDEX idx_centernotif_activation     ON CenterNotifications (activation_id);
 CREATE INDEX idx_centernotif_recipient      ON CenterNotifications (destinatary);
 CREATE INDEX idx_centernotif_status_queued  ON CenterNotifications (status) WHERE status = 'queued';
+
+
+
+-- Tabla principal de turnos
+CREATE TABLE CenterShifts (
+    shift_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
+    activation_id INT NOT NULL REFERENCES CentersActivations(activation_id) ON DELETE CASCADE,
+    assigned_user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+    
+    -- Información del turno
+    shift_start TIMESTAMPTZ NOT NULL,
+    shift_end TIMESTAMPTZ NOT NULL,
+    
+    -- Días de la semana (array de números 0-6: domingo=0, lunes=1, ..., sábado=6)
+    weekdays INT[] NOT NULL DEFAULT ARRAY[0,1,2,3,4,5,6],
+    
+    -- Metadatos
+    notes TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'programado' CHECK (status IN ('programado', 'en_curso', 'completado', 'cancelado')),
+    
+    -- Auditoría
+    created_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    updated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ,
+    
+    -- Constraints
+    CONSTRAINT shift_dates_valid CHECK (shift_end > shift_start),
+    CONSTRAINT shift_weekdays_valid CHECK (
+        array_length(weekdays, 1) > 0 AND 
+        weekdays <@ ARRAY[0,1,2,3,4,5,6]
+    )
+);
+
+-- Índices para optimizar consultas de turnos
+CREATE INDEX idx_center_shifts_center ON CenterShifts(center_id);
+CREATE INDEX idx_center_shifts_activation ON CenterShifts(activation_id);
+CREATE INDEX idx_center_shifts_user ON CenterShifts(assigned_user_id);
+CREATE INDEX idx_center_shifts_dates ON CenterShifts(shift_start, shift_end);
+CREATE INDEX idx_center_shifts_status ON CenterShifts(status);
+CREATE INDEX idx_center_shifts_live ON CenterShifts(center_id, activation_id) 
+    WHERE deleted_at IS NULL AND status IN ('programado', 'en_curso');
+
+-- Tabla de historial de cambios en turnos 
+CREATE TABLE CenterShiftHistory (
+    history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    shift_id UUID NOT NULL REFERENCES CenterShifts(shift_id) ON DELETE CASCADE,
+    action VARCHAR(20) NOT NULL CHECK (action IN ('created', 'updated', 'cancelled', 'completed')),
+    changed_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    previous_data JSONB,
+    new_data JSONB,
+    reason TEXT
+);
+
+-- Índices para historial de turnos
+CREATE INDEX idx_shift_history_shift ON CenterShiftHistory(shift_id, changed_at DESC);
+CREATE INDEX idx_shift_history_user ON CenterShiftHistory(changed_by);
+CREATE INDEX idx_shift_history_action ON CenterShiftHistory(action);
