@@ -1,6 +1,6 @@
 .map-page-container {
   width: 100%;
-  height: calc(100vh - 100px); /* Ajusta según sea necesario, restando navbar y padding */
+  height: calc(100vh); /* Ajusta según sea necesario, restando navbar y padding */
   display: flex;
   flex-direction: column;
   overflow: hidden; /* El mapa no debe tener scroll, debe ocupar exactamente su espacio */

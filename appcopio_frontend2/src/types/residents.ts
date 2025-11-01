@@ -1,3 +1,4 @@
+import type { Person, PersonDetailsEnriched } from "@/services/persons.service";
 // src/types/residents.ts
 export interface ResidentGroup {
   rut: string;
@@ -6,23 +7,6 @@ export interface ResidentGroup {
   family_id: number;
 }
 
-export interface Person {
-  rut: string;
-  nombre: string;
-  fecha_ingreso: string;
-  fecha_salida: string;
-  edad: number;
-  genero: string;
-  primer_apellido: string;
-  segundo_apellido: string;
-  nacionalidad: string;
-  estudia: boolean;
-  trabaja: boolean;
-  perdida_trabajo: boolean;
-  rubro: string;
-  discapacidad: boolean;
-  dependencia: boolean;
-}
 
 export interface ActiveCenter {
   activation_id: number;
@@ -36,4 +20,16 @@ export interface CapacityInfo {
   available_capacity: number;
 }
 
+// Define el tipo para la respuesta del nuevo endpoint
+export interface FamilyMembership {
+  family_id: number;
+  family_name: string;
+  is_head: boolean;
+  relationship: string; // Parentesco
+  // ... otros campos
+}
+
+
 export type DepartureReason = "traslado" | "regreso" | "reubicacion";
+
+export type { Person, PersonDetailsEnriched };

@@ -1,93 +1,220 @@
 /* src/components/layout/navbar/Navbar.css */
 
-
-
-.main-navbar {
-    position: fixed;   /* o fixed si quieres */
-  top: 0;
-  z-index: 1100;
-
-  /* Fondo a todo el ancho del viewport */
-  width: 100vw;
-
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 2rem;
-  height: 60px;
-  background-color: #000000; /* <-- CORRECCIÓN: Fondo Negro */
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* ... el resto de tu CSS se mantiene igual ... */
-.navbar-logo a {
-  color: white;
-  text-decoration: none;
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
-.navbar-links {
-  list-style: none;
+/* Estilos globales para asegurar que el layout funcione correctamente */
+body {
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
+}
+
+/* Asegurar que el contenido no se solape con el AppBar en móvil */
+@media (max-width: 899px) {
+  .main-content {
+    padding-top: 64px;
+  }
+}
+
+/* Estilos para transiciones suaves */
+.drawer-transition {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ajustes para el logo en diferentes tamaños */
+.navbar-logo {
   display: flex;
   align-items: center;
-  gap: 1.5rem; /* <-- Espacio entre los enlaces */
+  justify-content: center;
+  transition: all 0.3s ease;
 }
 
-.navbar-links a {
-  color: #f0f0f0;
+/* Estilos para los iconos de navegación */
+.nav-icon {
+  color: white;
+  transition: transform 0.2s ease;
+}
+
+.nav-icon:hover {
+  transform: scale(1.1);
+}
+
+/* Asegurar que los enlaces no tengan estilos por defecto */
+a {
   text-decoration: none;
-  font-size: 1rem;
-  padding: 0.5rem 0;
-  position: relative;
-  transition: color 0.2s ease-in-out;
+  color: inherit;
 }
 
-.navbar-links a:hover {
+/* Estilos para el badge de notificaciones */
+.notification-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 82, 82, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 82, 82, 0);
+  }
+}
+
+/* Estilos para mejorar la accesibilidad en móvil */
+@media (max-width: 599px) {
+  /* Aumentar área táctil en móvil */
+  .MuiListItemButton-root {
+    min-height: 48px !important;
+  }
+  
+  .MuiIconButton-root {
+    padding: 12px !important;
+  }
+}
+
+/* Estilos para el menú colapsado */
+.collapsed-menu {
+  overflow-x: hidden;
+}
+
+.collapsed-menu .MuiListItemText-root {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Mejora visual para el drawer en móvil */
+@media (max-width: 899px) {
+  .MuiDrawer-paper {
+    border-right: none;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Estilos para el overlay del drawer temporal */
+.MuiBackdrop-root {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Estilos para mejorar la visibilidad del botón hamburguesa */
+.hamburger-button {
   color: white;
+  transition: transform 0.2s ease;
 }
 
-/* Estilo para el enlace activo */
-.navbar-links a.active-link {
-  color: white;
-  font-weight: bold;
+.hamburger-button:hover {
+  transform: rotate(90deg);
 }
 
-/* Línea sutil debajo del enlace activo */
-.navbar-links a.active-link::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: #ffffff;
+/* Estilos para el avatar del usuario */
+.user-avatar {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.login-button-nav {
-  background-color: white;
-  color: #004a99 !important; /* El !important asegura que sobreescriba el color base */
-  padding: 0.5rem 1rem !important;
-  border-radius: 5px;
-  font-weight: bold;
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
 }
 
-.logout-button {
-  background-color: transparent;
-  color: white;
-  border: 1px solid white;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+/* Mejorar el contraste en modo oscuro */
+.dark-theme {
+  color-scheme: dark;
 }
 
-.logout-button:hover {
-  background-color: white;
-  color: #004a99;
+/* Estilos para el indicador offline */
+.offline-indicator {
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Estilos para el scroll del drawer */
+.MuiDrawer-paper {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.MuiDrawer-paper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.MuiDrawer-paper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.MuiDrawer-paper::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.MuiDrawer-paper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Animación para el botón de colapsar */
+.collapse-button {
+  transition: transform 0.3s ease;
+}
+
+.collapse-button.collapsed {
+  transform: rotate(180deg);
+}
+
+/* Estilos para mejorar la legibilidad */
+.nav-text {
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+/* Responsive: Ajustes adicionales para tablets */
+@media (min-width: 600px) and (max-width: 899px) {
+  .main-content {
+    padding: 16px;
+  }
+}
+
+/* Estilos para animación de entrada del drawer */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawer-entering {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Asegurar que el contenido principal no se solape */
+.main-content-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mejora para los tooltips */
+.MuiTooltip-tooltip {
+  font-size: 0.875rem;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+/* Estilos para focus visible (accesibilidad) */
+*:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* Mejorar la transición del ancho del contenido principal */
+.content-shift {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
