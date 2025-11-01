@@ -20,6 +20,7 @@ import type {
   InventoryCreateDTO,
 } from "@/types/inventory";
 import "./InventoryPage.css";
+import { getPrioritiesByCenter, upsertPriority, Priority, CenterPriority } from "@/services/priorities.service";
 
 const groupByCategory = (items: InventoryItem[]): GroupedInventory =>
   (items ?? []).reduce((acc, item) => {
@@ -39,6 +40,9 @@ export default function InventoryPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [priorities, setPriorities] = useState<CenterPriority[]>([]);
+  const [savingPriorityItemId, setSavingPriorityItemId] = useState<string | null>(null);
+
 
   // Modales / edición
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -112,6 +116,9 @@ export default function InventoryPage() {
         if (cats.length > 0 && newItemCategory === "") {
           setNewItemCategory(String(cats[0].category_id));
         }
+        const data = await getPrioritiesByCenter(centerId);
+        console.log("data_",data);
+        setPriorities(data);
       } catch (e: any) {
         if (!controller.signal.aborted) {
           setError(e?.message ?? "No se pudieron cargar los datos.");
@@ -141,7 +148,21 @@ export default function InventoryPage() {
       if (!controller.signal.aborted && showLoading) setIsLoading(false);
     }
   };
+  const getItemPriority = (itemId: string) =>
+    priorities.find(p => p.item_id === itemId)?.priority ?? 'bajo';
 
+  const handlePriorityChange = async (itemId: string, newPriority: Priority) => {
+    if (!user?.user_id || !centerId) return;
+    try {
+      setSavingPriorityItemId(itemId);
+      const updated = await upsertPriority(centerId, itemId, newPriority);
+      setPriorities(prev => prev.filter(p => p.item_id !== itemId).concat(updated));
+    } catch (err) {
+      console.error("Error al actualizar prioridad:", err);
+    } finally {
+      setSavingPriorityItemId(null);
+    }
+  };
   // Callback para actualizar el fullnessPercentage del centro
   const handleFullnessCalculated = useCallback(async (fullnessPercentage: number) => {
     if (!centerId || !isOnline) return;
@@ -566,8 +587,18 @@ export default function InventoryPage() {
                             <button className="action-btn" onClick={() => handleOpenEditModal(item)}>
                               Editar
                             </button>
+                            <select
+                              value={getItemPriority(item.item_id)}
+                              onChange={(e) => handlePriorityChange(item.item_id, e.target.value as Priority)}
+                              disabled={savingPriorityItemId === item.item_id}
+                              className={`priority-select priority-${getItemPriority(item.item_id)}`}
+                            >
+                              <option value="bajo">Prioridad Baja</option>
+                              <option value="medio">Prioridad Media</option>
+                              <option value="alto">Prioridad Alta</option>
+                            </select>
                           </td>
-                        )}
+                        )}  
                       </tr>
                     ))
                   )}
