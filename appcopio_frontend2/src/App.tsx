@@ -26,6 +26,7 @@ import NeedsFormPage from "@/pages/NeedsFormPage/NeedsFormPage";
 import NeedsStatusPage from "@/pages/NeedsStatusPage/NeedsStatusPage";
 import UpdatesPage from "@/pages/UpdatesPage/UpdatesPage";
 import InventoryHistoryPage from "@/pages/InventoryHistoryPage/InventoryHistoryPage";
+import MovementHistoryPage from "@/pages/MovementHistoryPage/MovementHistoryPage";
 import MisCentrosPage from "@/pages/MisCentrosPage/MisCentrosPage";
 import FibePage from "@/pages/FibePage/FibePage";
 import CenterResidentsPage from "@/pages/CenterResidentsPage/CenterResidentsPage";
@@ -85,6 +86,7 @@ export default function App() {
                   <Route path="details" element={<CenterDetailsPage />} />
                   <Route path="inventory" element={<InventoryPage />} />
                   <Route path="inventory/history" element={<InventoryHistoryPage />} />
+                  <Route path="movements/history" element={<MovementHistoryPage />} />
                   <Route path="needs/new" element={<NeedsFormPage />} />
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />

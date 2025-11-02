@@ -58,7 +58,7 @@ CREATE TABLE Centers (
     capacity INT DEFAULT 0,
     is_active BOOLEAN DEFAULT FALSE,
     fullness_percentage INT DEFAULT 0,
-    operational_status TEXT DEFAULT 'abierto',
+    operational_status TEXT DEFAULT 'abierto', 
     public_note TEXT,
     should_be_active BOOLEAN DEFAULT FALSE,
     comunity_charge_id INT REFERENCES Users(user_id) ON DELETE SET NULL,
@@ -114,10 +114,18 @@ CREATE TABLE InventoryLog (
     reason TEXT,
     notes TEXT,
     created_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    family_id INT REFERENCES FamilyGroups(family_id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Guarda el historial de asignaciones de cada centro: el registro válido actualmente es el que tiene valid_to IS NULL
+-- Índice para mejorar rendimiento de consultas por familia
+CREATE INDEX IF NOT EXISTS idx_inventorylog_family_id 
+ON InventoryLog(family_id) 
+WHERE family_id IS NOT NULL;
+
+COMMENT ON COLUMN InventoryLog.family_id IS 'ID del grupo familiar destinatario en caso de salidas (SUB). NULL para entradas y ajustes.';
+
+-- Guarda el historial de asignaciones de cada centro: el registro vàlido actualmente es el que tiene valid_to IS NULL
 CREATE TABLE CenterAssignments (
     assignment_id SERIAL PRIMARY KEY,
     center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
