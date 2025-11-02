@@ -32,6 +32,7 @@ import templateRoutes from "./routes/templateRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
 import notificationRoutes from "./routes/notificacionRoutes";
 import migrateRoutes from "./routes/migrate";
+import volunteerRoutes from './routes/volunteerContactRoutes';
 
 dotenv.config();
 
@@ -103,6 +104,7 @@ app.use("/api/notifications", requireAuth, notificationRoutes);
 app.use("/api/migrate", migrateRoutes); // Sin requireAuth para facilitar ejecución inicial
 
 
+app.use('/api/volunteers', volunteerRoutes);
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {

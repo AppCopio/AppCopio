@@ -2,11 +2,7 @@
 import type { HouseholdData } from "../types/family";
 import { NEEDS_OPTIONS } from "../types/fibe";
 import type { Db } from "../types/db";
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { requireAuth } from '../auth/middleware';
-import pool from '../config/db';
+
 /**
  * Transforma un array de strings de necesidades en un vector de 1s y 0s.
  */
