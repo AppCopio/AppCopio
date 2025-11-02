@@ -1,7 +1,7 @@
 // src/routes/shiftRoutes.ts
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
-import { requireUser } from '../auth/requireUser';
+import { requireAuth } from '../auth/middleware';
 import {
     getShiftsByCenter,
     getShiftsByUser,
@@ -306,16 +306,16 @@ const exportCenterShifts: RequestHandler = async (req, res) => {
 // RUTAS
 // =================================================================
 
-router.get('/center/:centerId', requireUser, listCenterShifts);
-router.get('/user/:userId', requireUser, listUserShifts);
-router.get('/:shiftId/history', requireUser, getHistory);
-router.get('/:shiftId', requireUser, getShift);
-router.post('/', requireUser, createNewShift);
-router.patch('/:shiftId', requireUser, updateExistingShift);
-router.delete('/:shiftId', requireUser, cancelExistingShift);
-router.delete('/:shiftId/hard', requireUser, hardDeleteShift);
+router.get('/center/:centerId', requireAuth, listCenterShifts);
+router.get('/user/:userId', requireAuth, listUserShifts);
+router.get('/:shiftId/history', requireAuth, getHistory);
+router.get('/:shiftId', requireAuth, getShift);
+router.post('/', requireAuth, createNewShift);
+router.patch('/:shiftId', requireAuth, updateExistingShift);
+router.delete('/:shiftId', requireAuth, cancelExistingShift);
+router.delete('/:shiftId/hard', requireAuth, hardDeleteShift);
 
 // Ruta de exportación CSV - comentada para implementación futura
-// router.get('/center/:centerId/export', requireUser, exportCenterShifts);
+// router.get('/center/:centerId/export', requireAuth, exportCenterShifts);
 
 export default router;

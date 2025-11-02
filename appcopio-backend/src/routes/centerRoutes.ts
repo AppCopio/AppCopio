@@ -35,6 +35,7 @@ const router = Router();
 // =================================================================
 
 const listCenters: RequestHandler = async (req, res) => {
+    console.log('listCenters called');
     try {
         const centers = await getAllCenters(pool);
         res.json(centers);
@@ -418,6 +419,63 @@ const listAssignedUsers: RequestHandler = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/centers/:centerId/available-workers
+ * Obtiene usuarios disponibles para asignar turnos en un centro:
+ * - Usuarios ya asignados al centro (con asignación activa: valid_to IS NULL)
+ * - Usuarios sin ninguna asignación de centro activa
+ * Excluye familias (role_id = 4) y usuarios inactivos
+ */
+const listAvailableWorkers: RequestHandler = async (req, res) => {
+    try {
+        const centerId = req.params.centerId;
+        
+        const query = `
+            SELECT DISTINCT
+                u.user_id,
+                u.email,
+                u.nombre,
+                u.role_id,
+                r.role_name,
+                u.is_active,
+                CASE 
+                    WHEN ca.user_id IS NOT NULL THEN true 
+                    ELSE false 
+                END as is_assigned_to_center
+            FROM Users u
+            INNER JOIN Roles r ON u.role_id = r.role_id
+            LEFT JOIN CenterAssignments ca ON u.user_id = ca.user_id 
+                AND ca.center_id = $1 
+                AND ca.valid_to IS NULL  -- Solo asignaciones activas
+            WHERE u.is_active = true 
+            AND u.role_id = 3
+            AND (
+                -- Usuario está asignado a este centro (asignación activa)
+                u.user_id IN (
+                    SELECT user_id 
+                    FROM CenterAssignments 
+                    WHERE center_id = $1 
+                    AND valid_to IS NULL
+                )
+                OR
+                -- Usuario no tiene ninguna asignación activa de centro
+                u.user_id NOT IN (
+                    SELECT user_id 
+                    FROM CenterAssignments
+                    WHERE valid_to IS NULL
+                )
+            )
+            ORDER BY is_assigned_to_center DESC, u.nombre ASC
+        `;
+        
+        const result = await pool.query(query, [centerId]);
+        res.json({ users: result.rows });
+    } catch (error) {
+        console.error(`Error en listAvailableWorkers (centerId: ${req.params.centerId}):`, error);
+        res.status(500).json({ error: 'Error al obtener usuarios disponibles.' });
+    }
+};
+
 // =================================================================
 // 4. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
@@ -446,6 +504,7 @@ router.post('/:centerId/inventory', requireAuth, addInventoryItem);
 router.put('/:centerId/inventory/:itemId', requireAuth, updateInventoryItem);
 router.delete('/:centerId/inventory/:itemId', requireAuth, deleteInventoryItem);
 
-router.get('/:centerId/assigned-users', requireAuth, listAssignedUsers); 
+router.get('/:centerId/assigned-users', requireAuth, listAssignedUsers);
+router.get('/:centerId/available-workers', requireAuth, listAvailableWorkers);
 
 export default router;

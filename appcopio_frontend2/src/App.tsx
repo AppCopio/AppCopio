@@ -40,6 +40,8 @@ import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
 
 import OfflineTestPage from '@/pages/System/OfflineTestPage';
 import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
+import ShiftsPage from "@/pages/ShiftsPage/ShiftsPage";
+import MyShiftsPage from "@/pages/MyShiftsPage/MyShiftsPage";
 
 
 export default function App() {
@@ -75,6 +77,7 @@ export default function App() {
               <Route path={paths.profile} element={<MyUserPage />} />
               <Route path={paths.myCenters} element={<MisCentrosPage />} />
               <Route path={paths.notifications} element={<NotificationsPage />} />
+              <Route path={paths.myShifts} element={<MyShiftsPage />} />
 
               {/* center/:centerId con hijos relativos + providers/guards */}
               <Route path={paths.center.pattern} element={<CenterLayout />}>
@@ -86,6 +89,7 @@ export default function App() {
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
+                  <Route path="shifts" element={<ShiftsPage />} />
 
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>

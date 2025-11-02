@@ -24,6 +24,7 @@ export const paths = {
   notifications: '/notifications', 
   profile: "/mi-perfil",
   myCenters: "/mis-centros",
+  myShifts: "/mis-turnos",
 
   // Center (segmento con parámetro y builders)
   center: {
@@ -38,5 +39,6 @@ export const paths = {
     updates: (centerId: string | number) => `/center/${centerId}/updates`,
     fibe: (centerId: string | number) => `/center/${centerId}/fibe`,
     databases: (centerId: string | number) => `/center/${centerId}/databases`,
+    shifts: (centerId: string | number) => `/center/${centerId}/shifts`,
   },
 } as const;

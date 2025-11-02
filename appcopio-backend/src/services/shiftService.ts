@@ -299,7 +299,7 @@ export async function createShift(
     client: PoolClient,
     input: CreateShiftInput
 ): Promise<CenterShift> {
-    // 1. Validar usuario existe y está activo (patrón existente del proyecto)
+    // 1. Validar usuario existe y está activo
     const userRs = await client.query(
         'SELECT user_id, is_active, role_id FROM Users WHERE user_id = $1', 
         [input.assigned_user_id]
@@ -311,7 +311,61 @@ export async function createShift(
         throw new Error('El usuario está inactivo');
     }
     
-    // 2. Obtener activation_id del centro activo
+    // 2. Validar que el usuario no tenga otro turno activo en fechas sobrelapadas
+    const activeShiftsQuery = `
+        SELECT shift_id, shift_start, shift_end, status, center_id
+        FROM CenterShifts
+        WHERE assigned_user_id = $1
+        AND status IN ('programado', 'en_curso')
+        AND deleted_at IS NULL
+        AND (
+            tstzrange(shift_start, shift_end, '[]') && tstzrange($2, $3, '[]')
+        )
+        LIMIT 1
+    `;
+    const activeShiftsRs = await client.query(activeShiftsQuery, [
+        input.assigned_user_id,
+        input.shift_start,
+        input.shift_end
+    ]);
+    
+    if (activeShiftsRs.rowCount && activeShiftsRs.rowCount > 0) {
+        const existingShift = activeShiftsRs.rows[0];
+        const startDate = new Date(existingShift.shift_start).toLocaleDateString('es-CL');
+        const endDate = new Date(existingShift.shift_end).toLocaleDateString('es-CL');
+        throw new Error(
+            `El usuario ya tiene un turno activo (${existingShift.status}) en el centro ${existingShift.center_id} ` +
+            `que solapa con estas fechas (${startDate} - ${endDate}). ` +
+            `Cancela o completa el turno existente antes de asignar uno nuevo.`
+        );
+    }
+    
+    // 3. Auto-asignar centro si el usuario no tiene asignación activa
+    const assignmentCheck = await client.query(
+        'SELECT assignment_id FROM CenterAssignments WHERE user_id = $1 AND center_id = $2 AND valid_to IS NULL',
+        [input.assigned_user_id, input.center_id]
+    );
+    
+    if (assignmentCheck.rowCount === 0) {
+        // Usuario no está asignado a este centro, crear asignación automáticamente
+        // Determinar el rol basado en el role_id del usuario
+        const userRoleId = userRs.rows[0].role_id;
+        let assignmentRole = 'trabajador municipal'; // por defecto
+        
+        // Ajustar según necesidad: role_id 1=admin, 2=municipal, 3=comunitario, 4=familia
+        if (userRoleId === 3) {
+            assignmentRole = 'contacto ciudadano';
+        }
+        
+        await client.query(`
+            INSERT INTO CenterAssignments (center_id, user_id, role, valid_from, changed_by)
+            VALUES ($1, $2, $3, NOW(), $4)
+        `, [input.center_id, input.assigned_user_id, assignmentRole, input.created_by]);
+        
+        console.log(`✅ Auto-asignado usuario ${input.assigned_user_id} al centro ${input.center_id} con rol "${assignmentRole}"`);
+    }
+    
+    // 4. Obtener activation_id del centro activo
     let activationId: number;
     if (input.activation_id) {
         activationId = input.activation_id;
@@ -319,10 +373,10 @@ export async function createShift(
         activationId = await getCenterActiveActivation(client, input.center_id);
     }
     
-    // 3. Preparar weekdays (por defecto todos los días)
+    // 5. Preparar weekdays (por defecto todos los días)
     const weekdays = input.weekdays || [0, 1, 2, 3, 4, 5, 6];
     
-    // 4. Validar solapamientos
+    // 6. Validar solapamientos (mantener validación existente)
     const overlapValidation = await validateShiftOverlap(client, {
         ...input,
         activation_id: activationId,
@@ -332,7 +386,7 @@ export async function createShift(
         throw new Error(overlapValidation.conflicts[0]?.message || 'Conflicto de horarios');
     }
     
-    // 5. Insertar turno
+    // 7. Insertar turno
     const query = `
         INSERT INTO CenterShifts (
             center_id, activation_id, assigned_user_id,
@@ -354,7 +408,7 @@ export async function createShift(
     
     const shiftId = result.rows[0].shift_id;
     
-    // 6. Registrar en historial
+    // 8. Registrar en historial
     const newShift = await getShiftById(client, shiftId);
     await logShiftHistory(
         client, 

@@ -544,6 +544,16 @@ export default function VerticalNavbar() {
           Mi Perfil
         </MenuItem>
         <Divider />
+        <MenuItem onClick={() => {
+          handleMenuClose();
+          navigate(paths.myShifts);
+        }}>
+          <ListItemIcon>
+            <WorkIcon fontSize="small" />
+          </ListItemIcon>
+          Mis turnos
+        </MenuItem>
+        <Divider />
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />

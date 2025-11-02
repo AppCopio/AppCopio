@@ -56,10 +56,11 @@ const CenterLayout: React.FC = () => {
     { label: "Crear Solicitud",       to: paths.center.needsNew(id), hiddenForTM: true },
     { label: "Estado de Actualizaciones", to: paths.center.updates(id) },
     { label: "Listado de Personas",   to: paths.center.residents(id) },
+    { label: "Turnos",                to: paths.center.shifts(id), hiddenForTM: true },
     { label: "Registros de activación",   to: paths.center.databases(id) },
   ];
 
-  // Filtrar enlaces: ocultar "Crear Solicitud" para TMs
+  // Filtrar enlaces: ocultar "Crear Solicitud" y "Turnos" para TMs
   const links = allLinks.filter(link => !(isTM && link.hiddenForTM));
 
   return (
