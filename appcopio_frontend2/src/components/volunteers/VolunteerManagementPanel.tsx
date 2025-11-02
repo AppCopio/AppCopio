@@ -19,7 +19,7 @@ import {
   DialogActions,
   IconButton,
   Stack,
-  Grid as Grid, // ⭐ CAMBIO: Usar Grid2 en lugar de Grid
+  Grid as Grid,
   Alert,
   CircularProgress,
   Tooltip,
@@ -37,7 +37,7 @@ import {
   Description as DescriptionIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import type { VolunteerInfo } from '@/services/volunteer.service';
+import type { VolunteerInfo, VolunteerStatus } from '@/types/volunteer';
 import { volunteerService } from '@/services/volunteer.service';
 
 interface VolunteerManagementPanelProps {
@@ -52,9 +52,12 @@ export default function VolunteerManagementPanel({
   const [volunteers, setVolunteers] = useState<VolunteerInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerInfo | null>(null);
+  const [selectedVolunteer, setSelectedVolunteer] =
+    useState<VolunteerInfo | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState<'accept' | 'reject' | 'contact' | null>(null);
+  const [actionType, setActionType] = useState<
+    'accept' | 'reject' | 'contact' | null
+  >(null);
   const [notes, setNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -82,7 +85,7 @@ export default function VolunteerManagementPanel({
   ) => {
     setSelectedVolunteer(volunteer);
     setActionType(type);
-    setNotes('');
+    setNotes(volunteer.notes || ''); // Cargar notas existentes
     setDialogOpen(true);
   };
 
@@ -98,8 +101,8 @@ export default function VolunteerManagementPanel({
 
     setActionLoading(true);
     try {
-      let newStatus: VolunteerInfo['status'];
-      
+      let newStatus: VolunteerStatus; 
+
       switch (actionType) {
         case 'accept':
           newStatus = 'aceptado';
@@ -131,7 +134,9 @@ export default function VolunteerManagementPanel({
   };
 
   const handleDelete = async (volunteerId: string) => {
-    if (!window.confirm('¿Estás seguro de eliminar este registro de voluntario?')) {
+    if (
+      !window.confirm('¿Estás seguro de eliminar este registro de voluntario?')
+    ) {
       return;
     }
 
@@ -143,7 +148,7 @@ export default function VolunteerManagementPanel({
     }
   };
 
-  const getStatusColor = (status: VolunteerInfo['status']) => {
+  const getStatusColor = (status: VolunteerStatus) => {
     const colors = {
       pendiente: 'warning',
       contactado: 'info',
@@ -153,7 +158,7 @@ export default function VolunteerManagementPanel({
     return colors[status];
   };
 
-  const getStatusLabel = (status: VolunteerInfo['status']) => {
+  const getStatusLabel = (status: VolunteerStatus) => {
     const labels = {
       pendiente: 'Pendiente',
       contactado: 'Contactado',
@@ -192,7 +197,7 @@ export default function VolunteerManagementPanel({
         </Alert>
       )}
 
-      {/* Stats - ⭐ ARREGLADO: Usando Grid2 con spacing */}
+      {/* Stats - Usando Grid2 con spacing */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {['pendiente', 'contactado', 'aceptado', 'rechazado'].map((status) => {
           const count = volunteers.filter((v) => v.status === status).length;
@@ -200,11 +205,14 @@ export default function VolunteerManagementPanel({
             <Grid size={{ xs: 6, sm: 3 }} key={status}>
               <Card sx={{ textAlign: 'center' }}>
                 <CardContent>
-                  <Typography variant="h4" color={getStatusColor(status as any)}>
+                  <Typography
+                    variant="h4"
+                    color={getStatusColor(status as VolunteerStatus)} 
+                  >
                     {count}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {getStatusLabel(status as any)}
+                    {getStatusLabel(status as VolunteerStatus)} 
                   </Typography>
                 </CardContent>
               </Card>
@@ -213,7 +221,7 @@ export default function VolunteerManagementPanel({
         })}
       </Grid>
 
-      {/* Lista de voluntarios - ⭐ ARREGLADO: Usando Grid2 */}
+      {/* Lista de voluntarios*/}
       {volunteers.length === 0 ? (
         <Alert severity="info">
           No hay solicitudes de voluntarios para este albergue.
@@ -225,8 +233,16 @@ export default function VolunteerManagementPanel({
               <Card>
                 <CardContent>
                   {/* Header con nombre y estado */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      mb: 2,
+                    }}
+                  >
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
                       <PersonIcon color="primary" />
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         {volunteer.nombre}
@@ -243,30 +259,57 @@ export default function VolunteerManagementPanel({
 
                   {/* Información de contacto */}
                   <Stack spacing={1.5}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
                       <PhoneIcon fontSize="small" color="action" />
                       <Typography variant="body2">
                         <strong>Celular:</strong> {volunteer.celular}
                       </Typography>
                     </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
                       <EmailIcon fontSize="small" color="action" />
-                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ wordBreak: 'break-all' }}
+                      >
                         <strong>Email:</strong> {volunteer.email}
                       </Typography>
                     </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <SchoolIcon fontSize="small" color="action" sx={{ mt: 0.5 }} />
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 1,
+                      }}
+                    >
+                      <SchoolIcon
+                        fontSize="small"
+                        color="action"
+                        sx={{ mt: 0.5 }}
+                      />
                       <Typography variant="body2">
                         <strong>Capacitaciones:</strong>{' '}
                         {volunteer.capacitaciones}
                       </Typography>
                     </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <DescriptionIcon fontSize="small" color="action" sx={{ mt: 0.5 }} />
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 1,
+                      }}
+                    >
+                      <DescriptionIcon
+                        fontSize="small"
+                        color="action"
+                        sx={{ mt: 0.5 }}
+                      />
                       <Typography variant="body2">
                         <strong>Servicios:</strong>{' '}
                         {volunteer.descripcion_servicios}
@@ -274,29 +317,62 @@ export default function VolunteerManagementPanel({
                     </Box>
 
                     {volunteer.notes && (
-                      <Box sx={{ bgcolor: 'grey.100', p: 1.5, borderRadius: 1, mt: 1 }}>
-                        <Typography variant="caption" color="text.secondary" display="block">
+                      <Box
+                        sx={{
+                          bgcolor: 'grey.100',
+                          p: 1.5,
+                          borderRadius: 1,
+                          mt: 1,
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
                           <strong>Notas:</strong>
                         </Typography>
-                        <Typography variant="body2">{volunteer.notes}</Typography>
+                        <Typography variant="body2">
+                          {volunteer.notes}
+                        </Typography>
                       </Box>
                     )}
                   </Stack>
 
                   {/* Fechas */}
-                  <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      pt: 2,
+                      borderTop: 1,
+                      borderColor: 'divider',
+                    }}
+                  >
                     <Typography variant="caption" color="text.secondary">
-                      Solicitud: {new Date(volunteer.created_at).toLocaleDateString()}
+                      Solicitud:{' '}
+                      {new Date(volunteer.created_at).toLocaleDateString()}
                     </Typography>
                     {volunteer.contacted_at && (
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Contactado: {new Date(volunteer.contacted_at).toLocaleDateString()}
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Contactado:{' '}
+                        {new Date(volunteer.contacted_at).toLocaleDateString()}
                       </Typography>
                     )}
                   </Box>
 
                   {/* Acciones */}
-                  <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      display: 'flex',
+                      gap: 1,
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     {volunteer.status === 'pendiente' && (
                       <>
                         <Tooltip title="Marcar como contactado">
@@ -377,7 +453,12 @@ export default function VolunteerManagementPanel({
       )}
 
       {/* Dialog de confirmación de acción */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
           {actionType === 'accept' && 'Aceptar Voluntario'}
           {actionType === 'reject' && 'Rechazar Voluntario'}
