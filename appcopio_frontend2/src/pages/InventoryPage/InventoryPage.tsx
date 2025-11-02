@@ -13,14 +13,11 @@ import { listCategories, createCategory, deleteCategory } from "@/services/categ
 import { getCenterCapacity } from "@/services/centers.service";
 import { getUser } from "@/services/users.service";
 import { validateItemDeletion } from "@/services/movements.service";
-import { startAutoSync } from "@/services/movements.service";
 import ResourcesAndNeeds from "@/components/inventory/ResourcesAndNeeds";
 import EntryForm from "@/components/inventory/EntryForm";
 import ExitForm from "@/components/inventory/ExitForm";
 import ResourceBoxManager from "@/components/inventory/ResourceBoxManager";
 import ExitBoxesSection from "@/components/inventory/ExitBoxesSection";
-import OfflineOperationsManager from "@/components/inventory/OfflineOperationsManager";
-import ConnectionStatus from "@/components/common/ConnectionStatus";
 import type {
   InventoryItem,
   GroupedInventory,
@@ -107,9 +104,9 @@ export default function InventoryPage() {
       setError(null);
       try {
         const [inv, cats, capacityData] = await Promise.all([
-          listCenterInventory(centerId, controller.signal),
-          listCategories(controller.signal),
-          getCenterCapacity(centerId, controller.signal),
+          listCenterInventory(centerId),
+          listCategories(),
+          getCenterCapacity(centerId),
         ]);
         const groupedInv = groupByCategory(inv);
         const capacity = capacityData?.total_capacity || 0;
@@ -129,27 +126,13 @@ export default function InventoryPage() {
     return () => controller.abort();
   }, [centerId]);
 
-  // HdU11: Auto-sync de operaciones offline
-  useEffect(() => {
-    if (!centerId) return;
-
-    const cleanup = startAutoSync(centerId, (results) => {
-      if (results.synced > 0) {
-        fetchInventory(false); // Refrescar inventario después de sync exitoso
-        console.log(`Auto-sync completed: ${results.synced} operations synced, ${results.failed} failed`);
-      }
-    });
-
-    return cleanup;
-  }, [centerId]);
-
   // Helpers
   const fetchInventory = async (showLoading = true) => {
     if (!centerId) return;
     const controller = new AbortController();
     try {
       if (showLoading) setIsLoading(true);
-      const inv = await listCenterInventory(centerId, controller.signal);
+      const inv = await listCenterInventory(centerId);
       const groupedInv = groupByCategory(inv);
       setInventory(groupedInv);
       setError(null);
@@ -301,9 +284,6 @@ export default function InventoryPage() {
 
   return (
     <div className="inventory-container">
-      {/* Indicador de estado de conexión */}
-      <ConnectionStatus />
-      
       <div className="inventory-header">
         <h3>Inventario del Centro {centerId}</h3>
         <div className="toggle-buttons-container">
@@ -357,14 +337,6 @@ export default function InventoryPage() {
       {/* Sección de Cajas de Salida */}
       {showBoxesSection && centerId && (
         <ExitBoxesSection centerId={centerId} />
-      )}
-
-      {/* HdU11: Gestor de operaciones offline */}
-      {centerId && (
-        <OfflineOperationsManager 
-          centerId={centerId}
-          onSync={() => fetchInventory(false)}
-        />
       )}
 
       {/* Filtros horizontales */}
@@ -594,7 +566,6 @@ export default function InventoryPage() {
         <EntryForm
           centerId={centerId}
           currentInventory={Object.values(inventory).flat()}
-          isOffline={!isOnline}
           onClose={() => setIsEntryFormOpen(false)}
           onSuccess={() => {
             fetchInventory(false);
@@ -607,7 +578,6 @@ export default function InventoryPage() {
         <ExitForm
           centerId={centerId}
           currentInventory={Object.values(inventory).flat()}
-          isOffline={!isOnline}
           onClose={() => setIsExitFormOpen(false)}
           onSuccess={() => {
             fetchInventory(false);
@@ -619,7 +589,6 @@ export default function InventoryPage() {
       {isResourceBoxManagerOpen && centerId ? (
         <ResourceBoxManager
           centerId={centerId}
-          isOffline={!isOnline}
           onClose={() => setIsResourceBoxManagerOpen(false)}
           onSuccess={() => {
             fetchInventory(false);

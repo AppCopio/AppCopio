@@ -2,14 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import type { InventoryItem } from '@/types/inventory';
 import type { ExitMovementCreateDTO, ExitItemCreateDTO, StockValidation, BackendExitRequest } from '@/types/movements';
-import { createExitMovement, createBulkExitMovement, validateStock as validateStockAPI, savePendingOperation } from '@/services/movements.service';
+import { createExitMovement, createBulkExitMovement, validateStock as validateStockAPI } from '@/services/movements.service';
 import { familyService, type FamilyGroup } from '@/services/family.service';
 import './ExitForm.css';
 
 interface ExitFormProps {
   centerId: string;
   currentInventory: InventoryItem[];
-  isOffline?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -25,7 +24,7 @@ interface ExitItem {
   is_valid: boolean;
 }
 
-export default function ExitForm({ centerId, currentInventory, isOffline = false, onClose, onSuccess }: ExitFormProps) {
+export default function ExitForm({ centerId, currentInventory, onClose, onSuccess }: ExitFormProps) {
   const [reason, setReason] = useState('');
   const [recipient, setRecipient] = useState('');
   const [notes, setNotes] = useState('');
@@ -60,14 +59,12 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
       }
     };
     
-    if (!isOffline) {
-      loadFamilies();
-    }
-  }, [isOffline]);
+    loadFamilies();
+  }, []);
 
   // Validar stock cuando cambian los items
   useEffect(() => {
-    if (items.length > 0 && !isOffline) {
+    if (items.length > 0) {
       validateStock();
     }
   }, [items]);
@@ -174,7 +171,7 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
 
     // Verificar validación de stock
     const hasInvalidItems = items.some(item => !item.is_valid);
-    if (hasInvalidItems && !isOffline) {
+    if (hasInvalidItems) {
       setShowValidationErrors(true);
       alert('Hay items con stock insuficiente. Revisa las cantidades.');
       return;
@@ -193,42 +190,33 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
     };
 
     try {
-      if (isOffline) {
-        // Guardar operación pendiente para sincronizar después
-        savePendingOperation({
-          center_id: centerId,
-          type: 'EXIT',
-          data: exitData
-        });
-        alert('Salida guardada offline. Se sincronizará cuando recuperes conexión.');
-      } else {
-        // Si hay múltiples items, usar endpoint de salidas múltiples
-        if (items.length > 1) {
-          // Para múltiples items, crear una salida por cada item
-          const exits: BackendExitRequest[] = items.map(item => ({
-            itemId: item.item_id,
-            quantity: item.requested_quantity,
-            familyId: selectedFamilyId!,
-            reason: reason.trim(),
-            notes: `${recipient.trim()}${notes.trim() ? ` - ${notes.trim()}` : ''}`
-          }));
-          
-          await createBulkExitMovement(centerId, { exits });
-        } else {
-          // Para un solo item, usar endpoint individual
-          const singleExit: BackendExitRequest = {
-            itemId: items[0].item_id,
-            quantity: items[0].requested_quantity,
-            familyId: selectedFamilyId!,
-            reason: reason.trim(),
-            notes: `${recipient.trim()}${notes.trim() ? ` - ${notes.trim()}` : ''}`
-          };
-          
-          await createExitMovement(centerId, singleExit);
-        }
+      // El interceptor de Axios maneja automáticamente el estado offline
+      // Si hay múltiples items, usar endpoint de salidas múltiples
+      if (items.length > 1) {
+        // Para múltiples items, crear una salida por cada item
+        const exits: BackendExitRequest[] = items.map(item => ({
+          itemId: item.item_id,
+          quantity: item.requested_quantity,
+          familyId: selectedFamilyId!,
+          reason: reason.trim(),
+          notes: `${recipient.trim()}${notes.trim() ? ` - ${notes.trim()}` : ''}`
+        }));
         
-        alert('Salida registrada exitosamente');
+        await createBulkExitMovement(centerId, { exits });
+      } else {
+        // Para un solo item, usar endpoint individual
+        const singleExit: BackendExitRequest = {
+          itemId: items[0].item_id,
+          quantity: items[0].requested_quantity,
+          familyId: selectedFamilyId!,
+          reason: reason.trim(),
+          notes: `${recipient.trim()}${notes.trim() ? ` - ${notes.trim()}` : ''}`
+        };
+        
+        await createExitMovement(centerId, singleExit);
       }
+      
+      alert('Salida registrada exitosamente');
       
       onSuccess();
       onClose();
@@ -319,7 +307,7 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
           <div className="form-section">
             <div className="items-header">
               <h4>Items a Entregar ({getTotalItems()})</h4>
-              {!isOffline && getInvalidItems() > 0 && (
+              {getInvalidItems() > 0 && (
                 <span className="validation-warning">
                   ⚠️ {getInvalidItems()} items con stock insuficiente
                 </span>
@@ -436,13 +424,6 @@ export default function ExitForm({ centerId, currentInventory, isOffline = false
                   Cancelar
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* Estado offline */}
-          {isOffline && (
-            <div className="offline-notice">
-              <p>📡 Modo offline: La salida se guardará localmente y se sincronizará cuando recuperes conexión.</p>
             </div>
           )}
 

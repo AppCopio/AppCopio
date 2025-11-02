@@ -9,7 +9,6 @@ import './ResourceBoxManager.css';
 
 interface ResourceBoxManagerProps {
   centerId: string;
-  isOffline?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -20,7 +19,7 @@ interface BoxForm {
   items: BoxItemTemplate[];
 }
 
-export default function ResourceBoxManager({ centerId, isOffline = false, onClose, onSuccess }: ResourceBoxManagerProps) {
+export default function ResourceBoxManager({ centerId, onClose, onSuccess }: ResourceBoxManagerProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [resourceBoxes, setResourceBoxes] = useState<ResourceBox[]>([]);
   const [exitBoxes, setExitBoxes] = useState<any[]>([]);
@@ -170,20 +169,15 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
 
     setIsSubmitting(true);
     try {
-      if (isOffline) {
-        // Simular uso offline - aquí podrías implementar lógica de almacenamiento local
-        alert('Función offline no implementada para cajas');
-      } else {
-        await createBoxEntry(centerId, {
-          box_id: selectedBox.box_id!,
-          reason: reason.trim(),
-          notes: notes.trim() || undefined
-        });
-        
-        alert('Entrada desde caja registrada exitosamente');
-        onSuccess();
-        onClose();
-      }
+      await createBoxEntry(centerId, {
+        box_id: selectedBox.box_id!,
+        reason: reason.trim(),
+        notes: notes.trim() || undefined
+      });
+      
+      alert('Entrada desde caja registrada exitosamente');
+      onSuccess();
+      onClose();
     } catch (error: any) {
       console.error('Error using resource box:', error);
       alert(`Error: ${error?.response?.data?.error || error.message || 'Error desconocido'}`);
@@ -625,7 +619,6 @@ export default function ResourceBoxManager({ centerId, isOffline = false, onClos
       <div className="box-manager-modal">
         <div className="box-manager-header">
           <h3>📦 Gestión de Cajas de Recursos</h3>
-          {isOffline && <span className="offline-indicator">📡 Sin conexión</span>}
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
 

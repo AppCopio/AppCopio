@@ -10,11 +10,10 @@ import type {
  * Obtiene la lista completa de ítems en el inventario de un centro.
  */
 export async function listCenterInventory(
-  centerId: string,
-  signal?: AbortSignal
+  centerId: string
 ): Promise<InventoryItem[]> {
   try {
-    const { data } = await api.get<InventoryItem[]>(`/centers/${centerId}/inventory`, { signal });
+    const { data } = await api.get<InventoryItem[]>(`/centers/${centerId}/inventory`);
     return data ?? [];
   } catch (error) {
     console.error(`Error fetching inventory for center ${centerId}:`, error);

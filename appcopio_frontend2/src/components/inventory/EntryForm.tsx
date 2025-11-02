@@ -2,14 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import type { Category, InventoryItem } from '@/types/inventory';
 import type { EntryMovementCreateDTO, EntryItemCreateDTO } from '@/types/movements';
-import { createEntryMovement, savePendingOperation } from '@/services/movements.service';
+import { createEntryMovement } from '@/services/movements.service';
 import { listCategories } from '@/services/categories.service';
 import './EntryForm.css';
 
 interface EntryFormProps {
   centerId: string;
   currentInventory: InventoryItem[];
-  isOffline?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -25,7 +24,7 @@ interface EntryItem {
   is_new_item: boolean;
 }
 
-export default function EntryForm({ centerId, currentInventory, isOffline = false, onClose, onSuccess }: EntryFormProps) {
+export default function EntryForm({ centerId, currentInventory, onClose, onSuccess }: EntryFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -145,19 +144,9 @@ export default function EntryForm({ centerId, currentInventory, isOffline = fals
         }))
       };
 
-      if (isOffline) {
-        // Guardar para sincronización posterior
-        savePendingOperation({
-          type: 'ENTRY',
-          center_id: centerId,
-          data: entryData
-        });
-        alert('Entrada guardada offline. Se sincronizará cuando haya conexión.');
-      } else {
-        // Enviar inmediatamente
-        await createEntryMovement(centerId, entryData);
-        alert('Entrada registrada exitosamente');
-      }
+      // El interceptor de Axios maneja automáticamente el estado offline
+      await createEntryMovement(centerId, entryData);
+      alert('Entrada registrada exitosamente');
 
       onSuccess();
       onClose();
@@ -180,7 +169,6 @@ export default function EntryForm({ centerId, currentInventory, isOffline = fals
       <div className="entry-form-modal">
         <div className="entry-form-header">
           <h3>📥 Registrar Entrada de Recursos</h3>
-          {isOffline && <span className="offline-indicator">📡 Sin conexión - Se guardará offline</span>}
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
 
@@ -264,7 +252,7 @@ export default function EntryForm({ centerId, currentInventory, isOffline = fals
             className="btn-primary" 
             disabled={isSubmitting || items.length === 0}
           >
-            {isSubmitting ? 'Registrando...' : isOffline ? 'Guardar Offline' : 'Registrar Entrada'}
+            {isSubmitting ? 'Registrando...' : 'Registrar Entrada'}
           </button>
         </div>
       </form>
