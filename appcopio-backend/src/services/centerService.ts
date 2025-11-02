@@ -40,12 +40,18 @@ async function calculateFullnessPercentage(db: Db, center: { center_id: string; 
 // =================================================================
 
 export async function getAllCenters(db: Db) {
-    const centersResult = await db.query('SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude FROM Centers ORDER BY center_id ASC');
-    const centersWithFullness = await Promise.all(centersResult.rows.map(async (center) => {
-        const fullnessPercentage = await calculateFullnessPercentage(db, center);
-        return { ...center, fullnessPercentage };
+    // Incluimos fullness_percentage directamente de la base de datos
+    const centersResult = await db.query(
+        'SELECT center_id, name, address, type, capacity, is_active, operational_status, public_note, latitude, longitude, fullness_percentage FROM Centers ORDER BY center_id ASC'
+    );
+    
+    // Mapeamos fullness_percentage a fullnessPercentage para mantener consistencia con el frontend
+    const centers = centersResult.rows.map(center => ({
+        ...center,
+        fullnessPercentage: center.fullness_percentage ?? 0
     }));
-    return centersWithFullness;
+    
+    return centers;
 }
 
 export async function getCenterById(db: Db, id: string) {
@@ -58,10 +64,28 @@ export async function getCenterById(db: Db, id: string) {
 
 export async function createCenter(client: PoolClient, body: any) {
     const { name, latitude, longitude, type, ...restOfBody } = body;
+    
+    // Validación de campos requeridos básicos
+    if (!name || typeof latitude !== 'number' || typeof longitude !== 'number' || !type) {
+        throw new Error('Campos requeridos: name, type, latitude, longitude.');
+    }
+    
     const centerQuery = `
         INSERT INTO Centers (name, address, type, capacity, is_active, latitude, longitude, should_be_active, comunity_charge_id, municipal_manager_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING center_id`;
-    const centerValues = [name, restOfBody.address, type, restOfBody.capacity || 0, false, latitude, longitude, restOfBody.should_be_active, restOfBody.comunity_charge_id, restOfBody.municipal_manager_id];
+    const centerValues = [
+        name, 
+        restOfBody.address || null, 
+        type, 
+        restOfBody.capacity || 0, 
+        false, // is_active siempre false al crear
+        latitude, 
+        longitude, 
+        restOfBody.should_be_active || false, 
+        restOfBody.comunity_charge_id || null, 
+        restOfBody.municipal_manager_id || null
+    ];
+    
     const centerResult = await client.query(centerQuery, centerValues);
     const newCenterId = centerResult.rows[0].center_id;
 
@@ -74,6 +98,7 @@ export async function createCenter(client: PoolClient, body: any) {
         const catastroQuery = `INSERT INTO CentersDescription (${catastroColumns.join(', ')}) VALUES (${placeholders})`;
         await client.query(catastroQuery, catastroValues);
     }
+    
     return { center_id: newCenterId, name: name };
 }
 
@@ -328,4 +353,18 @@ export async function getAssignedUsersByCenter(db: Db, centerId: string) {
 
     const result = await db.query(query, [centerId]);
     return result.rows; 
+}
+
+/**
+ * Actualiza el porcentaje de llenado/abastecimiento de un centro.
+ */
+export async function updateCenterFullness(db: Db, centerId: string, fullnessPercentage: number) {
+    const result = await db.query(
+        `UPDATE Centers 
+         SET fullness_percentage = $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE center_id = $2 
+         RETURNING center_id, name, fullness_percentage, updated_at`,
+        [fullnessPercentage, centerId]
+    );
+    return result.rows[0] || null;
 }

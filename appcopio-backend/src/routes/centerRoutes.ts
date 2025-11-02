@@ -19,7 +19,8 @@ import {
     addInventoryItem as addInventoryItemService,
     updateInventoryItem as updateInventoryItemService,
     deleteInventoryItem as deleteInventoryItemService,
-    getAssignedUsersByCenter as getAssignedUsersByCenter
+    getAssignedUsersByCenter as getAssignedUsersByCenter,
+    updateCenterFullness as updateCenterFullnessService
 } from '../services/centerService';
 
 // Importar funciones nuevas de inventario
@@ -68,15 +69,29 @@ const getCenter: RequestHandler = async (req, res) => {
 
 const createCenter: RequestHandler = async (req, res) => {
     const { name, latitude, longitude, type } = req.body;
+    
+    // Validación de campos requeridos
     if (!name || typeof latitude !== 'number' || typeof longitude !== 'number' || !type) {
+        console.log('CREATE CENTER - Validación fallida:', {
+            hasName: !!name,
+            latitudeType: typeof latitude,
+            longitudeType: typeof longitude,
+            hasType: !!type,
+            latitude_value: latitude,
+            longitude_value: longitude
+        });
         res.status(400).json({ error: 'Campos requeridos: name, type, latitude, longitude.' });
         return;
     }
     
+    // Normalizar el tipo de centro
+    const normalizedType = type.toLowerCase() === 'acopio' ? 'acopio' : 'albergue';
+    const bodyWithNormalizedType = { ...req.body, type: normalizedType };
+    
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const newCenter = await createCenterService(client, req.body);
+        const newCenter = await createCenterService(client, bodyWithNormalizedType);
         await client.query('COMMIT');
         res.status(201).json(newCenter);
     } catch (error) {
@@ -202,6 +217,28 @@ const setOperationalStatus: RequestHandler = async (req, res) => {
         }
     } catch (error) {
         console.error(`Error en setOperationalStatus (id: ${req.params.id}):`, error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+};
+
+const updateFullness: RequestHandler = async (req, res) => {
+    const { fullnessPercentage } = req.body;
+    
+    // Validación
+    if (typeof fullnessPercentage !== 'number' || fullnessPercentage < 0 || fullnessPercentage > 100) {
+        res.status(400).json({ error: 'fullnessPercentage debe ser un número entre 0 y 100.' });
+        return;
+    }
+    
+    try {
+        const updatedCenter = await updateCenterFullnessService(pool, req.params.id, fullnessPercentage);
+        if (!updatedCenter) {
+            res.status(404).json({ error: 'Centro no encontrado.' });
+        } else {
+            res.json(updatedCenter);
+        }
+    } catch (error) {
+        console.error(`Error en updateFullness (id: ${req.params.id}):`, error);
         res.status(500).json({ error: 'Error interno del servidor.' });
     }
 };
@@ -600,6 +637,7 @@ router.delete('/:id', requireAuth, deleteCenter);
 // --- Rutas de Estado y Activación ---
 router.patch('/:id/status', requireAuth, setActivationStatus);
 router.patch('/:id/operational-status', requireAuth, setOperationalStatus);
+router.patch('/:id/fullness', requireAuth, updateFullness);
 router.get('/status/active', requireAuth, listActiveCenters);
 router.get('/:id/activation', requireAuth, getCenterActiveActivation);
 

@@ -1,8 +1,11 @@
 /* src/App.css */
 .App {
-  text-align: center;
+  width: 100%;
+  height: auto;
 }
 
 .content {
-  margin-top: 60px; 
+  margin-top: 0px; 
+  width: 100%;
+  min-height: 100vh;
 }

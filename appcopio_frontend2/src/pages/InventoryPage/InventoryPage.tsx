@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/offline/OfflineContext";
@@ -10,7 +10,7 @@ import {
   deleteInventoryItem,
 } from "@/services/inventory.service";
 import { listCategories, createCategory, deleteCategory } from "@/services/categories.service";
-import { getCenterCapacity } from "@/services/centers.service";
+import { getCenterCapacity, updateCenterFullness } from "@/services/centers.service";
 import { getUser } from "@/services/users.service";
 import { validateItemDeletion } from "@/services/movements.service";
 import ResourcesAndNeeds from "@/components/inventory/ResourcesAndNeeds";
@@ -109,7 +109,7 @@ export default function InventoryPage() {
           getCenterCapacity(centerId),
         ]);
         const groupedInv = groupByCategory(inv);
-        const capacity = capacityData?.total_capacity || 0;
+        const capacity = capacityData?.current_capacity || 0;
         
         setInventory(groupedInv);
         setCategories(cats);
@@ -144,6 +144,19 @@ export default function InventoryPage() {
       if (!controller.signal.aborted && showLoading) setIsLoading(false);
     }
   };
+
+  // Callback para actualizar el fullnessPercentage del centro
+  const handleFullnessCalculated = useCallback(async (fullnessPercentage: number) => {
+    if (!centerId || !isOnline) return;
+    
+    try {
+      await updateCenterFullness(centerId, fullnessPercentage);
+      console.log(`Centro ${centerId} actualizado con fullness: ${fullnessPercentage}%`);
+    } catch (error) {
+      console.error("Error al actualizar fullness del centro:", error);
+      // No mostramos error al usuario ya que es una actualización en segundo plano
+    }
+  }, [centerId, isOnline]);
 
   // Ordenar por fecha
   const handleSortByDate = (order: string) => {
@@ -331,6 +344,7 @@ export default function InventoryPage() {
           centerCapacity={centerCapacity}
           isOffline={!isOnline}
           lastSyncTime={lastSync ? new Date(lastSync).toLocaleString() : ''}
+          onFullnessCalculated={handleFullnessCalculated}
         />
       )}
 

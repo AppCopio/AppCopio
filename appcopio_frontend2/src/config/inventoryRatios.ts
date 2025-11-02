@@ -16,10 +16,10 @@ export interface CategoryRatios {
 // Ratios base definidos para cálculo de necesidades
 export const INVENTORY_RATIOS: CategoryRatios = {
   "Alimentos y Bebidas": [
-    { name: "Agua potable", quantityPerPerson: 3, period: "daily", unit: "litros", priority: "high" },
+    { name: "Agua potable", quantityPerPerson: 2, period: "daily", unit: "litros", priority: "high" },
     { name: "Comida enlatada", quantityPerPerson: 2, period: "daily", unit: "latas", priority: "high" },
     { name: "Pan", quantityPerPerson: 1, period: "daily", unit: "unidades", priority: "medium" },
-    { name: "Leche", quantityPerPerson: 1, period: "daily", unit: "litros", priority: "medium" },
+    { name: "Leche", quantityPerPerson: 2, period: "weekly", unit: "litros", priority: "medium" },
     { name: "Frutas", quantityPerPerson: 2, period: "daily", unit: "unidades", priority: "medium" },
   ],
   
@@ -63,9 +63,9 @@ export const INVENTORY_RATIOS: CategoryRatios = {
   ],
 };
 
-// Función para calcular las necesidades basadas en capacidad del centro
+// Función para calcular las necesidades basadas en el número actual de personas en el centro
 export function calculateNeeds(
-  capacity: number, 
+  currentPeople: number, 
   category: string, 
   daysToCalculate: number = 7
 ): ItemRatio[] {
@@ -77,16 +77,16 @@ export function calculateNeeds(
     // Calcular según el período del ratio
     switch (ratio.period) {
       case 'daily':
-        totalQuantity = ratio.quantityPerPerson * capacity * daysToCalculate;
+        totalQuantity = ratio.quantityPerPerson * currentPeople * daysToCalculate;
         break;
       case 'weekly':
-        totalQuantity = ratio.quantityPerPerson * capacity * (daysToCalculate / 7);
+        totalQuantity = ratio.quantityPerPerson * currentPeople * (daysToCalculate / 7);
         break;
       case 'monthly':
-        totalQuantity = ratio.quantityPerPerson * capacity * (daysToCalculate / 30);
+        totalQuantity = ratio.quantityPerPerson * currentPeople * (daysToCalculate / 30);
         break;
       default:
-        totalQuantity = ratio.quantityPerPerson * capacity;
+        totalQuantity = ratio.quantityPerPerson * currentPeople;
     }
     
     return {
@@ -94,6 +94,36 @@ export function calculateNeeds(
       quantityPerPerson: Math.ceil(totalQuantity), // Redondeamos hacia arriba
     };
   });
+}
+
+// Función para calcular necesidad total de una categoría (suma de todos los items)
+export function calculateTotalCategoryNeed(
+  currentPeople: number,
+  category: string,
+  daysToCalculate: number = 7
+): number {
+  const categoryRatios = INVENTORY_RATIOS[category] || [];
+  
+  return categoryRatios.reduce((total, ratio) => {
+    let itemQuantity: number;
+    
+    // Calcular según el período del ratio
+    switch (ratio.period) {
+      case 'daily':
+        itemQuantity = ratio.quantityPerPerson * currentPeople * daysToCalculate;
+        break;
+      case 'weekly':
+        itemQuantity = ratio.quantityPerPerson * currentPeople * (daysToCalculate / 7);
+        break;
+      case 'monthly':
+        itemQuantity = ratio.quantityPerPerson * currentPeople * (daysToCalculate / 30);
+        break;
+      default:
+        itemQuantity = ratio.quantityPerPerson * currentPeople;
+    }
+    
+    return total + itemQuantity;
+  }, 0);
 }
 
 // Función para obtener todas las categorías disponibles

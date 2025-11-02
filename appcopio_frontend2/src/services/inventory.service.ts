@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { isCancelError } from "@/lib/errors";
 import type {
   InventoryItem,
   InventoryCreateDTO,
@@ -16,6 +17,7 @@ export async function listCenterInventory(
     const { data } = await api.get<InventoryItem[]>(`/centers/${centerId}/inventory`);
     return data ?? [];
   } catch (error) {
+    if (isCancelError(error)) return [];
     console.error(`Error fetching inventory for center ${centerId}:`, error);
     return [];
   }

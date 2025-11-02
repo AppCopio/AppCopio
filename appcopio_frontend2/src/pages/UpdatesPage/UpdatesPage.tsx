@@ -97,8 +97,11 @@ export default function UpdatesPage() {
             
             const workerData = await listActiveUsersByRole(ROLE_ID_TMO, controller.signal);
             setWorkers(workerData);
-        } catch (err) {
-           
+        } catch (err: any) {
+            // Ignorar errores de cancelación (cuando el componente se desmonta)
+            if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED' || controller.signal.aborted) {
+                return;
+            }
             console.error("Error fetching active workers:", err);
             setError("No se pudo cargar la lista de trabajadores.");
         }

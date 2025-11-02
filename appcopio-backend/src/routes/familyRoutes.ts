@@ -30,6 +30,12 @@ import pool from '../config/db';
 import type { HouseholdData } from '../types/family';
 import { NEEDS_OPTIONS } from "../types/fibe";
 import { Db } from '../types/db';
+import { requireUser } from '../auth/requireUser';
+import { 
+    getFullFamily, 
+    updateFullFamily, 
+    UpdateFullFamilyData 
+} from '../services/familyService';
 
 const router = Router();
 
@@ -44,11 +50,17 @@ const router = Router();
  */
 function needsVectorFromSelected(selectedNeeds: string[] | undefined | null): number[] {
     const vec = new Array(NEEDS_OPTIONS.length).fill(0);
-    if (!selectedNeeds || selectedNeeds.length === 0) return vec;
+    if (!selectedNeeds || selectedNeeds.length === 0) {
+        // Asegurar que siempre tenga 14 elementos
+        while (vec.length < 14) vec.push(0);
+        return vec;
+    }
     const selectedSet = new Set(selectedNeeds.map((s) => s.toLowerCase().trim()));
     NEEDS_OPTIONS.forEach((name, idx) => {
         if (selectedSet.has(name.toLowerCase())) vec[idx] = 1;
     });
+    // Asegurar que siempre tenga 14 elementos
+    while (vec.length < 14) vec.push(0);
     return vec;
 }
 
@@ -409,7 +421,216 @@ const departFamilyGroupHandler: RequestHandler = async (req, res) => {
     }
 };
  */
+/**
+ * @controller GET /api/families/:familyId/details
+ * @description Obtiene los detalles completos de una familia y todos sus miembros.
+ */
+export const getFamilyDetails: RequestHandler = async (req , res) => {
+    const familyId = parseInt(req.params.familyId, 10);
+    if (isNaN(familyId)) {
+        return res.status(400).json({ error: "ID de familia inválido." });
+    }
+    const db = await pool.connect();
+    try {
+        // 1. Consulta Principal: Detalles del Grupo Familiar (FIBE) y Jefe de Hogar
+        const mainQuery = `
+            SELECT 
+                fg.family_id, 
+                fg.observaciones, 
+                fg.necesidades_basicas, 
+                fg.status,
+                fg.departure_date,
+                fg.departure_reason,
+                p.person_id AS jefe_hogar_person_id, 
+                p.rut AS jefe_hogar_rut, 
+                p.nombre AS jefe_hogar_nombre, 
+                p.primer_apellido AS jefe_hogar_primer_apellido, 
+                p.segundo_apellido AS jefe_hogar_segundo_apellido,
+                -- *** CORRECCIÓN: USAMOS created_at de Persons como fecha de ingreso de la familia ***
+                p.created_at AS fecha_ingreso 
+            FROM 
+                FamilyGroups fg
+            JOIN 
+                Persons p ON fg.jefe_hogar_person_id = p.person_id
+            WHERE 
+                fg.family_id = $1;
+        `;
 
+        const mainResult = await db.query(mainQuery, [familyId]);
+        const familyData = mainResult.rows[0];
+
+        if (!familyData) {
+            return res.status(404).json({ error: "Grupo familiar no encontrado." });
+        }
+        
+        // 2. Consulta Miembros: Obtiene todos los miembros del grupo familiar
+        const membersQuery = `
+            SELECT
+                p.person_id, 
+                p.rut, 
+                p.nombre, 
+                p.primer_apellido, 
+                p.segundo_apellido, 
+                p.edad,           
+                p.genero,         
+                p.estudia,         
+                p.trabaja,         
+                p.perdida_trabajo,
+                p.rubro,         
+                p.discapacidad, 
+                p.nacionalidad,   
+                p.dependencia,
+                created_at,    
+                fgm.parentesco
+            FROM
+                FamilyGroupMembers fgm
+            JOIN 
+                Persons p ON fgm.person_id = p.person_id
+            WHERE 
+                fgm.family_id = $1;
+        `;
+
+        const membersResult = await db.query(membersQuery, [familyId]);
+        const miembros = membersResult.rows;
+
+        // 3. Formatear y preparar la respuesta
+        const jefeHogar = {
+            person_id: familyData.jefe_hogar_person_id,
+            rut: familyData.jefe_hogar_rut,
+            nombre: familyData.jefe_hogar_nombre,
+            primer_apellido: familyData.jefe_hogar_primer_apellido,
+            segundo_apellido: familyData.jefe_hogar_segundo_apellido,
+            // Agregamos el campo es_jefe_hogar directamente al objeto de miembros para fácil uso en el frontend
+            es_jefe_hogar: true,
+            parentesco: "Jefe/a de Hogar"
+        };
+        
+        // Aseguramos que la lista de miembros incluya al jefe de hogar (siempre y cuando la persona exista en Persons)
+        const miembrosConJefe = miembros.map(m => ({
+            ...m,
+            es_jefe_hogar: m.person_id === jefeHogar.person_id,
+        }));
+        
+        // El frontend espera 'necesidades_basicas' como un array de strings si es PostgreSQL Array
+        const necesidadesFormateadas = Array.isArray(familyData.necesidades_basicas) 
+            ? familyData.necesidades_basicas.map(String) 
+            : [];
+
+        const responseData = {
+            family_id: familyData.family_id,
+            observaciones: familyData.observaciones,
+            necesidades_basicas: necesidadesFormateadas,
+            fecha_ingreso: familyData.fecha_ingreso,
+            status: familyData.status,
+            jefe_hogar: jefeHogar,
+            miembros: miembrosConJefe, // Lista completa, incluyendo el jefe de hogar
+        };
+
+        return res.json(responseData);
+
+    } catch (error) {
+        console.error(`Error en getFamilyDetails (id: ${familyId}):`, error);
+        // El código de error 42703 (columna inexistente) se maneja aquí antes de llegar al cliente
+        return res.status(500).json({ 
+            error: "Error interno del servidor al obtener detalles de la familia.",
+            details: error instanceof Error ? error.message : "Desconocido"
+        });
+    }
+};
+// =================================================================
+// NUEVOS CONTROLADORES PARA HdU31 - GESTIÓN DE PERSONAS
+// =================================================================
+
+/**
+ * @controller GET /api/families/:id/full
+ * @description Obtiene una familia completa con todos sus miembros y datos del centro.
+ */
+const getFullFamilyHandler: RequestHandler = async (req, res) => {
+    const familyId = parseInt(req.params.id, 10);
+    
+    if (isNaN(familyId)) {
+        res.status(400).json({ error: "El ID de la familia debe ser un número válido." });
+        return;
+    }
+
+    try {
+        const fullFamily = await getFullFamily(pool, familyId);
+        
+        if (!fullFamily) {
+            res.status(404).json({ error: "Grupo familiar no encontrado." });
+            return;
+        }
+
+        res.json(fullFamily);
+    } catch (error) {
+        console.error(`Error en getFullFamily (id: ${familyId}):`, error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+};
+
+/**
+ * @controller PUT /api/families/:id/full
+ * @description Actualiza una familia completa de forma transaccional.
+ */
+const updateFullFamilyHandler: RequestHandler = async (req, res) => {
+    const familyId = parseInt(req.params.id, 10);
+    
+    if (isNaN(familyId)) {
+        res.status(400).json({ error: "El ID de la familia debe ser un número válido." });
+        return;
+    }
+
+    const updateData: UpdateFullFamilyData = req.body;
+    
+    // Validaciones básicas
+    if (!updateData.observaciones && updateData.observaciones !== '') {
+        res.status(400).json({ error: "El campo 'observaciones' es requerido." });
+        return;
+    }
+
+    // Validar que necesidades_basicas sea un array válido
+    if (!Array.isArray(updateData.necesidades_basicas)) {
+        res.status(400).json({ error: "El campo 'necesidades_basicas' debe ser un array." });
+        return;
+    }
+
+    // Asegurar que el array tenga exactamente 14 elementos (rellenar con 0s si hace falta)
+    while (updateData.necesidades_basicas.length < 14) {
+        updateData.necesidades_basicas.push(0);
+    }
+    
+    // Truncar si tiene más de 14
+    if (updateData.necesidades_basicas.length > 14) {
+        updateData.necesidades_basicas = updateData.necesidades_basicas.slice(0, 14);
+    }
+
+    if (!Array.isArray(updateData.miembros) || updateData.miembros.length === 0) {
+        res.status(400).json({ error: "El campo 'miembros' debe ser un array con al menos un miembro." });
+        return;
+    }
+
+    const userId = requireUser(req).user_id;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+        
+        await updateFullFamily(client, familyId, updateData, userId);
+        
+        await client.query('COMMIT');
+        
+        res.json({ 
+            message: "Familia actualizada exitosamente.",
+            family_id: familyId 
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(`Error en updateFullFamily (id: ${familyId}):`, error);
+        res.status(500).json({ error: "Error interno del servidor al actualizar la familia." });
+    } finally {
+        client.release();
+    }
+};
 
 // =================================================================
 // 3. SECCIÓN DE RUTAS (Endpoints)
@@ -417,8 +638,11 @@ const departFamilyGroupHandler: RequestHandler = async (req, res) => {
 
 router.get("/", listFamilies);
 router.post("/", createFamily);
+router.get("/:id/full", getFullFamilyHandler); // NUEVO: Debe ir ANTES de "/:id"
 router.get("/:id", getFamilyById);
+router.put("/:id/full", updateFullFamilyHandler); // NUEVO: Debe ir ANTES de "/:id"
 router.put("/:id", updateFamily);
 router.patch('/:familyId/depart', departFamilyGroup);
+router.get("/:familyId/details", getFamilyDetails);
 
 export default router;

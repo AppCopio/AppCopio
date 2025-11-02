@@ -8,635 +8,1245 @@ import { saveAs } from "file-saver";
 import Papa from "papaparse";
 
 import {
-  ActiveCenter,
-  CapacityInfo,
-  Person,
-  ResidentGroup,
-  DepartureReason,
+  ActiveCenter,
+  CapacityInfo,
+  Person,
+  ResidentGroup,
+  DepartureReason,
+  PersonDetailsEnriched,
 } from "@/types/residents";
 import {
-  getCenterCapacity,
-  listResidentGroups,
-  listPeopleByCenter,
-  listActiveCenters,
-  registerFamilyDeparture,
+  getCenterCapacity,
+  listResidentGroups,
+  listPeopleByCenter,
+  listActiveCenters,
+  registerFamilyDeparture,
+  getFamilyDetails,
+  getPersonDetailsEnriched,
 } from "@/services/residents.service";
-
-
+import { NEEDS_OPTIONS } from "@/types/fibe";
+import PersonEditModal from "@/components/center/PersonEditModal";
 const toISODate = (s?: string) => {
-  if (!s) return "";
-  const iso = s.includes(" ") ? s.replace(" ", "T") : s;  // "YYYY-MM-DDTHH:mm:ssZ"
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  if (!s) return "";
+  const iso = s.includes(" ") ? s.replace(" ", "T") : s; // "YYYY-MM-DDTHH:mm:ssZ"
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); // "YYYY-MM-DD"
 };
 
 const formatCL = (s?: string) => {
-  if (!s) return "";
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CL", { timeZone: "UTC" });
+  if (!s) return "";
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CL", { timeZone: "UTC" });
 };
+
 const CenterResidentsPage: React.FC = () => {
-  const { centerId } = useParams<{ centerId: string }>();
-  const navigate = useNavigate();
+  const { centerId } = useParams<{ centerId: string }>();
+  const navigate = useNavigate();
 
-  const [groups, setGroups] = useState<ResidentGroup[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
+  const [groups, setGroups] = useState<ResidentGroup[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [filters, setFilters] = useState({
-    nombre: "",
-    rut: "",
-    fechaIngreso: "",
-    fechaSalida: "",
-    edad: "",
-    genero: "",
-  });
+  const [filters, setFilters] = useState({
+    nombre: "",
+    rut: "",
+    fechaIngreso: "",
+    fechaSalida: "",
+    edad: "",
+    genero: "",
+  });
 
-  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
-  const [exitReason, setExitReason] = useState<"" | DepartureReason>("");
-  const [exitDate, setExitDate] = useState("");
-  const [residentToExit, setResidentToExit] = useState<ResidentGroup | null>(null);
-  const [destinationActivationId, setDestinationActivationId] = useState("");
-  const [activeCenters, setActiveCenters] = useState<ActiveCenter[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [exitReason, setExitReason] = useState<"" | DepartureReason>("");
+  const [exitDate, setExitDate] = useState("");
+  const [residentToExit, setResidentToExit] = useState<ResidentGroup | null>(null);
+  const [destinationActivationId, setDestinationActivationId] = useState("");
+  const [activeCenters, setActiveCenters] = useState<ActiveCenter[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [centerCapacity, setCenterCapacity] = useState<number>(0);
-  const [currentCapacity, setCurrentCapacity] = useState<number>(0);
-  const [availableCapacity, setAvailableCapacity] = useState<number>(0);
+  const [centerCapacity, setCenterCapacity] = useState<number>(0);
+  const [currentCapacity, setCurrentCapacity] = useState<number>(0);
+  const [availableCapacity, setAvailableCapacity] = useState<number>(0);
 
-  const [showFamilies, setShowFamilies] = useState(true);
+  const [showFamilies, setShowFamilies] = useState(true);
+  const [openDetailsFamilyId, setOpenDetailsFamilyId] = useState<number | null>(null);
+  const [familyDetails, setFamilyDetails] = useState<any>(null);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
-  // ---------- EXPORTS ----------
-  const LOGO_PATH = "/logoMuni/munilogo.png"; // está dentro de /public
+  // Detalle persona enriquecido
+  const [openDetailsPersonId, setOpenDetailsPersonId] = useState<number | null>(null);
+  const [personDetails, setPersonDetails] = useState<PersonDetailsEnriched | null>(null);
+  const [isPersonDetailsLoading, setIsPersonDetailsLoading] = useState(false);
+  const [personDetailsError, setPersonDetailsError] = useState<string | null>(null);
+  const [familyDetailsMap, setFamilyDetailsMap] = useState<Record<number, any>>({});
+  
+  const [isAnyDetailsLoading, setIsAnyDetailsLoading] = useState(false);
 
-async function addLogo(doc: jsPDF) {
-  const img = new Image();
-  img.src = LOGO_PATH;         // misma origin => sin CORS
-  try {
-    // espera a que la imagen cargue
-    if ((img as any).decode) {
-      await img.decode();
-    } else {
-      await new Promise((res, rej) => {
-        img.onload = () => res(null);
-        img.onerror = rej;
-      });
-    }
-    // x, y, width, height (ajusta tamaño si quieres)
-    doc.addImage(img, "PNG", 12, 10, 16, 16);
-  } catch {
-    // si no carga, seguimos sin logo
-  }
-}
+  // Estados para modal de edición - HdU31
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingFamilyId, setEditingFamilyId] = useState<number | null>(null);
 
-const exportToPDF = async () => {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  // EXPORTS
+  const LOGO_PATH = "/logoMuni/munilogo.png"; // dentro de /public
 
-  // Header
-  await addLogo(doc);
-  const currentDate = new Date().toLocaleString();
-  const title = showFamilies
-    ? `Listado de Familias - Centro ${centerId}`
-    : `Listado de Personas - Centro ${centerId}`;
-
-  doc.setFontSize(16);
-  doc.text(title, 32, 18);
-  doc.setFontSize(9);
-  doc.text(`Fecha de descarga: ${currentDate}`, 32, 25);
-
-  // Datos
-  const head = showFamilies
-    ? [["Nombre Jefe/a de Hogar", "RUT", "Nº Integrantes"]]
-    : [[
-        "Nombre","RUT","F. Ingreso","F. Salida","Edad","Género",
-        "1°Apellido","2°Apellido","Nacionalidad","Estudia","Trabaja","Pérdida Trabajo","Rubro","Discapacidad","Dependencia"
-      ]];
-
-  const body = showFamilies
-    ? groups.map(g => [g.nombre_completo, g.rut, g.integrantes_grupo])
-    : people.map(p => [
-        `${p.nombre} ${p.primer_apellido} ${p.segundo_apellido || ""}`.trim(),
-        p.rut, p.fecha_ingreso || "", p.fecha_salida || "", p.edad ?? "", p.genero || "",
-        p.primer_apellido || "", p.segundo_apellido || "", p.nacionalidad || "",
-        p.estudia ? "Sí" : "No", p.trabaja ? "Sí" : "No", p.perdida_trabajo ? "Sí" : "No",
-        p.rubro || "", p.discapacidad ? "Sí" : "No", p.dependencia ? "Sí" : "No",
-      ]);
-
-  // Márgenes y ancho útil
-  const margin = { top: 20, left: 10, right: 10 };
-  const pageW = doc.internal.pageSize.getWidth();
-  const usableW = pageW - margin.left - margin.right;
-
-  // Compactar altura de línea (jsPDF)
-  doc.setLineHeightFactor(1.1);
-
-  autoTable(doc, {
-    startY: 32,
-    head,
-    body,
-    theme: "grid",
-    tableWidth: usableW,
-    styles: {
-      font: "helvetica",
-      fontSize: 5.5,         // chico para que quepa
-      cellPadding: 1.0,      // menos padding
-      overflow: "linebreak",
-      valign: "middle",
-      lineColor: [0, 0, 0],
-      lineWidth: 0.1,
-      fillColor: [240, 240, 240],
-    },
-    headStyles: {
-      fillColor: [25, 118, 210],
-      textColor: 255,
-      fontStyle: "bold",
-      halign: "center",
-      valign: "middle",
-      fontSize: 6,
-      cellPadding: 0.6,
-      minCellHeight: 5,
-    },
-    columnStyles: showFamilies
-      ? {
-          0: { cellWidth: 90, halign: "left"   },
-          1: { cellWidth: 40, halign: "center" },
-          2: { cellWidth: 30, halign: "center" },
-        }
-      : {
-          0:  { cellWidth: 15, halign: "left"   }, // Nombre
-          1:  { cellWidth: 13, halign: "center" }, // RUT
-          2:  { cellWidth: 15, halign: "center" }, // F. Ingreso
-          3:  { cellWidth: 15, halign: "center" }, // F. Salida
-          4:  { cellWidth: 8, halign: "center" }, // Edad
-          5:  { cellWidth: 10, halign: "center" }, // Género
-          6:  { cellWidth: 12, halign: "left"   }, // 1er Ap.
-          7:  { cellWidth: 12, halign: "left"   }, // 2do Ap.
-          8:  { cellWidth: 18, halign: "center" }, // Nac.
-          9:  { cellWidth: 9, halign: "center" }, // Est.
-          10: { cellWidth: 10, halign: "center" }, // Trab.
-          11: { cellWidth: 10, halign: "center" }, // Pérdida
-          12: { cellWidth: 15, halign: "left"   }, // Rubro
-          13: { cellWidth: 15, halign: "center" }, // Discap.
-          14: { cellWidth: 15, halign: "center" }, // Dep.
-        },
-    margin,
-  });
-
-  doc.save(`Listado_${showFamilies ? "Familias" : "Personas"}_${centerId}.pdf`);
-};
-
-  const exportToCSV = () => {
-  // 1) Armamos headers y filas en el orden exacto
-  const headers = showFamilies
-    ? ["nombre_completo", "rut", "integrantes_grupo"]
-    : [
-        "nombre",
-        "rut",
-        "fecha_ingreso",
-        "fecha_salida",
-        "edad",
-        "genero",
-        "primer_apellido",
-        "segundo_apellido",
-        "nacionalidad",
-        "estudia",
-        "trabaja",
-        "perdida_trabajo",
-        "rubro",
-        "discapacidad",
-        "dependencia",
-      ];
-
-  type Row = Record<string, string | number | null | undefined>;
-
-  const rows: Row[] = showFamilies
-    ? groups.map((g) => ({
-        nombre_completo: g.nombre_completo,
-        rut: g.rut, // si quieres “blindarlo” ante Excel: rut: `="${g.rut}"`,
-        integrantes_grupo: g.integrantes_grupo,
-      }))
-    : people.map((p) => ({
-        nombre: `${p.nombre} ${p.primer_apellido} ${p.segundo_apellido || ""}`.trim(),
-        rut: p.rut, // o `="${p.rut}"` para evitar que Excel lo formatee
-        fecha_ingreso: p.fecha_ingreso,
-        fecha_salida: p.fecha_salida,
-        edad: p.edad,
-        genero: p.genero,
-        primer_apellido: p.primer_apellido,
-        segundo_apellido: p.segundo_apellido,
-        nacionalidad: p.nacionalidad,
-        estudia: p.estudia ? "Sí" : "No",
-        trabaja: p.trabaja ? "Sí" : "No",
-        perdida_trabajo: p.perdida_trabajo ? "Sí" : "No",
-        rubro: p.rubro,
-        discapacidad: p.discapacidad ? "Sí" : "No",
-        dependencia: p.dependencia ? "Sí" : "No",
-      }));
-
-  // 2) Convertimos a matriz en el mismo orden que headers
-  const dataMatrix = rows.map((r) => headers.map((h) => (r[h] ?? "") as string | number));
-
-  // 3) Generamos CSV con delimitador ;, comillas y saltos CRLF
-  const csvCore = Papa.unparse(
-    {
-      fields: headers,   // cabeceras
-      data: dataMatrix,  // filas
-    },
-    {
-      delimiter: ";",
-      quotes: true,
-      newline: "\r\n",
-    }
-  );
-
-  // 4) Pista para Excel + BOM para UTF-8
-  const csv = "sep=;\r\n" + csvCore;
-  const csvWithBOM = "\uFEFF" + csv;
-
-  const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
-  saveAs(blob, `Listado_${showFamilies ? "Familias" : "Personas"}_${centerId}.csv`);
-};
-
-  // ---------- DATA LOAD ----------
-  useEffect(() => {
-    let cancel = false;
-    async function load() {
-      if (!centerId) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const [cap, grps, ppl, actives] = await Promise.all([
-          getCenterCapacity(centerId),
-          listResidentGroups(centerId),
-          listPeopleByCenter(centerId, filters),
-          listActiveCenters(),
-        ]);
-        if (cancel) return;
-
-        if (cap) {
-          setCenterCapacity(cap.capacity ?? 0);
-          setCurrentCapacity(cap.current_capacity ?? 0);
-          setAvailableCapacity(cap.available_capacity ?? 0);
-        }
-
-        setGroups(Array.isArray(grps) ? grps : []);
-        const raw = Array.isArray(ppl) ? ppl : [];
-        const normalized = raw.map((p: any) => ({
-          ...p,
-          // toma la primera disponible y deja "YYYY-MM-DD"
-          fecha_ingreso: toISODate(p.fecha_ingreso ?? p.fechaIngreso ?? p.created_at ?? p.createdAt),
-          fecha_salida:  toISODate(p.fecha_salida  ?? p.fechaSalida),
-        }));
-        setPeople(normalized);
-        setActiveCenters(Array.isArray(actives) ? actives : []);
-      } catch (e: any) {
-        if (!cancel) setError(e?.response?.data?.message || e?.message || "Error al cargar los datos.");
-      } finally {
-        if (!cancel) setLoading(false);
+  async function addLogo(doc: jsPDF) {
+    try {
+      const img = new Image();
+      img.src = LOGO_PATH;
+      if ((img as any).decode) {
+        await img.decode();
+      } else {
+        await new Promise((res, rej) => {
+          img.onload = () => res(null);
+          img.onerror = rej;
+        });
       }
+      doc.addImage(img, "PNG", 12, 10, 16, 16);
+    } catch {
+      // seguir sin logo si falla
     }
-    load();
-    return () => {
-      cancel = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [centerId, JSON.stringify(filters)]);
+  }  const exportToPDF = async () => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-  // ---------- EXIT MODAL ----------
-  const handleOpenExitModal = (resident: ResidentGroup) => {
-    setResidentToExit(resident);
-    setIsExitModalOpen(true);
+    await addLogo(doc);
+    const currentDate = new Date().toLocaleString();
+    const title = showFamilies
+      ? `Listado de Familias - Centro ${centerId}`
+      : `Listado de Personas - Centro ${centerId}`;
+
+    doc.setFontSize(16);
+    doc.text(title, 32, 18);
+    doc.setFontSize(9);
+    doc.text(`Fecha de descarga: ${currentDate}`, 32, 25);
+
+    const head = showFamilies
+      ? [["Nombre Jefe/a de Hogar", "RUT", "Nº Integrantes"]]
+      : [
+          [
+            "Nombre",
+            "RUT",
+            "F. Ingreso",
+            "F. Salida",
+            "Edad",
+            "Género",
+            "1°Apellido",
+            "2°Apellido",
+            "Nacionalidad",
+            "Estudia",
+            "Trabaja",
+            "Pérdida Trabajo",
+            "Rubro",
+            "Discapacidad",
+            "Dependencia",
+          ],
+        ];
+
+    const body = showFamilies
+      ? groups.map((g) => [g.nombre_completo, g.rut, g.integrantes_grupo])
+      : people.map((p) => [
+          `${p.nombre} ${p.primer_apellido} ${p.segundo_apellido || ""}`.trim(),
+          p.rut,
+          p.fecha_ingreso || "",
+          p.fecha_salida || "",
+          p.edad ?? "",
+          p.genero || "",
+          p.primer_apellido || "",
+          p.segundo_apellido || "",
+          p.nacionalidad || "",
+          p.estudia ? "Sí" : "No",
+          p.trabaja ? "Sí" : "No",
+          p.perdida_trabajo ? "Sí" : "No",
+          p.rubro || "",
+          p.discapacidad ? "Sí" : "No",
+          p.dependencia ? "Sí" : "No",
+        ]);
+
+    const margin = { top: 20, left: 10, right: 10 };
+    const pageW = doc.internal.pageSize.getWidth();
+    const usableW = pageW - margin.left - margin.right;
+
+    doc.setLineHeightFactor(1.1);
+
+    autoTable(doc, {
+      startY: 32,
+      head,
+      body,
+      theme: "grid",
+      tableWidth: usableW,
+      styles: {
+        font: "helvetica",
+        fontSize: 5.5,
+        cellPadding: 1.0,
+        overflow: "linebreak",
+        valign: "middle",
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+        fillColor: [240, 240, 240],
+      },
+      headStyles: {
+        fillColor: [25, 118, 210],
+        textColor: 255,
+        fontStyle: "bold",
+        halign: "center",
+        valign: "middle",
+        fontSize: 6,
+        cellPadding: 0.6,
+        minCellHeight: 5,
+      },
+      columnStyles: showFamilies
+        ? {
+            0: { cellWidth: 90, halign: "left" },
+            1: { cellWidth: 40, halign: "center" },
+            2: { cellWidth: 30, halign: "center" },
+          }
+        : {
+            0: { cellWidth: 15, halign: "left" },
+            1: { cellWidth: 13, halign: "center" },
+            2: { cellWidth: 15, halign: "center" },
+            3: { cellWidth: 15, halign: "center" },
+            4: { cellWidth: 8, halign: "center" },
+            5: { cellWidth: 10, halign: "center" },
+            6: { cellWidth: 12, halign: "left" },
+            7: { cellWidth: 12, halign: "left" },
+            8: { cellWidth: 18, halign: "center" },
+            9: { cellWidth: 9, halign: "center" },
+            10: { cellWidth: 10, halign: "center" },
+            11: { cellWidth: 10, halign: "center" },
+            12: { cellWidth: 15, halign: "left" },
+            13: { cellWidth: 15, halign: "center" },
+            14: { cellWidth: 15, halign: "center" },
+          },
+      margin,
+    });
+
+    doc.save(`Listado_${showFamilies ? "Familias" : "Personas"}_${centerId}.pdf`);
+  };
+
+  const exportToCSV = () => {
+    const headers = showFamilies
+      ? ["nombre_completo", "rut", "integrantes_grupo"]
+      : [
+          "nombre",
+          "rut",
+          "fecha_ingreso",
+          "fecha_salida",
+          "edad",
+          "genero",
+          "primer_apellido",
+          "segundo_apellido",
+          "nacionalidad",
+          "estudia",
+          "trabaja",
+          "perdida_trabajo",
+          "rubro",
+          "discapacidad",
+          "dependencia",
+        ];
+
+    type Row = Record<string, string | number | null | undefined>;
+
+    const rows: Row[] = showFamilies
+      ? groups.map((g) => ({
+          nombre_completo: g.nombre_completo,
+          rut: g.rut,
+          integrantes_grupo: g.integrantes_grupo,
+        }))
+      : people.map((p) => ({
+          nombre: `${p.nombre} ${p.primer_apellido} ${p.segundo_apellido || ""}`.trim(),
+          rut: p.rut,
+          fecha_ingreso: p.fecha_ingreso,
+          fecha_salida: p.fecha_salida,
+          edad: p.edad,
+          genero: p.genero,
+          primer_apellido: p.primer_apellido,
+          segundo_apellido: p.segundo_apellido,
+          nacionalidad: p.nacionalidad,
+          estudia: p.estudia ? "Sí" : "No",
+          trabaja: p.trabaja ? "Sí" : "No",
+          perdida_trabajo: p.perdida_trabajo ? "Sí" : "No",
+          rubro: p.rubro,
+          discapacidad: p.discapacidad ? "Sí" : "No",
+          dependencia: p.dependencia ? "Sí" : "No",
+        }));
+
+    const dataMatrix = rows.map((r) => headers.map((h) => (r[h] ?? "") as string | number));
+    const csvCore = Papa.unparse(
+      {
+        fields: headers,
+        data: dataMatrix,
+      },
+      {
+        delimiter: ";",
+        quotes: true,
+        newline: "\r\n",
+      }
+    );
+
+    const csv = "sep=;\r\n" + csvCore;
+    const csvWithBOM = "\uFEFF" + csv;
+    const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, `Listado_${showFamilies ? "Familias" : "Personas"}_${centerId}.csv`);
+  };
+
+  // DATA LOAD
+  useEffect(() => {
+    let cancel = false;
+    async function load() {
+      if (!centerId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const [cap, grps, ppl, actives] = await Promise.all([
+          getCenterCapacity(centerId),
+          listResidentGroups(centerId),
+          listPeopleByCenter(centerId, filters),
+          listActiveCenters(),
+        ]);
+        if (cancel) return;
+
+        if (cap) {
+          setCenterCapacity(cap.capacity ?? 0);
+          setCurrentCapacity(cap.current_capacity ?? 0);
+          setAvailableCapacity(cap.available_capacity ?? 0);
+        }
+
+        setGroups(Array.isArray(grps) ? grps : []);
+        const raw = Array.isArray(ppl) ? ppl : [];
+        const normalized = raw.map((p: any) => ({
+          ...p,
+          fecha_ingreso: toISODate(p.fecha_ingreso ?? p.fechaIngreso ?? p.created_at ?? p.createdAt),
+          fecha_salida: toISODate(p.fecha_salida ?? p.fechaSalida),
+        }));
+        setPeople(normalized);
+        setActiveCenters(Array.isArray(actives) ? actives : []);
+      } catch (e: any) {
+        if (!cancel) setError(e?.response?.data?.message || e?.message || "Error al cargar los datos.");
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centerId, JSON.stringify(filters)]);
+
+  // EXIT MODAL
+  const handleOpenExitModal = (resident: ResidentGroup) => {
+    setResidentToExit(resident);
+    setIsExitModalOpen(true);
+  };
+
+  const resetExitForm = () => {
+    setIsExitModalOpen(false);
+    setExitReason("");
+    setExitDate("");
+    setDestinationActivationId("");
+    setResidentToExit(null);
+  };
+
+  const handleCloseExitModal = async () => {
+    resetExitForm();
+    if (centerId) {
+      try {
+        const [cap, grps] = await Promise.all([getCenterCapacity(centerId), listResidentGroups(centerId)]);
+        if (cap) {
+          setCenterCapacity(cap.capacity ?? 0);
+          setCurrentCapacity(cap.current_capacity ?? 0);
+          setAvailableCapacity(cap.available_capacity ?? 0);
+        }
+        setGroups(grps);
+      } catch {
+        /* noop */
+      }
+    }
+  };
+
+  const handleExitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!residentToExit || !residentToExit.family_id || !exitReason || !exitDate) {
+      window.alert("Debe completar todos los campos necesarios.");
+      return;
+    }
+    if (exitReason === "traslado" && !destinationActivationId) {
+      window.alert("Seleccione el centro de destino para un traslado.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await registerFamilyDeparture({
+        familyId: residentToExit.family_id,
+        departure_reason: exitReason as DepartureReason,
+        destination_activation_id: exitReason === "traslado" ? destinationActivationId : null,
+        departure_date: exitDate,
+      });
+      window.alert("Salida registrada con éxito.");
+      await handleCloseExitModal();
+    } catch (err: any) {
+      console.error("Error registrando la salida:", err);
+      window.alert(err?.response?.data?.message || `Error: ${err?.message || "No se pudo registrar la salida."}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handlers para modal de edici�n - HdU31
+  const handleOpenEditModal = (familyId: number) => {
+    setEditingFamilyId(familyId);
+    setEditModalOpen(true);
   };
 
-  const resetExitForm = () => {
-    setIsExitModalOpen(false);
-    setExitReason("");
-    setExitDate("");
-    setDestinationActivationId("");
-    setResidentToExit(null);
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setEditingFamilyId(null);
   };
 
-  const handleCloseExitModal = async () => {
-    resetExitForm();
+  const handleSaveSuccess = async () => {
+    // Recargar datos del acorde�n despu�s de guardar
     if (centerId) {
       try {
-        const [cap, grps] = await Promise.all([getCenterCapacity(centerId), listResidentGroups(centerId)]);
-        if (cap) {
-          setCenterCapacity(cap.capacity ?? 0);
-          setCurrentCapacity(cap.current_capacity ?? 0);
-          setAvailableCapacity(cap.available_capacity ?? 0);
+        if (showFamilies) {
+          // Modo familias: recargar lista y detalles si est� abierto
+          const grps = await listResidentGroups(centerId);
+          setGroups(grps);
+          if (openDetailsFamilyId) {
+            const details = await getFamilyDetails(openDetailsFamilyId);
+            setFamilyDetails(details);
+          }
+        } else {
+          // Modo personas: recargar lista y detalles si est� abierto
+          const ppl = await listPeopleByCenter(centerId, filters);
+          setPeople(ppl);
+          if (editingFamilyId && familyDetailsMap[editingFamilyId]) {
+            const details = await getFamilyDetails(editingFamilyId);
+            setFamilyDetailsMap({ ...familyDetailsMap, [editingFamilyId]: details });
+          }
         }
-        setGroups(grps);
-      } catch {
-        /* noop */
+      } catch (err) {
+        console.error("Error recargando datos tras edici�n:", err);
       }
     }
+    handleCloseEditModal();
   };
 
-  const handleExitSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!residentToExit || !residentToExit.family_id || !exitReason || !exitDate) {
-      window.alert("Debe completar todos los campos necesarios.");
-      return;
-    }
-    if (exitReason === "traslado" && !destinationActivationId) {
-      window.alert("Seleccione el centro de destino para un traslado.");
-      return;
-    }
+  const translateNeedCode = (code: number): string => {
+    // Ajustamos porque en la base de datos probablemente los códigos van del 1 al 14
+    const index = code - 1;
+    if (index >= 0 && index < NEEDS_OPTIONS.length) {
+      return NEEDS_OPTIONS[index];
+    }
+    return `Código Desconocido (${code})`;
+  };
 
-    setIsSubmitting(true);
-    try {
-      await registerFamilyDeparture({
-        familyId: residentToExit.family_id,
-        departure_reason: exitReason as DepartureReason,
-        destination_activation_id: exitReason === "traslado" ? destinationActivationId : null,
-        departure_date: exitDate,
-      });
-      window.alert("Salida registrada con éxito.");
-      await handleCloseExitModal();
-    } catch (err: any) {
-      console.error("Error registrando la salida:", err);
-      window.alert(err?.response?.data?.message || `Error: ${err?.message || "No se pudo registrar la salida."}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const toggleDetails = async (familyId: number | undefined) => {
+    if (!familyId) {
+      console.log("toggleDetails: familyId vacío");
+      return;
+    }
 
-  // ---------- FILTERS ----------
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
-  };
+    // quita foco para evitar aria-hidden issues
+    if (document.activeElement instanceof HTMLElement) {
+      console.log("toggleDetails: blurring active element:", document.activeElement);
+      document.activeElement.blur();
+    }
 
-  const filteredPeople = useMemo(() => {
-    return people.filter((person) => {
-      return (
-        (filters.nombre ? person.nombre.toLowerCase().includes(filters.nombre.toLowerCase()) : true) &&
-        (filters.rut ? person.rut.includes(filters.rut) : true) &&
-        (filters.fechaIngreso ? (person.fecha_ingreso || "") === filters.fechaIngreso : true) &&
-        (filters.fechaSalida  ? (person.fecha_salida  || "") === filters.fechaSalida  : true) &&
-        (filters.edad ? String(person.edad).includes(String(filters.edad)) : true) &&
-        (filters.genero ? person.genero.toLowerCase().includes(filters.genero.toLowerCase()) : true)
-      );
-    });
-  }, [people, filters]);
+    // cierra detalle persona (regla: solo uno abierto)
+    if (openDetailsPersonId !== null) {
+      console.log("toggleDetails: cerrando detalle persona abierto:", openDetailsPersonId);
+      setOpenDetailsPersonId(null);
+      setPersonDetails(null);
+      setPersonDetailsError(null);
+      setFamilyDetailsMap({});
+    }
 
-  // ---------- RENDER ----------
-  if (!error && loading) return <div className="residents-container">Cargando...</div>;
-  if (error)
-    return (
-      <div className="residents-container">
-        <div className="error-box">{error}</div>
-        <button onClick={() => navigate(-1)} className="back-button" style={{ marginTop: 12 }}>
-          ← Volver
-        </button>
-      </div>
-    );
+    // si ya está abierto -> cerrarlo
+    if (openDetailsFamilyId === familyId) {
+      console.log("toggleDetails: cerrando misma familia:", familyId);
+      setOpenDetailsFamilyId(null);
+      setFamilyDetails(null);
+      setDetailsError(null);
+      return;
+    }
 
-  return (
-    <div className="residents-container">
-      <div className="residents-header">
-        <button onClick={() => navigate(-1)} className="back-button">
-          ← Volver
-        </button>
-        <h2>Familias/Personas Albergadas - Centro {centerId}</h2>
-      </div>
+    console.log("toggleDetails: abriendo familia:", familyId);
+    setOpenDetailsFamilyId(familyId);
+    setFamilyDetails(null);
+    setDetailsError(null);
+    setIsDetailsLoading(true);
 
-      <div className="capacity-info">
-        <p>
-          <strong>Capacidad Total:</strong> {centerCapacity}
-        </p>
-        <p>
-          <strong>Ocupado:</strong> {currentCapacity}
-        </p>
-        <p>
-          <strong>Disponible:</strong> {availableCapacity}
-        </p>
-      </div>
+    try {
+      const details = await getFamilyDetails(familyId);
+      console.log("toggleDetails: detalles recibidos:", familyId, details);
+      setFamilyDetails(details);
+    } catch (e: any) {
+      console.error("toggleDetails: error al obtener detalles de la familia:", familyId, e);
+      setDetailsError("No se pudo cargar la información detallada: " + (e?.response?.data?.error || e?.message || "Error de conexión."));
+    } finally {
+      setIsDetailsLoading(false);
+      console.log("toggleDetails: terminado para familyId:", familyId);
+    }
+  };
 
-      <div className="export-buttons" style={{ marginBottom: "1rem" }}>
-        <button onClick={exportToPDF} className="export-btn">
-          Exportar a PDF
-        </button>
-        <button onClick={exportToCSV} className="export-btn">
-          Exportar a Excel
-        </button>
-      </div>
 
-      <div className="navigate-button">
-        <button
-          onClick={() => setShowFamilies(true)}
-          className={`navigate-btn ${showFamilies ? "active" : ""}`}
-          aria-pressed={showFamilies}
-        >
-          Ver Listado de Familias
-        </button>
-        <button
-          onClick={() => setShowFamilies(false)}
-          className={`navigate-btn ${!showFamilies ? "active" : ""}`}
-          aria-pressed={!showFamilies}
-        >
-          Ver Listado de Personas
-        </button>
-      </div>
+ const togglePersonDetails = async (personId: number | undefined) => {
+    if (!personId) {
+      console.log("togglePersonDetails: personId vacío");
+      return;
+    }
 
-      {showFamilies ? (
-        <div>
-          {groups.length === 0 ? (
-            <p>No hay familias registradas actualmente en este centro.</p>
-          ) : (
-            <table className="residents-table">
-              <thead>
-                <tr>
-                  <th>Nombre Jefe/a de Hogar</th>
-                  <th>RUT</th>
-                  <th>Nº Integrantes</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((resident) => (
-                  <tr key={resident.family_id ?? `${resident.rut}-${resident.nombre_completo}`}>
-                    <td>{resident.nombre_completo}</td>
-                    <td>{resident.rut}</td>
-                    <td>{resident.integrantes_grupo}</td>
-                    <td>
-                      <button onClick={() => handleOpenExitModal(resident)} className="action-btn">
-                        Registrar Salida
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      ) : (
-        <div>
-          <section className="filters-card filters-compact" aria-labelledby="filters-title">
-            <div className="filters-header">
-              <h3 id="filters-title">Filtrar</h3>
-              <div className="filters-actions">
-                <button
-                  type="button"
-                  className="btn-secondary-outlined"
-                  onClick={() =>
-                    setFilters({ nombre: "", rut: "", fechaIngreso: "", fechaSalida: "", edad: "", genero: "" })
-                  }
-                >
-                  Limpiar
-                </button>
-              </div>
-            </div>
+    // quita foco
+    if (document.activeElement instanceof HTMLElement) {
+      console.log("togglePersonDetails: blurring active element:", document.activeElement);
+      document.activeElement.blur();
+    }
 
-            <div className="filters-grid">
-              <label className="filter-field">
-                <span>Nombre</span>
-                <input type="text" name="nombre" value={filters.nombre} onChange={handleFilterChange} placeholder="nombre (ej: Juan) :" />
-              </label>
+    // cierra detalle familia (regla: solo uno abierto)
+    if (openDetailsFamilyId !== null) {
+      console.log("togglePersonDetails: cerrando detalle familia abierto:", openDetailsFamilyId);
+      setOpenDetailsFamilyId(null);
+      setFamilyDetails(null);
+      setDetailsError(null);
+    }
 
-              <label className="filter-field">
-                <span>RUT</span>
-                <input type="text" name="rut" value={filters.rut} onChange={handleFilterChange} placeholder="rut (ej: 12.345.678-9) :" />
-              </label>
+    // si mismo ya abierto -> cerrar
+    if (openDetailsPersonId === personId) {
+      console.log("togglePersonDetails: cerrando misma persona:", personId);
+      setOpenDetailsPersonId(null);
+      setPersonDetails(null);
+      setPersonDetailsError(null);
+      setFamilyDetailsMap({});
+      return;
+    }
 
-              <label className="filter-field">
-                <span>Fecha de Ingreso</span>
-                <input type="date" name="fechaIngreso" value={filters.fechaIngreso} onChange={handleFilterChange} />
-              </label>
+    console.log("togglePersonDetails: abriendo persona:", personId);
+    setOpenDetailsPersonId(personId);
+    setPersonDetails(null);
+    setPersonDetailsError(null);
+    setIsPersonDetailsLoading(true);
 
-              <label className="filter-field">
-                <span>Fecha de Salida</span>
-                <input type="date" name="fechaSalida" value={filters.fechaSalida} onChange={handleFilterChange} />
-              </label>
+    try {
+      const details = await getPersonDetailsEnriched(personId);
+      console.log("togglePersonDetails: personDetails recibidos:", details);
+      setPersonDetails(details);
 
-              <label className="filter-field">
-                <span>Edad</span>
-                <input type="number" name="edad" value={filters.edad} onChange={handleFilterChange} placeholder="edad (ej: 12) :" />
-              </label>
+      // cargar solo las familias que queremos mostrar (p.ej. la activa o la última)
+      const memberships = Array.isArray(details?.family_memberships) ? details.family_memberships : [];
+      console.log("togglePersonDetails: memberships:", memberships);
 
-              <label className="filter-field">
-                <span>Género</span>
-                <input type="text" name="genero" value={filters.genero} onChange={handleFilterChange} placeholder="Genero (ej: F / M / X) :" />
-              </label>
-            </div>
-          </section>
+      // preferimos la familia activa si existe, sino la última
+      const fmToUse = memberships.find((m) => m.family_status === "activo") ?? memberships[memberships.length - 1];
+      if (!fmToUse) {
+        console.log("togglePersonDetails: no hay memberships para persona:", personId);
+        setFamilyDetailsMap({});
+      } else {
+        const fid = fmToUse.family_id;
+        console.log("togglePersonDetails: cargando family details para fid:", fid);
+        try {
+          const fd = await getFamilyDetails(fid);
+          console.log("togglePersonDetails: family details cargados:", fid, fd);
+          setFamilyDetailsMap({ [fid]: fd });
+        } catch (err) {
+          console.error("togglePersonDetails: error cargando family details para fid:", fid, err);
+          setFamilyDetailsMap({ [fid]: null });
+        }
+      }
+    } catch (e: any) {
+      console.error("togglePersonDetails: error al obtener detalles de la persona:", personId, e);
+      setPersonDetailsError("No se pudo cargar la información detallada: " + (e?.response?.data?.error || e?.message || "Error de conexión."));
+    } finally {
+      setIsPersonDetailsLoading(false);
+      console.log("togglePersonDetails: terminado para personId:", personId);
+    }
+  };
 
-          {filteredPeople.length === 0 ? (
-            <p>No hay personas registradas en este centro.</p>
-          ) : (
-            <table className="people-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>RUT</th>
-                  <th>Fecha Ingreso</th>
-                  <th>Fecha Salida</th>
-                  <th>Edad</th>
-                  <th>Género</th>
-                  <th>Primer Apellido</th>
-                  <th>Segundo Apellido</th>
-                  <th>Nacionalidad</th>
-                  <th>Estudia</th>
-                  <th>Trabaja</th>
-                  <th>Pérdida de Trabajo</th>
-                  <th>Rubro</th>
-                  <th>Discapacidad</th>
-                  <th>Dependencia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPeople.map((person) => (
-                  <tr key={person.rut}>
-                    <td>{`${person.nombre} ${person.primer_apellido} ${person.segundo_apellido || ""}`.trim()}</td>
-                    <td>{person.rut}</td>
-                    <td>{formatCL(person.fecha_ingreso)}</td>
-                    <td>{formatCL(person.fecha_salida)}</td>
-                    <td>{person.edad}</td>
-                    <td>{person.genero}</td>
-                    <td>{person.primer_apellido}</td>
-                    <td>{person.segundo_apellido}</td>
-                    <td>{person.nacionalidad}</td>
-                    <td>{person.estudia ? "Sí" : "No"}</td>
-                    <td>{person.trabaja ? "Sí" : "No"}</td>
-                    <td>{person.perdida_trabajo ? "Sí" : "No"}</td>
-                    <td>{person.rubro}</td>
-                    <td>{person.discapacidad ? "Sí" : "No"}</td>
-                    <td>{person.dependencia ? "Sí" : "No"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
+  const handleOpenFamilyDetails = async (familyId: number) => {
+    if (isAnyDetailsLoading) {
+      console.warn("⏳ Ya se está cargando otro detalle, ignorando clic...");
+      return;
+    }
 
-      {isExitModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Registrar Salida de: {residentToExit?.nombre_completo}</h3>
-            <form onSubmit={handleExitSubmit}>
-              <div className="form-group">
-                <label htmlFor="exitReason">Motivo de la salida:</label>
-                <select
-                  id="exitReason"
-                  value={exitReason}
-                  onChange={(e) => setExitReason(e.target.value as DepartureReason | "")}
-                  required
-                >
-                  <option value="">Seleccione un motivo</option>
-                  <option value="traslado">Traslado a otro centro</option>
-                  <option value="regreso">Regreso a casa</option>
-                  <option value="reubicacion">Reubicación</option>
-                </select>
-              </div>
+    console.log("🟩 handleOpenFamilyDetails ->", familyId);
+    setIsAnyDetailsLoading(true);
 
-              <div className="form-group">
-                <label htmlFor="exitDate">Fecha de salida:</label>
-                <input
-                  id="exitDate"
-                  type="date"
-                  value={exitDate}
-                  onChange={(e) => setExitDate(e.target.value)}
-                  required
-                />
-              </div>
+    // Cierra detalles de persona
+    setOpenDetailsPersonId(null);
+    setPersonDetails(null);
+    setPersonDetailsError(null);
+    setFamilyDetailsMap({});
 
-              {exitReason === "traslado" && (
-                <div className="form-group">
-                  <label htmlFor="destinationActivationId">Centro de destino:</label>
-                  <select
-                    id="destinationActivationId"
-                    value={destinationActivationId}
-                    onChange={(e) => setDestinationActivationId(e.target.value)}
-                    required
-                  >
-                    <option value="">Seleccione centro...</option>
-                    {activeCenters.map((center) => (
-                      <option key={center.activation_id} value={center.activation_id}>
-                        {center.center_name} ({center.center_id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+    await toggleDetails(familyId);
 
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={resetExitForm} disabled={isSubmitting}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? "Registrando..." : "Registrar Salida"}
-                </button>
-              </div>
-            </form>
+    setIsAnyDetailsLoading(false);
+  };
+  const handleOpenPersonDetails = async (personId: number) => {
+    if (isAnyDetailsLoading) {
+      console.warn("⏳ Ya se está cargando otro detalle, ignorando clic...");
+      return;
+    }
+
+    console.log("🟦 handleOpenPersonDetails ->", personId);
+    setIsAnyDetailsLoading(true);
+
+    // Cierra detalles de familia
+    setOpenDetailsFamilyId(null);
+    setFamilyDetails(null);
+    setDetailsError(null);
+
+    await togglePersonDetails(personId);
+
+    setIsAnyDetailsLoading(false);
+  };
+
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const filteredPeople = useMemo(() => {
+    return people.filter((person) => {
+      return (
+        (filters.nombre ? person.nombre.toLowerCase().includes(filters.nombre.toLowerCase()) : true) &&
+        (filters.rut ? person.rut.includes(filters.rut) : true) &&
+        (filters.fechaIngreso ? (person.fecha_ingreso || "") === filters.fechaIngreso : true) &&
+        (filters.fechaSalida ? (person.fecha_salida || "") === filters.fechaSalida : true) &&
+        (filters.edad ? String(person.edad).includes(String(filters.edad)) : true) &&
+        (filters.genero ? person.genero.toLowerCase().includes(filters.genero.toLowerCase()) : true)
+      );
+    });
+  }, [people, filters]);
+// RENDER
+  if (!error && loading) return <div className="residents-container">Cargando...</div>;
+  if (error)
+    return (
+      <div className="residents-container">
+        <div className="error-box">{error}</div>
+        <button onClick={() => navigate(-1)} className="back-button" style={{ marginTop: 12 }}>
+          ← Volver
+        </button>
+      </div>
+    );
+
+  return (
+    <div className="residents-container">
+      <div className="residents-header">
+        <button onClick={() => navigate(-1)} className="back-button">
+          ← Volver
+        </button>
+        <h2>Familias/Personas Albergadas - Centro {centerId}</h2>
+      </div>
+
+      <div className="capacity-info">
+        <p>
+          <strong>Capacidad Total:</strong> {centerCapacity}
+        </p>
+        <p>
+          <strong>Ocupado:</strong> {currentCapacity}
+        </p>
+        <p>
+          <strong>Disponible:</strong> {availableCapacity}
+        </p>
+      </div>
+
+      <div className="export-buttons" style={{ marginBottom: "1rem" }}>
+        <button onClick={exportToPDF} className="export-btn">
+          Exportar a PDF
+        </button>
+        <button onClick={exportToCSV} className="export-btn">
+          Exportar a Excel
+        </button>
+      </div>
+
+      <div className="navigate-button">
+        <button
+          onClick={() => setShowFamilies(true)}
+          className={`navigate-btn ${showFamilies ? "active" : ""}`}
+          aria-pressed={showFamilies}
+        >
+          Ver Listado de Familias
+        </button>
+        <button
+          onClick={() => setShowFamilies(false)}
+          className={`navigate-btn ${!showFamilies ? "active" : ""}`}
+          aria-pressed={!showFamilies}
+        >
+          Ver Listado de Personas
+        </button>
+      </div>
+
+      {showFamilies ? (
+        <div>
+          {groups.length === 0 ? (
+            <p>No hay familias registradas actualmente en este centro.</p>
+          ) : (
+            <table className="residents-table">
+              <thead>
+                <tr>
+                  <th>Nombre Jefe/a de Hogar</th>
+                  <th>RUT</th>
+                  <th>Nº Integrantes</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groups.map((resident) => (
+                  <React.Fragment key={resident.family_id ?? `${resident.rut}-${resident.nombre_completo}`}>
+                    <tr>
+                      <td>{resident.nombre_completo}</td>
+                      <td>{resident.rut}</td>
+                      <td>{resident.integrantes_grupo}</td>
+                      <td>
+                        <button
+                          onClick={() => handleOpenFamilyDetails(resident.family_id)}
+                          disabled={isAnyDetailsLoading}
+                          className="action-btn action-btn-view"
+                          style={{
+                            marginRight: "8px",
+                            backgroundColor: openDetailsFamilyId === resident.family_id ? "#dc3545" : "#007bff",
+                          }}
+                        >
+                          {openDetailsFamilyId === resident.family_id ? "Ocultar Detalles" : "Ver Detalles"}
+                        </button>
+
+                        <button onClick={() => handleOpenExitModal(resident)} className="action-btn">
+                          Registrar Salida
+                        </button>
+                      </td>
+                    </tr>
+
+                    {openDetailsFamilyId === resident.family_id && (
+                      <tr>
+                        <td colSpan={4} className="family-details-row" style={{ padding: "0" }}>
+                          <div style={{ padding: "15px 20px", backgroundColor: "#f0f0f0", borderTop: "1px solid #ddd" }}>
+                            {isDetailsLoading && <p>Cargando detalles del grupo familiar...</p>}
+                            {detailsError && (
+                              <p style={{ color: "red", fontWeight: "bold" }}>⚠️ Error: {detailsError}</p>
+                            )}
+
+                            {familyDetails && (
+                              <div className="family-details-card-v2">
+                                <header className="card-header-v2">
+                                  <div className="header-meta-v2">
+                                    {(() => {
+                                      const jefeDeHogar = (familyDetails.miembros || []).find((m: any) => m.es_jefe_hogar);
+                                      const fechaIngreso = jefeDeHogar?.created_at;
+                                      if (fechaIngreso) {
+                                        return (
+                                          <div className="meta-item">
+                                            <i className="fas fa-calendar-alt meta-icon" />
+                                            <span className="meta-label">Ingreso al Centro:</span>
+                                            <span className="meta-value">{formatCL(fechaIngreso)}</span>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                </header>
+
+                                <div className="card-body-v2">
+                                  <h4 className="section-title-v2">Observaciones y Necesidades Básicas</h4>
+
+                                  <p className="observations-text-v2">
+                                    {familyDetails.observaciones || "No hay observaciones registradas."}
+                                  </p>
+
+                                  <div className="needs-list-v2">
+                                    {(() => {
+                                      const rawNeeds = familyDetails?.necesidades_basicas || [];
+
+                                      // Convertimos strings a números
+                                      const needsArray = rawNeeds.map((n: string | number): number => Number(n));
+
+                                      // Filtramos solo los activos (1)
+                                      const activeNeeds = needsArray
+                                        .map((value: number, index: number) => ({ value, index }))
+                                        .filter((item: { value: number; index: number }) => item.value === 1);
+
+                                      if (activeNeeds.length === 0) {
+                                        return (
+                                          <p className="no-needs-text">
+                                            No se registraron necesidades básicas urgentes.
+                                          </p>
+                                        );
+                                      }
+
+                                      return activeNeeds.map((item: { value: number; index: number }) => (
+                                        <span key={item.index} className="need-badge">
+                                          {translateNeedCode(item.index + 1)}{" "}
+                                        </span>
+                                      ));
+                                    })()}
+                                  </div>
+
+                                  <h4 className="section-title-v2 members-title">
+                                      Miembros del Grupo Familiar ({(familyDetails.miembros || []).length}) - ID Familia: {familyDetails.family_id}
+                                  </h4>
+
+                                  <div style={{ overflowX: "auto" }}>
+                                    <table className="members-table-v2" style={{ minWidth: "1200px" }}>
+                                      <thead>
+                                        <tr>
+                                          <th>Nombre Completo</th>
+                                          <th>Parentesco</th>
+                                          <th>Edad</th>
+                                          <th>Género</th>
+                                          <th>RUT</th>
+                                          <th>Nacionalidad</th>
+                                          <th>Estudia</th>
+                                          <th>Trabaja</th>
+                                          <th>Rubro</th>
+                                          <th>Pérdida Trabajo</th>
+                                          <th>Discapacidad</th>
+                                          <th>Dependencia</th>
+                                          <th>ID Persona</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {(familyDetails.miembros || []).map((miembro: any) => (
+                                          <tr key={miembro.person_id} className={miembro.es_jefe_hogar ? "is-head" : ""}>
+                                            <td>
+                                              {miembro.nombre} {miembro.primer_apellido} {miembro.segundo_apellido}
+                                            </td>
+                                            <td>
+                                              <span className={miembro.es_jefe_hogar ? "head-badge" : "member-badge"}>
+                                                {miembro.parentesco}
+                                              </span>
+                                            </td>
+                                            <td>{miembro.edad || "-"}</td>
+                                            <td>{miembro.genero || "-"}</td>
+                                            <td>{miembro.rut || "-"}</td>
+                                            <td>{miembro.nacionalidad || "-"}</td>
+                                            <td>
+                                              <span className={miembro.estudia ? "value-yes" : "value-no"}>
+                                                {miembro.estudia ? "Sí" : "No"}
+                                              </span>
+                                            </td>
+                                            <td>
+                                              <span className={miembro.trabaja ? "value-yes" : "value-no"}>
+                                                {miembro.trabaja ? "Sí" : "No"}
+                                              </span>
+                                            </td>
+                                            <td>{miembro.rubro || "-"}</td>
+                                            <td>
+                                              <span className={miembro.perdida_trabajo ? "value-yes" : "value-no"}>
+                                                {miembro.perdida_trabajo ? "Sí" : "No"}
+                                              </span>
+                                            </td>
+                                            <td>
+                                              <span className={miembro.discapacidad ? "value-yes" : "value-no"}>
+                                                {miembro.discapacidad ? "Sí" : "No"}
+                                              </span>
+                                            </td>
+                                            <td>
+                                              <span className={miembro.dependencia ? "value-yes" : "value-no"}>
+                                                {miembro.dependencia ? "Sí" : "No"}
+                                              </span>
+                                            </td>
+                                            <td>{miembro.person_id || "-"}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+
+                                  {/* Boton Editar Familia - HdU31 */}
+                                  <div style={{ marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #ddd", textAlign: "right" }}>
+                                    <button
+                                      onClick={() => handleOpenEditModal(resident.family_id)}
+                                      className="action-btn"
+                                      style={{
+                                        backgroundColor: "#28a745",
+                                        color: "white",
+                                        padding: "10px 20px",
+                                        border: "none",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                       Editar Familia
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : (
+        <div>
+          <section className="filters-card filters-compact" aria-labelledby="filters-title">
+            <div className="filters-header">
+              <h3 id="filters-title">Filtrar</h3>
+              <div className="filters-actions">
+                <button
+                  type="button"
+                  className="btn-secondary-outlined"
+                  onClick={() =>
+                    setFilters({
+                      nombre: "",
+                      rut: "",
+                      fechaIngreso: "",
+                      fechaSalida: "",
+                      edad: "",
+                      genero: "",
+                    })
+                  }
+                >
+                  Limpiar
+                </button>
+              </div>
+            </div>
+
+            <div className="filters-grid">
+              <label className="filter-field">
+                <span>Nombre</span>
+                <input type="text" name="nombre" value={filters.nombre} onChange={handleFilterChange} placeholder="nombre (ej: Juan) :" />
+              </label>
+
+              <label className="filter-field">
+                <span>RUT</span>
+                <input type="text" name="rut" value={filters.rut} onChange={handleFilterChange} placeholder="rut (ej: 12.345.678-9) :" />
+              </label>
+
+              <label className="filter-field">
+                <span>Fecha de Ingreso</span>
+                <input type="date" name="fechaIngreso" value={filters.fechaIngreso} onChange={handleFilterChange} />
+              </label>
+
+              <label className="filter-field">
+                <span>Fecha de Salida</span>
+                <input type="date" name="fechaSalida" value={filters.fechaSalida} onChange={handleFilterChange} />
+              </label>
+
+              <label className="filter-field">
+                <span>Edad</span>
+                <input type="number" name="edad" value={filters.edad} onChange={handleFilterChange} placeholder="edad (ej: 12) :" />
+              </label>
+
+              <label className="filter-field">
+                <span>Género</span>
+                <input type="text" name="genero" value={filters.genero} onChange={handleFilterChange} placeholder="Genero (ej: F / M / X) :" />
+              </label>
+            </div>
+          </section>
+
+          {filteredPeople.length === 0 ? (
+            <p>No hay personas registradas en este centro.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className="people-table" style={{ minWidth: "1500px" }}>
+                <thead>
+                  <tr>
+                    <th>Nombre Completo</th>
+                    <th>RUT</th>
+                    <th>Fecha Ingreso</th>
+                    <th>Fecha Salida</th>
+                    <th>Edad</th>
+                    <th>Género</th>
+                    <th>Nacionalidad</th>
+                    <th>Estudia</th>
+                    <th>Trabaja</th>
+                    <th>Pérdida de Trabajo</th>
+                    <th>Rubro</th>
+                    <th>Discapacidad</th>
+                    <th>Dependencia</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPeople.map((person) => (
+                    <React.Fragment key={person.person_id}>
+                      <tr>
+                        <td>{`${person.nombre} ${person.primer_apellido} ${person.segundo_apellido || ""}`.trim()}</td>
+                        <td>{person.rut}</td>
+                        <td>{person.fecha_ingreso ? formatCL(person.fecha_ingreso) : "-"}</td>
+                        <td>{person.fecha_salida ? formatCL(person.fecha_salida) : "-"}</td>
+                        <td>{person.edad || "-"}</td>
+                        <td>{person.genero || "-"}</td>
+                        <td>{person.nacionalidad || "-"}</td>
+                        <td>{person.estudia ? "Sí" : "No"}</td>
+                        <td>{person.trabaja ? "Sí" : "No"}</td>
+                        <td>{person.perdida_trabajo ? "Sí" : "No"}</td>
+                        <td>{person.rubro || "-"}</td>
+                        <td>{person.discapacidad ? "Sí" : "No"}</td>
+                        <td>{person.dependencia ? "Sí" : "No"}</td>
+                        <td>
+                          <button
+                            onClick={() => handleOpenPersonDetails(person.person_id)}
+                            disabled={isAnyDetailsLoading}
+                            className="action-btn action-btn-view"
+                            style={{
+                              marginRight: "8px",
+                              backgroundColor: openDetailsPersonId === person.person_id ? "#dc3545" : "#007bff",
+                            }}
+                          >
+                            {openDetailsPersonId === person.person_id ? "Ocultar Detalles" : "Ver Detalles"}
+                          </button>
+                        </td>
+                      </tr>
+
+                      {openDetailsPersonId === person.person_id && (
+                        <tr>
+                          <td colSpan={14} className="person-details-row" style={{ padding: 0 }}>
+                            <div
+                              style={{
+                                padding: "15px 20px",
+                                backgroundColor: "#f0f0f0",
+                                borderTop: "1px solid #ddd",
+                              }}
+                            >
+                              {isPersonDetailsLoading && <p>Cargando detalles de la persona...</p>}
+                              {personDetailsError && (
+                                <p style={{ color: "red", fontWeight: "bold" }}>⚠️ Error: {personDetailsError}</p>
+                              )}
+
+                              {/* ---------------- HEADER META: Ingreso al Centro (igual que en familias) ---------------- */}
+                              {personDetails?.person_details && (
+                                <div className="family-details-card-v2">
+                                  <header className="card-header-v2">
+                                    <div className="header-meta-v2">
+                                      {/* Ingreso al Centro: fecha formatted */}
+                                      <div className="meta-item">
+                                        <i className="fas fa-calendar-alt meta-icon" />
+                                        <span className="meta-label">Ingreso al Centro:</span>
+                                        <span className="meta-value">
+                                          {personDetails.person_details.created_at
+                                            ? formatCL(personDetails.person_details.created_at)
+                                            : "Desconocido"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </header>
+
+                                  <div className="card-body-v2">
+                                    <h4 className="section-title-v2">Observaciones y Necesidades Básicas</h4>
+                                          
+                                    {(() => {
+                                      if (!personDetails?.family_memberships?.length) return <p>No hay observaciones registradas.</p>;
+
+                                      const fm = personDetails.family_memberships.find(f => f.family_status === "activo") ?? personDetails.family_memberships[0];
+                                      if (!fm) return <p>No hay observaciones registradas.</p>;
+
+                                      const fd = familyDetailsMap[fm.family_id];
+                                      if (!fd) return <p>Cargando observaciones de la familia...</p>; // ⚠ evita crash
+
+                                      const observaciones = fd.observaciones || "No hay observaciones registradas.";
+                                      const rawNeeds: (number | string)[] = fd.necesidades_basicas || [];
+                                      const needsArray = rawNeeds.map(n => Number(n));
+                                      const activeNeeds = needsArray
+                                        .map((value, index) => ({ value, index }))
+                                        .filter(item => item.value === 1);
+
+                                      return (
+                                        <>
+                                          <p className="observations-text-v2" style={{ marginBottom: 12 }}>
+                                            {observaciones}
+                                          </p>
+                                          <div className="needs-list-v2" style={{ marginBottom: 12 }}>
+                                            {activeNeeds.length === 0 ? (
+                                              <p className="no-needs-text">No se registraron necesidades básicas urgentes.</p>
+                                            ) : (
+                                              activeNeeds.map(item => (
+                                                <span key={item.index} className="need-badge" style={{ marginRight: 6 }}>
+                                                  {translateNeedCode(item.index + 1)}{" "}
+                                                </span>
+                                              ))
+                                            )}
+                                          </div>
+                                        </>
+                                      );
+                                    })()}
+                                    {/* 💡 SOLUCIÓN: Miembros del Grupo Familiar (Solo se renderiza la ÚLTIMA familia activa/reciente) */}
+                                      {(() => {
+                                        const memberships = personDetails.family_memberships;
+
+                                        // 1. Verificar si hay membresías
+                                        if (!Array.isArray(memberships) || memberships.length === 0) {
+                                          return <p>No pertenece a ningún grupo familiar.</p>;
+                                        }
+
+                                        // 2. Obtener la ÚLTIMA membresía de la persona (la que se cargó en familyDetailsMap)
+                                        const lastMembership = memberships[memberships.length - 1];
+
+                                        if (!lastMembership) {
+                                          return <p>No se pudo encontrar la membresía familiar más reciente.</p>;
+                                        }
+
+                                        // 3. Obtener los detalles de la ÚNICA familia cargada en el estado
+                                        const fd = familyDetailsMap[lastMembership.family_id];
+
+                                        // 4. Renderizar solo si los detalles están cargados
+                                        if (fd) {
+                                          return (
+                                            <div key={lastMembership.family_id} style={{ marginBottom: 16 }}>
+                                              <h4 className="section-title-v2 members-title">
+                                                  Miembros del Grupo Familiar ({(fd.miembros || []).length}) - ID Familia: {fd.family_id}
+                                              </h4>
+                                              
+                                              <div style={{ overflowX: "auto" }}>
+                                                <table className="members-table-v2" style={{ minWidth: "1000px" }}>
+                                                  <thead>
+                                                    <tr>
+                                                      <th>Nombre Completo</th>
+                                                      <th>Parentesco</th>
+                                                      <th>Edad</th>
+                                                      <th>Género</th>
+                                                      <th>RUT</th>
+                                                      <th>Nacionalidad</th>
+                                                      <th>Estudia</th>
+                                                      <th>Trabaja</th>
+                                                      <th>Rubro</th>
+                                                      <th>Pérdida Trabajo</th>
+                                                      <th>Discapacidad</th>
+                                                      <th>Dependencia</th>
+                                                      <th>ID Persona</th>
+                                                    </tr>
+                                                  </thead>
+                                                  <tbody>
+                                                    {/* Iterar sobre los miembros reales de la familia cargada (fd.miembros) */}
+                                                    {(fd.miembros || []).map((mi: any) => (
+                                                      <tr key={mi.person_id} className={mi.es_jefe_hogar ? "is-head" : ""}>
+                                                        <td>{mi.nombre} {mi.primer_apellido} {mi.segundo_apellido}</td>
+                                                        <td><span className={mi.es_jefe_hogar ? "head-badge" : "member-badge"}>{mi.parentesco}</span></td>
+                                                        <td>{mi.edad || "-"}</td>
+                                                        <td>{mi.genero || "-"}</td>
+                                                        <td>{mi.rut || "-"}</td>
+                                                        <td>{mi.nacionalidad || "-"}</td>
+                                                        <td>{mi.estudia ? "Sí" : "No"}</td>
+                                                        <td>{mi.trabaja ? "Sí" : "No"}</td>
+                                                        <td>{mi.rubro || "-"}</td>
+                                                        <td>{mi.perdida_trabajo ? "Sí" : "No"}</td>
+                                                        <td>{mi.discapacidad ? "Sí" : "No"}</td>
+                                                        <td>{mi.dependencia ? "Sí" : "No"}</td>
+                                                        <td>{mi.person_id || "-"}</td>
+                                                      </tr>
+                                                    ))}
+                                                  </tbody>
+                                                </table>
+                                              </div>
+
+                                              {/* Bot�n Editar Familia - HdU31 (desde persona) */}
+                                              <div style={{ marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #ddd", textAlign: "right" }}>
+                                                <button
+                                                  onClick={() => handleOpenEditModal(lastMembership.family_id)}
+                                                  className="action-btn"
+                                                  style={{
+                                                    backgroundColor: "#28a745",
+                                                    color: "white",
+                                                    padding: "10px 20px",
+                                                    border: "none",
+                                                    borderRadius: "4px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "bold",
+                                                  }}
+                                                >
+                                                   Editar Familia
+                                                </button>
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+
+                                        // Mostrar mensaje de carga mientras se obtienen los detalles de la única familia
+                                        return <p>Cargando información de la familia {lastMembership.family_id}...</p>;
+                                      })()}
+                                                                        </div>
+                                </div>
+                              )}
+                              {/* -------------------------------------------------------------------------------- */}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isExitModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Registrar Salida de: {residentToExit?.nombre_completo}</h3>
+            <form onSubmit={handleExitSubmit}>
+              <div className="form-group">
+                <label htmlFor="exitReason">Motivo de la salida:</label>
+                <select
+                  id="exitReason"
+                  value={exitReason}
+                  onChange={(e) => setExitReason(e.target.value as DepartureReason | "")}
+                  required
+                >
+                  <option value="">Seleccione un motivo</option>
+                  <option value="traslado">Traslado a otro centro</option>
+                  <option value="regreso">Regreso a casa</option>
+                  <option value="reubicacion">Reubicación</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="exitDate">Fecha de salida:</label>
+                <input id="exitDate" type="date" value={exitDate} onChange={(e) => setExitDate(e.target.value)} required />
+              </div>
+
+              {exitReason === "traslado" && (
+                <div className="form-group">
+                  <label htmlFor="destinationActivationId">Centro de destino:</label>
+                  <select
+                    id="destinationActivationId"
+                    value={destinationActivationId}
+                    onChange={(e) => setDestinationActivationId(e.target.value)}
+                    required
+                  >
+                    <option value="">Seleccione centro...</option>
+                    {activeCenters.map((center) => (
+                      <option key={center.activation_id} value={center.activation_id}>
+                        {center.center_name} ({center.center_id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={resetExitForm} disabled={isSubmitting}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? "Registrando..." : "Registrar Salida"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
+
+      {/* Modal de edición - HdU31 */}
+      {editModalOpen && editingFamilyId && (
+        <PersonEditModal
+          open={editModalOpen}
+          onClose={handleCloseEditModal}
+          familyId={editingFamilyId}
+          onSaveSuccess={handleSaveSuccess}
+        />
+      )}
     </div>
   );
-};
-
-export default CenterResidentsPage;
+};export default CenterResidentsPage;

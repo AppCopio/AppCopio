@@ -38,11 +38,27 @@
 .capacity-info {
   font-size: 1rem;
   color: #666;
+  margin-bottom: 8px;
 }
 
 .capacity-info strong {
   color: #333;
   font-weight: 600;
+}
+
+.overall-fullness {
+  font-size: 1.1rem;
+  color: #333;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
+}
+
+.overall-fullness strong {
+  font-size: 1.3rem;
+  font-weight: 700;
 }
 
 .categories-grid {
@@ -140,9 +156,24 @@
 }
 
 .items-breakdown h4 {
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
   color: #333;
   font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.breakdown-note {
+  margin: 0 0 12px 0;
+  padding: 10px 12px;
+  background-color: #e3f2fd;
+  border-left: 3px solid #2196f3;
+  font-size: 0.85rem;
+  color: #1565c0;
+  line-height: 1.5;
+  border-radius: 4px;
+}
+
+.breakdown-note strong {
   font-weight: 600;
 }
 
@@ -212,8 +243,15 @@
 }
 
 .item-coverage {
-  min-width: 50px;
+  min-width: 60px;
   text-align: right;
+}
+
+.coverage-hint {
+  font-size: 0.8rem;
+  color: #757575;
+  font-style: italic;
+  cursor: help;
 }
 
 .coverage-text {

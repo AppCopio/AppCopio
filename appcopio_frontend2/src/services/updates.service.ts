@@ -3,6 +3,7 @@
 //tambien le meti trycatch que sorpresa bruno
 
 import { api } from "@/lib/api";
+import { isCancelError } from "@/lib/errors";
 import type { UpdateRequest, UpdateStatus, UpdatesApiResponse, UpdateCreateDTO } from "@/types/update";
 
 /**
@@ -38,6 +39,7 @@ export async function listUpdates(params: {
     });
     return data ?? { requests: [], total: 0 };
   } catch (error) {
+    if (isCancelError(error)) return { requests: [], total: 0 };
     console.error("Error fetching update requests:", error);
     return { requests: [], total: 0 };
   }
@@ -53,6 +55,7 @@ export async function patchUpdateRequest(id: number, body: Record<string, unknow
     const { data } = await api.patch<UpdateRequest>(`/updates/${id}`, body, { signal }); // CAMBIO APLICADO AQUÍ
     return data;
   } catch (error) {
+    if (isCancelError(error)) throw error; // Re-lanzar cancelaciones
     console.error(`Error patching update request ${id}:`, error);
     throw error;
   }
@@ -67,6 +70,7 @@ export async function createUpdateRequest(payload: UpdateCreateDTO, signal?: Abo
     const { data } = await api.post<UpdateRequest>("/updates", payload, { signal }); // CAMBIO APLICADO AQUÍ
     return data;
   } catch (error) {
+    if (isCancelError(error)) throw error; // Re-lanzar cancelaciones
     console.error("Error creating update request:", error);
     throw error;
   }

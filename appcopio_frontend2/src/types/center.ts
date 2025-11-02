@@ -22,14 +22,14 @@ export type Center = {
 // src/types/center.ts
 
 export interface CenterData {
-    center_id: string;
+    center_id?: string; // Opcional para creación, será autogenerado por la BD
     name: string;
     address: string;
-    type: 'Albergue' | 'Acopio' | 'Albergue Comunitario' | 'acopio' | ''; //type: CenterTypeName
+    type: 'Albergue' | 'Acopio' | 'Albergue Comunitario' | 'acopio' | 'albergue' | ''; //type: CenterTypeName
     folio: string;
-    capacity: number;
-    latitude: number;
-    longitude: number;
+    capacity: number | null;
+    latitude: number | null;
+    longitude: number | null;
     should_be_active: boolean;
     comunity_charge_id: number | null; //esto no se si se está pocupabndo
     municipal_manager_id: number | null;
@@ -155,10 +155,10 @@ export interface CenterData {
 }
 
 export const initialCenterData: CenterData = {
-    center_id: '',
+    // center_id se omite - será autogenerado por la BD
     name: '',
     address: '',
-    type: 'Albergue',
+    type: 'albergue', // Usar lowercase consistente con backend
     folio: '',
     capacity: 0,
     latitude: 0,
@@ -166,7 +166,7 @@ export const initialCenterData: CenterData = {
     should_be_active: false,
     comunity_charge_id: null,
     municipal_manager_id: null,
-    is_active: true,
+    is_active: false, // Cambiar a false por defecto
 
     // Campos de CentersDescription
     nombre_dirigente: '',

@@ -67,15 +67,14 @@ const LikertScaleInput: React.FC<{
 const CreateCenterPage: React.FC = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState<CenterData>({
-        // Campos de la tabla Centers
-center_id: '',
+        // Campos de la tabla Centers - center_id se omite, será autogenerado
     name: '',
     address: '',
-    type: 'Albergue',
+    type: 'albergue', // Usar lowercase consistente 
     folio: '',
-    capacity: 0,
-    latitude: 0,
-    longitude: 0,
+    capacity: null,
+    latitude: null,
+    longitude: null,
     should_be_active: false,
     comunity_charge_id: null,
     municipal_manager_id: null,
@@ -205,16 +204,40 @@ center_id: '',
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
+        
+        // Limpiar errores de validación cuando el usuario modifique el formulario
+        if (validationErrors.length > 0) {
+            setValidationErrors([]);
+        }
+        
+        let processedValue: any;
+        
+        if (type === 'checkbox') {
+            processedValue = (e.target as HTMLInputElement).checked;
+        } else if (type === 'number') {
+            // Si el valor está vacío, asignar null
+            if (value === '' || value === null || value === undefined) {
+                processedValue = null;
+            } else {
+                const numValue = Number(value);
+                // Validar que sea un número válido
+                processedValue = isNaN(numValue) ? null : numValue;
+            }
+        } else {
+            // Para strings, si está vacío asignar null o string vacío según el campo
+            processedValue = value === '' ? null : value;
+        }
+        
         setFormData(prevState => ({
             ...prevState,
-            [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : (value === '' ? null : (type === 'number' ? Number(value) : value)),
+            [name]: processedValue,
         }));
     };
 
     const validateForm = () => {
         const errors: string[] = [];
         const requiredFields: (keyof CenterData)[] = [
-            'center_id', 'name', 'address', 'type', 'capacity', 'latitude', 'longitude',
+            'name', 'address', 'type', 'capacity', 'latitude', 'longitude',  // Remover center_id
             'tipo_inmueble', 'numero_habitaciones', 'estado_conservacion',
             'espacio_10_afectados', 'diversidad_funcional', 'areas_comunes_accesibles', 'espacio_recreacion',
             'agua_potable', 'agua_estanques', 'electricidad', 'calefaccion', 'alcantarillado',
@@ -226,16 +249,20 @@ center_id: '',
         ];
     
         requiredFields.forEach(field => {
-            if (formData[field] === '' || formData[field] === null || (typeof formData[field] === 'number' && isNaN(formData[field] as number))) {
+            if (formData[field] === '' || formData[field] === null || formData[field] === undefined) {
                 errors.push(`El campo '${field}' es obligatorio.`);
             }
         });
         
-        if (typeof formData.latitude !== 'number' || isNaN(formData.latitude)) {
+        // Validaciones específicas para números
+        if (formData.latitude === null || formData.latitude === undefined || typeof formData.latitude !== 'number' || isNaN(formData.latitude)) {
             errors.push('La latitud debe ser un número válido.');
         }
-        if (typeof formData.longitude !== 'number' || isNaN(formData.longitude)) {
+        if (formData.longitude === null || formData.longitude === undefined || typeof formData.longitude !== 'number' || isNaN(formData.longitude)) {
             errors.push('La longitud debe ser un número válido.');
+        }
+        if (formData.capacity === null || formData.capacity === undefined || typeof formData.capacity !== 'number' || isNaN(formData.capacity) || formData.capacity <= 0) {
+            errors.push('La capacidad debe ser un número válido mayor a 0.');
         }
     
         setValidationErrors(errors);
@@ -257,7 +284,49 @@ center_id: '',
         setIsSaving(true);
         if (navigator.onLine) {
             try {
-                const newCenter = await createCenter(formData);
+                // Asegurar que los valores numéricos sean números antes de enviar
+                const latitude = formData.latitude !== null && formData.latitude !== undefined 
+                    ? (typeof formData.latitude === 'number' ? formData.latitude : parseFloat(String(formData.latitude)))
+                    : null;
+                    
+                const longitude = formData.longitude !== null && formData.longitude !== undefined
+                    ? (typeof formData.longitude === 'number' ? formData.longitude : parseFloat(String(formData.longitude)))
+                    : null;
+                    
+                const capacity = formData.capacity !== null && formData.capacity !== undefined
+                    ? (typeof formData.capacity === 'number' ? formData.capacity : parseInt(String(formData.capacity), 10))
+                    : null;
+                
+                // Verificar que los valores sean válidos
+                if (latitude === null || isNaN(latitude)) {
+                    setError('La latitud debe ser un número válido.');
+                    setIsConfirmationOpen(false);
+                    setIsSaving(false);
+                    return;
+                }
+                
+                if (longitude === null || isNaN(longitude)) {
+                    setError('La longitud debe ser un número válido.');
+                    setIsConfirmationOpen(false);
+                    setIsSaving(false);
+                    return;
+                }
+                
+                if (capacity === null || isNaN(capacity) || capacity <= 0) {
+                    setError('La capacidad debe ser un número válido mayor a 0.');
+                    setIsConfirmationOpen(false);
+                    setIsSaving(false);
+                    return;
+                }
+                
+                const sanitizedData = {
+                    ...formData,
+                    latitude,
+                    longitude,
+                    capacity,
+                };
+                
+                const newCenter = await createCenter(sanitizedData);
                 setSuccess(`Centro "${newCenter.name}" creado con éxito.`);
                 localStorage.removeItem('pendingCenterRegistrationForm');
                 setTimeout(() => navigate('/admin/centers'), 2000);
@@ -266,12 +335,14 @@ center_id: '',
             } finally {
                 setIsLoading(false);
                 setIsConfirmationOpen(false);
+                setIsSaving(false);
             }
         } else {
             localStorage.setItem('pendingCenterRegistrationForm', JSON.stringify(formData));
             alert('Sin conexión. El formulario se guardó y se sincronizará cuando recuperes la red.');
             setIsLoading(false);
             setIsConfirmationOpen(false);
+            setIsSaving(false);
             navigate('/admin/centers');
         }
     };
@@ -298,8 +369,6 @@ center_id: '',
                         </Typography>
                         <Grid container spacing={2}>
 
-                                <TextField fullWidth label="ID del Centro" name="center_id" value={formData.center_id} onChange={handleChange} required />
-
                                 <TextField fullWidth label="Nombre de la organización" name="name" value={formData.name} onChange={handleChange} required /> 
 
                                 <TextField fullWidth label="Dirección" name="address" value={formData.address} onChange={handleChange} required />
@@ -315,16 +384,45 @@ center_id: '',
                                     <InputLabel>Tipo de Centro</InputLabel>
                                     <Select name="type" value={formData.type} label="Tipo de Centro" onChange={handleChange as any}>
                                         <MenuItem value="albergue">Albergue</MenuItem>
-                                        <MenuItem value="acopio">Albergue comunitario</MenuItem>
+                                        <MenuItem value="acopio">Acopio</MenuItem>
                                     </Select>
                                 </FormControl>
 
 
-                                <TextField fullWidth label="Capacidad" name="capacity" type="number" value={formData.capacity} onChange={handleChange} required />
+                                <TextField 
+                                    fullWidth 
+                                    label="Capacidad" 
+                                    name="capacity" 
+                                    type="number" 
+                                    value={formData.capacity ?? ''} 
+                                    onChange={handleChange} 
+                                    required 
+                                    inputProps={{ min: 1 }}
+                                />
 
-                                <TextField fullWidth label="Latitud" name="latitude" type="number" value={formData.latitude} onChange={handleChange} required />
+                                <TextField 
+                                    fullWidth 
+                                    label="Latitud" 
+                                    name="latitude" 
+                                    type="number" 
+                                    value={formData.latitude ?? ''} 
+                                    onChange={handleChange} 
+                                    required 
+                                    inputProps={{ step: 'any' }}
+                                    helperText="Ej: -33.4489"
+                                />
 
-                                <TextField fullWidth label="Longitud" name="longitude" type="number" value={formData.longitude} onChange={handleChange} required />
+                                <TextField 
+                                    fullWidth 
+                                    label="Longitud" 
+                                    name="longitude" 
+                                    type="number" 
+                                    value={formData.longitude ?? ''} 
+                                    onChange={handleChange} 
+                                    required 
+                                    inputProps={{ step: 'any' }}
+                                    helperText="Ej: -70.6693"
+                                />
 
                                 <FormControlLabel
                                     control={<Checkbox checked={formData.should_be_active} onChange={handleChange} name="should_be_active" />}
@@ -578,6 +676,19 @@ center_id: '',
                 </Accordion>
 
 
+
+                {validationErrors.length > 0 && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                            Por favor, corrija los siguientes errores:
+                        </Typography>
+                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                            {validationErrors.map((error, index) => (
+                                <li key={index}>{error}</li>
+                            ))}
+                        </ul>
+                    </Alert>
+                )}
                 {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
                 {success && <Alert severity="success" sx={{ mt: 2 }}>{success}</Alert>}
 

@@ -53,7 +53,8 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
     // Trae datos del usuario y el nombre del rol (equivale al role query del handler viejo)
     const qUser = `
       SELECT u.user_id, u.username, u.password_hash, u.is_active, u.role_id, u.es_apoyo_admin,
-             r.role_name
+         u.rut, u.email, u.nombre, u.genero, u.celular, u.imagen_perfil, u.created_at,
+         r.role_name
       FROM Users u
       LEFT JOIN Roles r ON r.role_id = u.role_id
       WHERE u.username = $1
@@ -94,6 +95,10 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
       es_apoyo_admin: !!user.es_apoyo_admin,
       is_active: !!user.is_active,
       assignedCenters, // <-- NUEVO EN LA RESPUESTA (no va dentro del JWT)
+      nombre: user.nombre,           // ← AGREGAR
+    genero: user.genero,           // ← AGREGAR
+    celular: user.celular,         // ← AGREGAR
+    imagen_perfil: user.imagen_perfil, // ← AGREGAR
     };
 
     // JWTs reales (manteniendo tu flujo nuevo)
@@ -104,6 +109,7 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
       role_name: user.role_name,
       is_active: user.is_active,
       es_apoyo_admin: user.es_apoyo_admin,
+      
     };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);

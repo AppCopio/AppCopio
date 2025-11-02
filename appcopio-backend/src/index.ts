@@ -31,6 +31,7 @@ import recordRoutes from "./routes/recordRoutes";
 import templateRoutes from "./routes/templateRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
 import notificationRoutes from "./routes/notificacionRoutes";
+import migrateRoutes from "./routes/migrate";
 import movementRoutes from "./routes/movementRoutes";
 import resourceBoxRoutes from "./routes/resourceBoxRoutes";
 
@@ -101,6 +102,7 @@ app.use("/api/database-records", requireAuth, recordRoutes);
 app.use("/api/database-templates", requireAuth, templateRoutes);
 app.use("/api/database-history", requireAuth, auditLogRoutes);
 app.use("/api/notifications", requireAuth, notificationRoutes);
+app.use("/api/migrate", migrateRoutes); // Sin requireAuth para facilitar ejecución inicial
 app.use("/api/centers", requireAuth, movementRoutes);
 app.use("/api/resource-boxes", requireAuth, resourceBoxRoutes);
 

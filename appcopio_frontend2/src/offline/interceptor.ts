@@ -40,16 +40,16 @@ async function handleOfflineRequest(
   // ESTAMOS OFFLINE
   // =====================================================
 
-  console.log(`[Interceptor] OFFLINE detectado - ${method} ${url}`);
+  //console.log(`[Interceptor] OFFLINE detectado - ${method} ${url}`);
 
   // Caso 1: GET Request → Buscar en cache
   if (method === 'GET') {
-    console.log('[Interceptor] Intentando recuperar del cache...');
+    //console.log('[Interceptor] Intentando recuperar del cache...');
     
     const cached = await getCachedResponse(url);
     
     if (cached) {
-      console.log('[Interceptor] ✅ Datos encontrados en cache');
+      //console.log('[Interceptor] ✅ Datos encontrados en cache');
       
       // Crear una respuesta falsa que axios pueda manejar
       // Esto evitará que axios intente hacer la request real
@@ -69,7 +69,7 @@ async function handleOfflineRequest(
         isOfflineCache: true, // Flag para identificar que es cache offline
       });
     } else {
-      console.warn('[Interceptor] ❌ No hay datos en cache');
+      //console.warn('[Interceptor] ❌ No hay datos en cache');
       
       // No hay cache → Lanzar error descriptivo
       return Promise.reject({
@@ -82,7 +82,7 @@ async function handleOfflineRequest(
   }
 
   // Caso 2: POST/PUT/DELETE → Encolar mutación
-  console.log('[Interceptor] Encolando mutación...');
+  //console.log('[Interceptor] Encolando mutación...');
   
   try {
     await addMutationToQueue({
@@ -93,7 +93,7 @@ async function handleOfflineRequest(
       status: 'pending',
     });
 
-    console.log('[Interceptor] ✅ Mutación encolada exitosamente');
+    //console.log('[Interceptor] ✅ Mutación encolada exitosamente');
 
     // Emitir evento para notificación al usuario
     emitMutationQueued(method, url, config.data);
@@ -106,7 +106,7 @@ async function handleOfflineRequest(
       code: 'OFFLINE_QUEUED',
     });
   } catch (error) {
-    console.error('[Interceptor] ❌ Error al encolar mutación:', error);
+    //console.error('[Interceptor] ❌ Error al encolar mutación:', error);
     return Promise.reject({
       message: 'Error al encolar mutación offline',
       config: config,
@@ -121,7 +121,7 @@ async function handleOfflineRequest(
  * Maneja errores antes de enviar la request
  */
 function handleRequestError(error: any): Promise<never> {
-  console.error('[Interceptor] Error en request interceptor:', error);
+  //console.error('[Interceptor] Error en request interceptor:', error);
   return Promise.reject(error);
 }
 
@@ -144,7 +144,7 @@ async function handleSuccessResponse(
   if (method === 'GET') {
     // Verificar si debemos cachear este endpoint
     if (!shouldCacheEndpoint(url)) {
-      console.log(`[Interceptor] Endpoint ${url} no se cachea (configuración)`);
+      //console.log(`[Interceptor] Endpoint ${url} no se cachea (configuración)`);
       return response;
     }
 
@@ -163,9 +163,9 @@ async function handleSuccessResponse(
         };
 
         await cacheResponse(cachedResponse);
-        console.log(`[Interceptor] ✅ Respuesta cacheada: ${url} (TTL: ${ttl}s)`);
+        //console.log(`[Interceptor] ✅ Respuesta cacheada: ${url} (TTL: ${ttl}s)`);
       } catch (error) {
-        console.error('[Interceptor] Error al cachear respuesta:', error);
+        //console.error('[Interceptor] Error al cachear respuesta:', error);
         // No lanzar error, solo log
       }
     }
@@ -181,19 +181,24 @@ async function handleSuccessResponse(
 function handleResponseError(error: any): Promise<any> {
   // Caso especial: Es un cache offline exitoso
   if (error.isOfflineCache && error.response) {
-    console.log('[Interceptor] Devolviendo datos del cache como respuesta válida');
+    //console.log('[Interceptor] Devolviendo datos del cache como respuesta válida');
     return Promise.resolve(error.response);
   }
 
   // Caso especial: Es una mutación encolada
   if (error.isOfflineMutation) {
-    console.log('[Interceptor] Mutación encolada, devolviendo error controlado');
+    //console.log('[Interceptor] Mutación encolada, devolviendo error controlado');
     // El servicio debe manejar este error específico
     return Promise.reject(error);
   }
 
+  // Ignorar errores de cancelación (AbortController)
+  if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED' || error?.message === 'canceled') {
+    return Promise.reject(error);
+  }
+
   // Error normal de red u otro
-  console.error('[Interceptor] Error en response:', error.message || error);
+  //console.error('[Interceptor] Error en response:', error.message || error);
   return Promise.reject(error);
 }
 
@@ -215,7 +220,7 @@ function handleResponseError(error: any): Promise<any> {
  * ```
  */
 export function setupOfflineInterceptor(axiosInstance: AxiosInstance): void {
-  console.log('[Interceptor] 🔧 Configurando interceptores offline...');
+  //console.log('[Interceptor] 🔧 Configurando interceptores offline...');
 
   // Request Interceptor
   axiosInstance.interceptors.request.use(
@@ -229,5 +234,5 @@ export function setupOfflineInterceptor(axiosInstance: AxiosInstance): void {
     handleResponseError
   );
 
-  console.log('[Interceptor] ✅ Interceptores offline configurados correctamente');
+  //console.log('[Interceptor] ✅ Interceptores offline configurados correctamente');
 }
