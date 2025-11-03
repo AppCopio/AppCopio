@@ -1,5 +1,5 @@
 /**
- * Datos del formulario de contacto de voluntarios
+ * Datos del formulario de contacto de voluntarios (para envío)
  */
 export interface VolunteerContactCreate {
   nombre: string;
@@ -11,23 +11,37 @@ export interface VolunteerContactCreate {
 }
 
 /**
- * Respuesta del backend con los datos del registro dinámico
+ * ✅ ACTUALIZADO: Estructura que devuelve el backend (VolunteerInfo)
+ * Esta es la estructura REAL que devuelve el servicio volunteerContactService del backend
  */
 export interface VolunteerContactResponse {
-  id: string; // ID del registro (record_id)
-  dataset_id: string;
-  version: number;
+  volunteer_id: string;  // ID del registro
+  center_id: string;
   created_at: string;
-  created_by: string;
-  data: {
-    [key: string]: string | number | boolean | null; // Campos de texto (Nombre, Email, etc.)
-  };
-  select_values: {
-    [key: string]: string[]; // Campos de selección (Status)
-  };
+  updated_at: string | null;
+  
+  // Datos del formulario
+  nombre: string;
+  celular: string;
+  email: string;
+  capacitaciones: string;
+  descripcion_servicios: string;
+  
+  // Campos de gestión
+  notes: string | null;
+  contacted_at: string | null;
+  status: VolunteerStatus;
 }
 
 /**
  * Estados posibles de un contacto de voluntario
  */
 export type VolunteerStatus = 'pendiente' | 'contactado' | 'aceptado' | 'rechazado';
+
+/**
+ * DTO para actualizar el estado de un voluntario
+ */
+export interface VolunteerStatusUpdate {
+  status?: VolunteerStatus;
+  notes?: string;
+}

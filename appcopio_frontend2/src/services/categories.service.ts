@@ -9,9 +9,9 @@ import type { Category } from "@/types/inventory";
  * Obtiene la lista de todas las categorías desde la API.
  * La lista ya viene ordenada alfabéticamente desde el backend.
  */
-export async function listCategories(signal?: AbortSignal): Promise<Category[]> {
+export async function listCategories(): Promise<Category[]> {
   try {
-    const { data } = await api.get<Category[]>("/categories", { signal });
+    const { data } = await api.get<Category[]>("/categories");
     // MEJORA: Se elimina el .sort() ya que el backend garantiza el orden.
     return data ?? [];
   } catch (error) {

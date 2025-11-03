@@ -24,6 +24,15 @@ import {
     getAllActivationsByCenter,
     getActivationDetail
 } from '../services/centerService';
+
+// Importar funciones nuevas de inventario
+import {
+    registerInventoryExit,
+    registerMultipleExits,
+    createBox,
+    getInventoryStats
+} from '../services/inventoryService';
+
 import { sendNotification } from '../services/notificationService';
 
 import { getCenterGroups } from '../services/familyService';
@@ -37,6 +46,7 @@ const router = Router();
 // =================================================================
 
 const listCenters: RequestHandler = async (req, res) => {
+    console.log('listCenters called');
     try {
         const centers = await getAllCenters(pool);
         res.json(centers);
@@ -473,6 +483,259 @@ const getCenterActivationDetail: RequestHandler = async (req, res) => {
     }
 };
 
+/**
+ * POST /centers/:centerId/inventory/exit
+ * Registra la salida de un recurso a un grupo familiar
+*/
+
+const registerExit: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    const userId = requireUser(req).user_id;
+    const { itemId, quantity, familyId, reason, notes } = req.body;
+
+    // Validaciones
+    if (!itemId || !quantity || !familyId || !reason) {
+        res.status(400).json({ 
+            error: 'Se requieren: itemId, quantity, familyId y reason.' 
+        });
+        return;
+    }
+
+    if (quantity <= 0) {
+        res.status(400).json({ error: 'La cantidad debe ser mayor a 0.' });
+        return;
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const result = await registerInventoryExit(client, centerId, {
+            itemId,
+            quantity,
+            familyId,
+            reason,
+            notes,
+            userId
+        });
+
+        await client.query('COMMIT');
+        res.status(200).json({ 
+            message: 'Salida registrada exitosamente.',
+            ...result 
+        });
+    } catch (error: any) {
+        await client.query('ROLLBACK');
+        
+        if (error.status) {
+            res.status(error.status).json({ error: error.message });
+        } else {
+            console.error(`Error en registerExit (centerId: ${centerId}):`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * POST /centers/:centerId/inventory/exit/bulk
+ * Registra múltiples salidas de inventario en una sola operación
+ */
+const registerBulkExit: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    const userId = requireUser(req).user_id;
+    const { exits } = req.body;
+
+    if (!Array.isArray(exits) || exits.length === 0) {
+        res.status(400).json({ 
+            error: 'Se requiere un array "exits" con al menos una salida.' 
+        });
+        return;
+    }
+
+    // Validar que todas las salidas tengan los campos requeridos
+    for (const exit of exits) {
+        if (!exit.itemId || !exit.quantity || !exit.familyId || !exit.reason) {
+            res.status(400).json({ 
+                error: 'Cada salida debe tener: itemId, quantity, familyId y reason.' 
+            });
+            return;
+        }
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Añadir userId a cada salida
+        const exitsWithUser = exits.map(exit => ({ ...exit, userId }));
+        
+        const results = await registerMultipleExits(client, centerId, exitsWithUser);
+
+        await client.query('COMMIT');
+        res.status(200).json({ 
+            message: `${results.length} salidas registradas exitosamente.`,
+            exits: results 
+        });
+    } catch (error: any) {
+        await client.query('ROLLBACK');
+        
+        if (error.status) {
+            res.status(error.status).json({ error: error.message });
+        } else {
+            console.error(`Error en registerBulkExit (centerId: ${centerId}):`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * POST /centers/:centerId/inventory/box
+ * Crea una "caja" con múltiples recursos para optimizar registro
+ */
+const createInventoryBox: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    const userId = requireUser(req).user_id;
+    const { name, description, items } = req.body;
+
+    // Validaciones
+    if (!name || !items || !Array.isArray(items) || items.length === 0) {
+        res.status(400).json({ 
+            error: 'Se requieren: name y un array "items" con al menos un elemento.' 
+        });
+        return;
+    }
+
+    // Validar que cada ítem tenga los datos necesarios
+    for (const item of items) {
+        if (!item.quantity || item.quantity <= 0) {
+            res.status(400).json({ 
+                error: 'Cada ítem debe tener una quantity > 0.' 
+            });
+            return;
+        }
+
+        if (!item.itemId && !item.itemName) {
+            res.status(400).json({ 
+                error: 'Cada ítem debe tener itemId o itemName.' 
+            });
+            return;
+        }
+
+        // Si se crea un ítem nuevo, validar campos requeridos
+        if (item.itemName && (!item.categoryId || !item.unit)) {
+            res.status(400).json({ 
+                error: 'Para ítems nuevos se requiere: itemName, categoryId y unit.' 
+            });
+            return;
+        }
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const result = await createBox(client, centerId, {
+            name,
+            description,
+            items,
+            userId
+        });
+
+        await client.query('COMMIT');
+        res.status(201).json({
+            message: 'Caja creada exitosamente.',
+            ...result
+        });
+    } catch (error: any) {
+        await client.query('ROLLBACK');
+        
+        if (error.status) {
+            res.status(error.status).json({ error: error.message });
+        } else {
+            console.error(`Error en createInventoryBox (centerId: ${centerId}):`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * GET /centers/:centerId/inventory/stats
+ * Obtiene estadísticas de movimientos de inventario
+ */
+const getInventoryStatistics: RequestHandler = async (req, res) => {
+    try {
+        const days = req.query.days ? parseInt(req.query.days as string) : 30;
+        const stats = await getInventoryStats(pool, req.params.centerId, days);
+        res.json(stats);
+    } catch (error) {
+        console.error(`Error en getInventoryStats (centerId: ${req.params.centerId}):`, error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+};
+
+/**
+ * GET /api/centers/:centerId/available-workers
+ * Obtiene usuarios disponibles para asignar turnos en un centro:
+ * - Usuarios ya asignados al centro (con asignación activa: valid_to IS NULL)
+ * - Usuarios sin ninguna asignación de centro activa
+ * Excluye familias (role_id = 4) y usuarios inactivos
+ */
+const listAvailableWorkers: RequestHandler = async (req, res) => {
+    try {
+        const centerId = req.params.centerId;
+        
+        const query = `
+            SELECT DISTINCT
+                u.user_id,
+                u.email,
+                u.nombre,
+                u.role_id,
+                r.role_name,
+                u.is_active,
+                CASE 
+                    WHEN ca.user_id IS NOT NULL THEN true 
+                    ELSE false 
+                END as is_assigned_to_center
+            FROM Users u
+            INNER JOIN Roles r ON u.role_id = r.role_id
+            LEFT JOIN CenterAssignments ca ON u.user_id = ca.user_id 
+                AND ca.center_id = $1 
+                AND ca.valid_to IS NULL  -- Solo asignaciones activas
+            WHERE u.is_active = true 
+            AND u.role_id = 3
+            AND (
+                -- Usuario está asignado a este centro (asignación activa)
+                u.user_id IN (
+                    SELECT user_id 
+                    FROM CenterAssignments 
+                    WHERE center_id = $1 
+                    AND valid_to IS NULL
+                )
+                OR
+                -- Usuario no tiene ninguna asignación activa de centro
+                u.user_id NOT IN (
+                    SELECT user_id 
+                    FROM CenterAssignments
+                    WHERE valid_to IS NULL
+                )
+            )
+            ORDER BY is_assigned_to_center DESC, u.nombre ASC
+        `;
+        
+        const result = await pool.query(query, [centerId]);
+        res.json({ users: result.rows });
+    } catch (error) {
+        console.error(`Error en listAvailableWorkers (centerId: ${req.params.centerId}):`, error);
+        res.status(500).json({ error: 'Error al obtener usuarios disponibles.' });
+    }
+};
+
 // =================================================================
 // 4. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
@@ -497,12 +760,19 @@ router.get('/:centerId/activations/:activationId', requireAuth, getCenterActivat
 router.get('/:centerId/capacity', requireAuth, getCapacity);
 router.get('/:centerId/people', requireAuth, listPeople);
 router.get('/:centerID/residents', requireAuth, listGroups)
-// --- Rutas de Inventario ---
+// --- Rutas de Inventario (Existentes) ---
 router.get('/:centerId/inventory', requireAuth, getInventory);
 router.post('/:centerId/inventory', requireAuth, addInventoryItem);
 router.put('/:centerId/inventory/:itemId', requireAuth, updateInventoryItem);
 router.delete('/:centerId/inventory/:itemId', requireAuth, deleteInventoryItem);
 
-router.get('/:centerId/assigned-users', requireAuth, listAssignedUsers); 
+// --- Rutas de Inventario (NUEVAS para HDU) ---
+router.post('/:centerId/inventory/exit', requireAuth, registerExit);
+router.post('/:centerId/inventory/exit/bulk', requireAuth, registerBulkExit);
+router.post('/:centerId/inventory/box', requireAuth, createInventoryBox);
+router.get('/:centerId/inventory/stats', requireAuth, getInventoryStatistics);
+
+router.get('/:centerId/assigned-users', requireAuth, listAssignedUsers);
+router.get('/:centerId/available-workers', requireAuth, listAvailableWorkers);
 
 export default router;

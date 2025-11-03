@@ -15,6 +15,15 @@ interface ActiveActivation {
   ended_at: string | null;
 }
 
+/**
+ * Interfaz para la respuesta del backend al listar voluntarios
+ */
+interface VolunteersListResponse {
+  volunteers: VolunteerContactResponse[];
+  total: number;
+  activation_id: number;
+}
+
 // Esta función ya estaba BIEN (la usa el formulario público)
 async function createVolunteerContact(
   contactData: VolunteerContactCreate,
@@ -68,21 +77,29 @@ async function getCenterActiveActivation(centerId: string): Promise<ActiveActiva
   }
 }
 
+/**
+ * ✅ CORREGIDO: Ahora extrae solo el array de volunteers de la respuesta
+ */
 async function getVolunteerContactsByActivation(
   activationId: number
 ): Promise<VolunteerContactResponse[]> {
-  const response = await api.get<VolunteerContactResponse[]>(
+  const response = await api.get<VolunteersListResponse>(
     `/volunteers/by-activation/${activationId}`
   );
-  return response.data;
+  
+  // ✅ CORRECCIÓN: Devolver solo el array volunteers, no todo el objeto
+  return response.data.volunteers;
 }
 
+/**
+ * ✅ CORREGIDO: Cambiar de PUT a PATCH y actualizar la ruta
+ */
 async function updateVolunteerContactStatus(
   volunteerId: string, 
   status: VolunteerStatus,
   notes: string | undefined
 ): Promise<VolunteerContactResponse> {
-  const response = await api.put<VolunteerContactResponse>(
+  const response = await api.patch<VolunteerContactResponse>(
     `/volunteers/${volunteerId}/status`, 
     { status, notes } 
   );
@@ -91,7 +108,7 @@ async function updateVolunteerContactStatus(
 
 export const volunteerService = {
   createVolunteerContact,
-  getCenterActiveActivation, // ✅ NUEVO - Para obtener activación de forma pública
+  getCenterActiveActivation, // ✅ Para obtener activación de forma pública
   getVolunteerContactsByActivation,
   updateVolunteerContactStatus,
 };
