@@ -404,7 +404,6 @@ export async function updateOperationalStatus(centerId: string, newStatusUi: Ope
  */
 export async function getCenterCapacity(
     centerId: string, 
-    signal?: AbortSignal
 ): Promise<{ 
     total_capacity: number;
     current_capacity: number;
@@ -412,7 +411,7 @@ export async function getCenterCapacity(
 } | null> { // <-- CAMBIO: Usamos un tipo anónimo aquí
     try {
         // La llamada a la API no necesita cambiar, solo el tipo de retorno de la función.
-        const { data } = await api.get(`/centers/${centerId}/capacity`, { signal });
+        const { data } = await api.get(`/centers/${centerId}/capacity`);
         return data;
     } catch (error) {
         if (isCancelError(error)) return null;

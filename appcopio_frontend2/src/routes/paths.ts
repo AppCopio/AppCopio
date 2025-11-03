@@ -24,6 +24,7 @@ export const paths = {
   notifications: '/notifications', 
   profile: "/mi-perfil",
   myCenters: "/mis-centros",
+  myShifts: "/mis-turnos",
 
   // Center (segmento con parámetro y builders)
   center: {
@@ -32,6 +33,7 @@ export const paths = {
     details: (centerId: string | number) => `/center/${centerId}/details`,
     inventory: (centerId: string | number) => `/center/${centerId}/inventory`,
     inventoryHistory: (centerId: string | number) => `/center/${centerId}/inventory/history`,
+    movementsHistory: (centerId: string | number) => `/center/${centerId}/movements/history`,
     needsNew: (centerId: string | number) => `/center/${centerId}/needs/new`,
     needsStatus: (centerId: string | number) => `/center/${centerId}/needs/status`,
     residents: (centerId: string | number) => `/center/${centerId}/residents`,
@@ -41,5 +43,6 @@ export const paths = {
     activationsHistory: (centerId: string | number) => `/center/${centerId}/activations`,
     activationDetail: (centerId: string | number, activationId: number) =>  `/center/${centerId}/activations/${activationId}`,
     volunteers: (centerId: string) => `/centers/${centerId}/volunteers`,
+    shifts: (centerId: string | number) => `/center/${centerId}/shifts`,
   },
 } as const;
