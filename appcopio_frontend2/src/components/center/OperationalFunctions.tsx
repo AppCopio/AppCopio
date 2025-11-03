@@ -4,16 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { 
   People as PeopleIcon,
   Groups as GroupsIcon,
-  Inventory as InventoryIcon,
   Assessment as AssessmentIcon,
   Assignment as AssignmentIcon,
   Refresh as RefreshIcon,
   Storage as StorageIcon,
-  QuestionAnswer as QuestionAnswerIcon 
+  QuestionAnswer as QuestionAnswerIcon,
+  Schedule as ScheduleIcon
 } from '@mui/icons-material';
 import { IconButton, Tooltip, CircularProgress } from '@mui/material';
 import { getCenterCapacity } from '@/services/centers.service';
-import { listCenterInventory } from '@/services/inventory.service';
 import './OperationalFunctions.css';
 
 interface OperationalFunctionsProps {
@@ -28,7 +27,6 @@ interface Stats {
     current_capacity: number;
     available_capacity: number;
   } | null;
-  inventoryCount: number;
   loading: boolean;
 }
 
@@ -40,21 +38,16 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
     capacity: null,
-    inventoryCount: 0,
     loading: true
   });
 
   const loadStats = async () => {
     setStats(prev => ({ ...prev, loading: true }));
     try {
-      const [capacityData, inventoryData] = await Promise.all([
-        getCenterCapacity(centerId),
-        listCenterInventory(centerId)
-      ]);
+      const capacityData = await getCenterCapacity(centerId);
       
       setStats({
         capacity: capacityData,
-        inventoryCount: inventoryData?.length || 0,
         loading: false
       });
     } catch (error) {
@@ -103,7 +96,7 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
       </div>
 
       <div className="operational-cards">
-        {/* Card: Personas Registradas (fusionado con capacidad) */}
+        {/* Card: Gestión de Personas */}
         <div 
           className="operational-card people-card"
           onClick={() => navigate(`/center/${centerId}/residents`)}
@@ -112,69 +105,33 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
             <PeopleIcon fontSize="large" />
           </div>
           <div className="card-content">
-            <h4>Personas Registradas</h4>
+            <h4>Gestión de Personas</h4>
             {stats.loading ? (
               <p className="card-loading">Cargando...</p>
-            ) : stats.capacity ? (
+            ) : (
               <>
                 <p className="card-stat">
-                  <span className="stat-current">{stats.capacity.current_capacity}</span>
+                  <span className="stat-current">{stats.capacity?.current_capacity ?? 0}</span>
                   <span className="stat-separator">/</span>
-                  <span className="stat-total">{stats.capacity.total_capacity}</span>
+                  <span className="stat-total">{stats.capacity?.total_capacity ?? 0}</span>
                 </p>
-                <p className="card-label">Personas</p>
-                <div className="capacity-bar">
-                  <div 
-                    className="capacity-fill"
-                    style={{ 
-                      width: `${(stats.capacity.current_capacity / stats.capacity.total_capacity) * 100}%` 
-                    }}
-                  />
-                </div>
-                <p className="card-sublabel">
-                  {stats.capacity.available_capacity} espacios disponibles
-                </p>
+                <p className="card-label">Capacidad actual</p>
               </>
-            ) : (
-              <p className="card-error">No disponible</p>
             )}
           </div>
         </div>
 
-        {/* Card: Grupos Familiares (pendiente) */}
+        {/* Card: Gestión de Grupos */}
         <div 
-          className="operational-card groups-card disabled"
-          title="Funcionalidad pendiente de implementación"
+          className="operational-card groups-card"
+          onClick={() => navigate(`/center/${centerId}/groups`)}
         >
           <div className="card-icon groups-icon">
             <GroupsIcon fontSize="large" />
           </div>
           <div className="card-content">
-            <h4>Grupos Familiares</h4>
-            <p className="card-pending">Pendiente</p>
-          </div>
-        </div>
-
-        {/* Card: Inventario */}
-        <div 
-          className="operational-card inventory-card"
-          onClick={() => navigate(`/center/${centerId}/inventory`)}
-        >
-          <div className="card-icon inventory-icon">
-            <InventoryIcon fontSize="large" />
-          </div>
-          <div className="card-content">
-            <h4>Inventario</h4>
-            {stats.loading ? (
-              <p className="card-loading">Cargando...</p>
-            ) : (
-              <>
-                <p className="card-stat">
-                  <span className="stat-current">{stats.inventoryCount}</span>
-                </p>
-                <p className="card-label">Artículos registrados</p>
-              </>
-            )}
+            <h4>Gestión de Grupos</h4>
+            <p className="card-sublabel">Familias y residentes</p>
           </div>
         </div>
 
@@ -217,6 +174,21 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
           <div className="card-content">
             <h4>Servicios Voluntarios</h4>
             <p className="card-sublabel">Respuestas a formulario de contacto</p>
+          </div>
+        </div>
+
+        {/* Card: Gestión de Turnos (PENDIENTE) */}
+        <div 
+          className="operational-card shifts-card disabled"
+          title="Funcionalidad en desarrollo"
+        >
+          <div className="card-icon shifts-icon">
+            <ScheduleIcon fontSize="large" />
+          </div>
+          <div className="card-content">
+            <h4>Gestión de Turnos</h4>
+            <p className="card-sublabel">Próximamente</p>
+            <div className="card-badge pending">En desarrollo</div>
           </div>
         </div>
       </div>

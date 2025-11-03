@@ -95,11 +95,6 @@
   color: white;
 }
 
-.inventory-icon {
-  background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%);
-  color: white;
-}
-
 .fibe-icon {
   background: linear-gradient(135deg, #2196f3 0%, #64b5f6 100%);
   color: white;
@@ -109,8 +104,14 @@
   background: linear-gradient(135deg, #e9dc1e 0%, #ebf062 100%);
   color: white;
 }
+
 .volunteer-icon {
   background: linear-gradient(135deg, #e91e63 0%, #f06292 100%);
+  color: white;
+}
+
+.shifts-icon {
+  background: linear-gradient(135deg, #607d8b 0%, #90a4ae 100%);
   color: white;
 }
 
@@ -129,94 +130,68 @@
   color: #333;
 }
 
+.card-sublabel {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 8px 0 0 0;
+}
+
 .card-stat {
   font-size: 2rem;
   font-weight: 700;
   color: #1976d2;
   margin: 8px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
 }
 
 .stat-current {
-  color: #2e7d32;
+  color: #1976d2;
 }
 
 .stat-separator {
+  color: #ccc;
+  margin: 0 8px;
+}
+
+.stat-total {
   color: #999;
   font-size: 1.5rem;
 }
 
-.stat-total {
-  color: #666;
-}
-
 .card-label {
-  font-size: 0.9rem;
   color: #666;
-  margin: 4px 0;
-  font-weight: 500;
-}
-
-.card-sublabel {
   font-size: 0.85rem;
-  color: #999;
-  margin: 4px 0;
+  margin: 4px 0 0 0;
 }
 
 .card-loading {
   color: #999;
-  font-style: italic;
+  font-size: 0.9rem;
   margin: 16px 0;
 }
 
-.card-error {
-  color: #d32f2f;
-  font-weight: 500;
-  margin: 16px 0;
+/* Badge para indicar estado pendiente */
+.card-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 8px;
+  text-transform: uppercase;
 }
 
-.card-pending {
-  color: #ff9800;
-  font-weight: 500;
-  font-style: italic;
-  margin: 16px 0;
-  font-size: 1.1rem;
+.card-badge.pending {
+  background: #ffc107;
+  color: #fff;
 }
 
-.capacity-bar {
-  width: 100%;
-  height: 8px;
-  background: #e0e0e0;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 12px 0;
-}
-
-.capacity-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
-  transition: width 0.3s ease;
-  border-radius: 4px;
-}
-
-/* Responsive */
+/* Responsive design */
 @media (max-width: 768px) {
   .operational-cards {
     grid-template-columns: 1fr;
   }
   
-  .operational-header h3 {
-    font-size: 1.2rem;
-  }
-  
   .operational-card {
-    min-height: 180px;
-  }
-  
-  .card-stat {
-    font-size: 1.6rem;
+    min-height: 160px;
   }
 }

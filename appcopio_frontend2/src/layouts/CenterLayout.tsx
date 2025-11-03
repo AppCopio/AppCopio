@@ -58,6 +58,8 @@ const CenterLayout: React.FC = () => {
     //{ label: "Listado de Personas",   to: paths.center.residents(id) },
     //{ label: "Registros de activación",   to: paths.center.databases(id) },
     { label: "Historial de activaciones",   to: paths.center.activationsHistory(id)},
+    { label: "Inventario",   to: paths.center.inventory(id)},
+
   ];
 
   // Filtrar enlaces: ocultar "Crear Solicitud" para TMs
