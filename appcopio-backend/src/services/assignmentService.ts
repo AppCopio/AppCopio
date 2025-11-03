@@ -262,10 +262,10 @@ export async function listActiveAssignmentsByActivation(
     assignment_id: r.assignment_id,
     activation_id: r.activation_id,
     user_id: r.user_id,
-    user_name: r.user_name || undefined, // Asigna el nombre si existe
+    user_name: r.user_name || undefined,
     start_date: r.start_date,
     started_by_name: r.started_by_name || undefined,
-    end_date: r.end_date, // Será null por el WHERE
+    end_date: r.end_date,
     ended_by_name: r.ended_by_name || undefined,
   }));
 

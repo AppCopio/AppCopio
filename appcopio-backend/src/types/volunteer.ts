@@ -46,4 +46,5 @@ export interface VolunteerContactResponse {
   message: string;
   volunteer_id?: string;
   created_at?: string; 
+  notifications_sent?: number;
 }

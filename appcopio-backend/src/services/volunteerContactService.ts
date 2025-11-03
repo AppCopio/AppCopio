@@ -1,4 +1,6 @@
 import type { Db } from "../types/db";
+import { sendNotification } from "./notificationService";
+import { listActiveAssignmentsByActivation } from "./assignmentService";
 import { createDatasetDB } from "./databaseService";
 import { createFieldDB, createOptionDB } from "./fieldService";
 import { createRecordDB, updateRecordDB, getRecordDB } from "./recordService";
@@ -73,11 +75,6 @@ export async function createVolunteerDataset(
       required: true,
       position: 6,
       config: {
-        // Estas opciones se crean en la tabla DatasetFieldOptions
-        // La función createFieldDB (que llamas abajo) debería encargarse de esto
-        // si está bien implementada. Si no, habría que crear las opciones aquí.
-        // Por ahora, tu `createFieldDB` parece no crear las opciones,
-        // así que AÑADIRÉ la lógica para crear las opciones.
         options: [
           { value: "pendiente", label: "Pendiente" },
           { value: "contactado", label: "Contactado" },
@@ -196,11 +193,34 @@ export async function createVolunteerContact(
     relations_core: [],
   });
 
+  // notificaciones
+  const assignments = await listActiveAssignmentsByActivation(db, activation_id);
+  const recipients = assignments
+    .map(assignment => assignment.user_id)
+    .filter((userId, idx, arr) => userId != null && arr.indexOf(userId) === idx);
+
+  const title = `Nuevo voluntario para prestación de servicios`;
+  const message = `Voluntario: ${contactData.nombre} - ${contactData.email}`;
+  
+  const notifications: Record<string, any> = {};
+  
+  for (let i = 0; i < recipients.length; i++) {
+    const userId = recipients[i];
+    notifications[`encargado_${i + 1}`] = await sendNotification(db, {
+      center_id: center_id,
+      activation_id: activation_id,
+      destinatary: userId,
+      title,
+      message,
+    });
+  }
+
   return {
     success: true,
     message: "Solicitud de voluntario registrada exitosamente.",
     volunteer_id: record.record_id,
-    created_at: record.created_at.toString(), 
+    created_at: record.created_at.toString(),
+    notifications_sent: recipients.length,
   };
 }
 
@@ -213,7 +233,7 @@ function mapRowToVolunteerInfo(row: any): VolunteerInfo {
     volunteer_id: row.record_id,
     center_id: row.center_id,
     created_at: row.created_at.toISOString(),
-    updated_at: row.updated_at.toISOString(),
+    updated_at: row.updated_at ? row.updated_at.toISOString() : null,
     
     nombre: data.nombre || '',
     celular: data.celular || '',
