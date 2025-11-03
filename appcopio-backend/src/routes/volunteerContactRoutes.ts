@@ -30,16 +30,44 @@ const router = Router();
  * @access Público (no requiere autenticación)
  */
 const submitVolunteerContact: RequestHandler = async (req, res) => {
-  const { activation_id, center_id, contactData } = req.body;
+  let { activation_id, center_id, contactData } = req.body;
 
   // Validación de campos requeridos
-  if (!activation_id || !center_id) {
+  if (!center_id) {
     res.status(400).json({ 
-      error: 'Se requieren los campos: activation_id y center_id.' 
+      error: 'Se requiere el campo: center_id.' 
     });
     return;
   }
 
+  // Si no se proporciona activation_id, buscarlo automáticamente
+  if (!activation_id) {
+    try {
+      const activationResult = await pool.query(
+        `SELECT activation_id 
+         FROM CentersActivations 
+         WHERE center_id = $1 AND ended_at IS NULL 
+         ORDER BY started_at DESC 
+         LIMIT 1`,
+        [center_id]
+      );
+
+      if (activationResult.rows.length === 0) {
+        res.status(400).json({ 
+          error: 'El centro no tiene una activación activa en este momento.' 
+        });
+        return;
+      }
+
+      activation_id = activationResult.rows[0].activation_id;
+    } catch (error) {
+      console.error('Error buscando activación activa:', error);
+      res.status(500).json({ 
+        error: 'Error al verificar la activación del centro.' 
+      });
+      return;
+    }
+  }
   if (!contactData || !contactData.nombre || !contactData.email || !contactData.celular) {
     res.status(400).json({ 
       error: 'Se requieren los campos del contacto: nombre, email y celular.' 

@@ -40,6 +40,6 @@ export const paths = {
     databases: (centerId: string | number) => `/center/${centerId}/databases`,
     activationsHistory: (centerId: string | number) => `/center/${centerId}/activations`,
     activationDetail: (centerId: string | number, activationId: number) =>  `/center/${centerId}/activations/${activationId}`,
-    centerVolunteersById: (centerId: string) => `/center/${centerId}/volunteers`,
+    volunteers: (centerId: string) => `/centers/${centerId}/volunteers`,
   },
 } as const;

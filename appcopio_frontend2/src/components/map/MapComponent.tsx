@@ -9,6 +9,7 @@ import "./MapComponent.css";
 import { Button } from "@mui/material";
 import "./VolunteerContactForm.css"; 
 import VolunteerContactForm from "./VolunteerContactForm";
+import { useActivation } from '@/contexts/ActivationContext';
 
 
 type MapComponentProps = {
@@ -193,7 +194,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
   const [showVolunteerForm, setShowVolunteerForm] = React.useState(false);
   const [volunteerFormCenter, setVolunteerFormCenter] = React.useState<Center | null>(null);
 
-
+  const { activation } = useActivation();
   // Hook de geolocalización
   const {
     location: userLocation,
@@ -457,20 +458,12 @@ export default function MapComponent({ centers }: MapComponentProps) {
       </APIProvider>
 
       {/*Modal/Overlay del formulario de voluntarios */}
-      {showVolunteerForm && volunteerFormCenter && (
-        <div 
-          className="volunteer-form-overlay"
-          onClick={(e) => {
-            // Cerrar si se hace click en el overlay
-            if (e.target === e.currentTarget) {
-              handleCloseVolunteerForm();
-            }
-          }}
-        >
-          <div className="volunteer-form-container">
+      {showVolunteerForm && selectedCenter &&(
+        <div className="volunteer-form-overlay" onClick={handleCloseVolunteerForm}>
+          <div className="volunteer-form-container" onClick={(e) => e.stopPropagation()}>
             <VolunteerContactForm
-              centerId={String(volunteerFormCenter.center_id)}
-              centerName={volunteerFormCenter.name}
+              centerId={selectedCenter.center_id}
+              centerName={selectedCenter.name}
               onClose={handleCloseVolunteerForm}
             />
           </div>

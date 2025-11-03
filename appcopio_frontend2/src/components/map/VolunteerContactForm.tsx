@@ -7,60 +7,41 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  Chip,
   Stack,
 } from '@mui/material';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import SendIcon from '@mui/icons-material/Send';
+import { volunteerService } from '@/services/volunteer.service';
+import type { VolunteerContactCreate } from '@/types/volunteer';
 
-// --- NUEVO ---
 // Función de validación de RUT (Módulo 11)
 const validateRut = (rut: string): boolean => {
-  if (typeof rut !== 'string') {
-    return false;
-  }
-
-  // Limpiar RUT (quitar puntos y guión) y convertir 'k' a 'K'
+  if (typeof rut !== 'string') return false;
   const rutLimpio = rut.replace(/[^0-9kK]+/g, '').toUpperCase();
-  
-  if (rutLimpio.length < 2) {
-    return false; // Debe tener al menos cuerpo y dígito verificador
-  }
-
+  if (rutLimpio.length < 2) return false;
   const dv = rutLimpio.slice(-1);
   const body = rutLimpio.slice(0, -1);
-
-  if (!/^\d+$/.test(body)) {
-    return false; // El cuerpo deben ser solo números
-  }
-
+  if (!/^\d+$/.test(body)) return false;
+  
   let suma = 0;
   let multiplo = 2;
-
-  // Calcular suma ponderada (Módulo 11)
   for (let i = body.length - 1; i >= 0; i--) {
     suma += parseInt(body.charAt(i), 10) * multiplo;
     multiplo = multiplo === 7 ? 2 : multiplo + 1;
   }
-
+  
   const dvEsperado = 11 - (suma % 11);
   let dvCalculado: string;
-
-  if (dvEsperado === 11) {
-    dvCalculado = '0';
-  } else if (dvEsperado === 10) {
-    dvCalculado = 'K';
-  } else {
-    dvCalculado = dvEsperado.toString();
-  }
-
+  if (dvEsperado === 11) dvCalculado = '0';
+  else if (dvEsperado === 10) dvCalculado = 'K';
+  else dvCalculado = dvEsperado.toString();
+  
   return dv === dvCalculado;
 };
-// --- FIN NUEVO ---
 
 interface VolunteerFormData {
   nombre: string;
-  rut: string; // --- NUEVO ---
+  rut: string;
   celular: string;
   email: string;
   capacitaciones: string;
@@ -80,7 +61,7 @@ export default function VolunteerContactForm({
 }: VolunteerContactFormProps) {
   const [formData, setFormData] = useState<VolunteerFormData>({
     nombre: '',
-    rut: '', // --- NUEVO ---
+    rut: '',
     celular: '',
     email: '',
     capacitaciones: '',
@@ -89,7 +70,7 @@ export default function VolunteerContactForm({
 
   const [touched, setTouched] = useState({
     nombre: false,
-    rut: false, // --- NUEVO ---
+    rut: false,
     celular: false,
     email: false,
     capacitaciones: false,
@@ -105,7 +86,7 @@ export default function VolunteerContactForm({
   // Validaciones
   const errors = {
     nombre: touched.nombre && !formData.nombre.trim(),
-    rut: touched.rut && (!formData.rut.trim() || !validateRut(formData.rut)), // --- NUEVO ---
+    rut: touched.rut && (!formData.rut.trim() || !validateRut(formData.rut)),
     celular: touched.celular && (!formData.celular.trim() || !/^\+?[\d\s-]{8,}$/.test(formData.celular)),
     email: touched.email && (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)),
     capacitaciones: touched.capacitaciones && !formData.capacitaciones.trim(),
@@ -114,8 +95,8 @@ export default function VolunteerContactForm({
 
   const isFormValid = 
     formData.nombre.trim() &&
-    formData.rut.trim() && // --- MODIFICADO ---
-    validateRut(formData.rut) && // --- MODIFICADO ---
+    formData.rut.trim() &&
+    validateRut(formData.rut) &&
     formData.celular.trim() &&
     /^\+?[\d\s-]{8,}$/.test(formData.celular) &&
     formData.email.trim() &&
@@ -139,10 +120,9 @@ export default function VolunteerContactForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Marcar todos los campos como tocados
     setTouched({
       nombre: true,
-      rut: true, // --- NUEVO ---
+      rut: true,
       celular: true,
       email: true,
       capacitaciones: true,
@@ -161,28 +141,31 @@ export default function VolunteerContactForm({
     setSubmitStatus({ type: null, message: '' });
 
     try {
-      // TODO: Aquí irá la llamada al servicio backend cuando esté implementado
-      // await volunteerService.submitContact(centerId, formData);
-      
-      // Simulación temporal
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log('Formulario de voluntario enviado:', {
-        centerId,
-        centerName,
-        ...formData,
-      });
+      const contactData: VolunteerContactCreate = {
+        nombre: formData.nombre.trim(),
+        rut: formData.rut.trim(),
+        celular: formData.celular.trim(),
+        email: formData.email.trim(),
+        capacitaciones: formData.capacitaciones.trim(),
+        descripcion_servicios: formData.descripcion_servicios.trim(),
+      };
+
+      // ✅ SIMPLIFICADO: El backend busca el activation_id automáticamente
+      await volunteerService.createVolunteerContact(
+        contactData,
+        0, // El backend ignora esto y busca automáticamente
+        centerId
+      );
 
       setSubmitStatus({
         type: 'success',
         message: '¡Gracias por tu interés! Nos pondremos en contacto contigo pronto.',
       });
 
-      // Limpiar formulario después de envío exitoso
       setTimeout(() => {
         setFormData({
           nombre: '',
-          rut: '', // --- NUEVO ---
+          rut: '',
           celular: '',
           email: '',
           capacitaciones: '',
@@ -190,7 +173,7 @@ export default function VolunteerContactForm({
         });
         setTouched({
           nombre: false,
-          rut: false, // --- NUEVO ---
+          rut: false,
           celular: false,
           email: false,
           capacitaciones: false,
@@ -205,7 +188,7 @@ export default function VolunteerContactForm({
       console.error('Error al enviar formulario de voluntario:', error);
       setSubmitStatus({
         type: 'error',
-        message: error.message || 'Error al enviar el formulario. Por favor intenta nuevamente.',
+        message: error.response?.data?.error || error.message || 'Error al enviar el formulario.',
       });
     } finally {
       setIsSubmitting(false);
@@ -224,7 +207,6 @@ export default function VolunteerContactForm({
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
       <Box
         sx={{
           bgcolor: 'primary.main',
@@ -246,15 +228,12 @@ export default function VolunteerContactForm({
         </Box>
       </Box>
 
-      {/* Form Content */}
       <Box sx={{ p: 3 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Completa el formulario para ofrecer tus servicios voluntarios en este albergue.
-          El equipo se pondrá en contacto contigo.
+          Completa el formulario para ofrecer tus servicios voluntarios.
         </Typography>
 
         <Stack spacing={2.5}>
-          {/* Nombre */}
           <TextField
             fullWidth
             label="Nombre completo"
@@ -268,7 +247,6 @@ export default function VolunteerContactForm({
             placeholder="Ej: María González"
           />
 
-          {/* --- NUEVO CAMPO RUT --- */}
           <TextField
             fullWidth
             label="RUT"
@@ -276,20 +254,12 @@ export default function VolunteerContactForm({
             onChange={handleChange('rut')}
             onBlur={handleBlur('rut')}
             error={errors.rut}
-            helperText={
-              errors.rut 
-                ? 'Ingresa un RUT válido (Ej: 12.345.678-9)' 
-                : ''
-            }
+            helperText={errors.rut ? 'Ingresa un RUT válido' : ''}
             required
             disabled={isSubmitting}
             placeholder="Ej: 12.345.678-9"
-            type="text"
           />
-          {/* --- FIN NUEVO CAMPO RUT --- */}
 
-
-          {/* Celular */}
           <TextField
             fullWidth
             label="Celular"
@@ -297,18 +267,13 @@ export default function VolunteerContactForm({
             onChange={handleChange('celular')}
             onBlur={handleBlur('celular')}
             error={errors.celular}
-            helperText={
-              errors.celular 
-                ? 'Ingresa un número de celular válido (mín. 8 dígitos)' 
-                : 'Incluye código de país si es necesario'
-            }
+            helperText={errors.celular ? 'Ingresa un número válido' : ''}
             required
             disabled={isSubmitting}
             placeholder="Ej: +56 9 1234 5678"
             type="tel"
           />
 
-          {/* Email */}
           <TextField
             fullWidth
             label="Correo electrónico"
@@ -316,14 +281,13 @@ export default function VolunteerContactForm({
             onChange={handleChange('email')}
             onBlur={handleBlur('email')}
             error={errors.email}
-            helperText={errors.email ? 'Ingresa un correo electrónico válido' : ''}
+            helperText={errors.email ? 'Ingresa un correo válido' : ''}
             required
             disabled={isSubmitting}
-            placeholder="Ej: maria.gonzalez@email.com"
+            placeholder="Ej: maria@email.com"
             type="email"
           />
 
-          {/* Capacitaciones */}
           <TextField
             fullWidth
             label="Capacitaciones o certificaciones"
@@ -331,19 +295,13 @@ export default function VolunteerContactForm({
             onChange={handleChange('capacitaciones')}
             onBlur={handleBlur('capacitaciones')}
             error={errors.capacitaciones}
-            helperText={
-              errors.capacitaciones 
-                ? 'Describe tus capacitaciones relevantes' 
-                : 'Ej: Primeros auxilios, Psicología, Cocina, etc.'
-            }
+            helperText={errors.capacitaciones ? 'Describe tus capacitaciones' : ''}
             required
             disabled={isSubmitting}
             multiline
             rows={2}
-            placeholder="Describe tus capacitaciones, cursos o certificaciones relevantes"
           />
 
-          {/* Descripción de servicios */}
           <TextField
             fullWidth
             label="Servicios que puedes prestar"
@@ -351,20 +309,14 @@ export default function VolunteerContactForm({
             onChange={handleChange('descripcion_servicios')}
             onBlur={handleBlur('descripcion_servicios')}
             error={errors.descripcion_servicios}
-            helperText={
-              errors.descripcion_servicios 
-                ? 'Describe los servicios que puedes ofrecer' 
-                : 'Sé específico sobre cómo puedes ayudar'
-            }
+            helperText={errors.descripcion_servicios ? 'Describe los servicios' : ''}
             required
             disabled={isSubmitting}
             multiline
             rows={3}
-            placeholder="Ej: Apoyo en cocina, atención médica básica, organización de actividades para niños, etc."
           />
         </Stack>
 
-        {/* Alert de estado */}
         {submitStatus.type && (
           <Alert 
             severity={submitStatus.type} 
@@ -375,7 +327,6 @@ export default function VolunteerContactForm({
           </Alert>
         )}
 
-        {/* Botones */}
         <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
           {onClose && (
             <Button
@@ -397,14 +348,12 @@ export default function VolunteerContactForm({
           </Button>
         </Box>
 
-        {/* Nota informativa */}
         <Typography 
           variant="caption" 
           color="text.secondary" 
           sx={{ display: 'block', mt: 2, textAlign: 'center' }}
         >
-          Al enviar este formulario, aceptas compartir tu información de contacto
-          con el equipo del albergue.
+          Al enviar este formulario, aceptas compartir tu información de contacto.
         </Typography>
       </Box>
     </Box>

@@ -1,185 +1,97 @@
-// src/services/volunteer.service.ts
-/**
- * Servicio para gestionar contactos de voluntarios
- * Este servicio maneja las comunicaciones con el backend para
- * el formulario de contacto de servicios voluntarios en albergues
- */
-
 import { api } from '@/lib/api';
+import type { 
+  VolunteerContactCreate,
+  VolunteerContactResponse,
+  VolunteerStatus
+} from '@/types/volunteer';
 
 /**
- * Datos del formulario de contacto de voluntarios
+ * Interfaz para la respuesta de activación activa
  */
-export interface VolunteerContactData {
-  nombre: string;
-  celular: string;
-  email: string;
-  capacitaciones: string;
-  descripcion_servicios: string;
-}
-
-/**
- * Respuesta del servidor al enviar un contacto de voluntario
- */
-export interface VolunteerContactResponse {
-  success: boolean;
-  message: string;
-  volunteer_id?: string;
-  created_at?: string;
-}
-
-/**
- * Información de un voluntario registrado
- */
-export interface VolunteerInfo extends VolunteerContactData {
-  volunteer_id: string;
+interface ActiveActivation {
+  activation_id: number;
   center_id: string;
-  center_name: string;
-  status: 'pendiente' | 'contactado' | 'aceptado' | 'rechazado';
-  created_at: string;
-  updated_at: string;
-  contacted_at?: string;
-  contacted_by?: string;
-  notes?: string;
+  started_at: string;
+  ended_at: string | null;
+}
+
+// Esta función ya estaba BIEN (la usa el formulario público)
+async function createVolunteerContact(
+  contactData: VolunteerContactCreate,
+  activationId: number,
+  centerId: string
+): Promise<any> {
+  
+  // El backend espera este objeto
+  const requestBody = {
+    activation_id: activationId,
+    center_id: centerId,
+    contactData: contactData,
+  };
+
+  const response = await api.post(
+    '/volunteers/contact', 
+    requestBody
+  );
+  return response.data;
 }
 
 /**
- * Servicio de voluntarios
+ * Obtiene la activación activa de un centro (endpoint público)
+ * NOTA: Esta función requiere que el backend tenga un endpoint público
+ * Si falla, significa que el centro no tiene activación activa o el endpoint no existe
  */
+async function getCenterActiveActivation(centerId: string): Promise<ActiveActivation | null> {
+  try {
+    // Intentamos obtener la activación del centro
+    // Este endpoint debería ser público en el backend
+    const response = await api.get<ActiveActivation>(
+      `/centers/${centerId}/public-activation`
+    );
+    return response.data;
+  } catch (error: any) {
+    // Si es 404 o 204, el centro no tiene activación activa
+    if (error.response?.status === 404 || error.response?.status === 204) {
+      console.log(`Centro ${centerId} no tiene activación activa`);
+      return null;
+    }
+    
+    // Si es 401, el endpoint requiere auth - necesita ser público
+    if (error.response?.status === 401) {
+      console.error('El endpoint de activación requiere autenticación - debe ser público');
+      throw new Error('No se puede verificar el estado del centro. Por favor contacta al administrador.');
+    }
+    
+    // Otros errores
+    console.error('Error al obtener activación del centro:', error);
+    throw new Error('Error al verificar la activación del centro.');
+  }
+}
+
+async function getVolunteerContactsByActivation(
+  activationId: number
+): Promise<VolunteerContactResponse[]> {
+  const response = await api.get<VolunteerContactResponse[]>(
+    `/volunteers/by-activation/${activationId}`
+  );
+  return response.data;
+}
+
+async function updateVolunteerContactStatus(
+  volunteerId: string, 
+  status: VolunteerStatus,
+  notes: string | undefined
+): Promise<VolunteerContactResponse> {
+  const response = await api.put<VolunteerContactResponse>(
+    `/volunteers/${volunteerId}/status`, 
+    { status, notes } 
+  );
+  return response.data;
+}
+
 export const volunteerService = {
-  /**
-   * Envía una solicitud de contacto para servicios voluntarios
-   * @param centerId - ID del centro/albergue
-   * @param data - Datos del formulario de contacto
-   * @returns Respuesta del servidor
-   */
-  async submitContact(
-    centerId: string,
-    data: VolunteerContactData
-  ): Promise<VolunteerContactResponse> {
-    try {
-      const response = await api.post<VolunteerContactResponse>(
-        `/api/centers/${centerId}/volunteer-contact`,
-        data
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error('Error al enviar contacto de voluntario:', error);
-      throw new Error(
-        error.response?.data?.message || 
-        'Error al enviar el formulario. Por favor intenta nuevamente.'
-      );
-    }
-  },
-
-  /**
-   * Obtiene la lista de voluntarios de un centro específico
-   * @param centerId - ID del centro/albergue
-   * @returns Lista de voluntarios
-   */
-  async getVolunteersByCenter(centerId: string): Promise<VolunteerInfo[]> {
-    try {
-      const response = await api.get<VolunteerInfo[]>(
-        `/api/centers/${centerId}/volunteers`
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error('Error al obtener voluntarios del centro:', error);
-      throw new Error(
-        error.response?.data?.message || 
-        'Error al cargar la lista de voluntarios.'
-      );
-    }
-  },
-
-  /**
-   * Actualiza el estado de un voluntario
-   * @param volunteerId - ID del voluntario
-   * @param status - Nuevo estado
-   * @param notes - Notas opcionales
-   * @returns Información actualizada del voluntario
-   */
-  async updateVolunteerStatus(
-    volunteerId: string,
-    status: VolunteerInfo['status'],
-    notes?: string
-  ): Promise<VolunteerInfo> {
-    try {
-      const response = await api.patch<VolunteerInfo>(
-        `/api/volunteers/${volunteerId}/status`,
-        { status, notes }
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error('Error al actualizar estado de voluntario:', error);
-      throw new Error(
-        error.response?.data?.message || 
-        'Error al actualizar el estado del voluntario.'
-      );
-    }
-  },
-
-  /**
-   * Obtiene los detalles de un voluntario específico
-   * @param volunteerId - ID del voluntario
-   * @returns Información del voluntario
-   */
-  async getVolunteerById(volunteerId: string): Promise<VolunteerInfo> {
-    try {
-      const response = await api.get<VolunteerInfo>(
-        `/api/volunteers/${volunteerId}`
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error('Error al obtener detalles del voluntario:', error);
-      throw new Error(
-        error.response?.data?.message || 
-        'Error al cargar los detalles del voluntario.'
-      );
-    }
-  },
-
-  /**
-   * Elimina un registro de voluntario
-   * @param volunteerId - ID del voluntario
-   */
-  async deleteVolunteer(volunteerId: string): Promise<void> {
-    try {
-      await api.delete(`/api/volunteers/${volunteerId}`);
-    } catch (error: any) {
-      console.error('Error al eliminar voluntario:', error);
-      throw new Error(
-        error.response?.data?.message || 
-        'Error al eliminar el registro del voluntario.'
-      );
-    }
-  },
-
-  /**
-   * Obtiene estadísticas de voluntarios de un centro
-   * @param centerId - ID del centro/albergue
-   * @returns Estadísticas
-   */
-  async getVolunteerStats(centerId: string): Promise<{
-    total: number;
-    pendientes: number;
-    contactados: number;
-    aceptados: number;
-    rechazados: number;
-  }> {
-    try {
-      const response = await api.get(
-        `/api/centers/${centerId}/volunteer-stats`
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error('Error al obtener estadísticas de voluntarios:', error);
-      throw new Error(
-        error.response?.data?.message || 
-        'Error al cargar las estadísticas.'
-      );
-    }
-  },
+  createVolunteerContact,
+  getCenterActiveActivation, // ✅ NUEVO - Para obtener activación de forma pública
+  getVolunteerContactsByActivation,
+  updateVolunteerContactStatus,
 };
-
-export default volunteerService;

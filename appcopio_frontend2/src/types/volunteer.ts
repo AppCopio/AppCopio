@@ -1,13 +1,9 @@
 /**
- * Define los estados posibles de una solicitud de voluntario.
+ * Datos del formulario de contacto de voluntarios
  */
-export type VolunteerStatus = 'pendiente' | 'contactado' | 'aceptado' | 'rechazado';
-
-/**
- * Payload para CREAR una nueva solicitud de voluntario.
- */
-export interface VolunteerContactData {
+export interface VolunteerContactCreate {
   nombre: string;
+  rut: string;
   celular: string;
   email: string;
   capacitaciones: string;
@@ -15,36 +11,23 @@ export interface VolunteerContactData {
 }
 
 /**
- * Payload para ACTUALIZAR el estado de un voluntario.
- */
-export interface VolunteerStatusUpdateData {
-  status: VolunteerStatus;
-  notes?: string;
-}
-
-/**
- * La entidad principal de Voluntario.
- */
-export interface VolunteerInfo extends VolunteerContactData {
-  volunteer_id: string;
-  center_id: string;
-  status: VolunteerStatus;
-  created_at: string; 
-  updated_at: string; 
-  notes?: string | null;
-  contacted_at?: string | null; 
-  //contacted_by?: number | null; // El ID (INT) del usuario que contactó, quizás sea bueno guardar esto?
-  center_name?: string; 
-  //contacted_by_name?: string | null;  
-}
-
-/**
- * Respuesta específica al crear una solicitud de voluntario.
+ * Respuesta del backend con los datos del registro dinámico
  */
 export interface VolunteerContactResponse {
-  success: boolean;
-  message: string;
-  volunteer_id?: string;
-  created_at?: string; 
+  id: string; // ID del registro (record_id)
+  dataset_id: string;
+  version: number;
+  created_at: string;
+  created_by: string;
+  data: {
+    [key: string]: string | number | boolean | null; // Campos de texto (Nombre, Email, etc.)
+  };
+  select_values: {
+    [key: string]: string[]; // Campos de selección (Status)
+  };
 }
 
+/**
+ * Estados posibles de un contacto de voluntario
+ */
+export type VolunteerStatus = 'pendiente' | 'contactado' | 'aceptado' | 'rechazado';
