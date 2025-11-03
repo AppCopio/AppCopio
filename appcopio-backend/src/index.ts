@@ -33,6 +33,7 @@ import templateRoutes from "./routes/templateRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
 import notificationRoutes from "./routes/notificacionRoutes";
 import migrateRoutes from "./routes/migrate";
+import volunteerRoutes from './routes/volunteerContactRoutes';
 import movementRoutes from "./routes/movementRoutes";
 import resourceBoxRoutes from "./routes/resourceBoxRoutes";
 import { startShiftStatusJob } from "./jobs/shiftStatusJob";
@@ -110,6 +111,7 @@ app.use("/api/centers", requireAuth, movementRoutes);
 app.use("/api/resource-boxes", requireAuth, resourceBoxRoutes);
 
 
+app.use('/api/volunteers', volunteerRoutes);
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {

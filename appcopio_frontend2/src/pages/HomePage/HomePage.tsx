@@ -1,3 +1,4 @@
+// src/pages/HomePage/HomePage.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Container, Typography, Stack, Paper } from '@mui/material';
@@ -15,8 +16,8 @@ const HomePage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background:'#f5f5f5',
-        py: 4,
+        background: '#f5f5f5',
+        overflow: 'hidden',
       }}
     >
       <Container maxWidth="lg" sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
@@ -39,6 +40,7 @@ const HomePage: React.FC = () => {
             justifyContent="space-between"
             sx={{ mb: { xs: 2, md: 3 }, px: { xs: 1, md: 3 } }}
           >
+            {/* Logo FESW - Izquierda */}
             <Box
               component="img"
               src="/logos/feria_logo.png"
@@ -49,6 +51,21 @@ const HomePage: React.FC = () => {
                 flex: '0 0 auto',
               }}
             />
+
+            {/* Logo AppCopio - Centro (más grande) */}
+            <Box
+              component="img"
+              src="/logos/cromatico_horizontal.png"
+              alt="AppCopio"
+              sx={{
+                height: { xs: 50, sm: 65, md: 80 },
+                objectFit: 'contain',
+                flex: '1 1 auto',
+                maxWidth: '300px',
+              }}
+            />
+
+            {/* Logo DIDECO - Derecha */}
             <Box
               component="img"
               src="/logos/DIDECO.png"
@@ -61,19 +78,6 @@ const HomePage: React.FC = () => {
             />
           </Stack>
 
-          {/* Logo Principal AppCopio */}
-          <Box
-            component="img"
-            src="/logos/cromatico_horizontal.png"
-            alt="AppCopio"
-            sx={{
-                height: { xs: 50, sm: 65, md: 80 },
-                objectFit: 'contain',
-                flex: '1 1 auto',
-                maxWidth: '300px',
-              }}
-          />
-
           {/* Título */}
           <Typography
             variant="h4"
@@ -82,7 +86,8 @@ const HomePage: React.FC = () => {
             sx={{
               fontWeight: 600,
               color: '#1A2B4A',
-              mb: 1,
+              mb: 0.5,
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
             }}
           >
             Sistema de Gestión de Centros
@@ -94,16 +99,18 @@ const HomePage: React.FC = () => {
             sx={{
               fontWeight: 500,
               color: 'text.secondary',
-              mb: 1,
+              mb: 0.5,
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.5rem' },
             }}
           >
-            de Albergues y Albergues comunitarios
+            de Albergues y Albergues Comunitarios
           </Typography>
           <Typography
             variant="h6"
             sx={{
               color: 'text.secondary',
-              mb: 6,
+              mb: { xs: 3, md: 4 },
+              fontSize: { xs: '1rem', sm: '1.25rem' },
             }}
           >
             Valparaíso
@@ -112,16 +119,16 @@ const HomePage: React.FC = () => {
           {/* Botones de Acción */}
           <Stack
             direction={{ xs: 'column', md: 'row' }}
-            spacing={4}
+            spacing={{ xs: 2, md: 4 }}
             justifyContent="center"
-            sx={{ mb: 4 }}
+            sx={{ mb: 2 }}
           >
             {/* Botón Ver Mapa */}
             <Paper
               elevation={3}
               sx={{
-                p: 4,
-                width: { xs: '100%', md: 300 },
+                p: { xs: 3, md: 4 },
+                width: { xs: '100%', md: 280 },
                 borderRadius: 3,
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
@@ -132,20 +139,20 @@ const HomePage: React.FC = () => {
             >
               <MapIcon
                 sx={{
-                  fontSize: 64,
+                  fontSize: { xs: 48, md: 56 },
                   color: 'primary.main',
-                  mb: 2,
+                  mb: 1.5,
                 }}
               />
-              <Typography variant="h6" gutterBottom fontWeight={600}>
+              <Typography variant="h6" gutterBottom fontWeight={600} sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
                 Ver Mapa de Centros
               </Typography>
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ mb: 3, minHeight: 40 }}
+                sx={{ mb: 2, minHeight: { xs: 'auto', md: 40 }, fontSize: { xs: '0.85rem', md: '0.875rem' } }}
               >
-                Comunidad: Consulta albergues activos y necesidades
+                Comunidad: Consulta centros activos y necesidades
               </Typography>
               <Button
                 variant="contained"
@@ -153,10 +160,10 @@ const HomePage: React.FC = () => {
                 fullWidth
                 onClick={() => navigate('/map')}
                 sx={{
-                  py: 1.5,
+                  py: 1.25,
                   borderRadius: 2,
                   textTransform: 'none',
-                  fontSize: '1rem',
+                  fontSize: { xs: '0.9rem', md: '1rem' },
                 }}
               >
                 Ver Mapa
@@ -167,8 +174,8 @@ const HomePage: React.FC = () => {
             <Paper
               elevation={3}
               sx={{
-                p: 4,
-                width: { xs: '100%', md: 300 },
+                p: { xs: 3, md: 4 },
+                width: { xs: '100%', md: 280 },
                 borderRadius: 3,
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
@@ -179,18 +186,18 @@ const HomePage: React.FC = () => {
             >
               <LoginIcon
                 sx={{
-                  fontSize: 64,
+                  fontSize: { xs: 48, md: 56 },
                   color: 'secondary.main',
-                  mb: 2,
+                  mb: 1.5,
                 }}
               />
-              <Typography variant="h6" gutterBottom fontWeight={600}>
+              <Typography variant="h6" gutterBottom fontWeight={600} sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
                 Acceso Municipal
               </Typography>
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ mb: 3, minHeight: 40 }}
+                sx={{ mb: 2, minHeight: { xs: 'auto', md: 40 }, fontSize: { xs: '0.85rem', md: '0.875rem' } }}
               >
                 Gestiona albergues y recursos
               </Typography>
@@ -201,10 +208,10 @@ const HomePage: React.FC = () => {
                 fullWidth
                 onClick={() => navigate('/login')}
                 sx={{
-                  py: 1.5,
+                  py: 1.25,
                   borderRadius: 2,
                   textTransform: 'none',
-                  fontSize: '1rem',
+                  fontSize: { xs: '0.9rem', md: '1rem' },
                 }}
               >
                 Iniciar Sesión

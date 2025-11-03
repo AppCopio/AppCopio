@@ -23,7 +23,7 @@ VALUES
 ('rodrigo.pizarro', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'rodrigo.pizarro@daemvalpo.cl', 3, 'Rodrigo Pizarro', '16.789.234-3', '987650001', TRUE, FALSE),-- Escuela Básica Cerro Las Cañas
 ('cesar.rojas', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'cesar.rojas@comunidad.cl', 3, 'César Rojas', '14.256.789-2', '987650002', TRUE, FALSE), -- Centro Comunitario El Litre
 ('patricia.olivares', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'patricia.olivares@comunidad.cl', 3, 'Patricia Olivares', '13.579.246-1', '987650003', TRUE, FALSE),-- Sede Vecinal Cerro Polanco
-('gonzalo.arancibia', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'gonzalo.arancibia@cultura.cl', 3, 'Gonzalo Arancibia', '18.345.672-9', '987650004', TRUE, FALSE), -- Centro Cultural Playa Ancha
+('gonzalo.arancibia', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'gonzalo.arancibia@comunidad.cl', 3, 'Gonzalo Arancibia', '18.345.672-9', '987650004', TRUE, FALSE), -- Centro Cultural Playa Ancha
 ('hector.munoz', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m', 'hector.munoz@comunidad.cl', 3, 'Héctor Muñoz', '17.234.568-4', '987650005', TRUE, FALSE), -- Sede Juntas de Vecinos Cerro Barón
 ('carolina.jeldes', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m',  'carolina.jeldes@daemvalpo.cl', 3, 'Carolina Jeldes', '19.876.543-2', '987650006', TRUE, FALSE), -- Escuela Básica Los Placeres
 ('ivan.veliz', '$2b$10$Psi3QNyicQITWPeGLOVXr.eqO9E72SBodzpSgJ42Z8EGgJZIYYR4m','ivan.veliz@deportes.cl', 3, 'Iván Véliz', '20.123.456-8', '987650007', TRUE, FALSE); -- Centro Deportivo Rodelillo
@@ -488,25 +488,173 @@ INSERT INTO Categories (name) VALUES
 -- Productos de prueba
 INSERT INTO Products (name, unit, category_id)
 VALUES
-('Agua Embotellada 1.5L', 'un', 1), ('Frazadas (1.5 plazas)', 'un', 2),
-('Kit de Higiene Personal (Adulto)', 'un', 3), ('Pañales para Niños (Talla G)', 'paquete', 3),
-('Saco de Comida para Perro (10kg)', 'saco', 4), ('Pilas AA', 'pack 4un', 5),
-('Paracetamol 500mg', 'caja', 6), ('Arroz (1kg)', 'kg', 1);
+('Agua Embotellada 1.5L', 'un', 1),
+('Frazadas (1.5 plazas)', 'un', 2),
+('Kit de Higiene Personal (Adulto)', 'un', 3),
+('Pañales para Niños (Talla G)', 'paquete', 3),
+('Saco de Comida para Perro (10kg)', 'saco', 4),
+('Pilas AA', 'pack 4un', 5),
+('Paracetamol 500mg', 'caja', 6),
+('Arroz (1kg)', 'kg', 1),
+('Fideos (500g)', 'paquete', 1),
+('Conservas de Atún', 'lata', 1),
+('Leche en Polvo (1kg)', 'bolsa', 1),
+('Mantas Polares', 'un', 2),
+('Papel Higiénico', 'pack 4un', 3),
+('Jabón de Tocador', 'un', 3),
+('Shampoo (400ml)', 'botella', 3),
+('Pasta Dental', 'un', 3),
+('Linternas', 'un', 5),
+('Velas', 'paquete 10un', 5),
+('Ibuprofeno 400mg', 'caja', 6),
+('Alcohol Gel (500ml)', 'botella', 6),
+('Colchonetas', 'un', 2),
+('Almohadas', 'un', 2);
 
--- Inventario de prueba
+-- Inventario de prueba - todos los centros con stock (ninguno en 0%)
+-- Centro C001
 INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) VALUES
-('C001', 1, 200, 1), ('C001', 2, 150, 1), ('C001', 8, 100, 1),
-('C002', 1, 80, 2), ('C002', 4, 50, 2);
+('C001', 1, 280, 1),
+('C001', 2, 70, 1),
+('C001', 3, 40, 1),
+('C001', 4, 60, 1),
+('C001', 5, 15, 1),
+('C001', 6, 25, 1),
+('C001', 7, 50, 1),
+('C001', 8, 70, 1),
+('C001', 9, 105, 1),
+('C001', 10, 140, 1),
+('C001', 11, 35, 1),
+('C001', 12, 50, 1),
+('C001', 13, 100, 1),
+('C001', 14, 90, 1),
+('C001', 15, 35, 1),
+('C001', 16, 70, 1),
+('C001', 17, 18, 1),
+('C001', 18, 30, 1),
+('C001', 19, 30, 1),
+('C001', 20, 20, 1),
+('C001', 21, 40, 1),
+('C001', 22, 40, 1);
+
+-- Centro C002
+INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) VALUES
+('C002', 1, 200, 2),
+('C002', 2, 50, 2),
+('C002', 3, 28, 2),
+('C002', 4, 45, 2),
+('C002', 5, 10, 2),
+('C002', 6, 18, 2),
+('C002', 7, 35, 2),
+('C002', 8, 50, 2),
+('C002', 9, 75, 2),
+('C002', 10, 100, 2),
+('C002', 11, 25, 2),
+('C002', 12, 35, 2),
+('C002', 13, 70, 2),
+('C002', 14, 60, 2),
+('C002', 15, 25, 2),
+('C002', 16, 50, 2),
+('C002', 17, 12, 2),
+('C002', 18, 22, 2),
+('C002', 19, 20, 2),
+('C002', 20, 15, 2),
+('C002', 21, 28, 2),
+('C002', 22, 28, 2);
+
+-- Centro C003
+INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) VALUES
+('C003', 1, 320, 4),
+('C003', 2, 80, 4),
+('C003', 3, 45, 4),
+('C003', 4, 70, 4),
+('C003', 5, 18, 4),
+('C003', 6, 30, 4),
+('C003', 7, 60, 4),
+('C003', 8, 80, 4),
+('C003', 9, 120, 4),
+('C003', 10, 160, 4),
+('C003', 11, 40, 4),
+('C003', 12, 60, 4),
+('C003', 13, 120, 4),
+('C003', 14, 100, 4),
+('C003', 15, 40, 4),
+('C003', 16, 80, 4),
+('C003', 17, 20, 4),
+('C003', 18, 35, 4),
+('C003', 19, 40, 4),
+('C003', 20, 25, 4),
+('C003', 21, 45, 4),
+('C003', 22, 45, 4);
+
+-- Centro C004
+INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) VALUES
+('C004', 1, 160, 5),
+('C004', 2, 40, 5),
+('C004', 3, 22, 5),
+('C004', 4, 35, 5),
+('C004', 5, 8, 5),
+('C004', 6, 15, 5),
+('C004', 7, 28, 5),
+('C004', 8, 40, 5),
+('C004', 9, 60, 5),
+('C004', 10, 80, 5),
+('C004', 11, 20, 5),
+('C004', 12, 28, 5),
+('C004', 13, 55, 5),
+('C004', 14, 50, 5),
+('C004', 15, 20, 5),
+('C004', 16, 40, 5),
+('C004', 17, 10, 5),
+('C004', 18, 18, 5),
+('C004', 19, 18, 5),
+('C004', 20, 12, 5),
+('C004', 21, 22, 5),
+('C004', 22, 22, 5);
+
+-- Centro C005
+INSERT INTO CenterInventoryItems (center_id, item_id, quantity, updated_by) VALUES
+('C005', 1, 400, 6),
+('C005', 2, 100, 6),
+('C005', 3, 55, 6),
+('C005', 4, 85, 6),
+('C005', 5, 22, 6),
+('C005', 6, 35, 6),
+('C005', 7, 70, 6),
+('C005', 8, 100, 6),
+('C005', 9, 150, 6),
+('C005', 10, 200, 6),
+('C005', 11, 50, 6),
+('C005', 12, 75, 6),
+('C005', 13, 150, 6),
+('C005', 14, 120, 6),
+('C005', 15, 50, 6),
+('C005', 16, 100, 6),
+('C005', 17, 25, 6),
+('C005', 18, 40, 6),
+('C005', 19, 50, 6),
+('C005', 20, 30, 6),
+('C005', 21, 55, 6),
+('C005', 22, 55, 6);
 
 -- Log de inventario correspondiente al stock inicial
-INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, reason, created_by) VALUES
-('C001', 1, 'ADD', 200, 'Stock Inicial', 1), ('C001', 2, 'ADD', 150, 'Stock Inicial', 1),
-('C001', 8, 'ADD', 100, 'Stock Inicial', 1), ('C002', 1, 'ADD', 80, 'Stock Inicial', 2),
-('C002', 4, 'ADD', 50, 'Stock Inicial', 2);
+INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, reason, created_by)
+SELECT center_id, item_id, 'ADD', quantity, 'Stock Inicial', updated_by
+FROM CenterInventoryItems;
 
 -- Asignaciones de prueba
 INSERT INTO CenterAssignments (user_id, center_id, role, changed_by) 
-VALUES (2, 'C001', 'trabajador municipal', 1), (3, 'C001', 'contacto ciudadano', 1), (2, 'C003', 'trabajador municipal', 1);
+VALUES 
+(2, 'C001', 'trabajador municipal', 1), 
+(3, 'C001', 'contacto ciudadano', 1),
+(4, 'C002', 'trabajador municipal', 1), 
+(7, 'C002', 'contacto ciudadano', 1),
+(5, 'C003', 'trabajador municipal', 1),
+(8, 'C003', 'contacto ciudadano', 1),
+(6, 'C004', 'trabajador municipal', 1),
+(9, 'C004', 'contacto ciudadano', 1),
+(2, 'C005', 'trabajador municipal', 1),
+(10, 'C005', 'contacto ciudadano', 1);
 
 UPDATE Centers c
 SET municipal_manager_id = ca.user_id
@@ -522,15 +670,58 @@ WHERE ca.center_id = c.center_id
   AND ca.role = 'contacto ciudadano'
   AND ca.valid_to IS NULL;
 
--- Solicitudes de prueba
+-- Solicitudes de prueba (mínimo 5 por centro, todas hechas por contactos ciudadanos)
+-- Centro C001
 INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUES
-('C002', 'Se necesitan con urgencia frazadas adicionales para niños y adultos mayores.', 'Alta', 3);
+('C001', 'Se necesitan con urgencia más frazadas para los niños menores de 5 años.', 'Alta', 3),
+('C001', 'El sistema de calefacción de la sala principal no funciona correctamente.', 'Alta', 3),
+('C001', 'Solicito reposición de pañales talla M, se están agotando rápidamente.', 'Media', 3),
+('C001', 'Las duchas del sector B tienen baja presión de agua.', 'Baja', 3),
+('C001', 'Necesitamos más productos de limpieza, especialmente cloro.', 'Media', 3),
+('C001', 'Hay goteras en el techo del comedor cuando llueve.', 'Media', 3);
 
--- Activación de un centro
+-- Centro C002
+INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUES
+('C002', 'La iluminación del pasillo principal está fallando, varias ampolletas quemadas.', 'Media', 7),
+('C002', 'Necesitamos urgente reposición de agua embotellada, el stock está muy bajo.', 'Alta', 7),
+('C002', 'El baño del segundo piso tiene problemas de alcantarillado.', 'Alta', 7),
+('C002', 'Solicito más mantas polares, hace mucho frío en las noches.', 'Media', 7),
+('C002', 'Falta señalización de salidas de emergencia en el ala oeste.', 'Media', 7);
+
+-- Centro C003
+INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUES
+('C003', 'La conexión WiFi es intermitente, dificulta la comunicación con familiares.', 'Media', 8),
+('C003', 'Requerimos más kits de higiene personal para adultos.', 'Media', 8),
+('C003', 'El portón de acceso principal tiene la cerradura dañada.', 'Alta', 8),
+('C003', 'Solicito reposición de medicamentos básicos en el botiquín.', 'Alta', 8),
+('C003', 'Las cortinas divisorias de privacidad están rotas.', 'Media', 8),
+('C003', 'Necesitamos más almohadas, no hay suficientes para todas las personas.', 'Media', 8);
+
+-- Centro C004
+INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUES
+('C004', 'Urgente: no hay suficientes frazadas para todas las personas, hace frío.', 'Alta', 9),
+('C004', 'El techo del baño tiene filtraciones, el piso se moja cuando llueve.', 'Alta', 9),
+('C004', 'Necesitamos más productos de higiene personal, especialmente jabón.', 'Media', 9),
+('C004', 'La puerta de entrada no cierra bien, hay corrientes de aire.', 'Media', 9),
+('C004', 'Solicito más colchonetas, no hay suficientes camas.', 'Alta', 9);
+
+-- Centro C005
+INSERT INTO UpdateRequests (center_id, description, urgency, requested_by) VALUES
+('C005', 'Necesitamos más alimentos no perecederos, especialmente arroz y fideos.', 'Media', 10),
+('C005', 'El aire acondicionado del gimnasio no funciona, hace mucho calor.', 'Media', 10),
+('C005', 'Solicito reposición de artículos de limpieza para mantener la higiene.', 'Media', 10),
+('C005', 'Las graderías necesitan mantenimiento, hay tablas sueltas.', 'Baja', 10),
+('C005', 'Requerimos más ropa de abrigo, especialmente para niños.', 'Media', 10),
+('C005', 'Necesitamos más pañales de todas las tallas, se agotan rápidamente.', 'Alta', 10);
+
+
+-- Activación de centros
 INSERT INTO CentersActivations (center_id, activated_by, notes)
 VALUES
 ('C001', 1, 'Activación por emergencia de incendio forestal en la zona alta de Valparaíso.'),
-('C002', 1, 'Apertura para contingencia en sector centro.');
+('C002', 1, 'Apertura para contingencia en sector cerro Cordillera.'),
+('C003', 1, 'Activación preventiva por alerta meteorológica en Playa Ancha.');
+
 
 -- Sincroniza bandera redundante is_active según activaciones vigentes
 UPDATE Centers c
@@ -539,12 +730,56 @@ SET is_active = EXISTS (
   WHERE ca.center_id = c.center_id AND ca.ended_at IS NULL
 );
 
--- Personas y grupos familiares de prueba
+-- Personas y grupos familiares de prueba (mínimo 5 personas por centro activo)
+
+-- Personas para Centro C001 (8 personas en 2 familias)
 INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
 VALUES
 ('15.111.111-1', 'María', 'González', 34, 'F'),
-('21.222.222-2', 'Pedro', 'Soto', 8, 'M');
+('21.222.222-2', 'Pedro', 'González', 8, 'M'),
+('18.333.333-3', 'Ana', 'González', 12, 'F'),
+('16.444.444-4', 'Roberto', 'Muñoz', 45, 'M'),
+('17.555.555-5', 'Carmen', 'Soto', 42, 'F'),
+('22.666.666-6', 'Luis', 'Muñoz', 16, 'M'),
+('23.777.777-7', 'Sofía', 'Muñoz', 5, 'F'),
+('19.888.888-8', 'Jorge', 'Muñoz', 68, 'M');
 
+-- Grupos familiares para C001
+WITH act AS (
+  SELECT activation_id
+  FROM CentersActivations
+  WHERE center_id = 'C001' AND ended_at IS NULL
+  ORDER BY started_at DESC
+  LIMIT 1
+)
+INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones)
+SELECT act.activation_id, 1, 'Familia monoparental, requieren apoyo especial para menores.'
+FROM act
+UNION ALL
+SELECT act.activation_id, 4, 'Familia numerosa con adulto mayor dependiente.'
+FROM act;
+
+INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
+(1, 1, 'Jefe de Hogar'),
+(1, 2, 'Hijo/a'),
+(1, 3, 'Hijo/a'),
+(2, 4, 'Jefe de Hogar'),
+(2, 5, 'Cónyuge'),
+(2, 6, 'Hijo/a'),
+(2, 7, 'Hijo/a'),
+(2, 8, 'Padre/Madre');
+
+-- Personas para Centro C002 (6 personas en 2 familias)
+INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
+VALUES
+('14.111.222-3', 'Patricia', 'Rojas', 38, 'F'),
+('20.222.333-4', 'Diego', 'Rojas', 10, 'M'),
+('24.333.444-5', 'Valentina', 'Rojas', 3, 'F'),
+('13.444.555-6', 'Carlos', 'Fernández', 52, 'M'),
+('15.555.666-7', 'Elena', 'Castillo', 48, 'F'),
+('21.666.777-8', 'Matías', 'Fernández', 14, 'M');
+
+-- Grupos familiares para C002
 WITH act AS (
   SELECT activation_id
   FROM CentersActivations
@@ -553,11 +788,55 @@ WITH act AS (
   LIMIT 1
 )
 INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones)
-SELECT act.activation_id, 1, 'Familia monoparental, requieren apoyo especial para menor de edad.'
+SELECT act.activation_id, 9, 'Madre soltera con hijos pequeños.'
+FROM act
+UNION ALL
+SELECT act.activation_id, 12, 'Pareja con adolescente, ambos padres trabajadores.'
 FROM act;
 
 INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
-(1, 1, 'Jefe de Hogar'), (1, 2, 'Hijo/a');
+(3, 9, 'Jefe de Hogar'),
+(3, 10, 'Hijo/a'),
+(3, 11, 'Hijo/a'),
+(4, 12, 'Jefe de Hogar'),
+(4, 13, 'Cónyuge'),
+(4, 14, 'Hijo/a');
+
+-- Personas para Centro C003 (7 personas en 2 familias)
+INSERT INTO Persons (rut, nombre, primer_apellido, edad, genero)
+VALUES
+('12.777.888-9', 'Andrea', 'López', 29, 'F'),
+('25.888.999-0', 'Benjamín', 'López', 6, 'M'),
+('26.999.000-1', 'Isabella', 'López', 2, 'F'),
+('11.000.111-2', 'Fernando', 'Parra', 36, 'M'),
+('16.111.222-3', 'Gabriela', 'Núñez', 33, 'F'),
+('22.222.333-4', 'Catalina', 'Parra', 11, 'F'),
+('23.333.444-5', 'Tomás', 'Parra', 7, 'M');
+
+-- Grupos familiares para C003
+WITH act AS (
+  SELECT activation_id
+  FROM CentersActivations
+  WHERE center_id = 'C003' AND ended_at IS NULL
+  ORDER BY started_at DESC
+  LIMIT 1
+)
+INSERT INTO FamilyGroups (activation_id, jefe_hogar_person_id, observaciones)
+SELECT act.activation_id, 15, 'Madre joven con dos hijos pequeños.'
+FROM act
+UNION ALL
+SELECT act.activation_id, 18, 'Familia nuclear con dos hijos escolares.'
+FROM act;
+
+INSERT INTO FamilyGroupMembers (family_id, person_id, parentesco) VALUES
+(5, 15, 'Jefe de Hogar'),
+(5, 16, 'Hijo/a'),
+(5, 17, 'Hijo/a'),
+(6, 18, 'Jefe de Hogar'),
+(6, 19, 'Cónyuge'),
+(6, 20, 'Hijo/a'),
+(6, 21, 'Hijo/a');
+
 
 -- Confirmaciones finales de integridad de datos
 

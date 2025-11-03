@@ -25,6 +25,7 @@ import type {
   InventoryCreateDTO,
 } from "@/types/inventory";
 import "./InventoryPage.css";
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 const groupByCategory = (items: InventoryItem[]): GroupedInventory =>
   (items ?? []).reduce((acc, item) => {
@@ -35,6 +36,7 @@ const groupByCategory = (items: InventoryItem[]): GroupedInventory =>
   }, {} as GroupedInventory);
 
 export default function InventoryPage() {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId } = useParams<{ centerId: string }>();
   const { user } = useAuth();
   const { isOnline, lastSync } = useOffline();

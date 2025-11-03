@@ -1,547 +1,414 @@
-/* ---------- Layout general ---------- */
-.residents-container {
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
+/* --- Paso 1: Encabezado y Capacidad --- */
 
 .residents-header {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 20px;
+  text-align: center; /* Centramos el título "Familias/Personas..." */
+  border-bottom: 1px solid #eee;
+  padding-bottom: 20px;
 }
 
-.back-button {
-  background-color: #007bff;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.back-button:hover { background-color: #0056b3; }
-
-/* ---------- Panel de capacidad ---------- */
 .capacity-info {
-  background-color: #f0f0f0;
-  padding: 10px;
+  display: flex; /* Cambia a horizontal */
+  justify-content: space-around; /* Distribuye el espacio */
+  gap: 15px;
+  background-color: #f8f9fa; /* Color de fondo suave */
+  padding: 15px;
   border-radius: 8px;
-  margin-bottom: 1rem;
-}
-.capacity-info p {
-  margin: 5px 0;
-  font-size: 1rem;
-}
-
-/* ---------- Exportar ---------- */
-.export-buttons {
   margin-bottom: 20px;
-  display: flex;
-  gap: 10px;
-}
-.export-btn {
-  padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.export-btn:hover { background-color: #0056b3; }
-
-/* ---------- Toggle de vistas ---------- */
-.navigate-button { margin-bottom: 20px; }
-.navigate-btn {
-  background-color: #28a745;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.navigate-btn:hover { background-color: #218838; }
-
-/* ---------- Tablas ---------- */
-.residents-table,
-.people-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-.residents-table th,
-.people-table th,
-.residents-table td,
-.people-table td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
-}
-.residents-table th,
-.people-table th {
-  background-color: #f5f5f5;
-}
-.table-container { overflow-x: auto; }
-
-/* ---------- (Antiguo) Bloque de filtros: oculto ---------- */
-.person-filters { display: none; }
-
-/* ---------- NUEVO: Card de filtros ---------- */
-.filters-card {
-  background: #ffffff;
-  border: 1px solid #e6e6e6;
-  border-radius: 12px;
-  padding: 16px;
-  margin: 18px 0 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  border: 1px solid #dee2e6;
 }
 
-/* Header de la card: título + acciones */
-.filters-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.filters-header h3 {
+.capacity-info p {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-.filters-actions { display: flex; gap: 8px; }
-.btn-secondary-outlined {
-  background: transparent;
-  color: #2563eb;
-  border: 1px solid #2563eb;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
+  font-size: 1rem;
   font-weight: 600;
-}
-.btn-secondary-outlined:hover { background: rgba(37,99,235,0.08); }
-
-/* Grid responsiva de campos */
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 12px;
+  color: #333;
 }
 
-/* Cada campo ocupa 12 cols en móvil, 6 en tablet, 4 en desktop */
-.filter-field {
-  display: flex;
-  flex-direction: column;
-  grid-column: span 12;
+.capacity-info p strong {
+  color: #0056b3; /* Color para las etiquetas */
+  margin-right: 8px;
 }
-@media (min-width: 640px) {
-  .filter-field { grid-column: span 6; }
-}
-@media (min-width: 1024px) {
-  .filter-field { grid-column: span 4; }
-}
+/* --- Paso 2: Estilo de Tarjeta de Detalle v2 --- */
 
-/* Etiquetas e inputs */
-.filter-field > span {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 6px;
+.family-details-row {
+  background-color: #f9f9f9; /* Fondo suave para la fila expandida */
 }
-.filter-field input,
-.filter-field select {
-  height: 38px;
-  padding: 8px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  font-size: 0.95rem;
-}
-.filter-field input::placeholder { color: #9ca3af; }
-/* Estado de foco */
-.filter-field input:focus,
-.filter-field select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
-}
-
-/* ---------- Botones genéricos (modales, etc.) ---------- */
-.filter-button,
-.modal-actions button {
-  background-color: #007bff;
-  color: white;
-  padding: 8px 15px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.filter-button:hover,
-.modal-actions button:hover { background-color: #0056b3; }
-.modal-actions { display: flex; gap: 10px; margin-top: 10px; }
-
-/* ---------- Modal ---------- */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.modal-content {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 400px;
-}
-.form-group { margin-bottom: 15px; }
-.form-group label { font-weight: bold; }
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 10px;
-  margin-top: 5px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
-/* ======= Ultra compacto ======= */
-.filters-card.filters-compact {
-  padding: 8px 10px;         /* antes 10x12 */
-  margin: 8px 0;             /* menos margen */
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-}
-
-.filters-card.filters-compact .filters-header {
-  margin-bottom: 4px;
-}
-.filters-card.filters-compact .filters-header h3 {
-  font-size: 0.9rem;         /* más chico */
-}
-.filters-card.filters-compact .btn-secondary-outlined {
-  padding: 2px 8px;          /* botón chiquito */
-  font-size: 0.8rem;
-  border-radius: 6px;
-}
-
-/* Grid con MUY poco gap y más campos por fila */
-.filters-card.filters-compact .filters-grid {
-  gap: 6px;
-  grid-template-columns: repeat(12, 1fr);
-}
-.filters-card.filters-compact .filter-field {
-  grid-column: span 12;      /* móvil: 1 por fila */
-}
-
-/* tablet: 3 por fila */
-@media (min-width: 640px) {
-  .filters-card.filters-compact .filter-field { grid-column: span 4; }
-}
-
-/* desktop: 6 por fila (todos en una línea) */
-@media (min-width: 1024px) {
-  .filters-card.filters-compact .filter-field { grid-column: span 2; }
-  /* en desktop ocultamos labels para ganar altura; usamos placeholder */
-  .filters-card.filters-compact .filter-field > span { display: none; }
-}
-
-.filters-card.filters-compact .filter-field > span {
-  font-size: 0.7rem;
-  margin-bottom: 2px;
-  color: #556070;
-}
-
-/* Inputs realmente pequeños */
-.filters-card.filters-compact .filter-field input,
-.filters-card.filters-compact .filter-field select {
-  height: 28px;              /* antes 30-38px */
-  padding: 4px 6px;
-  font-size: 0.85rem;
-  border-radius: 6px;
-  border: 1px solid #d8dde6;
-}
-.filters-card.filters-compact .filter-field input::placeholder {
-  font-size: 0.84rem;
-  color: #9aa3b2;
-}
-.filters-card.filters-compact .filter-field input:focus,
-.filters-card.filters-compact .filter-field select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37,99,235,0.10);
-}
-
-
-/* --- Estilos de la Tarjeta (Versión 2: Estética Mejorada) --- */
 
 .family-details-card-v2 {
-    background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
-    margin-bottom: 25px;
-    overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente moderna */
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin: 15px;
 }
 
-/* --- Encabezado de la Tarjeta --- */
+/* 2a: Cabecera de la Tarjeta (Fecha de Ingreso) */
 .card-header-v2 {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background-color: #f0f4f8; /* Fondo sutilmente azulado */
-    padding: 20px 30px;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #fdfdfd;
 }
 
-/* 1. Sección de Identificación (Nombre y Rol) */
-.id-section {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex-basis: 30%;
-}
-
-.icon-badge {
-    background-color: #3f51b5; /* Azul primario */
-    color: white;
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-
-.name-title-v2 {
-    margin: 0;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #212121;
-}
-
-.role-tag-v2 {
-    margin: 0;
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #3f51b5; /* Color de rol destacado */
-}
-
-/* 2. Sección de Datos Clave */
-.data-key-section {
-    display: flex;
-    gap: 30px;
-    flex-basis: 45%;
-}
-
-.data-item-v2 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.data-icon {
-    color: #3f51b5; /* Íconos azules */
-    font-size: 1rem;
-}
-
-.data-label-v2 {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #757575;
-    text-transform: uppercase;
-}
-
-.data-value-v2 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #333;
-}
-
-/* Estilo para el Tag de Estado */
-.status-tag-v2 {
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.status-activo {
-    background-color: #e8f5e9; /* Fondo verde claro */
-    color: #4caf50; /* Texto verde */
-}
-
-.status-inactivo {
-    background-color: #fbecec; /* Fondo rojo claro */
-    color: #f44336; /* Texto rojo */
-}
-
-/* 3. Sección de Acciones */
-.actions-section-v2 {
-    display: flex;
-    gap: 10px;
-    flex-basis: 25%;
-    justify-content: flex-end;
-}
-
-.btn-action-v2 {
-    padding: 8px 12px;
-    border: none;
-    border-radius: 5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-    font-size: 0.9rem;
-}
-
-.btn-action-v2 i {
-    margin-right: 5px;
-}
-
-.btn-edit {
-    background-color: #ff9800; /* Naranja/Ámbar para editar */
-    color: white;
-}
-
-.btn-exit {
-    background-color: #f44336; /* Rojo para egreso/acción crítica */
-    color: white;
-}
-
-.btn-action-v2:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-}
-
-/* --- Cuerpo de la Tarjeta --- */
-.card-body-v2 {
-    padding: 20px 30px 30px;
-}
-
-
-.section-title-v2 {
-    font-size: 1.1rem;
-    color: #3f51b5;
-    border-bottom: 2px solid #e0e0e0;
-    padding-bottom: 5px;
-    margin-bottom: 15px;
-    font-weight: 600;
-}
-
-.observations-text-v2 {
-    background-color: #fcfcfc;
-    border-left: 4px solid #3f51b5;
-    padding: 10px 15px;
-    font-style: italic;
-    color: #555;
-    border-radius: 3px;
-    font-size: 0.9rem;
-}
-
-.members-title {
-    margin-top: 25px;
-    border-bottom-color: #4caf50; /* Cambiamos el color para diferenciar la sección */
-    color: #4caf50;
-}
-
-.members-table-v2 {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    font-size: 0.95rem;
-}
-
-.members-table-v2 th, 
-.members-table-v2 td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.members-table-v2 th {
-    background-color: #f7f7f7;
-    color: #555;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-}
-
-/* Fila especial para el Jefe de Hogar */
-.members-table-v2 tr.is-head {
-    background-color: #e3f2fd; /* Fondo azul muy claro */
-    font-weight: 600;
-    border-top: 2px solid #3f51b5;
-}
-
-.head-badge {
-    background-color: #3f51b5;
-    color: white;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.member-badge {
-    color: #555;
-    font-weight: 400;
-    font-size: 0.9rem;
-}
-
-/* 1. Contenedor de todos los metadatos (necesario si quieres más de uno) */
 .header-meta-v2 {
-    /* Si estás usando la estructura card-header-v2, este div está dentro, 
-       y debe alinearse con la sección de ID y Acciones. */
-    display: flex;
-    gap: 30px; /* Espacio entre items (RUT, Teléfono, Fecha de Ingreso) */
-    flex-wrap: wrap; 
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .meta-item {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Aumentamos un poco el espacio */
-    font-size: 1rem; /* ✅ AUMENTAMOS el tamaño base a 1rem */
-    color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
 }
 
-/* 2. Estilo del ícono (calendario) */
 .meta-icon {
-    color: #3f51b5; 
-    font-size: 1.2rem; /* ✅ AUMENTAMOS el ícono para que sea visible */
-    flex-shrink: 0;
+  color: #007bff;
+  font-size: 1.2rem;
 }
 
-/* 3. Etiqueta (Ingreso al Centro:) */
 .meta-label {
-    font-size: 0.9rem; /* Un poco más grande para la etiqueta */
-    font-weight: 600;
-    color: #555; /* Lo hacemos un poco más oscuro */
-    text-transform: uppercase;
+  font-weight: 600;
+  color: #555;
 }
 
-/* 4. Valor (la fecha formateada) */
 .meta-value {
-    font-size: 1.1rem; /* ✅ ¡EL MÁS GRANDE! Destacamos la fecha */
-    font-weight: 700; /* Hacemos el valor más negrita */
-    color: #212121; /* Texto casi negro para mejor contraste */
-    background-color: #e8eaf6; /* Fondo sutil para destacarlo del resto del encabezado */
-    padding: 3px 6px;
-    border-radius: 4px;
+  font-weight: 700;
+  color: #111;
 }
 
-.family-Persons-details-card-v2 {
-    background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
-    margin-bottom: 25px;
-    overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente moderna */
+/* 2b: Cuerpo de la Tarjeta (Observaciones, Necesidades) */
+.card-body-v2 {
+  padding: 20px;
 }
+
+.section-title-v2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 10px;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 5px;
+  display: inline-block;
+}
+
+.observations-text-v2 {
+  font-size: 0.95rem;
+  color: #444;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.needs-list-v2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 25px;
+}
+
 .need-badge {
-  margin-right: 0.6rem; /* o el espacio que quieras */
+  background-color: #e7f3ff;
+  color: #0056b3;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid #b8d6f3;
+}
+/* --- Paso 3: Tabla de Miembros (Interna) --- */
+
+.members-title {
+  margin-top: 20px;
+}
+
+.members-table-v2 {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.members-table-v2 th,
+.members-table-v2 td {
+  border: 1px solid #ddd;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.members-table-v2 th {
+  background-color: #f4f4f4;
+  font-weight: 600;
+}
+
+/* Fila del Jefe de Hogar */
+.members-table-v2 tr.is-head {
+  background-color: #fffbe6; /* Amarillo suave */
+  font-weight: 600;
+}
+
+/* Insignias de Parentesco */
+.head-badge, .member-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: white;
+}
+.head-badge {
+  background-color: #dc3545; /* Rojo */
+}
+.member-badge {
+  background-color: #6c757d; /* Gris */
+}
+
+/* Insignias de Sí/No (Estudia, Trabaja, etc.) */
+.value-yes, .value-no {
+  font-weight: 700;
+}
+.value-yes {
+  color: #28a745; /* Verde */
+}
+.value-no {
+  color: #dc3545; /* Rojo */
+}
+/* --- Paso 4: Tarjeta de Filtros (Vista Persona) --- */
+
+.filters-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.filters-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.btn-secondary-outlined {
+  background: #fff;
+  color: #007bff;
+  border: 1px solid #007bff;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.btn-secondary-outlined:hover {
+  background: #007bff;
+  color: #fff;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-field span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.filter-field input,
+.filter-field select {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+/* --- Estilos de Sección (Contenedor de Tarjeta) --- */
+
+.residents-section {
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 25px;
+  overflow: hidden; /* Para que el header se vea bien */
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #007bff; /* Fondo azul como en la imagen */
+  color: white;
+  border-bottom: 1px solid #0056b3;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.section-title h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.section-icon {
+  font-size: 1.8rem !important; /* Icono más grande */
+}
+
+.section-count {
+  font-size: 1rem;
+  font-weight: 400;
+  opacity: 0.8;
+  margin-left: 5px;
+}
+
+.section-content {
+  padding: 20px;
+}
+
+/* --- Anchos para Tabla Grupos Familiares --- */
+
+.residents-table {
+  /* 1. Hacemos que la tabla respete los anchos fijos */
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* 2. Asignamos anchos a cada columna por su orden */
+.residents-table th:nth-child(1) { width: 35%; } /* Columna 1: Jefe de Hogar */
+.residents-table th:nth-child(2) { width: 20%; } /* Columna 2: RUT */
+.residents-table th:nth-child(3) { width: 15%; } /* Columna 3: Miembros */
+.residents-table th:nth-child(4) { width: 30%; } /* Columna 4: Acciones */
+
+/* --- Anchos para Tabla Personas --- */
+
+.people-table {
+  /* 1. Hacemos que la tabla respete los anchos fijos */
+  table-layout: fixed;
+  width: 100%; /* Opcional: puedes poner un ancho fijo más grande si prefieres scroll */
+  /* min-width: 1200px; */ /* <-- Descomenta esta línea si prefieres scroll horizontal */
+}
+
+/* 2. Asignamos anchos a cada columna */
+.people-table th:nth-child(1) { width: 25%; } /* Columna 1: Nombre Completo */
+.people-table th:nth-child(2) { width: 12%; } /* Columna 2: RUT */
+.people-table th:nth-child(3) { width: 12%; } /* Columna 3: Fecha Ingreso */
+.people-table th:nth-child(4) { width: 12%; } /* Columna 4: Fecha Salida */
+.people-table th:nth-child(5) { width: 7%; }  /* Columna 5: Edad */
+.people-table th:nth-child(6) { width: 8%; }  /* Columna 6: Género */
+.people-table th:nth-child(7) { width: 12%; } /* Columna 7: Nacionalidad */
+.people-table th:nth-child(8) { width: 12%; } /* Columna 8: Acción */
+/* Agrega más :nth-child(N) si tienes más columnas */
+
+.residents-table td,
+.people-table td {
+  /* Con esto, el texto que no cabe se corta con "..." */
+  white-space: nowrap;  /* No permite que el texto salte a la línea de abajo */
+  overflow: hidden;     /* Oculta el texto que se desborda */
+  text-overflow: ellipsis; /* Pone los "..." */
+}
+
+/* PERO: Quizás no quieres esto en la columna de "Acciones", 
+  ya que cortaría los botones. 
+  Vamos a anularlo para la última columna de ambas tablas:
+*/
+.residents-table th:last-child,
+.residents-table td:last-child,
+.people-table th:last-child,
+.people-table td:last-child {
+  white-space: normal;  /* Permite que el contenido se ajuste (los botones) */
+  overflow: visible;
+}
+
+/* --- Estilos para Header y Botón Exportar --- */
+
+.residents-header {
+  display: flex; /* Activa Flexbox */
+  justify-content: space-between; /* Espacio entre izq. y der. */
+  align-items: center; /* Centra verticalmente */
+  border-bottom: 1px solid #eee;
+  padding-bottom: 20px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-right {
+  /* El botón de exportar se alinea a la derecha */
+}
+
+/* El color verde agua clarito que pediste */
+.btn-export-new {
+  background-color: #a6e9d5; /* Verde agua claro */
+  color: #004d40; /* Texto verde oscuro para contraste */
+  border: 1px solid #004d40;
+  padding: 10px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-export-new:hover {
+  background-color: #004d40;
+  color: #ffffff;
+}
+
+/* --- Estilos para el Nuevo Modal de Exportación --- */
+.export-modal .form-group {
+  margin-bottom: 20px;
+}
+
+.export-modal .form-group label {
+  font-weight: 600;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.export-modal .radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.export-modal .radio-group label {
+  font-weight: 400;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.export-modal input[type="radio"] {
+  margin: 0;
 }

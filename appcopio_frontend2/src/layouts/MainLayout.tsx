@@ -40,6 +40,7 @@ function MainLayoutContent() {
             }),
         }}
       >
+
         <React.Suspense fallback={<PageFallback />}>
           <Outlet />
         </React.Suspense>

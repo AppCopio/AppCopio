@@ -51,13 +51,16 @@ const CenterLayout: React.FC = () => {
   const isTM = !!user && user.role_id === 2 && !user.es_apoyo_admin;
   
   const allLinks = [
-    { label: "Inventario",            to: paths.center.inventory(id) },
+    //{ label: "Inventario",            to: paths.center.inventory(id) },
     { label: "Ver Detalles",          to: paths.center.details(id) },
     { label: "Crear Solicitud",       to: paths.center.needsNew(id), hiddenForTM: true },
     { label: "Estado de Actualizaciones", to: paths.center.updates(id) },
-    { label: "Listado de Personas",   to: paths.center.residents(id) },
+    //{ label: "Listado de Personas",   to: paths.center.residents(id) },
     { label: "Turnos",                to: paths.center.shifts(id), hiddenForTM: true },
-    { label: "Registros de activación",   to: paths.center.databases(id) },
+    //{ label: "Registros de activación",   to: paths.center.databases(id) },
+    { label: "Historial de activaciones",   to: paths.center.activationsHistory(id)},
+    { label: "Inventario",   to: paths.center.inventory(id)},
+
   ];
 
   // Filtrar enlaces: ocultar "Crear Solicitud" y "Turnos" para TMs

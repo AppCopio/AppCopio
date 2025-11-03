@@ -7,6 +7,9 @@ import type { Center } from "@/types/center";
 import MapFilters, { type OperationalStatusFilters } from "./MapFilters";
 import "./MapComponent.css";
 import { Button } from "@mui/material";
+import "./VolunteerContactForm.css"; 
+import VolunteerContactForm from "./VolunteerContactForm";
+import { useActivation } from '@/contexts/ActivationContext';
 
 
 type MapComponentProps = {
@@ -187,6 +190,11 @@ export default function MapComponent({ centers }: MapComponentProps) {
   });
   const [isFiltersCollapsed, setIsFiltersCollapsed] = React.useState<boolean>(true); // Comenzar colapsado
 
+  //Form voluntarios
+  const [showVolunteerForm, setShowVolunteerForm] = React.useState(false);
+  const [volunteerFormCenter, setVolunteerFormCenter] = React.useState<Center | null>(null);
+
+  const { activation } = useActivation();
   // Hook de geolocalización
   const {
     location: userLocation,
@@ -239,6 +247,17 @@ export default function MapComponent({ centers }: MapComponentProps) {
       return;
     }
     requestLocation();
+  };
+
+  //Handlers para el formulario de voluntarios
+  const handleOpenVolunteerForm = (center: Center) => {
+    setVolunteerFormCenter(center);
+    setShowVolunteerForm(true);
+  };
+
+  const handleCloseVolunteerForm = () => {
+    setShowVolunteerForm(false);
+    setVolunteerFormCenter(null);
   };
 
   // Cargar filtros y estado de colapso guardados al montar el componente
@@ -406,6 +425,18 @@ export default function MapComponent({ centers }: MapComponentProps) {
                     <strong>Nivel de Abastecimiento:</strong>{" "}
                     {Number(selectedCenter.fullnessPercentage ?? 0).toFixed(0)}%
                   </p>
+
+                  {/* Botón para ofrecer servicios voluntarios */}
+                  {!isAuthenticated && selectedCenter.type === "Albergue" ||!isAuthenticated && selectedCenter.type === "Acopio" &&  (
+                    <button
+                      className="volunteer-btn"
+                      onClick={() => handleOpenVolunteerForm(selectedCenter)}
+                      type="button"
+                    >
+                      <span className="volunteer-btn-icon">🤝</span>
+                      Ofrecer Servicios Voluntarios
+                    </button>
+                  )}
                 </div>
               </InfoWindow>
             )}
@@ -423,12 +454,21 @@ export default function MapComponent({ centers }: MapComponentProps) {
           </Button>
         </div>
 
-
-
-
-
         </div>
       </APIProvider>
+
+      {/*Modal/Overlay del formulario de voluntarios */}
+      {showVolunteerForm && selectedCenter &&(
+        <div className="volunteer-form-overlay" onClick={handleCloseVolunteerForm}>
+          <div className="volunteer-form-container" onClick={(e) => e.stopPropagation()}>
+            <VolunteerContactForm
+              centerId={selectedCenter.center_id}
+              centerName={selectedCenter.name}
+              onClose={handleCloseVolunteerForm}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

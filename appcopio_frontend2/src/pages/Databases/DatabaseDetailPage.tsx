@@ -14,6 +14,7 @@ import type { DatabaseRecord } from "@/types/record";
 import axios from "axios";
 import CellEditor from "@/components/databases/CellEditor";
 import DragIndicatorRounded from "@mui/icons-material/DragIndicatorRounded";
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 
 
@@ -63,6 +64,7 @@ function slugify(s: string) {
 // COMPONENTE PRINCIPAL
 // =======================================================
 export default function DatabaseDetailPage() {
+  useScrollToTop({ behavior: 'smooth' });
   const { activation, loading: actLoading } = useActivation();
   const [loading, setLoading] = useState(true);
   const [db, setDb] = useState<any>(null);

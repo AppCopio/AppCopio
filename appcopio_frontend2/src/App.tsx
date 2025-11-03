@@ -41,6 +41,10 @@ import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
 
 import OfflineTestPage from '@/pages/System/OfflineTestPage';
 import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
+
+import ActivationsHistoryPage from '@/pages/Activations/ActivationsHistoryPage';
+import ActivationDetailPage from '@/pages/Activations/ActivationDetailPage';
+import CenterVolunteersPage from '@/pages/CenterVolunteersPage/CenterVolunteersPage';
 import ShiftsPage from "@/pages/ShiftsPage/ShiftsPage";
 import MyShiftsPage from "@/pages/MyShiftsPage/MyShiftsPage";
 
@@ -91,6 +95,9 @@ export default function App() {
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
+                  <Route path="activations" element={<ActivationsHistoryPage />} />
+                  <Route path="activations/:activationId" element={<ActivationDetailPage />} />
+
                   <Route path="shifts" element={<ShiftsPage />} />
 
                   {/* Requiere activación activa */}
@@ -98,6 +105,7 @@ export default function App() {
                     <Route path="fibe" element={<FibePage />} />
                     <Route path="databases" element={<DatabasesPage />} />
                     <Route path="databases/:id" element={<DatabaseDetailPage/>} />
+                    <Route path="volunteers" element={<CenterVolunteersPage/>} />
                   </Route>
                 </Route>
               </Route>
