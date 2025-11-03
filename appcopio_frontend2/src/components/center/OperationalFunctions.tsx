@@ -177,18 +177,17 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
           </div>
         </div>
 
-        {/* Card: Gestión de Turnos (PENDIENTE) */}
+        {/* Card: Gestión de Turnos*/}
         <div 
-          className="operational-card shifts-card disabled"
-          title="Funcionalidad en desarrollo"
+          className="operational-card shifts-card"
+          onClick={()=> navigate(`/center/${centerId}/shifts`)}
         >
           <div className="card-icon shifts-icon">
             <ScheduleIcon fontSize="large" />
           </div>
           <div className="card-content">
             <h4>Gestión de Turnos</h4>
-            <p className="card-sublabel">Próximamente</p>
-            <div className="card-badge pending">En desarrollo</div>
+            <p className="card-sublabel">Turnos de encargados de Albergue</p>
           </div>
         </div>
       </div>

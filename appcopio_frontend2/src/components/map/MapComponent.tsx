@@ -427,7 +427,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
                   </p>
 
                   {/* Botón para ofrecer servicios voluntarios */}
-                  {!isAuthenticated && selectedCenter.type === "Albergue" ||!isAuthenticated && selectedCenter.type === "Acopio" &&  (
+                  {!isAuthenticated && (selectedCenter.type === "Albergue" || selectedCenter.type === "Acopio") && (
                     <button
                       className="volunteer-btn"
                       onClick={() => handleOpenVolunteerForm(selectedCenter)}
