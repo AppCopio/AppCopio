@@ -20,6 +20,7 @@
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^7.0.2",
     "@types/pg": "^8.15.2",
     "@vis.gl/react-google-maps": "^1.5.3",
@@ -33,6 +34,7 @@
     "express-rate-limit": "^8.0.1",
     "googleapis": "^163.0.0",
     "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.9",
     "pg": "^8.16.0",
     "zod": "^4.1.5"

@@ -35,6 +35,7 @@ import notificationRoutes from "./routes/notificacionRoutes";
 import migrateRoutes from "./routes/migrate";
 import movementRoutes from "./routes/movementRoutes";
 import resourceBoxRoutes from "./routes/resourceBoxRoutes";
+import { startShiftStatusJob } from "./jobs/shiftStatusJob";
 
 dotenv.config();
 
@@ -127,6 +128,10 @@ app.listen(port, () => {
       console.error("Error al conectar con la BD al iniciar:", err);
     }
   });
+  
+  // Iniciar el cron job de actualización de estados de turnos
+  startShiftStatusJob();
+  console.log('✅ Cron job de turnos iniciado');
 });
 
 app.get("/__routes", (_req, res) => {

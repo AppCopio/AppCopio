@@ -13,6 +13,7 @@ import ShiftsCalendarView from '@/components/shifts/ShiftsCalendarView';
 import type { CenterShift, ShiftListOptions, Weekday } from '@/types/shift';
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
+import { formatShiftStatus } from '@/utils/shiftUtils';
 import './ShiftsPage.css';
 
 const WEEKDAY_NAMES = [ 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -441,7 +442,7 @@ function ShiftCard({ shift, canManage, onEdit, onCancel, onViewHistory }: ShiftC
           <p className="shift-user">👤 {shift.assigned_user_name}</p>
         </div>
         <span className={`shift-status ${shift.status}`}>
-          {shift.status}
+          {formatShiftStatus(shift.status)}
         </span>
       </div>
 
@@ -478,7 +479,7 @@ function ShiftCard({ shift, canManage, onEdit, onCancel, onViewHistory }: ShiftC
       )}
 
       <div className="shift-card-actions">
-        {canManage && shift.status === 'programado' && (
+        {canManage && (shift.status === 'programado' || shift.status === 'en_curso') && (
           <>
             <button className="btn-action btn-edit" onClick={onEdit}>
               ✏️ Editar
