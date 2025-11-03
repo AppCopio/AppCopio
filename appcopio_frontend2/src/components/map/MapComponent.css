@@ -296,3 +296,49 @@
     max-width: 200px;
   }
 }
+/* --- Estilo COMPACTO para el Botón "Ver Detalles" --- */
+
+.view-details-btn {
+    /* Diseño Base */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Colores y Fondo */
+    background-color: #007bff;
+    color: white;
+    
+    /* FORMA Y ESPACIADO COMPACTOS */
+    padding: 6px 12px; /* Reducido */
+    border: none;
+    border-radius: 16px; /* Ligeramente más compacta */
+    font-size: 12px; /* Reducido */
+    font-weight: 600; /* Menos negrita que 'bold' */
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.2px; /* Reducido */
+    
+    /* Sombra y Transiciones */
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1); /* Sombra más suave */
+    transition: background-color 0.3s ease, transform 0.15s ease, box-shadow 0.3s ease;
+}
+
+/* Efectos al pasar el ratón */
+.view-details-btn:hover {
+    background-color: #0056b3;
+    transform: translateY(-0.5px); /* Movimiento más sutil */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Estilo para el Icono */
+.view-details-btn .icon-detail {
+    margin-left: 6px; /* Espacio reducido */
+    font-size: 14px; /* Reducido */
+    line-height: 1;
+}
+
+/* Efecto al hacer click */
+.view-details-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

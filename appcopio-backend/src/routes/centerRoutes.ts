@@ -757,7 +757,7 @@ router.get('/:centerId/activations', requireAuth, listCenterActivations);
 router.get('/:centerId/activations/:activationId', requireAuth, getCenterActivationDetail);
 
 // --- Rutas de Datos Específicos del Centro ---
-router.get('/:centerId/capacity', requireAuth, getCapacity);
+router.get('/:centerId/capacity',  getCapacity);
 router.get('/:centerId/people', requireAuth, listPeople);
 router.get('/:centerID/residents', requireAuth, listGroups)
 // --- Rutas de Inventario (Existentes) ---

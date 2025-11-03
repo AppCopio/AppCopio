@@ -67,6 +67,8 @@ CREATE TABLE Centers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+
+
 CREATE TABLE Products (
     item_id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -142,6 +144,14 @@ CREATE TABLE InventoryLog (
     created_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
     family_id INT REFERENCES FamilyGroups(family_id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE CenterItemPriority (
+  center_id VARCHAR(10) REFERENCES Centers(center_id) ON DELETE CASCADE,
+  item_id INT REFERENCES Products(item_id) ON DELETE CASCADE,
+  priority TEXT CHECK (priority IN ('bajo','medio','alto')),
+  updated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (center_id, item_id)
 );
 
 -- Índice para mejorar rendimiento de consultas por familia

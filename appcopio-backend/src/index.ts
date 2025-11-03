@@ -33,6 +33,7 @@ import templateRoutes from "./routes/templateRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
 import notificationRoutes from "./routes/notificacionRoutes";
 import migrateRoutes from "./routes/migrate";
+import prioritiesRoutes from "./routes/prioritiesRoutes"; 
 import volunteerRoutes from './routes/volunteerContactRoutes';
 import movementRoutes from "./routes/movementRoutes";
 import resourceBoxRoutes from "./routes/resourceBoxRoutes";
@@ -109,6 +110,8 @@ app.use("/api/notifications", requireAuth, notificationRoutes);
 app.use("/api/migrate", migrateRoutes); // Sin requireAuth para facilitar ejecución inicial
 app.use("/api/centers", requireAuth, movementRoutes);
 app.use("/api/resource-boxes", requireAuth, resourceBoxRoutes);
+
+app.use("/api/centers",prioritiesRoutes); 
 
 
 app.use('/api/volunteers', volunteerRoutes);
