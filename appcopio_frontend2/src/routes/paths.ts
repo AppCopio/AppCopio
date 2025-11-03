@@ -44,5 +44,6 @@ export const paths = {
     activationDetail: (centerId: string | number, activationId: number) =>  `/center/${centerId}/activations/${activationId}`,
     volunteers: (centerId: string) => `/centers/${centerId}/volunteers`,
     shifts: (centerId: string | number) => `/center/${centerId}/shifts`,
+
   },
 } as const;
