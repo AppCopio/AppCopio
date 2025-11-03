@@ -20,8 +20,19 @@ import {
     updateInventoryItem as updateInventoryItemService,
     deleteInventoryItem as deleteInventoryItemService,
     getAssignedUsersByCenter as getAssignedUsersByCenter,
-    updateCenterFullness as updateCenterFullnessService
+    updateCenterFullness as updateCenterFullnessService,
+    getAllActivationsByCenter,
+    getActivationDetail
 } from '../services/centerService';
+
+// Importar funciones nuevas de inventario
+import {
+    registerInventoryExit,
+    registerMultipleExits,
+    createBox,
+    getInventoryStats
+} from '../services/inventoryService';
+
 import { sendNotification } from '../services/notificationService';
 
 import { getCenterGroups } from '../services/familyService';
@@ -35,6 +46,7 @@ const router = Router();
 // =================================================================
 
 const listCenters: RequestHandler = async (req, res) => {
+    console.log('listCenters called');
     try {
         const centers = await getAllCenters(pool);
         res.json(centers);
@@ -134,8 +146,9 @@ const deleteCenter: RequestHandler = async (req, res) => {
 // =================================================================
 
 const setActivationStatus: RequestHandler = async (req, res) => {
-    const { isActive } = req.body;
+    const { isActive, notes, assignedUserId } = req.body;
     const userId = requireUser(req).user_id;
+    
     if (typeof isActive !== 'boolean') {
         res.status(400).json({ error: 'Se requiere el campo "isActive" (boolean).' });
         return;
@@ -144,36 +157,46 @@ const setActivationStatus: RequestHandler = async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const updatedCenter = await updateActivationStatus(client, req.params.id, isActive, userId);
+        
+        const updatedCenter = await updateActivationStatus(
+            client, 
+            req.params.id, 
+            isActive, 
+            userId,
+            notes,
+            assignedUserId
+        );
+        
         if (!updatedCenter) {
             await client.query("ROLLBACK");
             res.status(404).json({ error: 'Centro no encontrado.' });
+            return;
         }
+        
         const title = `Centro ${isActive ? "activado" : "desactivado"}: ${updatedCenter.name}`;
         const message = isActive
-        ? `El centro "${updatedCenter.name}" ha sido ACTIVADO por el usuario ${userId}.`
-        : `El centro "${updatedCenter.name}" ha sido DESACTIVADO por el usuario ${userId}.`;
+            ? `El centro "${updatedCenter.name}" ha sido ACTIVADO.${notes ? ` Motivo: ${notes}` : ''}`
+            : `El centro "${updatedCenter.name}" ha sido DESACTIVADO.`;
 
-        // Destinatarios: municipal_manager_id y comunity_charge_id (evitando duplicados y nulos)
-        const recipients  = [
+        const recipients = [
             updatedCenter.municipal_manager_id ?? null,
             updatedCenter.comunity_charge_id ?? null,
-        ].filter((x) => x != null);
+            assignedUserId ?? null,
+        ].filter((x, idx, arr) => x != null && arr.indexOf(x) === idx);
         
         const notifications: Record<string, any> = {};
 
         for (const rec of recipients) {
             const role =
-                rec === updatedCenter.municipal_manager_id
-                ? "municipal_manager"
-                : rec === updatedCenter.comunity_charge_id
-                ? "comunity_charge"
+                rec === updatedCenter.municipal_manager_id ? "municipal_manager"
+                : rec === updatedCenter.comunity_charge_id ? "comunity_charge"
+                : rec === assignedUserId ? "assigned_manager"
                 : "recipient";
 
             notifications[role] = await sendNotification(client, {
                 center_id: updatedCenter.center_id,
                 activation_id: updatedCenter.activation_id ?? null,
-                destinatary: rec, // id del usuario destinatario
+                destinatary: rec,
                 title,
                 message,
                 channel: "ctrStatus_change",
@@ -184,7 +207,7 @@ const setActivationStatus: RequestHandler = async (req, res) => {
         return res.json({ ...updatedCenter, notifications });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error(`Error en setActivationStatus (id: ${req.params.id}):`, error);
+        console.error(`Error en setActivationStatus:`, error);
         res.status(500).json({ error: 'Error interno del servidor.' });
     } finally {
         client.release();
@@ -309,8 +332,6 @@ const listGroups: RequestHandler = async (req, res) => {
 };
 
 
-
-
 const getInventory: RequestHandler = async (req, res) => {
     try {
         const inventory = await getInventoryByCenterId(pool, req.params.centerId);
@@ -418,6 +439,303 @@ const listAssignedUsers: RequestHandler = async (req, res) => {
     }
 };
 
+/**
+ * @route GET /centers/:centerId/activations
+ * @desc Lista todas las activaciones (historial completo) de un centro
+ */
+const listCenterActivations: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    
+    try {
+        const activations = await getAllActivationsByCenter(pool, centerId);
+        res.json(activations);
+    } catch (error) {
+        console.error(`Error en listCenterActivations (centerId: ${centerId}):`, error);
+        res.status(500).json({ error: 'Error interno del servidor al obtener el historial de activaciones.' });
+    }
+};
+
+/**
+ * @route GET /centers/:centerId/activations/:activationId
+ * @desc Obtiene el detalle completo de una activación específica
+ */
+const getCenterActivationDetail: RequestHandler = async (req, res) => {
+    const { activationId } = req.params;
+    const activationIdNum = parseInt(activationId, 10);
+    
+    if (isNaN(activationIdNum)) {
+        res.status(400).json({ error: 'El activation_id debe ser un número válido.' });
+        return;
+    }
+    
+    try {
+        const detail = await getActivationDetail(pool, activationIdNum);
+        
+        if (!detail) {
+            res.status(404).json({ error: 'Activación no encontrada.' });
+            return;
+        }
+        
+        res.json(detail);
+    } catch (error) {
+        console.error(`Error en getCenterActivationDetail (activationId: ${activationId}):`, error);
+        res.status(500).json({ error: 'Error interno del servidor al obtener el detalle de la activación.' });
+    }
+};
+
+/**
+ * POST /centers/:centerId/inventory/exit
+ * Registra la salida de un recurso a un grupo familiar
+*/
+
+const registerExit: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    const userId = requireUser(req).user_id;
+    const { itemId, quantity, familyId, reason, notes } = req.body;
+
+    // Validaciones
+    if (!itemId || !quantity || !familyId || !reason) {
+        res.status(400).json({ 
+            error: 'Se requieren: itemId, quantity, familyId y reason.' 
+        });
+        return;
+    }
+
+    if (quantity <= 0) {
+        res.status(400).json({ error: 'La cantidad debe ser mayor a 0.' });
+        return;
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const result = await registerInventoryExit(client, centerId, {
+            itemId,
+            quantity,
+            familyId,
+            reason,
+            notes,
+            userId
+        });
+
+        await client.query('COMMIT');
+        res.status(200).json({ 
+            message: 'Salida registrada exitosamente.',
+            ...result 
+        });
+    } catch (error: any) {
+        await client.query('ROLLBACK');
+        
+        if (error.status) {
+            res.status(error.status).json({ error: error.message });
+        } else {
+            console.error(`Error en registerExit (centerId: ${centerId}):`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * POST /centers/:centerId/inventory/exit/bulk
+ * Registra múltiples salidas de inventario en una sola operación
+ */
+const registerBulkExit: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    const userId = requireUser(req).user_id;
+    const { exits } = req.body;
+
+    if (!Array.isArray(exits) || exits.length === 0) {
+        res.status(400).json({ 
+            error: 'Se requiere un array "exits" con al menos una salida.' 
+        });
+        return;
+    }
+
+    // Validar que todas las salidas tengan los campos requeridos
+    for (const exit of exits) {
+        if (!exit.itemId || !exit.quantity || !exit.familyId || !exit.reason) {
+            res.status(400).json({ 
+                error: 'Cada salida debe tener: itemId, quantity, familyId y reason.' 
+            });
+            return;
+        }
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Añadir userId a cada salida
+        const exitsWithUser = exits.map(exit => ({ ...exit, userId }));
+        
+        const results = await registerMultipleExits(client, centerId, exitsWithUser);
+
+        await client.query('COMMIT');
+        res.status(200).json({ 
+            message: `${results.length} salidas registradas exitosamente.`,
+            exits: results 
+        });
+    } catch (error: any) {
+        await client.query('ROLLBACK');
+        
+        if (error.status) {
+            res.status(error.status).json({ error: error.message });
+        } else {
+            console.error(`Error en registerBulkExit (centerId: ${centerId}):`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * POST /centers/:centerId/inventory/box
+ * Crea una "caja" con múltiples recursos para optimizar registro
+ */
+const createInventoryBox: RequestHandler = async (req, res) => {
+    const { centerId } = req.params;
+    const userId = requireUser(req).user_id;
+    const { name, description, items } = req.body;
+
+    // Validaciones
+    if (!name || !items || !Array.isArray(items) || items.length === 0) {
+        res.status(400).json({ 
+            error: 'Se requieren: name y un array "items" con al menos un elemento.' 
+        });
+        return;
+    }
+
+    // Validar que cada ítem tenga los datos necesarios
+    for (const item of items) {
+        if (!item.quantity || item.quantity <= 0) {
+            res.status(400).json({ 
+                error: 'Cada ítem debe tener una quantity > 0.' 
+            });
+            return;
+        }
+
+        if (!item.itemId && !item.itemName) {
+            res.status(400).json({ 
+                error: 'Cada ítem debe tener itemId o itemName.' 
+            });
+            return;
+        }
+
+        // Si se crea un ítem nuevo, validar campos requeridos
+        if (item.itemName && (!item.categoryId || !item.unit)) {
+            res.status(400).json({ 
+                error: 'Para ítems nuevos se requiere: itemName, categoryId y unit.' 
+            });
+            return;
+        }
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const result = await createBox(client, centerId, {
+            name,
+            description,
+            items,
+            userId
+        });
+
+        await client.query('COMMIT');
+        res.status(201).json({
+            message: 'Caja creada exitosamente.',
+            ...result
+        });
+    } catch (error: any) {
+        await client.query('ROLLBACK');
+        
+        if (error.status) {
+            res.status(error.status).json({ error: error.message });
+        } else {
+            console.error(`Error en createInventoryBox (centerId: ${centerId}):`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * GET /centers/:centerId/inventory/stats
+ * Obtiene estadísticas de movimientos de inventario
+ */
+const getInventoryStatistics: RequestHandler = async (req, res) => {
+    try {
+        const days = req.query.days ? parseInt(req.query.days as string) : 30;
+        const stats = await getInventoryStats(pool, req.params.centerId, days);
+        res.json(stats);
+    } catch (error) {
+        console.error(`Error en getInventoryStats (centerId: ${req.params.centerId}):`, error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+};
+
+/**
+ * GET /api/centers/:centerId/available-workers
+ * Obtiene usuarios disponibles para asignar turnos en un centro:
+ * - Usuarios ya asignados al centro (con asignación activa: valid_to IS NULL)
+ * - Usuarios sin ninguna asignación de centro activa
+ * Excluye familias (role_id = 4) y usuarios inactivos
+ */
+const listAvailableWorkers: RequestHandler = async (req, res) => {
+    try {
+        const centerId = req.params.centerId;
+        
+        const query = `
+            SELECT DISTINCT
+                u.user_id,
+                u.email,
+                u.nombre,
+                u.role_id,
+                r.role_name,
+                u.is_active,
+                CASE 
+                    WHEN ca.user_id IS NOT NULL THEN true 
+                    ELSE false 
+                END as is_assigned_to_center
+            FROM Users u
+            INNER JOIN Roles r ON u.role_id = r.role_id
+            LEFT JOIN CenterAssignments ca ON u.user_id = ca.user_id 
+                AND ca.center_id = $1 
+                AND ca.valid_to IS NULL  -- Solo asignaciones activas
+            WHERE u.is_active = true 
+            AND u.role_id = 3
+            AND (
+                -- Usuario está asignado a este centro (asignación activa)
+                u.user_id IN (
+                    SELECT user_id 
+                    FROM CenterAssignments 
+                    WHERE center_id = $1 
+                    AND valid_to IS NULL
+                )
+                OR
+                -- Usuario no tiene ninguna asignación activa de centro
+                u.user_id NOT IN (
+                    SELECT user_id 
+                    FROM CenterAssignments
+                    WHERE valid_to IS NULL
+                )
+            )
+            ORDER BY is_assigned_to_center DESC, u.nombre ASC
+        `;
+        
+        const result = await pool.query(query, [centerId]);
+        res.json({ users: result.rows });
+    } catch (error) {
+        console.error(`Error en listAvailableWorkers (centerId: ${req.params.centerId}):`, error);
+        res.status(500).json({ error: 'Error al obtener usuarios disponibles.' });
+    }
+};
+
 // =================================================================
 // 4. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
@@ -435,17 +753,26 @@ router.patch('/:id/operational-status', requireAuth, setOperationalStatus);
 router.patch('/:id/fullness', requireAuth, updateFullness);
 router.get('/status/active', requireAuth, listActiveCenters);
 router.get('/:id/activation', requireAuth, getCenterActiveActivation);
+router.get('/:centerId/activations', requireAuth, listCenterActivations);
+router.get('/:centerId/activations/:activationId', requireAuth, getCenterActivationDetail);
 
 // --- Rutas de Datos Específicos del Centro ---
 router.get('/:centerId/capacity',  getCapacity);
 router.get('/:centerId/people', requireAuth, listPeople);
 router.get('/:centerID/residents', requireAuth, listGroups)
-// --- Rutas de Inventario ---
+// --- Rutas de Inventario (Existentes) ---
 router.get('/:centerId/inventory', requireAuth, getInventory);
 router.post('/:centerId/inventory', requireAuth, addInventoryItem);
 router.put('/:centerId/inventory/:itemId', requireAuth, updateInventoryItem);
 router.delete('/:centerId/inventory/:itemId', requireAuth, deleteInventoryItem);
 
-router.get('/:centerId/assigned-users', requireAuth, listAssignedUsers); 
+// --- Rutas de Inventario (NUEVAS para HDU) ---
+router.post('/:centerId/inventory/exit', requireAuth, registerExit);
+router.post('/:centerId/inventory/exit/bulk', requireAuth, registerBulkExit);
+router.post('/:centerId/inventory/box', requireAuth, createInventoryBox);
+router.get('/:centerId/inventory/stats', requireAuth, getInventoryStatistics);
+
+router.get('/:centerId/assigned-users', requireAuth, listAssignedUsers);
+router.get('/:centerId/available-workers', requireAuth, listAvailableWorkers);
 
 export default router;

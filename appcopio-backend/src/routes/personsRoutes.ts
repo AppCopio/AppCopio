@@ -2,7 +2,15 @@
 import { Router, RequestHandler } from 'express';
 import pool from '../config/db';
 import { Person, FibePersonData } from '../types/person';
-import { getPersons, getPersonById, createPersonDB, updatePersonById,getPersonDetailsWithFamily } from '../services/personService';
+import { 
+    getPersons, 
+    getPersonById, 
+    createPersonDB, 
+    updatePersonById,
+    getPersonDetailsWithFamily,
+    searchPersons,
+    PersonSearchFilters
+} from '../services/personService';
 
 const router = Router();
 
@@ -135,10 +143,40 @@ const getPersonDetailsEnriched: RequestHandler = async (req, res) => {
     }
 };
 
+/**
+ * @controller GET /api/persons/search
+ * @description Busca personas por RUT, nombre o centro.
+ * @query rut - RUT de la persona (parcial, normalizado)
+ * @query nombre - Nombre completo de la persona (parcial, case-insensitive)
+ * @query center_id - ID del centro donde está albergada
+ */
+const searchPersonsHandler: RequestHandler = async (req, res) => {
+    try {
+        const filters: PersonSearchFilters = {
+            rut: req.query.rut as string | undefined,
+            nombre: req.query.nombre as string | undefined,
+            center_id: req.query.center_id as string | undefined
+        };
+
+        // Validar que al menos un filtro esté presente
+        if (!filters.rut && !filters.nombre && !filters.center_id) {
+            res.status(400).json({ error: "Debes proporcionar al menos un criterio de búsqueda (rut, nombre o center_id)." });
+            return;
+        }
+
+        const results = await searchPersons(pool, filters);
+        res.json(results);
+    } catch (error) {
+        console.error("Error en searchPersons:", error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+};
+
 // =================================================================
 // 2. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
 
+router.get('/search', searchPersonsHandler); // IMPORTANTE: Debe ir ANTES de '/:id'
 router.get('/', listPersons);
 router.post('/', createPerson);
 router.get('/:id', getPerson);

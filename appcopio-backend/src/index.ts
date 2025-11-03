@@ -22,6 +22,7 @@ import familyMembersRoutes from "./routes/familyMembersRoutes";
 import fibeRoutes from "./routes/fibeRoutes";
 import roleRoutes from "./routes/roleRoutes";
 import zoneRoutes from "./routes/zoneRoutes";
+import shiftRoutes from "./routes/shiftRoutes";
 import {requireAuth} from "./auth/middleware";
 import csvRoutes from "./routes/csvRoutes";
 
@@ -33,6 +34,9 @@ import auditLogRoutes from "./routes/auditLogRoutes";
 import notificationRoutes from "./routes/notificacionRoutes";
 import migrateRoutes from "./routes/migrate";
 import prioritiesRoutes from "./routes/prioritiesRoutes"; 
+import volunteerRoutes from './routes/volunteerContactRoutes';
+import movementRoutes from "./routes/movementRoutes";
+import resourceBoxRoutes from "./routes/resourceBoxRoutes";
 
 dotenv.config();
 
@@ -94,6 +98,7 @@ app.use("/api/fibe", requireAuth, fibeRoutes);
 app.use("/api/roles", requireAuth, roleRoutes);
 app.use("/api/csv/upload", requireAuth, csvRoutes);
 app.use("/api/zones", requireAuth, zoneRoutes); 
+app.use("/api/shifts", requireAuth, shiftRoutes);
 
 app.use("/api/database", requireAuth, databaseRoutes);
 app.use("/api/database-fields", requireAuth, fieldRoutes);
@@ -102,10 +107,13 @@ app.use("/api/database-templates", requireAuth, templateRoutes);
 app.use("/api/database-history", requireAuth, auditLogRoutes);
 app.use("/api/notifications", requireAuth, notificationRoutes);
 app.use("/api/migrate", migrateRoutes); // Sin requireAuth para facilitar ejecución inicial
+app.use("/api/centers", requireAuth, movementRoutes);
+app.use("/api/resource-boxes", requireAuth, resourceBoxRoutes);
 
 app.use("/api/centers",prioritiesRoutes); 
 
 
+app.use('/api/volunteers', volunteerRoutes);
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {

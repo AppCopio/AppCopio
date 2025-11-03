@@ -26,6 +26,7 @@ import NeedsFormPage from "@/pages/NeedsFormPage/NeedsFormPage";
 import NeedsStatusPage from "@/pages/NeedsStatusPage/NeedsStatusPage";
 import UpdatesPage from "@/pages/UpdatesPage/UpdatesPage";
 import InventoryHistoryPage from "@/pages/InventoryHistoryPage/InventoryHistoryPage";
+import MovementHistoryPage from "@/pages/MovementHistoryPage/MovementHistoryPage";
 import MisCentrosPage from "@/pages/MisCentrosPage/MisCentrosPage";
 import FibePage from "@/pages/FibePage/FibePage";
 import CenterResidentsPage from "@/pages/CenterResidentsPage/CenterResidentsPage";
@@ -40,6 +41,12 @@ import DatabaseDetailPage from "@/pages/Databases/DatabaseDetailPage";
 
 import OfflineTestPage from '@/pages/System/OfflineTestPage';
 import CsvUploadPage from "@/pages/CsvUploadPage/CsvUploadPage";
+
+import ActivationsHistoryPage from '@/pages/Activations/ActivationsHistoryPage';
+import ActivationDetailPage from '@/pages/Activations/ActivationDetailPage';
+import CenterVolunteersPage from '@/pages/CenterVolunteersPage/CenterVolunteersPage';
+import ShiftsPage from "@/pages/ShiftsPage/ShiftsPage";
+import MyShiftsPage from "@/pages/MyShiftsPage/MyShiftsPage";
 
 
 export default function App() {
@@ -75,6 +82,7 @@ export default function App() {
               <Route path={paths.profile} element={<MyUserPage />} />
               <Route path={paths.myCenters} element={<MisCentrosPage />} />
               <Route path={paths.notifications} element={<NotificationsPage />} />
+              <Route path={paths.myShifts} element={<MyShiftsPage />} />
 
               {/* center/:centerId con hijos relativos + providers/guards */}
               <Route path={paths.center.pattern} element={<CenterLayout />}>
@@ -82,16 +90,22 @@ export default function App() {
                   <Route path="details" element={<CenterDetailsPage />} />
                   <Route path="inventory" element={<InventoryPage />} />
                   <Route path="inventory/history" element={<InventoryHistoryPage />} />
+                  <Route path="movements/history" element={<MovementHistoryPage />} />
                   <Route path="needs/new" element={<NeedsFormPage />} />
                   <Route path="needs/status" element={<NeedsStatusPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
+                  <Route path="activations" element={<ActivationsHistoryPage />} />
+                  <Route path="activations/:activationId" element={<ActivationDetailPage />} />
+
+                  <Route path="shifts" element={<ShiftsPage />} />
 
                   {/* Requiere activación activa */}
                   <Route element={<RequireCenterActive/>}>
                     <Route path="fibe" element={<FibePage />} />
                     <Route path="databases" element={<DatabasesPage />} />
                     <Route path="databases/:id" element={<DatabaseDetailPage/>} />
+                    <Route path="volunteers" element={<CenterVolunteersPage/>} />
                   </Route>
                 </Route>
               </Route>

@@ -1,4 +1,3 @@
-// src/pages/CenterResidentsPage/CenterResidentsPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./CenterResidentsPage.css";
@@ -6,7 +5,18 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { saveAs } from "file-saver";
 import Papa from "papaparse";
-
+import { useScrollToTop } from '@/hooks/useScrollToTop';
+import type { CenterData, Center } from "@/types/center";
+import { 
+  Groups as GroupsIcon, 
+  Person as PersonIcon,
+  Visibility as ViewIcon,
+  Edit as EditIcon,
+  Logout as ExitIcon,
+  PersonSearch as PersonSearchIcon, // (Lo agrego por si lo usamos después)
+  FileDownload as FileDownloadIcon,
+  IosShare as IosShareIcon
+} from "@mui/icons-material";
 import {
   ActiveCenter,
   CapacityInfo,
@@ -21,11 +31,11 @@ import {
   listPeopleByCenter,
   listActiveCenters,
   registerFamilyDeparture,
-  getFamilyDetails,
-  getPersonDetailsEnriched,
+  getFamilyDetails,
+  getPersonDetailsEnriched,
 } from "@/services/residents.service";
 import { NEEDS_OPTIONS } from "@/types/fibe";
-
+import PersonEditModal from "@/components/center/PersonEditModal";
 const toISODate = (s?: string) => {
   if (!s) return "";
   const iso = s.includes(" ") ? s.replace(" ", "T") : s; // "YYYY-MM-DDTHH:mm:ssZ"
@@ -40,9 +50,10 @@ const formatCL = (s?: string) => {
 };
 
 const CenterResidentsPage: React.FC = () => {
-  const { centerId } = useParams<{ centerId: string }>();
-  const navigate = useNavigate();
 
+  useScrollToTop({ behavior: 'smooth' });
+  const { centerId } = useParams<{ centerId: string }>();
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<ResidentGroup[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
 
@@ -66,6 +77,7 @@ const CenterResidentsPage: React.FC = () => {
   const [activeCenters, setActiveCenters] = useState<ActiveCenter[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [center, setCenter] = useState<CenterData | null>(null);
   const [centerCapacity, setCenterCapacity] = useState<number>(0);
   const [currentCapacity, setCurrentCapacity] = useState<number>(0);
   const [availableCapacity, setAvailableCapacity] = useState<number>(0);
@@ -81,37 +93,44 @@ const CenterResidentsPage: React.FC = () => {
   const [personDetails, setPersonDetails] = useState<PersonDetailsEnriched | null>(null);
   const [isPersonDetailsLoading, setIsPersonDetailsLoading] = useState(false);
   const [personDetailsError, setPersonDetailsError] = useState<string | null>(null);
-  const [familyDetailsMap, setFamilyDetailsMap] = useState<Record<number, any>>({});
-  
-  const [isAnyDetailsLoading, setIsAnyDetailsLoading] = useState(false);
+  const [familyDetailsMap, setFamilyDetailsMap] = useState<Record<number, any>>({});
+  
+  const [isAnyDetailsLoading, setIsAnyDetailsLoading] = useState(false);
 
-  // EXPORTS
-  const LOGO_PATH = "/logoMuni/munilogo.png"; // dentro de /public
+  // Estados para modal de edición - HdU31
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingFamilyId, setEditingFamilyId] = useState<number | null>(null);
 
-  async function addLogo(doc: jsPDF) {
-    const img = new Image();
-    img.src = LOGO_PATH;
-    try {
-      if ((img as any).decode) {
-        await img.decode();
-      } else {
-        await new Promise((res, rej) => {
-          img.onload = () => res(null);
-          img.onerror = rej;
-        });
-      }
-      doc.addImage(img, "PNG", 12, 10, 16, 16);
-    } catch {
-      // seguir sin logo si falla
-    }
-  }
+  // Estados para el modal de exportación
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportType, setExportType] = useState<"families" | "people">("families");
+  const [exportFormat, setExportFormat] = useState<"pdf" | "csv">("pdf");
 
-  const exportToPDF = async () => {
+  // EXPORTS
+  const LOGO_PATH = "/logoMuni/munilogo.png"; // dentro de /public
+
+  async function addLogo(doc: jsPDF) {
+    try {
+      const img = new Image();
+      img.src = LOGO_PATH;
+      if ((img as any).decode) {
+        await img.decode();
+      } else {
+        await new Promise((res, rej) => {
+          img.onload = () => res(null);
+          img.onerror = rej;
+        });
+      }
+      doc.addImage(img, "PNG", 12, 10, 16, 16);
+    } catch {
+      // seguir sin logo si falla
+    }
+  } const exportToPDF = async (type: "families" | "people") => {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
     await addLogo(doc);
     const currentDate = new Date().toLocaleString();
-    const title = showFamilies
+    const title = (type === "families")
       ? `Listado de Familias - Centro ${centerId}`
       : `Listado de Personas - Centro ${centerId}`;
 
@@ -120,7 +139,7 @@ const CenterResidentsPage: React.FC = () => {
     doc.setFontSize(9);
     doc.text(`Fecha de descarga: ${currentDate}`, 32, 25);
 
-    const head = showFamilies
+    const head = (type === "families")
       ? [["Nombre Jefe/a de Hogar", "RUT", "Nº Integrantes"]]
       : [
           [
@@ -142,7 +161,7 @@ const CenterResidentsPage: React.FC = () => {
           ],
         ];
 
-    const body = showFamilies
+    const body = (type === "families")
       ? groups.map((g) => [g.nombre_completo, g.rut, g.integrantes_grupo])
       : people.map((p) => [
           `${p.nombre} ${p.primer_apellido} ${p.segundo_apellido || ""}`.trim(),
@@ -194,7 +213,7 @@ const CenterResidentsPage: React.FC = () => {
         cellPadding: 0.6,
         minCellHeight: 5,
       },
-      columnStyles: showFamilies
+      columnStyles: (type === "families")
         ? {
             0: { cellWidth: 90, halign: "left" },
             1: { cellWidth: 40, halign: "center" },
@@ -220,11 +239,11 @@ const CenterResidentsPage: React.FC = () => {
       margin,
     });
 
-    doc.save(`Listado_${showFamilies ? "Familias" : "Personas"}_${centerId}.pdf`);
+    doc.save(`Listado_${(type === "families") ? "Familias" : "Personas"}_${centerId}.pdf`);
   };
 
-  const exportToCSV = () => {
-    const headers = showFamilies
+  const exportToCSV = (type: "families" | "people") => {
+    const headers = (type === "families")
       ? ["nombre_completo", "rut", "integrantes_grupo"]
       : [
           "nombre",
@@ -246,7 +265,7 @@ const CenterResidentsPage: React.FC = () => {
 
     type Row = Record<string, string | number | null | undefined>;
 
-    const rows: Row[] = showFamilies
+    const rows: Row[] = (type === "families")
       ? groups.map((g) => ({
           nombre_completo: g.nombre_completo,
           rut: g.rut,
@@ -286,7 +305,7 @@ const CenterResidentsPage: React.FC = () => {
     const csv = "sep=;\r\n" + csvCore;
     const csvWithBOM = "\uFEFF" + csv;
     const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, `Listado_${showFamilies ? "Familias" : "Personas"}_${centerId}.csv`);
+    saveAs(blob, `Listado_${(type === "families") ? "Familias" : "Personas"}_${centerId}.csv`);
   };
 
   // DATA LOAD
@@ -391,6 +410,64 @@ const CenterResidentsPage: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handlers para modal de edici�n - HdU31
+  const handleOpenEditModal = (familyId: number) => {
+    setEditingFamilyId(familyId);
+    setEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setEditingFamilyId(null);
+  };
+
+  const handleSaveSuccess = async () => {
+    // Recargar datos del acorde�n despu�s de guardar
+    if (centerId) {
+      try {
+        if (showFamilies) {
+          // Modo familias: recargar lista y detalles si est� abierto
+          const grps = await listResidentGroups(centerId);
+          setGroups(grps);
+          if (openDetailsFamilyId) {
+            const details = await getFamilyDetails(openDetailsFamilyId);
+            setFamilyDetails(details);
+          }
+        } else {
+          // Modo personas: recargar lista y detalles si est� abierto
+          const ppl = await listPeopleByCenter(centerId, filters);
+          setPeople(ppl);
+          if (editingFamilyId && familyDetailsMap[editingFamilyId]) {
+            const details = await getFamilyDetails(editingFamilyId);
+            setFamilyDetailsMap({ ...familyDetailsMap, [editingFamilyId]: details });
+          }
+        }
+      } catch (err) {
+        console.error("Error recargando datos tras edici�n:", err);
+      }
+    }
+    handleCloseEditModal();
+  };
+  // Handlers para el nuevo modal de exportación
+  const handleOpenExportModal = () => {
+    // Sincroniza la opción por defecto del modal con la pestaña activa
+    setExportType(showFamilies ? "families" : "people");
+    setIsExportModalOpen(true);
+  };
+
+  const handleCloseExportModal = () => {
+    setIsExportModalOpen(false);
+  };
+
+  const handlePerformExport = async () => {
+    if (exportFormat === "pdf") {
+      await exportToPDF(exportType);
+    } else if (exportFormat === "csv") {
+      exportToCSV(exportType);
+    }
+    handleCloseExportModal();
   };
 
   const translateNeedCode = (code: number): string => {
@@ -594,15 +671,26 @@ const CenterResidentsPage: React.FC = () => {
   return (
     <div className="residents-container">
       <div className="residents-header">
-        <button onClick={() => navigate(-1)} className="back-button">
-          ← Volver
-        </button>
-        <h2>Familias/Personas Albergadas - Centro {centerId}</h2>
-      </div>
+        {/* Sección Izquierda */}
+        <div className="header-left">
+          <button onClick={() => navigate(-1)} className="back-button">
+            ← Volver
+          </button>
+          <h2>Familias/Personas Albergadas - Centro {centerId}</h2>
+        </div>
+
+        {/* Sección Derecha (Botón de Exportar) */}
+        <div className="header-right">
+          <button onClick={handleOpenExportModal} className="btn-export-new">
+            <IosShareIcon />
+            <span>Exportar</span>
+          </button>
+        </div>
+      </div>
 
       <div className="capacity-info">
         <p>
-          <strong>Capacidad Total:</strong> {centerCapacity}
+          <strong>Capacidad Total:</strong> {center?.capacity}
         </p>
         <p>
           <strong>Ocupado:</strong> {currentCapacity}
@@ -612,35 +700,36 @@ const CenterResidentsPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="export-buttons" style={{ marginBottom: "1rem" }}>
-        <button onClick={exportToPDF} className="export-btn">
-          Exportar a PDF
-        </button>
-        <button onClick={exportToCSV} className="export-btn">
-          Exportar a Excel
-        </button>
-      </div>
+
 
       <div className="navigate-button">
         <button
-          onClick={() => setShowFamilies(true)}
-          className={`navigate-btn ${showFamilies ? "active" : ""}`}
-          aria-pressed={showFamilies}
-        >
-          Ver Listado de Familias
-        </button>
+    onClick={() => setShowFamilies(true)}
+    className={`Maps-btn ${showFamilies ? "active" : ""}`}
+    aria-pressed={showFamilies}
+  >
+    <GroupsIcon /> <span>Ver Listado de Familias</span>
+  </button>
         <button
-          onClick={() => setShowFamilies(false)}
-          className={`navigate-btn ${!showFamilies ? "active" : ""}`}
-          aria-pressed={!showFamilies}
-        >
-          Ver Listado de Personas
-        </button>
+    onClick={() => setShowFamilies(false)}
+    className={`Maps-btn ${!showFamilies ? "active" : ""}`}
+    aria-pressed={!showFamilies}
+  >
+    <PersonIcon /> <span>Ver Listado de Personas</span>
+  </button>
       </div>
 
       {showFamilies ? (
-        <div>
-          {groups.length === 0 ? (
+        <section className="residents-section">
+          <div className="section-header">
+            <div className="section-title">
+              <GroupsIcon className="section-icon" />
+              <h2>Vista por Grupos Familiares</h2>
+              <span className="section-count">({groups.length} grupos)</span>
+            </div>
+          </div>
+          <div className="section-content">
+            {groups.length === 0 ? (
             <p>No hay familias registradas actualmente en este centro.</p>
           ) : (
             <table className="residents-table">
@@ -660,21 +749,25 @@ const CenterResidentsPage: React.FC = () => {
                       <td>{resident.rut}</td>
                       <td>{resident.integrantes_grupo}</td>
                       <td>
-                        <button
-                          onClick={() => handleOpenFamilyDetails(resident.family_id)}
-                          disabled={isAnyDetailsLoading}
-                          className="action-btn action-btn-view"
-                          style={{
-                            marginRight: "8px",
-                            backgroundColor: openDetailsFamilyId === resident.family_id ? "#dc3545" : "#007bff",
-                          }}
-                        >
-                          {openDetailsFamilyId === resident.family_id ? "Ocultar Detalles" : "Ver Detalles"}
-                        </button>
+                        {/* Envolvemos los botones para mejor styling */}
+                          <div className="action-button-group">
+                            <button
+                              onClick={() => handleOpenFamilyDetails(resident.family_id)}
+                              disabled={isAnyDetailsLoading}
+                              className="action-btn action-btn-view"
+                              style={{
+                                marginRight: "8px",
+                                backgroundColor: openDetailsFamilyId === resident.family_id ? "#dc3545" : "#007bff",
+                              }}
+                            >
+                              <ViewIcon /> 
+                              <span>{openDetailsFamilyId === resident.family_id ? "Ocultar" : "Ver Detalles"}</span>
+                            </button>
 
-                        <button onClick={() => handleOpenExitModal(resident)} className="action-btn">
-                          Registrar Salida
-                        </button>
+                            <button onClick={() => handleOpenExitModal(resident)} className="action-btn action-btn-exit">
+                              <ExitIcon /> <span>Registrar Salida</span>
+                            </button>
+                          </div>
                       </td>
                     </tr>
 
@@ -813,6 +906,25 @@ const CenterResidentsPage: React.FC = () => {
                                       </tbody>
                                     </table>
                                   </div>
+
+                                  {/* Boton Editar Familia - HdU31 */}
+                                  <div style={{ marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #ddd", textAlign: "right" }}>
+                                    <button
+                                      onClick={() => handleOpenEditModal(resident.family_id)}
+                                      className="action-btn action-btn-edit"
+                                      style={{
+                                        backgroundColor: "#28a745",
+                                        color: "white",
+                                        padding: "10px 20px",
+                                        border: "none",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                       <EditIcon /> <span>Editar Familia</span>
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -825,7 +937,8 @@ const CenterResidentsPage: React.FC = () => {
               </tbody>
             </table>
           )}
-        </div>
+        </div> {/* Cierre del .section-content */}
+        </section> 
       ) : (
         <div>
           <section className="filters-card filters-compact" aria-labelledby="filters-title">
@@ -926,16 +1039,17 @@ const CenterResidentsPage: React.FC = () => {
                         <td>{person.dependencia ? "Sí" : "No"}</td>
                         <td>
                           <button
-                            onClick={() => handleOpenPersonDetails(person.person_id)}
-                            disabled={isAnyDetailsLoading}
-                            className="action-btn action-btn-view"
-                            style={{
-                              marginRight: "8px",
-                              backgroundColor: openDetailsPersonId === person.person_id ? "#dc3545" : "#007bff",
-                            }}
-                          >
-                            {openDetailsPersonId === person.person_id ? "Ocultar Detalles" : "Ver Detalles"}
-                          </button>
+                            onClick={() => handleOpenPersonDetails(person.person_id)}
+                            disabled={isAnyDetailsLoading}
+                            className="action-btn action-btn-view"
+                            style={{
+                              marginRight: "8px",
+                              backgroundColor: openDetailsPersonId === person.person_id ? "#dc3545" : "#007bff",
+                            }}
+                          >
+                            <ViewIcon />
+                            <span>{openDetailsPersonId === person.person_id ? "Ocultar" : "Ver Detalles"}</span>
+                          </button>
                         </td>
                       </tr>
 
@@ -1078,6 +1192,25 @@ const CenterResidentsPage: React.FC = () => {
                                                   </tbody>
                                                 </table>
                                               </div>
+
+                                              {/* Bot�n Editar Familia - HdU31 (desde persona) */}
+                                              <div style={{ marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #ddd", textAlign: "right" }}>
+                                                <button
+                                                  onClick={() => handleOpenEditModal(lastMembership.family_id)}
+                                                  className="action-btn"
+                                                  style={{
+                                                    backgroundColor: "#28a745",
+                                                    color: "white",
+                                                    padding: "10px 20px",
+                                                    border: "none",
+                                                    borderRadius: "4px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "bold",
+                                                  }}
+                                                >
+                                                   Editar Familia
+                                                </button>
+                                              </div>
                                             </div>
                                           );
                                         }
@@ -1155,11 +1288,100 @@ const CenterResidentsPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+          </div>
+        </div>
+      )}
 
-export default CenterResidentsPage;
+      {/* Modal de edición - HdU31 */}
+      {editModalOpen && editingFamilyId && (
+        <PersonEditModal
+          open={editModalOpen}
+          onClose={handleCloseEditModal}
+          familyId={editingFamilyId}
+          onSaveSuccess={handleSaveSuccess}
+        />
+      )}
+      {/* --- INICIO: Nuevo Modal de Exportación --- */}
+      {isExportModalOpen && (
+      <div className="modal-overlay">
+        <div className="modal-content export-modal">
+          <h3>Exportar Datos</h3>
+
+          {/* Pregunta 1: Qué exportar */}
+          <div className="form-group">
+            <label>¿Qué desea exportar?</label>
+            <div className="radio-group">
+              <label>
+                <input
+                  type="radio"
+                  name="exportType"
+                  value="families"
+                  checked={exportType === "families"}
+                  onChange={() => setExportType("families")}
+                />
+                Grupos Familiares
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="exportType"
+                  value="people"
+                  checked={exportType === "people"}
+                  onChange={() => setExportType("people")}
+                />
+                Lista de Personas
+              </label>
+            </div>
+          </div>
+
+          {/* Pregunta 2: Formato */}
+          <div className="form-group">
+            <label>Seleccione el formato:</label>
+            <div className="radio-group">
+              <label>
+                <input
+                  type="radio"
+                  name="exportFormat"
+                  value="pdf"
+                  checked={exportFormat === "pdf"}
+                  onChange={() => setExportFormat("pdf")}
+                />
+                PDF (.pdf)
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="exportFormat"
+                  value="csv"
+                  checked={exportFormat === "csv"}
+                  onChange={() => setExportFormat("csv")}
+                />
+                Excel (.csv)
+              </label>
+            </div>
+          </div>
+
+          {/* Acciones del Modal */}
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleCloseExportModal}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handlePerformExport}
+            >
+              Exportar
+            </button>
+          </div>
+        </div>
+      </div>
+      )}
+      {/* --- FIN: Nuevo Modal de Exportación --- */}
+    </div>
+  );
+};export default CenterResidentsPage;

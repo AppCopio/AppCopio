@@ -7,7 +7,7 @@
 // src/services/centers.service.ts (o centerApi.ts)
 import { api } from "@/lib/api";
 import { isCancelError } from "@/lib/errors";
-import type { Center, ActiveActivation, CenterData} from "@/types/center"; 
+import type { Center, ActiveActivation, CenterData, ActivationInfo} from "@/types/center"; 
 import type { InventoryItem } from "@/types/inventory"; 
 import type { User } from "@/types/user"; 
 // =================================================================
@@ -329,11 +329,55 @@ export async function deleteCenter(centerId: string, signal?: AbortSignal): Prom
 /**
  * Activa o desactiva un centro.
  */
-export async function updateCenterStatus(centerId: string, isActive: boolean, userId: number, signal?: AbortSignal): Promise<void> {
+export async function updateCenterStatus(
+  centerId: string,
+  isActive: boolean,
+  userId: number,
+  options?: {
+    notes?: string;
+    assignedUserIds?: number[];  // ← CAMBIO: Ahora es array
+  },
+  signal?: AbortSignal
+) {
   try {
-    await api.patch(`/centers/${centerId}/status`, { isActive, userId }, { signal });
+    const payload: any = {
+      isActive,
+    };
+
+    if (isActive && options) {
+      payload.notes = options.notes;
+      
+      // CAMBIO: Si hay múltiples IDs, enviar el primero como assignedUserId
+      // y los demás los asignaremos después
+      if (options.assignedUserIds && options.assignedUserIds.length > 0) {
+        payload.assignedUserId = options.assignedUserIds[0];
+      }
+    }
+
+    const { data } = await api.patch(`/centers/${centerId}/status`, payload, { signal });
+    
+    // Si hay más encargados, asignarlos después de la activación
+    if (isActive && options?.assignedUserIds && options.assignedUserIds.length > 1) {
+      const activationId = data.activation_id;
+      
+      if (activationId) {
+        // Importar la función desde assignments.service
+        const { createActivationAssignment } = await import('./assignments.service');
+        
+        // Asignar los encargados restantes (desde el índice 1)
+        for (let i = 1; i < options.assignedUserIds.length; i++) {
+          try {
+            await createActivationAssignment(activationId, options.assignedUserIds[i]);
+          } catch (err) {
+            console.error(`Error asignando usuario ${options.assignedUserIds[i]}:`, err);
+          }
+        }
+      }
+    }
+    
+    return data;
   } catch (error) {
-    console.error(`Error updating status for center ${centerId}:`, error);
+    console.error(`Error updating center status ${centerId}:`, error);
     throw error;
   }
 }
@@ -360,7 +404,6 @@ export async function updateOperationalStatus(centerId: string, newStatusUi: Ope
  */
 export async function getCenterCapacity(
     centerId: string, 
-    signal?: AbortSignal
 ): Promise<{ 
     total_capacity: number;
     current_capacity: number;
@@ -368,7 +411,7 @@ export async function getCenterCapacity(
 } | null> { // <-- CAMBIO: Usamos un tipo anónimo aquí
     try {
         // La llamada a la API no necesita cambiar, solo el tipo de retorno de la función.
-        const { data } = await api.get(`/centers/${centerId}/capacity`, { signal });
+        const { data } = await api.get(`/centers/${centerId}/capacity`);
         return data;
     } catch (error) {
         if (isCancelError(error)) return null;
@@ -421,4 +464,130 @@ export async function listAssignedUsersToCenter(centerId: string, signal?: Abort
         // Lanzamos el error para que el componente que exporta pueda manejarlo (e.g., mostrar mensaje).
         throw error; 
     }
+}
+
+import type { 
+  ActivationHistoryItem, 
+  ActivationDetail, 
+} from "@/types/center";
+
+/**
+ * Obtiene el historial completo de activaciones de un centro
+ * @param centerId - ID del centro
+ * @param signal - AbortSignal para cancelar la petición
+ * @returns Array con todas las activaciones del centro ordenadas por fecha (más reciente primero)
+ */
+export async function getCenterActivationsHistory(
+  centerId: string, 
+  signal?: AbortSignal
+): Promise<ActivationHistoryItem[]> {
+  try {
+    const { data } = await api.get<ActivationHistoryItem[]>(
+      `/centers/${centerId}/activations`,
+      { signal }
+    );
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    if (isCancelError(error)) return [];
+    console.error(`Error fetching activations history for center ${centerId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene el detalle completo de una activación específica
+ * Incluye: familias, encargados, bases de datos, estadísticas de inventario
+ * @param centerId - ID del centro
+ * @param activationId - ID de la activación
+ * @param signal - AbortSignal para cancelar la petición
+ * @returns Detalle completo de la activación o null si no existe
+ */
+export async function getActivationDetail(
+  centerId: string,
+  activationId: number,
+  signal?: AbortSignal
+): Promise<ActivationDetail | null> {
+  try {
+    const { data } = await api.get<ActivationDetail>(
+      `/centers/${centerId}/activations/${activationId}`,
+      { signal }
+    );
+    return data || null;
+  } catch (error) {
+    if (isCancelError(error)){
+      throw error;
+    }
+    console.error(`Error fetching activation detail ${activationId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Obtiene estadísticas agregadas del historial de activaciones de un centro
+ * Útil para dashboards y análisis
+ * @param centerId - ID del centro
+ * @param signal - AbortSignal para cancelar la petición
+ * @returns Estadísticas del historial o null si hay error
+ */
+
+
+// =======================================================
+// HELPERS / UTILIDADES
+// =======================================================
+
+/**
+ * Formatea una duración en días a un string legible
+ * @example formatDuration(5.5) => "5 días"
+ * @example formatDuration(0.5) => "12 horas"
+ */
+export function formatActivationDuration(days: number): string {
+  if (days < 1) {
+    const hours = Math.round(days * 24);
+    return `${hours} hora${hours !== 1 ? 's' : ''}`;
+  }
+  
+  const wholeDays = Math.floor(days);
+  return `${wholeDays} día${wholeDays !== 1 ? 's' : ''}`;
+}
+
+/**
+ * Determina si una activación está actualmente activa
+ */
+export function isActivationActive(activation: ActivationHistoryItem | ActivationInfo): boolean {
+  return activation.ended_at === null;
+}
+
+/**
+ * Formatea un rango de fechas para una activación
+ * @example "15 Ene 2025 - 20 Ene 2025"
+ * @example "15 Ene 2025 - Actualidad" (si está activa)
+ */
+export function formatActivationDateRange(activation: ActivationHistoryItem | ActivationInfo): string {
+  const startDate = new Date(activation.started_at);
+  const startStr = startDate.toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+  
+  if (!activation.ended_at) {
+    return `${startStr} - Actualidad`;
+  }
+  
+  const endDate = new Date(activation.ended_at);
+  const endStr = endDate.toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+  
+  return `${startStr} - ${endStr}`;
+}
+
+/**
+ * Calcula el estado de una activación basado en sus fechas
+ */
+export function getActivationStatus(activation: ActivationHistoryItem | ActivationInfo): 
+  'active' | 'closed' {
+  return activation.ended_at === null ? 'active' : 'closed';
 }

@@ -1,24 +1,23 @@
--- ==========================================================
--- PASO 1: ELIMINACIÓN SEGURA DE TODAS LAS TABLAS CON CASCADE
--- Garantiza una base de datos limpia en cada ejecución.
--- ==========================================================
+-- Tablas de datos y relaciones principales
 DROP TABLE IF EXISTS FamilyGroupMembers CASCADE;
 DROP TABLE IF EXISTS FamilyGroups CASCADE;
 DROP TABLE IF EXISTS Persons CASCADE;
 DROP TABLE IF EXISTS CenterInventoryItems CASCADE;
-DROP TABLE IF EXISTS CentersActivations CASCADE;
+DROP TABLE IF EXISTS InventoryLog CASCADE;
 DROP TABLE IF EXISTS UpdateRequests CASCADE;
 DROP TABLE IF EXISTS CenterAssignments CASCADE;
-DROP TABLE IF EXISTS InventoryLog CASCADE;
+DROP TABLE IF EXISTS ActivationAssignments CASCADE;
+DROP TABLE IF EXISTS CentersActivations CASCADE;
 DROP TABLE IF EXISTS CentersDescription CASCADE;
 DROP TABLE IF EXISTS CenterItemPriority CASCADE;
 DROP TABLE IF EXISTS Products CASCADE;
 DROP TABLE IF EXISTS Categories CASCADE;
 DROP TABLE IF EXISTS Centers CASCADE;
+DROP TABLE IF EXISTS RefreshTokens CASCADE; 
 DROP TABLE IF EXISTS Users CASCADE;
 DROP TABLE IF EXISTS Roles CASCADE;
-DROP SEQUENCE IF EXISTS centers_seq CASCADE;
 
+-- Tablas del módulo "Datasets"
 DROP TABLE IF EXISTS DatasetRecordCoreRelations CASCADE;
 DROP TABLE IF EXISTS DatasetRecordRelations CASCADE;
 DROP TABLE IF EXISTS DatasetRecordOptionValues CASCADE;
@@ -26,7 +25,19 @@ DROP TABLE IF EXISTS DatasetFieldOptions CASCADE;
 DROP TABLE IF EXISTS DatasetRecords CASCADE;
 DROP TABLE IF EXISTS DatasetFields CASCADE;
 DROP TABLE IF EXISTS Datasets CASCADE;
+
+-- Tablas del módulo "Templates"
 DROP TABLE IF EXISTS TemplateFields CASCADE;
 DROP TABLE IF EXISTS Templates CASCADE;
+
+-- Tablas de "Log", "Notificaciones" y "Zonas"
 DROP TABLE IF EXISTS AuditLog CASCADE;
+DROP TABLE IF EXISTS CenterNotifications CASCADE; 
 DROP TABLE IF EXISTS municipal_zones CASCADE;
+
+
+DROP TABLE IF EXISTS CenterShiftHistory CASCADE;
+DROP TABLE IF EXISTS CenterShifts CASCADE;
+DROP SEQUENCE IF EXISTS centers_seq CASCADE;
+DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
+DROP EXTENSION IF EXISTS pgcrypto CASCADE;

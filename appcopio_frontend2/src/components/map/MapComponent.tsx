@@ -7,6 +7,9 @@ import type { Center } from "@/types/center";
 import MapFilters, { type OperationalStatusFilters } from "./MapFilters";
 import "./MapComponent.css";
 import { Button } from "@mui/material";
+import "./VolunteerContactForm.css"; 
+import VolunteerContactForm from "./VolunteerContactForm";
+import { useActivation } from '@/contexts/ActivationContext';
 import SidePanel from "./SidePanel";
 import { getCenterCapacity } from "@/services/centers.service";
 import type { Category, InventoryItem } from "@/types/inventory";
@@ -199,6 +202,11 @@ export default function MapComponent({ centers }: MapComponentProps) {
   } | null>(null);
   const [priorities, setPriorities] = React.useState<InventoryPriorityItem[]>([]);
 
+  //Form voluntarios
+  const [showVolunteerForm, setShowVolunteerForm] = React.useState(false);
+  const [volunteerFormCenter, setVolunteerFormCenter] = React.useState<Center | null>(null);
+
+  const { activation } = useActivation();
   // Hook de geolocalización
   const {
     location: userLocation,
@@ -251,6 +259,17 @@ export default function MapComponent({ centers }: MapComponentProps) {
       return;
     }
     requestLocation();
+  };
+
+  //Handlers para el formulario de voluntarios
+  const handleOpenVolunteerForm = (center: Center) => {
+    setVolunteerFormCenter(center);
+    setShowVolunteerForm(true);
+  };
+
+  const handleCloseVolunteerForm = () => {
+    setShowVolunteerForm(false);
+    setVolunteerFormCenter(null);
   };
 
   // Cargar filtros y estado de colapso guardados al montar el componente
@@ -481,24 +500,6 @@ export default function MapComponent({ centers }: MapComponentProps) {
                     <strong>Nivel de Abastecimiento:</strong>{" "}
                     {Number(selectedCenter.fullnessPercentage ?? 0).toFixed(0)}%
                   </p>
-                  <Button
-                    className="view-details-btn"
-                    onClick={() => {
-                      if (selectedCenter?.center_id) {
-                        fetchCenterCapacity(selectedCenter.center_id);
-                        getInventoryWithPriorities(selectedCenter.center_id)
-                          .then((data) => setPriorities(data))
-                          .catch(() => setPriorities([]));
-
-                        setIsPanelOpen(true);
-                      } else {
-                        console.warn("⚠️ selectedCenter.center_id no está definido");
-                      }
-                    }}
-                  >
-                    Ver más
-                    <span className="icon-detail">➡️</span>
-                  </Button>
                 </div>
               </InfoWindow>
             )}
@@ -515,10 +516,6 @@ export default function MapComponent({ centers }: MapComponentProps) {
             {showOMZ ? "Ocultar zonas OMZ" : "Ver zonas OMZ"}
           </Button>
         </div>
-
-
-
-
 
         </div>
         <SidePanel open={isPanelOpen} onClose={() => setIsPanelOpen(false)}>
@@ -569,6 +566,19 @@ export default function MapComponent({ centers }: MapComponentProps) {
           </div>
         </SidePanel>
       </APIProvider>
+
+      {/*Modal/Overlay del formulario de voluntarios */}
+      {showVolunteerForm && selectedCenter &&(
+        <div className="volunteer-form-overlay" onClick={handleCloseVolunteerForm}>
+          <div className="volunteer-form-container" onClick={(e) => e.stopPropagation()}>
+            <VolunteerContactForm
+              centerId={selectedCenter.center_id}
+              centerName={selectedCenter.name}
+              onClose={handleCloseVolunteerForm}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
