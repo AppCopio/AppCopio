@@ -39,6 +39,7 @@ import serviceRequestRoutes from "./routes/serviceRequestRoutes";
 import movementRoutes from "./routes/movementRoutes";
 import resourceBoxRoutes from "./routes/resourceBoxRoutes";
 import { startShiftStatusJob } from "./jobs/shiftStatusJob";
+import { startTokenCleanupScheduler } from "./services/tokenCleanupService";
 
 dotenv.config();
 
@@ -132,6 +133,12 @@ app.listen(port, () => {
   // Iniciar el cron job de actualización de estados de turnos
   startShiftStatusJob();
   console.log('✅ Cron job de turnos iniciado');
+  
+  // Iniciar limpieza automática de tokens cada 6 horas
+  startTokenCleanupScheduler(6);
+  console.log('✅ Limpieza automática de tokens iniciada');
+
+    
 });
 
 app.get("/__routes", (_req, res) => {
