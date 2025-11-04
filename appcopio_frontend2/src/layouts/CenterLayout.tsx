@@ -56,8 +56,9 @@ const CenterLayout: React.FC = () => {
   const allLinks = [
     //{ label: "Inventario",            to: paths.center.inventory(id) },
     { label: "Ver Detalles",          to: paths.center.details(id) },
-    { label: "Crear Solicitud",       to: paths.center.needsNew(id), hiddenForTM: true },
-    { label: "Estado de Actualizaciones", to: paths.center.updates(id) },
+    //{ label: "Crear Solicitud",       to: paths.center.needsNew(id), hiddenForTM: true },
+    //{ label: "Estado de Actualizaciones", to: paths.center.updates(id) },
+    { label: "Solicitudes de Actualización", to: paths.center.requests(id) },
     //{ label: "Listado de Personas",   to: paths.center.residents(id) },
     { label: "Turnos",                to: paths.center.shifts(id), hiddenForCitizenContact: true },
     //{ label: "Registros de activación",   to: paths.center.databases(id) },

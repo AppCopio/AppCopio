@@ -110,4 +110,86 @@ export const TEMPLATES: TemplateItem[] = [
             { name: "Acción", key: "accion", field_type: "text", position: 40, is_required: false, settings: {} }, 
         ],
     },
-];
+
+    {
+        key: "solicitudes_servicios",
+        name: "Solicitudes de Servicios",
+        description: "Gestión de solicitudes de servicios voluntarios para el centro.",
+        previewColumns: ["Título", "Categoría", "Prioridad", "Estado"],
+        fields: [
+            { 
+                name: "Título", 
+                key: "titulo", 
+                field_type: "text", 
+                position: 10, 
+                is_required: true, 
+                settings: { maxLength: 100 } 
+            },
+            { 
+                name: "Descripción", 
+                key: "descripcion", 
+                field_type: "text", 
+                position: 20, 
+                is_required: true, 
+                settings: { maxLength: 500, multiline: true } 
+            },
+            { 
+                name: "Categoría", 
+                key: "categoria", 
+                field_type: "select", 
+                position: 30, 
+                is_required: true,
+                settings: {
+                    options: [
+                        { value: "salud", label: "Salud", icon: "🏥" },
+                        { value: "psicologia", label: "Psicología", icon: "🧠" },
+                        { value: "alimentacion", label: "Alimentación", icon: "🍽️" },
+                        { value: "limpieza", label: "Limpieza", icon: "🧹" },
+                        { value: "transporte", label: "Transporte", icon: "🚐" },
+                        { value: "educacion", label: "Educación", icon: "📚" },
+                        { value: "legal", label: "Legal", icon: "⚖️" },
+                        { value: "mantenimiento", label: "Mantenimiento", icon: "🔧" },
+                        { value: "otro", label: "Otro", icon: "📋" },
+                    ]
+                }
+            },
+            { 
+                name: "Prioridad", 
+                key: "prioridad", 
+                field_type: "select", 
+                position: 40, 
+                is_required: true,
+                settings: {
+                    options: [
+                        { value: "alta", label: "Alta", color: "#d32f2f" },
+                        { value: "media", label: "Media", color: "#ed6c02" },
+                        { value: "baja", label: "Baja", color: "#2e7d32" },
+                    ]
+                }
+            },
+            { 
+                name: "Estado", 
+                key: "estado", 
+                field_type: "select", 
+                position: 50, 
+                is_required: true,
+                settings: {
+                    options: [
+                        { value: "pendiente", label: "Pendiente" },
+                        { value: "en_progreso", label: "En Progreso" },
+                        { value: "completada", label: "Completada" },
+                        { value: "cancelada", label: "Cancelada" },
+                    ]
+                }
+            },
+            { 
+                name: "Notas", 
+                key: "notas", 
+                field_type: "text", 
+                position: 60, 
+                is_required: false, 
+                settings: { multiline: true } 
+            },
+        ],
+    },
+] as const;

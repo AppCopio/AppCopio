@@ -47,6 +47,7 @@ import ActivationDetailPage from '@/pages/Activations/ActivationDetailPage';
 import CenterVolunteersPage from '@/pages/CenterVolunteersPage/CenterVolunteersPage';
 import ShiftsPage from "@/pages/ShiftsPage/ShiftsPage";
 import MyShiftsPage from "@/pages/MyShiftsPage/MyShiftsPage";
+import CenterRequestsPage from "@/pages/CenterRequestPage/CenterRequestsPage";
 
 
 export default function App() {
@@ -91,8 +92,9 @@ export default function App() {
                   <Route path="inventory" element={<InventoryPage />} />
                   <Route path="inventory/history" element={<InventoryHistoryPage />} />
                   <Route path="movements/history" element={<MovementHistoryPage />} />
-                  <Route path="needs/new" element={<NeedsFormPage />} />
-                  <Route path="needs/status" element={<NeedsStatusPage />} />
+                  {/*<Route path="needs/new" element={<NeedsFormPage />} />
+                  <Route path="needs/status" element={<NeedsStatusPage />} />*/}
+                  <Route path="requests" element={<CenterRequestsPage />} />
                   <Route path="residents" element={<CenterResidentsPage />} />
                   <Route path="updates" element={<UpdatesPage />} />
                   <Route path="activations" element={<ActivationsHistoryPage />} />

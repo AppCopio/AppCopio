@@ -8,17 +8,21 @@ import {
   Card,
   CardContent,
   Stack,
-  Chip
+  Chip,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { 
   VolunteerActivism as VolunteerIcon,
-  Group as GroupIcon
+  Group as GroupIcon,
+  Assignment as AssignmentIcon
 } from '@mui/icons-material';
 import { useActivation } from '@/contexts/ActivationContext';
 import { getOneCenter } from '@/services/centers.service';
 import VolunteerContactPanel from '@/components/volunteers/VolunteerContactPanel';
 import type { CenterData } from '@/types/center';
 import { useScrollToTop } from '@/hooks/useScrollToTop';
+import CreateServiceRequestForm from '@/components/volunteers/CreateServiceRequestForm';
 
 export default function CenterVolunteersPage() {
   useScrollToTop({ behavior: 'smooth' });
@@ -27,6 +31,7 @@ export default function CenterVolunteersPage() {
   const [center, setCenter] = React.useState<CenterData | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState(0);
 
   React.useEffect(() => {
     if (centerId) {
@@ -100,9 +105,33 @@ export default function CenterVolunteersPage() {
           </Stack>
         </CardContent>
       </Card>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)} variant="fullWidth">
+          <Tab icon={<GroupIcon />} label="Voluntarios Ofrecidos" iconPosition="start" />
+          <Tab icon={<AssignmentIcon />} label="Solicitar Servicios" iconPosition="start" />
+        </Tabs>
+      </Box>
+      {/* Contenido según tab seleccionado */}
+      {activeTab === 0 && (
+          <VolunteerContactPanel activationId={activation.activation_id} />
+        )}
 
-      {/* Panel principal */}
-      <VolunteerContactPanel activationId={activation.activation_id} />
+        {activeTab === 1 && (
+          <Box>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                Desde aquí puedes crear solicitudes de servicios que serán visibles para toda
+                la comunidad en el mapa público.
+              </Typography>
+            </Alert>
+            
+            <CreateServiceRequestForm 
+              centerId={centerId!}
+              activationId={activation.activation_id}
+              onSuccess={() => console.log('Solicitud creada!')}
+            />
+          </Box>
+      )}
     </Box>
   );
 }
