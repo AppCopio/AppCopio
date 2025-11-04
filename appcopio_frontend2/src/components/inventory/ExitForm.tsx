@@ -1,9 +1,10 @@
 // src/components/inventory/ExitForm.tsx
 import React, { useState, useEffect } from 'react';
 import type { InventoryItem } from '@/types/inventory';
-import type { ExitMovementCreateDTO, ExitItemCreateDTO, StockValidation, BackendExitRequest } from '@/types/movements';
+import type { ExitMovementCreateDTO, ExitItemCreateDTO, StockValidation, BackendExitRequest, ResourceBox } from '@/types/movements';
 import { createExitMovement, createBulkExitMovement, validateStock as validateStockAPI } from '@/services/movements.service';
 import { familyService, type FamilyGroup } from '@/services/family.service';
+import BoxTemplateManager from './BoxTemplateManager';
 import './ExitForm.css';
 
 interface ExitFormProps {
@@ -32,6 +33,7 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stockValidation, setStockValidation] = useState<StockValidation | null>(null);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
   
   // Estado para familias
   const [families, setFamilies] = useState<FamilyGroup[]>([]);
@@ -136,6 +138,50 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
     });
   };
 
+  const handleTemplateSelect = (template: ResourceBox) => {
+    // Convertir items de la plantilla al formato del formulario de salida
+    const templateItems: ExitItem[] = template.items
+      .map(templateItem => {
+        // Buscar el item en el inventario actual
+        const inventoryItem = currentInventory.find(invItem => 
+          invItem.name.toLowerCase() === templateItem.item_name.toLowerCase() &&
+          invItem.quantity > 0
+        );
+
+        if (!inventoryItem) {
+          return null; // Item no disponible en inventario
+        }
+
+        return {
+          id: crypto.randomUUID(),
+          item_id: inventoryItem.item_id,
+          item_name: inventoryItem.name,
+          category: inventoryItem.category,
+          available_stock: inventoryItem.quantity,
+          requested_quantity: Math.min(templateItem.quantity, inventoryItem.quantity), // No exceder stock disponible
+          unit: inventoryItem.unit,
+          is_valid: templateItem.quantity <= inventoryItem.quantity
+        };
+      })
+      .filter(item => item !== null) as ExitItem[];
+
+    // Agregar items de la plantilla a la lista actual
+    setItems(prev => [...prev, ...templateItems]);
+    
+    // Si no hay motivo, usar el nombre de la plantilla como sugerencia
+    if (!reason.trim()) {
+      setReason(`Salida desde plantilla: ${template.name}`);
+    }
+    
+    setShowTemplateManager(false);
+
+    // Mostrar alerta si algunos items no estaban disponibles
+    const unavailableItems = template.items.length - templateItems.length;
+    if (unavailableItems > 0) {
+      alert(`Se agregaron ${templateItems.length} items. ${unavailableItems} items de la plantilla no están disponibles en el inventario.`);
+    }
+  };
+
   const updateItemQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) return;
 
@@ -173,7 +219,7 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
     const hasInvalidItems = items.some(item => !item.is_valid);
     if (hasInvalidItems) {
       setShowValidationErrors(true);
-      alert('Hay items con stock insuficiente. Revisa las cantidades.');
+      alert('Stock insuficiente. Revisa las cantidades.');
       return;
     }
 
@@ -312,14 +358,23 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
                   ⚠️ {getInvalidItems()} items con stock insuficiente
                 </span>
               )}
-              <button 
-                type="button" 
-                className="add-item-btn"
-                onClick={() => setShowAddItem(true)}
-                disabled={availableItems.length === 0}
-              >
-                + Agregar Item
-              </button>
+              <div className="items-actions">
+                <button 
+                  type="button" 
+                  className="template-btn"
+                  onClick={() => setShowTemplateManager(true)}
+                >
+                  ⚙ Usar Plantilla
+                </button>
+                <button 
+                  type="button" 
+                  className="add-item-btn"
+                  onClick={() => setShowAddItem(true)}
+                  disabled={availableItems.length === 0}
+                >
+                  + Agregar Item
+                </button>
+              </div>
             </div>
 
             {availableItems.length === 0 && (
@@ -441,6 +496,17 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
             </button>
           </div>
         </form>
+
+        {/* Modal para seleccionar plantilla de salida */}
+        {showTemplateManager && (
+          <BoxTemplateManager
+            centerId={centerId}
+            onClose={() => setShowTemplateManager(false)}
+            onTemplateSelect={handleTemplateSelect}
+            mode="select"
+            selectMode="exit"
+          />
+        )}
       </div>
     </div>
   );

@@ -12,12 +12,11 @@ import {
 import { listCategories, createCategory, deleteCategory } from "@/services/categories.service";
 import { getCenterCapacity, updateCenterFullness } from "@/services/centers.service";
 import { getUser } from "@/services/users.service";
-import { validateItemDeletion } from "@/services/movements.service";
+import { validateItemDeletion, createInventoryAdjustment } from "@/services/movements.service";
 import ResourcesAndNeeds from "@/components/inventory/ResourcesAndNeeds";
 import EntryForm from "@/components/inventory/EntryForm";
 import ExitForm from "@/components/inventory/ExitForm";
-import ResourceBoxManager from "@/components/inventory/ResourceBoxManager";
-import ExitBoxesSection from "@/components/inventory/ExitBoxesSection";
+import BoxTemplateManager from "@/components/inventory/BoxTemplateManager";
 import type {
   InventoryItem,
   GroupedInventory,
@@ -55,11 +54,12 @@ export default function InventoryPage() {
   // Modales / edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [originalQuantity, setOriginalQuantity] = useState<number>(0);
 
   // HdU11: Modales para movimientos
   const [isEntryFormOpen, setIsEntryFormOpen] = useState(false);
   const [isExitFormOpen, setIsExitFormOpen] = useState(false);
-  const [isResourceBoxManagerOpen, setIsResourceBoxManagerOpen] = useState(false);
+  const [isBoxTemplateManagerOpen, setIsBoxTemplateManagerOpen] = useState(false);
 
   // Filtros y forms
   const [categoriaFiltrada, setCategoriaFiltrada] = useState<string>("");
@@ -72,7 +72,6 @@ export default function InventoryPage() {
 
   const [centerCapacity, setCenterCapacity] = useState<number>(0);
   const [showNeedsSection, setShowNeedsSection] = useState<boolean>(true);
-  const [showBoxesSection, setShowBoxesSection] = useState<boolean>(true);
 
   // Permisos
   const [assignedCenters, setAssignedCenters] = useState<string[]>([]);
@@ -122,9 +121,6 @@ export default function InventoryPage() {
         setCategories(cats);
         setCenterCapacity(capacity);
         
-        if (cats.length > 0 && newItemCategory === "") {
-          setNewItemCategory(String(cats[0].category_id));
-        }
         const data = await getPrioritiesByCenter(centerId);
         console.log("data_",data);
         setPriorities(data);
@@ -202,6 +198,7 @@ export default function InventoryPage() {
   // Modals
   const handleOpenEditModal = (item: InventoryItem) => {
     setEditingItem(item);
+    setOriginalQuantity(item.quantity); // Guardar cantidad original
     setIsEditModalOpen(true);
   };
   const handleCloseEditModal = () => {
@@ -334,13 +331,6 @@ export default function InventoryPage() {
           >
             {showNeedsSection ? '📊 Ocultar Necesidades' : '📊 Mostrar Necesidades'}
           </button>
-          <button 
-            className={`toggle-needs-btn ${showBoxesSection ? 'active' : ''}`}
-            onClick={() => setShowBoxesSection(!showBoxesSection)}
-            title="Mostrar/Ocultar cajas de salida"
-          >
-            {showBoxesSection ? '📦 Ocultar Cajas' : '📦 Mostrar Cajas'}
-          </button>
           {canManage && (
             <>
               {/* HdU11: Botones para movimientos de inventario */}
@@ -350,7 +340,7 @@ export default function InventoryPage() {
               <button className="movement-btn exit-btn" onClick={() => setIsExitFormOpen(true)}>
                 📤 Registrar Salida
               </button>
-              <button className="movement-btn box-btn" onClick={() => setIsResourceBoxManagerOpen(true)}>
+              <button className="movement-btn box-btn" onClick={() => setIsBoxTemplateManagerOpen(true)}>
                 📦 Gestionar Cajas
               </button>
               
@@ -373,11 +363,6 @@ export default function InventoryPage() {
           lastSyncTime={lastSync ? new Date(lastSync).toLocaleString() : ''}
           onFullnessCalculated={handleFullnessCalculated}
         />
-      )}
-
-      {/* Sección de Cajas de Salida */}
-      {showBoxesSection && centerId && (
-        <ExitBoxesSection centerId={centerId} />
       )}
 
       {/* Filtros horizontales */}
@@ -637,14 +622,11 @@ export default function InventoryPage() {
         />
       )}
 
-      {isResourceBoxManagerOpen && centerId ? (
-        <ResourceBoxManager
+      {isBoxTemplateManagerOpen && centerId ? (
+        <BoxTemplateManager
           centerId={centerId}
-          onClose={() => setIsResourceBoxManagerOpen(false)}
-          onSuccess={() => {
-            fetchInventory(false);
-            setIsResourceBoxManagerOpen(false);
-          }}
+          onClose={() => setIsBoxTemplateManagerOpen(false)}
+          mode="manage"
         />
       ) : null}
     </div>

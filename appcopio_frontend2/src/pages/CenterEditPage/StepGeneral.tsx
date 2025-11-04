@@ -63,6 +63,12 @@ const StepGeneral = React.forwardRef<StepHandle, StepGeneralProps>(({ value, onC
       isValid = false;
     }
 
+    // Validación de capacidad
+    if (value.capacity === null || value.capacity === undefined || isNaN(value.capacity) || value.capacity < 0) {
+      errors.capacity = "La capacidad debe ser un número positivo.";
+      isValid = false;
+    }
+
     // Validación numérica opcional del folio si viene como string no vacío
     if (
       value.folio !== null &&
@@ -158,8 +164,17 @@ const StepGeneral = React.forwardRef<StepHandle, StepGeneralProps>(({ value, onC
         name="capacity"
         type="number"
         inputProps={{ min: 0 }}
-        value={value.capacity}
-        onChange={(e) => onChange("capacity", Number(e.target.value))}
+        value={value.capacity ?? ""}
+        onChange={(e) => {
+          const newValue = e.target.value === "" ? null : Number(e.target.value);
+          onChange("capacity", newValue);
+          if (fieldErrors.capacity) {
+            setFieldErrors((prev) => ({ ...prev, capacity: "" }));
+          }
+        }}
+        required
+        error={!!fieldErrors.capacity}
+        helperText={fieldErrors.capacity || "Número de personas que puede albergar"}
       />
 
       <TextField

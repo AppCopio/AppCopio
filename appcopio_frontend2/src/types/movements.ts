@@ -74,6 +74,7 @@ export interface ResourceBox {
   box_id?: number;
   name: string;
   description?: string;
+  type?: 'entry' | 'exit'; // Tipo de plantilla: entrada o salida
   items: BoxItemTemplate[];
   created_at?: string;
   created_by_user_id?: number;

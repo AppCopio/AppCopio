@@ -269,7 +269,7 @@ export default function MovementHistoryPage() {
                     {movement.items.map((item) => (
                       <div key={item.movement_item_id} className="item-chip">
                         <span className="item-name">{item.item_name}</span>
-                        <span className="item-quantity">
+                        <span className={`item-quantity ${movement.movement_type === 'ADJUSTMENT' ? 'adjustment' : ''}`}>
                           {item.quantity} {item.unit}
                         </span>
                         <span className="item-category">{item.category_name}</span>

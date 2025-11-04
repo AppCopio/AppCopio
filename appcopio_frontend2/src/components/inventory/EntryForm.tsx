@@ -1,9 +1,10 @@
 // src/components/inventory/EntryForm.tsx
 import React, { useState, useEffect } from 'react';
 import type { Category, InventoryItem } from '@/types/inventory';
-import type { EntryMovementCreateDTO, EntryItemCreateDTO } from '@/types/movements';
+import type { EntryMovementCreateDTO, EntryItemCreateDTO, ResourceBox } from '@/types/movements';
 import { createEntryMovement } from '@/services/movements.service';
 import { listCategories } from '@/services/categories.service';
+import BoxTemplateManager from './BoxTemplateManager';
 import './EntryForm.css';
 
 interface EntryFormProps {
@@ -30,6 +31,7 @@ export default function EntryForm({ centerId, currentInventory, onClose, onSucce
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<EntryItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
 
   // Estados para el formulario de agregar item
   const [showAddItem, setShowAddItem] = useState(false);
@@ -113,6 +115,28 @@ export default function EntryForm({ centerId, currentInventory, onClose, onSucce
 
   const removeItem = (itemId: string) => {
     setItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  const handleTemplateSelect = (template: ResourceBox) => {
+    // Convertir items de la plantilla al formato del formulario
+    const templateItems: EntryItem[] = template.items.map(templateItem => ({
+      id: crypto.randomUUID(),
+      item_name: templateItem.item_name,
+      category_id: templateItem.category_id,
+      quantity: templateItem.quantity,
+      unit: templateItem.unit,
+      is_new_item: true // Las plantillas siempre crean items nuevos por defecto
+    }));
+
+    // Agregar items de la plantilla a la lista actual
+    setItems(prev => [...prev, ...templateItems]);
+    
+    // Si no hay motivo, usar el nombre de la plantilla como sugerencia
+    if (!reason.trim()) {
+      setReason(`Entrada desde plantilla: ${template.name}`);
+    }
+    
+    setShowTemplateManager(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -201,13 +225,22 @@ export default function EntryForm({ centerId, currentInventory, onClose, onSucce
         <div className="form-section">
           <div className="items-header">
             <h4>Items a recibir ({items.length})</h4>
-            <button
-              type="button"
-              className="add-item-btn"
-              onClick={() => setShowAddItem(true)}
-            >
-              + Agregar Item
-            </button>
+            <div className="items-actions">
+              <button
+                type="button"
+                className="template-btn"
+                onClick={() => setShowTemplateManager(true)}
+              >
+                ⚙ Usar Plantilla
+              </button>
+              <button
+                type="button"
+                className="add-item-btn"
+                onClick={() => setShowAddItem(true)}
+              >
+                + Agregar Item
+              </button>
+            </div>
           </div>
 
           {items.length > 0 && (
@@ -409,6 +442,17 @@ export default function EntryForm({ centerId, currentInventory, onClose, onSucce
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal para seleccionar plantilla de entrada */}
+      {showTemplateManager && (
+        <BoxTemplateManager
+          centerId={centerId}
+          onClose={() => setShowTemplateManager(false)}
+          onTemplateSelect={handleTemplateSelect}
+          mode="select"
+          selectMode="entry"
+        />
       )}
       </div>
     </div>

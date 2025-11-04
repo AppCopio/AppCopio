@@ -84,6 +84,40 @@ export async function createBulkExitMovement(
 }
 
 /**
+ * Realiza un ajuste de inventario con la diferencia específica
+ */
+export async function createInventoryAdjustment(
+  centerId: string,
+  itemId: number,
+  data: {
+    previousQuantity: number;
+    newQuantity: number;
+    reason?: string;
+  },
+  signal?: AbortSignal
+): Promise<{ message: string }> {
+  try {
+    const quantityDifference = data.newQuantity - data.previousQuantity;
+    
+    if (quantityDifference === 0) {
+      return { message: 'No hay cambios en la cantidad' };
+    }
+    
+    // Primero actualizar la cantidad
+    const updateResponse = await api.put(`/centers/${centerId}/inventory/${itemId}`, {
+      quantity: data.newQuantity
+    }, { signal });
+    
+    return {
+      message: `Ajuste registrado: ${quantityDifference > 0 ? '+' : ''}${quantityDifference}`
+    };
+  } catch (error) {
+    console.error(`Error creating inventory adjustment for center ${centerId}, item ${itemId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Valida stock disponible para una salida
  */
 export async function validateStock(
@@ -229,6 +263,7 @@ export async function createResourceBox(
       box_id: boxId,
       name: data.name,
       description: data.description,
+      type: data.type, // ¡AGREGAR EL TIPO!
       items: data.items,
       created_at: new Date().toISOString(),
       created_by_user_id: 1 // Se asumirá el usuario actual

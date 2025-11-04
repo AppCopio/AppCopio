@@ -217,7 +217,10 @@ export default function InventoryHistoryPage() {
                     <div className="movement-product">
                       <h4>{log.product_name}</h4>
                       <span className="movement-quantity">
-                        {log.action_type === "SUB" ? "-" : "+"}{log.quantity}
+                        {log.action_type === "ADJUST" 
+                          ? (log.quantity >= 0 ? `+${log.quantity}` : `${log.quantity}`)
+                          : `${log.action_type === "SUB" ? "-" : "+"}${log.quantity}`
+                        }
                       </span>
                     </div>
                     
