@@ -354,3 +354,17 @@
   margin: 8px 0;
   font-size: 14px;
 }
+.see-more-btn {
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.see-more-btn:hover {
+  background-color: #125aa0;
+}

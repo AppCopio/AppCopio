@@ -88,7 +88,7 @@ app.use("/api/centers", centerRoutes)
 app.use("/api/updates", requireAuth, updateRoutes);
 app.use("/api/users", requireAuth, userRouter);
 app.use("/api/inventory", requireAuth, inventoryRoutes);
-app.use("/api/categories", requireAuth, categoryRoutes);
+app.use("/api/categories", categoryRoutes);
 app.use("/api/assignments", requireAuth, assignmentRoutes);
 app.use("/api/persons", requireAuth, personsRoutes);
 app.use("/api/family", requireAuth, familyRoutes);
@@ -105,9 +105,9 @@ app.use("/api/database-templates", requireAuth, templateRoutes);
 app.use("/api/database-history", requireAuth, auditLogRoutes);
 app.use("/api/notifications", requireAuth, notificationRoutes);
 app.use("/api/migrate", migrateRoutes); // Sin requireAuth para facilitar ejecución inicial
-app.use("/api/centers", requireAuth, movementRoutes);
 app.use("/api/resource-boxes", requireAuth, resourceBoxRoutes);
 app.use("/api/centers", prioritiesRoutes); 
+app.use("/api/centers", requireAuth, movementRoutes);
 app.use('/api/volunteers', volunteerRoutes);
 app.use('/api/service-request', serviceRequestRoutes);
 

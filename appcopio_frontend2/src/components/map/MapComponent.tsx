@@ -324,7 +324,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
   };
  React.useEffect(() => {
   if (!selectedCenter) return;
-
+  fetchCenterCapacity(selectedCenter.center_id);
   getInventoryWithPriorities(selectedCenter.center_id)
     .then((data) => {
       // Ordenar primero por prioridad, luego por categoría
@@ -348,10 +348,6 @@ export default function MapComponent({ centers }: MapComponentProps) {
       setPriorities([]);
     });
 }, [selectedCenter]);
-  React.useEffect(() => {
-    if (!selectedCenter) return;
-    fetchPriorities(selectedCenter.center_id);
-  }, [selectedCenter]);
 
   async function fetchCenterCapacity(centerId: string) {
     try {
@@ -434,7 +430,6 @@ export default function MapComponent({ centers }: MapComponentProps) {
                   }
                   onClick={() => {
                     setSelectedCenterId(String(center.center_id));
-                    setIsPanelOpen(true); // Abrir el panel cuando se selecciona un centro
                   }}
                 >
                   <div className={`marker-pin ${getPinStatusClass(center, isNearby)}`}>
@@ -516,6 +511,14 @@ export default function MapComponent({ centers }: MapComponentProps) {
                       Ofrecer Servicios Voluntarios
                     </button>
                   )}
+                              {/* ✅ Nuevo botón para abrir el panel */}
+                  <button
+                    className="see-more-btn"
+                    onClick={() => setIsPanelOpen(true)}
+                    type="button"
+                  >
+                    🔍 Ver más
+                  </button>
                 </div>
               </InfoWindow>
             )}
