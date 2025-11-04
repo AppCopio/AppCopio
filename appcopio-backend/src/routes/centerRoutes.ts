@@ -708,7 +708,7 @@ const listAvailableWorkers: RequestHandler = async (req, res) => {
                 AND ca.center_id = $1 
                 AND ca.valid_to IS NULL  -- Solo asignaciones activas
             WHERE u.is_active = true 
-            AND u.role_id = 3
+            AND u.role_id = 2
             AND (
                 -- Usuario está asignado a este centro (asignación activa)
                 u.user_id IN (
@@ -729,6 +729,7 @@ const listAvailableWorkers: RequestHandler = async (req, res) => {
         `;
         
         const result = await pool.query(query, [centerId]);
+        console.log(`Usuarios disponibles para el centro ${centerId}:`, result.rows);
         res.json({ users: result.rows });
     } catch (error) {
         console.error(`Error en listAvailableWorkers (centerId: ${req.params.centerId}):`, error);
