@@ -2,9 +2,11 @@
 import { Router, RequestHandler } from "express";
 import pool from "../config/db";
 import { AssignmentRole } from "../types/user";
-
-// CAMBIO: Importamos las funciones desde el nuevo servicio
-import { getActiveAssignments, createOrUpdateAssignment, removeAssignment as removeAssignmentService } from '../services/assignmentService';
+import { CreateActivationAssignmentInput, EndActivationAssignmentInput } from '../types/assignment';
+import { getActiveAssignments, createOrUpdateAssignment, removeAssignment as removeAssignmentService, 
+    createActivationAssignment, listActiveAssignmentsByActivation,  endActivationAssignment, listHistoryOfActiveAssignmentsByActivation } from '../services/assignmentService';
+import { requireUser } from "../auth/requireUser";
+import { requireAuth } from "../auth/middleware";
 
 const router = Router();
 
@@ -48,7 +50,6 @@ const listActiveAssignments: RequestHandler = async (req, res) => {
     }
 
     try {
-        // CAMBIO: El controlador llama al servicio para obtener los datos.
         const assignments = await getActiveAssignments(pool, userId, role, excludeCenterId);
         res.json({ assignments: assignments, count: assignments.length });
     } catch (e) {
@@ -76,7 +77,6 @@ const createAssignment: RequestHandler = async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // CAMBIO: El controlador llama al servicio para ejecutar la lógica de negocio.
         const result = await createOrUpdateAssignment(client, { user_id, center_id, normRole, changed_by });
 
         await client.query('COMMIT');
@@ -120,7 +120,6 @@ const removeAssignment: RequestHandler = async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // CAMBIO: El controlador llama al servicio para ejecutar la lógica.
         await removeAssignmentService(client, { user_id, center_id, normRole, changed_by });
 
         await client.query('COMMIT');
@@ -138,6 +137,122 @@ const removeAssignment: RequestHandler = async (req, res) => {
     }
 };
 
+const createActivationAssignmentHandler: RequestHandler = async (req, res) => {
+  const { activation_id, user_id } = req.body;
+  
+  const started_by = requireUser(req).user_id;
+
+  if (typeof activation_id !== 'number' || typeof user_id !== 'number' || !started_by) {
+    return res.status(400).json({ error: "Se requieren 'activation_id' (numérico), 'user_id' (numérico) y estar autenticado." });
+  }
+    
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const input: CreateActivationAssignmentInput = {
+      activation_id,
+      user_id,
+      started_by,
+    };
+    
+    const newAssignment = await createActivationAssignment(client, input);
+    res.status(201).json(newAssignment);
+    await client.query('COMMIT');
+
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    console.error(`Error en createActivationAssignmentHandler:`, error);
+    if (error.status === 409 || error.status === 403) {
+      return res.status(409).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+  finally {
+    client.release();
+  }
+};
+
+/**
+ * @route GET /api/assignments/activations/:activation_id
+ * @desc Lista los encargados activos de una activación específica.
+ */
+const listActivationAssignmentsHandler: RequestHandler = async (req, res)  => {
+  const activation_id = parseInt(req.params.activation_id);
+
+  if (isNaN(activation_id)) {
+    return res.status(400).json({ error: "Se requiere un 'activation_id' numérico en la URL." });
+  }
+
+  try {
+    const assignments = await listActiveAssignmentsByActivation(pool, activation_id);
+    res.json(assignments);
+
+  } catch (error: any) {
+    console.error(`Error en listActivationAssignmentsHandler (id: ${activation_id}):`, error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+};
+
+/**
+ * @route PUT /api/assignments/activations/end
+ * @desc Termina (des-asigna) la asignación activa de un encargado.
+ */
+const endActivationAssignmentHandler: RequestHandler = async (req, res)  => {
+  const { activation_id, user_id } = req.body;
+  const ended_by = requireUser(req).user_id;
+
+  if (typeof activation_id !== 'number' || typeof user_id !== 'number' || !ended_by) {
+    return res.status(400).json({ error: "Se requieren 'activation_id' (numérico), 'user_id' (numérico) y estar autenticado." });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const input: EndActivationAssignmentInput = {
+      activation_id,
+      user_id,
+      ended_by,
+      close_all: req.body.close_all,
+    };
+    
+    // Llamamos al servicio con el pool
+    const updatedAssignment = await endActivationAssignment(client, input);
+    await client.query('COMMIT');
+    res.status(200).json(updatedAssignment);
+
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    console.error(`Error en endActivationAssignmentHandler:`, error);
+    // Manejo de errores de negocio (400 o 404)
+    if (error.status === 404 || error.status === 400) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  } finally {
+    client.release(); // <-- No olvides liberar el cliente
+  }
+};
+
+
+const listHistoryOfActivationAssignmentsHandler: RequestHandler = async (req, res)  => {
+  const activation_id = parseInt(req.params.activation_id);
+
+  if (isNaN(activation_id)) {
+    return res.status(400).json({ error: "Se requiere un 'activation_id' numérico en la URL." });
+  }
+
+  try {
+    const assignments = await listHistoryOfActiveAssignmentsByActivation(pool, activation_id);
+    res.json(assignments);
+
+  } catch (error: any) {
+    console.error(`Error en listActivationAssignmentsHandler (id: ${activation_id}):`, error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+};
+
 // =================================================================
 // 3. SECCIÓN DE RUTAS (Endpoints)
 // =================================================================
@@ -145,5 +260,9 @@ const removeAssignment: RequestHandler = async (req, res) => {
 router.get("/active/by-user-role", listActiveAssignments);
 router.post("/", createAssignment);
 router.delete("/", removeAssignment);
+router.post('/activations', requireAuth, createActivationAssignmentHandler);
+router.get('/activations/:activation_id', requireAuth, listActivationAssignmentsHandler);
+router.get('/activations/history/:activation_id', requireAuth, listHistoryOfActivationAssignmentsHandler);
+router.put('/activations/end', requireAuth, endActivationAssignmentHandler);
 
 export default router;

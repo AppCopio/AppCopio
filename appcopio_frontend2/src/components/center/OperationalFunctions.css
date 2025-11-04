@@ -1,0 +1,197 @@
+/* src/components/center/OperationalFunctions.css */
+.operational-functions-container {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+}
+
+.operational-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 16px;
+}
+
+.operational-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.inactive-message {
+  text-align: center;
+  padding: 32px;
+  background: #fff3cd;
+  border-radius: 8px;
+  border: 1px solid #ffc107;
+}
+
+.inactive-message p {
+  margin: 0;
+  color: #856404;
+  font-size: 1rem;
+}
+
+.operational-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.operational-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  min-height: 200px;
+}
+
+.operational-card:hover:not(.disabled) {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: #1976d2;
+}
+
+.operational-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #f0f0f0 0%, #e9ecef 100%);
+}
+
+.card-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.operational-card:hover:not(.disabled) .card-icon {
+  transform: scale(1.1);
+}
+
+.people-icon {
+  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+  color: white;
+}
+
+.groups-icon {
+  background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%);
+  color: white;
+}
+
+.fibe-icon {
+  background: linear-gradient(135deg, #2196f3 0%, #64b5f6 100%);
+  color: white;
+}
+
+.databases-icon {
+  background: linear-gradient(135deg, #e9dc1e 0%, #ebf062 100%);
+  color: white;
+}
+
+.volunteer-icon {
+  background: linear-gradient(135deg, #e91e63 0%, #f06292 100%);
+  color: white;
+}
+
+.shifts-icon {
+  background: linear-gradient(135deg, #607d8b 0%, #90a4ae 100%);
+  color: white;
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+}
+
+.card-content h4 {
+  margin: 0 0 12px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.card-sublabel {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 8px 0 0 0;
+}
+
+.card-stat {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1976d2;
+  margin: 8px 0;
+}
+
+.stat-current {
+  color: #1976d2;
+}
+
+.stat-separator {
+  color: #ccc;
+  margin: 0 8px;
+}
+
+.stat-total {
+  color: #999;
+  font-size: 1.5rem;
+}
+
+.card-label {
+  color: #666;
+  font-size: 0.85rem;
+  margin: 4px 0 0 0;
+}
+
+.card-loading {
+  color: #999;
+  font-size: 0.9rem;
+  margin: 16px 0;
+}
+
+/* Badge para indicar estado pendiente */
+.card-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+.card-badge.pending {
+  background: #ffc107;
+  color: #fff;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .operational-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .operational-card {
+    min-height: 160px;
+  }
+}

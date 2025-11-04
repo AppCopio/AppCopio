@@ -36,7 +36,7 @@ export async function createRecordDB(db: Db, userId: number, args: {
   select_values: Record<string, string | string[]>;
   relations_dynamic: Array<{ field_id: string; target_record_id: string }>;
   relations_core: Array<{ field_id: string; target_core: string; target_id: number }>;
-})  : Promise<DatasetRecord>{
+}) : Promise<DatasetRecord>{
   // 1) Inserta registro base
   const insertRec = `
     INSERT INTO DatasetRecords (dataset_id, activation_id, data, created_by)

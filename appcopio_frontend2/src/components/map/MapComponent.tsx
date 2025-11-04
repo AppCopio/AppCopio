@@ -7,11 +7,20 @@ import type { Center } from "@/types/center";
 import MapFilters, { type OperationalStatusFilters } from "./MapFilters";
 import "./MapComponent.css";
 import { Button } from "@mui/material";
-
-
+import "./VolunteerContactForm.css"; 
+import VolunteerContactForm from "./VolunteerContactForm";
+import { useActivation } from '@/contexts/ActivationContext';
+import SidePanel from "./SidePanel";
+import { getCenterCapacity } from "@/services/centers.service";
+import type { Category, InventoryItem } from "@/types/inventory";
+import type { InventoryPriorityItem } from "@/types/priorities";
+import ServiceRequestsSection from './ServiceRequestsSection';
 type MapComponentProps = {
   centers: Center[];
 };
+
+import { getInventoryWithPriorities } from "@/services/priorities.service";
+
 
 const apiKey = import.meta.env.VITE_Maps_API_KEY as string | undefined;
 const valparaisoCoords = { lat: -33.04, lng: -71.61 };
@@ -177,6 +186,7 @@ const OMZLayer: React.FC<{ visible: boolean }> = ({ visible }) => {
 
 
 export default function MapComponent({ centers }: MapComponentProps) {
+  const [isPanelOpen, setIsPanelOpen] = React.useState(false);
   const { isAuthenticated } = useAuth();
   const [selectedCenterId, setSelectedCenterId] = React.useState<string | null>(null);
   const [showOMZ, setShowOMZ] = React.useState(false); // Estado para controlar la visibilidad de la capa OMZ
@@ -186,7 +196,18 @@ export default function MapComponent({ centers }: MapComponentProps) {
     showMaxCapacity: true,
   });
   const [isFiltersCollapsed, setIsFiltersCollapsed] = React.useState<boolean>(true); // Comenzar colapsado
+  const [centerCapacity, setCenterCapacity] = React.useState<{
+    total_capacity: number;
+    current_capacity: number;
+    available_capacity: number;
+  } | null>(null);
+  const [priorities, setPriorities] = React.useState<InventoryPriorityItem[]>([]);
 
+  //Form voluntarios
+  const [showVolunteerForm, setShowVolunteerForm] = React.useState(false);
+  const [volunteerFormCenter, setVolunteerFormCenter] = React.useState<Center | null>(null);
+
+  const { activation } = useActivation();
   // Hook de geolocalización
   const {
     location: userLocation,
@@ -241,6 +262,17 @@ export default function MapComponent({ centers }: MapComponentProps) {
     requestLocation();
   };
 
+  //Handlers para el formulario de voluntarios
+  const handleOpenVolunteerForm = (center: Center) => {
+    setVolunteerFormCenter(center);
+    setShowVolunteerForm(true);
+  };
+
+  const handleCloseVolunteerForm = () => {
+    setShowVolunteerForm(false);
+    setVolunteerFormCenter(null);
+  };
+
   // Cargar filtros y estado de colapso guardados al montar el componente
   React.useEffect(() => {
     try {
@@ -267,6 +299,69 @@ export default function MapComponent({ centers }: MapComponentProps) {
       console.warn('No se pudieron cargar configuraciones guardadas:', error);
     }
   }, []);
+
+  const fetchPriorities = async (centerId: string) => {
+    try {
+      const data = await getInventoryWithPriorities(centerId);
+      
+      const priorityOrder = { alto: 1, medio: 2, bajo: 3 };
+
+      const sortedData = [...data].sort((a, b) => {
+        const pA = priorityOrder[a.priority] ?? 99;
+        const pB = priorityOrder[b.priority] ?? 99;
+        if (pA !== pB) return pA - pB;
+
+        const catA = a.category_name ?? '';
+        const catB = b.category_name ?? '';
+        return catA.localeCompare(catB);
+      });
+
+      setPriorities(sortedData);
+    } catch (err) {
+      console.error("❌ Error al obtener inventario con prioridades:", err);
+      setPriorities([]);
+    }
+  };
+ React.useEffect(() => {
+  if (!selectedCenter) return;
+
+  getInventoryWithPriorities(selectedCenter.center_id)
+    .then((data) => {
+      // Ordenar primero por prioridad, luego por categoría
+      const priorityOrder = { alto: 1, medio: 2, bajo: 3 };
+      const sortedData = [...data].sort((a, b) => {
+        const pA = priorityOrder[a.priority] ?? 99;
+        const pB = priorityOrder[b.priority] ?? 99;
+        if (pA !== pB) return pA - pB;
+
+        const catA = a.category_name ?? '';
+        const catB = b.category_name ?? '';
+        if (catA !== catB) return catA.localeCompare(catB);
+
+        return 0; // mantener orden original dentro de la categoría
+      });
+
+      setPriorities(sortedData);
+    })
+    .catch((err) => {
+      console.error("❌ Error al obtener inventario con prioridades:", err);
+      setPriorities([]);
+    });
+}, [selectedCenter]);
+  React.useEffect(() => {
+    if (!selectedCenter) return;
+    fetchPriorities(selectedCenter.center_id);
+  }, [selectedCenter]);
+
+  async function fetchCenterCapacity(centerId: string) {
+    try {
+      const data = await getCenterCapacity(centerId);
+      setCenterCapacity(data);
+    } catch (error) {
+      console.error("❌ Error al obtener capacidad:", error);
+    }
+  }
+
 
   // Función para manejar el toggle del colapso
   const handleToggleCollapse = (collapsed: boolean) => {
@@ -337,7 +432,10 @@ export default function MapComponent({ centers }: MapComponentProps) {
                       ? `${center.name} - ${formatOperationalStatus(center.operational_status)}`
                       : `${center.name} - Abastecido al ${Number(center.fullnessPercentage ?? 0).toFixed(0)}%`
                   }
-                  onClick={() => setSelectedCenterId(String(center.center_id))}
+                  onClick={() => {
+                    setSelectedCenterId(String(center.center_id));
+                    setIsPanelOpen(true); // Abrir el panel cuando se selecciona un centro
+                  }}
                 >
                   <div className={`marker-pin ${getPinStatusClass(center, isNearby)}`}>
                     <span>{center.type === "Albergue" ? "🏠" : "📦"}</span>
@@ -406,6 +504,18 @@ export default function MapComponent({ centers }: MapComponentProps) {
                     <strong>Nivel de Abastecimiento:</strong>{" "}
                     {Number(selectedCenter.fullnessPercentage ?? 0).toFixed(0)}%
                   </p>
+
+                  {/* Botón para ofrecer servicios voluntarios */}
+                  {!isAuthenticated && (selectedCenter.type === "Albergue" || selectedCenter.type === "Acopio") && (
+                    <button
+                      className="volunteer-btn"
+                      onClick={() => handleOpenVolunteerForm(selectedCenter)}
+                      type="button"
+                    >
+                      <span className="volunteer-btn-icon">🤝</span>
+                      Ofrecer Servicios Voluntarios
+                    </button>
+                  )}
                 </div>
               </InfoWindow>
             )}
@@ -423,12 +533,74 @@ export default function MapComponent({ centers }: MapComponentProps) {
           </Button>
         </div>
 
-
-
-
-
         </div>
+        <SidePanel 
+          open={isPanelOpen} 
+          onClose={() => setIsPanelOpen(false)}
+          title={selectedCenter?.name || "Información del Centro"} // ← ACTUALIZAR
+        >
+          <div className="sidepanel-info">
+            <p><strong>Centro de:</strong> {selectedCenter?.type || 'No disponible'} </p>
+            <p><strong>Dirección:</strong> {selectedCenter?.address || 'No disponible'} </p>
+            <p><strong>Activo:</strong> {selectedCenter?.is_active ? '✅ Sí' : '❌ No'}</p>
+            <p><strong>Capacidad total:</strong> {centerCapacity?.total_capacity ?? 'Cargando...'} </p>
+            <p><strong>Capacidad actual:</strong> {centerCapacity?.current_capacity ?? 'Cargando...'} </p>
+            <p><strong>Capacidad disponible:</strong> {centerCapacity?.available_capacity ?? 'Cargando...'} </p>
+          </div>
+
+          <div className="resources-title-separator">
+            <hr className="separator-line" />
+            <h4 className="resources-section-title">📦 Recursos Solicitados por el Albergue</h4>
+          </div>
+
+          <div className="priority-section">
+            {["alto", "medio", "bajo"].map(level => {
+              const levelItems = priorities.filter(p => p.priority === level);
+              if (!levelItems.length) return null;
+
+              const itemsByCategory: Record<string, InventoryPriorityItem[]> = {};
+              levelItems.forEach(item => {
+                const cat = item.category_name ?? "Sin Categoría";
+                if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
+                itemsByCategory[cat].push(item);
+              });
+
+              return (
+                <div key={level}>
+                  <h4 className={`priority-title ${level}`}>
+                    {level === "alto" ? "🔴 Prioridad Alta" : level === "medio" ? "🟡 Prioridad Media" : "🟢 Prioridad Baja"}
+                  </h4>
+
+                  {Object.entries(itemsByCategory).map(([category, items]) => (
+                    <div key={category}>
+                      <strong>Categoria {category}</strong>
+                      <ul>
+                        {items.map(item => (
+                          <li key={item.item_id}>{item.item_name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+          <ServiceRequestsSection />
+        </SidePanel>
       </APIProvider>
+
+      {/*Modal/Overlay del formulario de voluntarios */}
+      {showVolunteerForm && selectedCenter &&(
+        <div className="volunteer-form-overlay" onClick={handleCloseVolunteerForm}>
+          <div className="volunteer-form-container" onClick={(e) => e.stopPropagation()}>
+            <VolunteerContactForm
+              centerId={selectedCenter.center_id}
+              centerName={selectedCenter.name}
+              onClose={handleCloseVolunteerForm}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -13,13 +13,14 @@ interface CreateShiftModalProps {
 }
 
 const WEEKDAYS = [
-  { value: 0, label: 'Dom' },
-  { value: 1, label: 'Lun' },
-  { value: 2, label: 'Mar' },
-  { value: 3, label: 'Mié' },
-  { value: 4, label: 'Jue' },
-  { value: 5, label: 'Vie' },
-  { value: 6, label: 'Sáb' },
+  { value: 0, label: 'Lun' },
+  { value: 1, label: 'Mar' },
+  { value: 2, label: 'Mié' },
+  { value: 3, label: 'Jue' },
+  { value: 4, label: 'Vie' },
+  { value: 5, label: 'Sáb' },
+  { value: 6, label: 'Dom' },
+
 ];
 
 export default function CreateShiftModal({ centerId, onClose, onSuccess }: CreateShiftModalProps) {
@@ -37,7 +38,7 @@ export default function CreateShiftModal({ centerId, onClose, onSuccess }: Creat
   const [endDate, setEndDate] = useState('');     // YYYY-MM-DD
   
   // Días de la semana que trabaja
-  const [selectedWeekdays, setSelectedWeekdays] = useState<Weekday[]>([1, 2, 3, 4, 5]); // Lun-Vie por defecto
+  const [selectedWeekdays, setSelectedWeekdays] = useState<Weekday[]>([0, 1, 2, 3, 4]); // Lun-Vie por defecto
   
   // Horario diario (mismo para todos los días seleccionados)
   const [startTime, setStartTime] = useState('08:00'); // HH:mm

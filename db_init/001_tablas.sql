@@ -67,6 +67,8 @@ CREATE TABLE Centers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+
+
 CREATE TABLE Products (
     item_id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -95,6 +97,32 @@ CREATE TABLE Persons (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE CentersActivations (
+    activation_id SERIAL PRIMARY KEY,
+    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMP WITH TIME ZONE,
+    activated_by INT NOT NULL REFERENCES Users(user_id) ON DELETE SET NULL,
+    deactivated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    notes TEXT
+);
+
+-- Registro de grupos familiares ingresados en X centro activado
+CREATE TABLE FamilyGroups (
+    family_id SERIAL PRIMARY KEY,
+    activation_id INT NOT NULL REFERENCES CentersActivations(activation_id) ON DELETE CASCADE,
+    jefe_hogar_person_id INT REFERENCES Persons(person_id) ON DELETE SET NULL,
+    observaciones TEXT,
+    necesidades_basicas INTEGER[14],
+    status VARCHAR(20) NOT NULL DEFAULT 'activo' CHECK (status IN ('activo', 'inactivo')),
+    departure_date TIMESTAMPTZ,
+    departure_reason TEXT,
+    destination_activation_id INT REFERENCES CentersActivations(activation_id) ON DELETE SET NULL,
+    -- Restricciones existentes
+    UNIQUE (activation_id, jefe_hogar_person_id)
+);
+
+
 -- Tablas de segundo nivel e intermedias
 CREATE TABLE CenterInventoryItems (
     center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
@@ -116,6 +144,14 @@ CREATE TABLE InventoryLog (
     created_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
     family_id INT REFERENCES FamilyGroups(family_id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE CenterItemPriority (
+  center_id VARCHAR(10) REFERENCES Centers(center_id) ON DELETE CASCADE,
+  item_id INT REFERENCES Products(item_id) ON DELETE CASCADE,
+  priority TEXT CHECK (priority IN ('bajo','medio','alto')),
+  updated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (center_id, item_id)
 );
 
 -- Índice para mejorar rendimiento de consultas por familia
@@ -152,34 +188,24 @@ CREATE TABLE UpdateRequests (
 );
 
 -- Guarda el historial de activaciones de cada centro, el registro valido actualmente es el que tiene ended_at IS NULL
-CREATE TABLE CentersActivations (
-    activation_id SERIAL PRIMARY KEY,
-    center_id VARCHAR(10) NOT NULL REFERENCES Centers(center_id) ON DELETE CASCADE,
-    started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ended_at TIMESTAMP WITH TIME ZONE,
-    activated_by INT NOT NULL REFERENCES Users(user_id) ON DELETE SET NULL,
-    deactivated_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
-    notes TEXT
+
+
+CREATE TABLE ActivationAssignments (
+    assignment_id SERIAL PRIMARY KEY,
+    activation_id INT NOT NULL REFERENCES CentersActivations(activation_id) ON DELETE CASCADE,
+    user_id INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    start_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_by INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    end_date TIMESTAMPTZ NULL,
+    ended_by INT REFERENCES Users(user_id) ON DELETE SET NULL
 );
+CREATE UNIQUE INDEX idx_unique_active_user ON ActivationAssignments(user_id) WHERE (end_date IS NULL); 
+
 
 -- CREATE INDEX IF NOT EXISTS idx_centersactivations_active
 --   ON "CentersActivations"(center_id)
 --   WHERE ended_at IS NULL;
 
--- Registro de grupos familiares ingresados en X centro activado
-CREATE TABLE FamilyGroups (
-    family_id SERIAL PRIMARY KEY,
-    activation_id INT NOT NULL REFERENCES CentersActivations(activation_id) ON DELETE CASCADE,
-    jefe_hogar_person_id INT REFERENCES Persons(person_id) ON DELETE SET NULL,
-    observaciones TEXT,
-    necesidades_basicas INTEGER[14],
-    status VARCHAR(20) NOT NULL DEFAULT 'activo' CHECK (status IN ('activo', 'inactivo')),
-    departure_date TIMESTAMPTZ,
-    departure_reason TEXT,
-    destination_activation_id INT REFERENCES CentersActivations(activation_id) ON DELETE SET NULL,
-    -- Restricciones existentes
-    UNIQUE (activation_id, jefe_hogar_person_id)
-);
 
 -- Registro que une a las personas con su grupo familiar y define el parentesco con el jefe de hogar
 CREATE TABLE FamilyGroupMembers (

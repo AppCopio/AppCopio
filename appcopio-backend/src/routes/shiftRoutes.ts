@@ -14,6 +14,8 @@ import {
     // exportShiftsToCSV // Comentado - para implementación futura
 } from '../services/shiftService';
 import { sendNotification } from '../services/notificationService';
+import { runShiftStatusUpdateManually } from '../jobs/shiftStatusJob';
+import { updateShiftStatuses, getShiftStatusStats, getShiftsNeedingUpdate } from '../services/shiftStatusService';
 
 const router = Router();
 
@@ -303,9 +305,76 @@ const exportCenterShifts: RequestHandler = async (req, res) => {
 */
 
 // =================================================================
+// CONTROLADORES DE ACTUALIZACIÓN AUTOMÁTICA DE ESTADOS
+// =================================================================
+
+/**
+ * POST /api/shifts/update-statuses
+ * Ejecuta manualmente la actualización de estados de turnos
+ * Útil para testing y debugging
+ */
+const manualStatusUpdate: RequestHandler = async (req, res) => {
+    try {
+        console.log('[API] Solicitud de actualización manual de estados de turnos');
+        
+        const result = await runShiftStatusUpdateManually();
+        
+        res.json({
+            success: true,
+            message: 'Estados actualizados exitosamente',
+            ...result
+        });
+    } catch (error: any) {
+        console.error('[API] Error en actualización manual:', error);
+        res.status(500).json({ 
+            success: false,
+            error: error.message || 'Error al actualizar estados' 
+        });
+    }
+};
+
+/**
+ * GET /api/shifts/status-stats
+ * Obtiene estadísticas de estados de turnos
+ */
+const getStatusStats: RequestHandler = async (req, res) => {
+    try {
+        const stats = await getShiftStatusStats(pool);
+        res.json(stats);
+    } catch (error: any) {
+        console.error('[API] Error al obtener estadísticas:', error);
+        res.status(500).json({ 
+            error: error.message || 'Error al obtener estadísticas' 
+        });
+    }
+};
+
+/**
+ * GET /api/shifts/pending-updates
+ * Obtiene turnos que necesitan actualización de estado
+ */
+const getPendingUpdates: RequestHandler = async (req, res) => {
+    try {
+        const pending = await getShiftsNeedingUpdate(pool);
+        res.json(pending);
+    } catch (error: any) {
+        console.error('[API] Error al obtener turnos pendientes:', error);
+        res.status(500).json({ 
+            error: error.message || 'Error al obtener turnos pendientes' 
+        });
+    }
+};
+
+// =================================================================
 // RUTAS
 // =================================================================
 
+// Rutas de actualización automática (primero para evitar conflictos de rutas)
+router.post('/update-statuses', requireAuth, manualStatusUpdate);
+router.get('/status-stats', requireAuth, getStatusStats);
+router.get('/pending-updates', requireAuth, getPendingUpdates);
+
+// Rutas normales de turnos
 router.get('/center/:centerId', requireAuth, listCenterShifts);
 router.get('/user/:userId', requireAuth, listUserShifts);
 router.get('/:shiftId/history', requireAuth, getHistory);

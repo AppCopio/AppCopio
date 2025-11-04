@@ -27,6 +27,9 @@ import { useActivation } from "@/contexts/ActivationContext";
 import { Button } from "@mui/material";
 import CenterCatastroDetails from "./CenterCatastroDetails";
 import "./CenterCatastroDetails.css";
+import OperationalFunctions from '@/components/center/OperationalFunctions';
+import ActivationPanel from '@/components/center/ActivationPanel';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 type Resource = { item_id: string | number; name: string; category: string; quantity: number };
 type AssignRole = "trabajador municipal" | "contacto ciudadano";
@@ -43,6 +46,7 @@ const getOperationalStatusClass = (status: OperationalStatusUI | undefined) => {
 };
 
 const CenterDetailsPage: React.FC = () => {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId } = useParams<{ centerId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -324,6 +328,29 @@ const fullnessPercentage = useMemo(() => {
         {/* @ts-ignore - backend trae props del catastro fuera de Center UI */}
         <CenterCatastroDetails centerData={center as any} />
 
+        {/* Panel de Activación */}
+        <ActivationPanel 
+          centerId={centerId!}
+          isActive={center.is_active}
+        />
+            
+        {/* Sección de Funcionalidades Operativas */}
+        <OperationalFunctions 
+          centerId={centerId!}
+          isActive={center.is_active}
+          onRefresh={async () => {
+            // Recargar datos del centro cuando se actualice
+            try {
+              const c = await getOneCenter(centerId!);
+              setCenter({
+                ...(c as any),
+                operational_status: mapStatusToFrontend((c as any).operational_status),
+              });
+            } catch (error) {
+              console.error('Error recargando centro:', error);
+            }
+          }}
+        />
         {/* Sección de Historial de Notificaciones */}
         <div className="notifications-section" style={{ marginTop: '32px' }}>
           <NotificationsHistory

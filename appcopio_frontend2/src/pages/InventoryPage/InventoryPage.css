@@ -438,3 +438,146 @@
   border: 1px solid #c3e6cb;
   cursor: help;
 }
+
+/* Estilos específicos para el contenedor de botones */
+.actions-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Responsive para la header */
+@media (max-width: 768px) {
+  .inventory-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .actions-container {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .filters-horizontal-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .filter-container {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .filter-container select {
+    min-width: 100%;
+  }
+  
+  /* Responsive table columns */
+  .inventory-table th:nth-child(1), 
+  .inventory-table td:nth-child(1) {
+    width: 40%;
+  }
+  
+  .inventory-table th:nth-child(2), 
+  .inventory-table td:nth-child(2) {
+    width: 15%;
+  }
+  
+  .inventory-table th:nth-child(3), 
+  .inventory-table td:nth-child(3) {
+    width: 25%;
+  }
+  
+  .inventory-table th:nth-child(4), 
+  .inventory-table td:nth-child(4) {
+    width: 20%;
+  }
+}
+
+/* HdU11: Estilos para indicadores de eliminación */
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+.delete-warning {
+  font-size: 0.8em;
+  color: #dc3545;
+  font-weight: 600;
+  padding: 2px 6px;
+  background-color: #f8d7da;
+  border-radius: 3px;
+  border: 1px solid #f5c6cb;
+  cursor: help;
+}
+
+.can-delete {
+  font-size: 0.8em;
+  color: #28a745;
+  font-weight: 600;
+  padding: 2px 6px;
+  background-color: #d4edda;
+  border-radius: 3px;
+  border: 1px solid #c3e6cb;
+  cursor: help;
+}
+
+.priority-select {
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 600;
+  color: white;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  margin-left: 24px; /* separación desde el botón Editar hacia la prioridad (más espacio) */
+}
+
+.priority-alto {
+  background-color: #e74c3c; /* rojo */
+}
+
+.priority-medio {
+  background-color: #ff8c42; /* naranja cálido */
+  color: white; /* texto en blanco para buen contraste */
+}
+
+.priority-bajo {
+  background-color: #2ecc71; /* verde */
+}
+
+/* Mostrar las opciones del desplegable con fondo blanco y texto oscuro
+   para una apariencia limpia y legible en la mayoría de navegadores. */
+select.priority-select option {
+  background-color: white !important;
+  color: #222 !important; /* texto oscuro para mejor contraste */
+}
+
+/* Mantener blanco al hover/focus (best-effort, algunos navegadores pueden ignorar) */
+select.priority-select option:hover,
+select.priority-select option:focus {
+  background-color: white !important;
+  color: #222 !important;
+}
+
+/* Cuando la propia select muestra el valor, usar clases para colorearla */
+select.priority-select.priority-bajo {
+  background-color: #2ecc71;
+  color: white;
+}
+select.priority-select.priority-medio {
+  background-color: #ff8c42;
+  color: white;
+}
+select.priority-select.priority-alto {
+  background-color: #e74c3c;
+  color: white;
+}

@@ -10,7 +10,7 @@ type ActivationState = {
 
 const ActivationContext = createContext<ActivationState | null>(null);
 
-export function ActivationProvider({ centerId, children }: { centerId: string | number; children: React.ReactNode }) {
+export function ActivationProvider({ centerId, children }: { centerId?: string | number; children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [activation, setActivation] = useState<ActiveActivation | null>(null);
 

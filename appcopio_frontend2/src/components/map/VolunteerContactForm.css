@@ -1,0 +1,94 @@
+/* src/components/map/VolunteerContactForm.css */
+
+.volunteer-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.volunteer-form-container {
+  animation: slideUp 0.3s ease-out;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Estilos para el botón en el InfoWindow */
+.volunteer-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  background: linear-gradient(45deg, #2196F3 30%, #21CBF3 90%);
+  border: none;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9em;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.volunteer-btn:hover {
+  background: linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+  transform: translateY(-2px);
+}
+
+.volunteer-btn:active {
+  transform: translateY(0);
+}
+
+.volunteer-btn-icon {
+  font-size: 1.2em;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+  .volunteer-form-overlay {
+    padding: 10px;
+  }
+
+  .volunteer-form-container {
+    max-height: 95vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .volunteer-btn {
+    font-size: 0.85em;
+    padding: 8px;
+  }
+}

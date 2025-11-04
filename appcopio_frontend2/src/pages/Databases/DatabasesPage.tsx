@@ -12,8 +12,10 @@ import { templatesService } from "@/services/template.service";
 import { fieldsService } from "@/services/fields.service";
 import { TEMPLATES, TemplateItem } from "@/types/template";
 import { ListSubheader } from "@mui/material";
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 export default function DatabasesPage() {
+  useScrollToTop({ behavior: 'smooth' });
   const { centerId = "" } = useParams<{ centerId: string }>();
   const { loading: actLoading, activation} = useActivation();
   const navigate = useNavigate();
@@ -29,6 +31,8 @@ export default function DatabasesPage() {
         try {
         setLoading(true);
         const data = await databasesService.listByActivation(activation.activation_id);
+        //Filtrar la de los voluntarios
+        const filtered = data.filter(db => db.key !== 'volunteer-contacts');
         if (mounted) setItems(data);
         } finally {
         if (mounted) setLoading(false);
@@ -81,9 +85,12 @@ export default function DatabasesPage() {
         existingNames={items.map(i => i.name)}
         usedTemplateKeys={[...new Set(items.map(i => i.template_key).filter(Boolean))] as string[]}
         onCreated={(created) => {
-          setItems(prev => [created, ...prev].sort((a, b) => a.name.localeCompare(b.name, "es")));
+          // No agregar si es BD de voluntarios
+          if (created.key !== 'volunteer-contacts') {
+            setItems(prev => [created, ...prev].sort((a, b) => a.name.localeCompare(b.name, "es")));
+            navigate(`./${encodeURIComponent(created.dataset_id)}`);
+          }
           setOpenNew(false);
-          navigate(`./${encodeURIComponent(created.dataset_id)}`);
         }}
       />
     </Container>

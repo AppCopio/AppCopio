@@ -1,6 +1,7 @@
 // src/components/shifts/ShiftsCalendarView.tsx
 import React from 'react';
 import type { CenterShift } from '@/types/shift';
+import { formatShiftStatus, getShiftStatusColor, getShiftStatusTextColor } from '@/utils/shiftUtils';
 
 interface ShiftsCalendarViewProps {
   shifts: CenterShift[];
@@ -76,15 +77,11 @@ export default function ShiftsCalendarView({ shifts, onShiftClick }: ShiftsCalen
                       borderRadius: '12px',
                       fontSize: '12px',
                       fontWeight: '600',
-                      background: shift.status === 'programado' ? '#dbeafe' : 
-                                 shift.status === 'en_curso' ? '#dcfce7' :
-                                 shift.status === 'completado' ? '#f3f4f6' : '#fee2e2',
-                      color: shift.status === 'programado' ? '#1e40af' :
-                            shift.status === 'en_curso' ? '#166534' :
-                            shift.status === 'completado' ? '#4b5563' : '#991b1b',
+                      background: getShiftStatusColor(shift.status),
+                      color: getShiftStatusTextColor(shift.status),
                     }}
                   >
-                    {shift.status}
+                    {formatShiftStatus(shift.status)}
                   </span>
                 </div>
               </div>
