@@ -1,6 +1,6 @@
 export type UUID = string;
 
-export type DatasetTemplateKey = "blank" | "personas_albergadas" |"familias_integradas" | "personas_ingresadas" | "registro_p_persona" | "red_apoyo" | "ayudas_entregadas" | "reubicaciones";
+export type DatasetTemplateKey = "blank" | "personas_albergadas" |"familias_integradas" | "personas_ingresadas" | "registro_p_persona" | "red_apoyo" | "ayudas_entregadas" | "reubicaciones"| "solicitudes_servicios";
 
 export type DatabaseSummary = {
   dataset_id: UUID;
