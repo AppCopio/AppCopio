@@ -42,7 +42,7 @@ export const paths = {
     databases: (centerId: string | number) => `/center/${centerId}/databases`,
     activationsHistory: (centerId: string | number) => `/center/${centerId}/activations`,
     activationDetail: (centerId: string | number, activationId: number) =>  `/center/${centerId}/activations/${activationId}`,
-    volunteers: (centerId: string) => `/centers/${centerId}/volunteers`,
+    volunteers: (centerId: string) => `/center/${centerId}/volunteers`,
     shifts: (centerId: string | number) => `/center/${centerId}/shifts`,
 
   },
