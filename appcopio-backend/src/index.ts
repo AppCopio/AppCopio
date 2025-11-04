@@ -35,6 +35,7 @@ import notificationRoutes from "./routes/notificacionRoutes";
 import migrateRoutes from "./routes/migrate";
 import prioritiesRoutes from "./routes/prioritiesRoutes"; 
 import volunteerRoutes from './routes/volunteerContactRoutes';
+import serviceRequestRoutes from "./routes/serviceRequestRoutes";
 import movementRoutes from "./routes/movementRoutes";
 import resourceBoxRoutes from "./routes/resourceBoxRoutes";
 import { startShiftStatusJob } from "./jobs/shiftStatusJob";
@@ -74,8 +75,6 @@ app.use((req, res, next) => {
 });
 app.use(cors(corsOptions));
 
-
-
 /** Rate limit solo en auth */
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 app.use("/api/auth", limiter);
@@ -86,7 +85,6 @@ app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
 app.use("/api/centers", centerRoutes)
-
 app.use("/api/updates", requireAuth, updateRoutes);
 app.use("/api/users", requireAuth, userRouter);
 app.use("/api/inventory", requireAuth, inventoryRoutes);
@@ -100,7 +98,6 @@ app.use("/api/roles", requireAuth, roleRoutes);
 app.use("/api/csv/upload", requireAuth, csvRoutes);
 app.use("/api/zones", requireAuth, zoneRoutes); 
 app.use("/api/shifts", requireAuth, shiftRoutes);
-
 app.use("/api/database", requireAuth, databaseRoutes);
 app.use("/api/database-fields", requireAuth, fieldRoutes);
 app.use("/api/database-records", requireAuth, recordRoutes);
@@ -110,11 +107,9 @@ app.use("/api/notifications", requireAuth, notificationRoutes);
 app.use("/api/migrate", migrateRoutes); // Sin requireAuth para facilitar ejecución inicial
 app.use("/api/centers", requireAuth, movementRoutes);
 app.use("/api/resource-boxes", requireAuth, resourceBoxRoutes);
-
-app.use("/api/centers",prioritiesRoutes); 
-
-
+app.use("/api/centers", prioritiesRoutes); 
 app.use('/api/volunteers', volunteerRoutes);
+app.use('/api/serviceRequest', serviceRequestRoutes);
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {

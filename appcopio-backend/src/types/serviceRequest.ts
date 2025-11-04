@@ -3,7 +3,7 @@
 /**
  * Define los estados posibles de una solicitud de servicio.
  */
-export type ServiceRequestStatus = 'pendiente' | 'en progreso' | 'completado' | 'cancelado';
+export type ServiceRequestStatus = 'pendiente' | 'en_progreso' | 'completado' | 'cancelado';
 
 /**
  * Categorías de servicios.
@@ -16,14 +16,14 @@ export type ServiceCategory =
   | "logistica"
   | "educacion"
   | "legal"
-  | "psicologico"
+  | "psicologia"
   | "tecnologia"
   | "otro";
 
 /**
  * Niveles de urgencia.
  */
-export type ServiceUrgency = "baja" | "media" | "alta" | "crítica";
+export type ServiceUrgency = "baja" | "media" | "alta" | "critica";
 
 export type ServiceDuration = 'horas' | 'dias' | 'semanas' | 'indefinido';
 
@@ -86,4 +86,34 @@ export interface ServiceRequestFilters {
   status?: ServiceRequestStatus;
   categoria?: ServiceCategory;
   urgencia?: ServiceUrgency;
+}
+
+/**
+ * Versión pública simplificada de un aviso de servicio
+ * (sin información sensible como notas internas, created_by, etc.)
+ */
+export interface ServiceRequestPublicInfo {
+  service_request_id: string;
+  center_id: string;
+  titulo: string;
+  descripcion: string;
+  categoria: ServiceCategory;
+  urgencia: ServiceUrgency;
+  duracion_estimada: ServiceDuration;
+  status: ServiceRequestStatus;
+  created_at: string;
+  // Opcional: nombre del centro para mostrar en el mapa
+  center_name?: string;
+}
+
+/**
+ * Filtros públicos (más limitados que los admin)
+ */
+export interface ServiceRequestPublicFilters {
+  center_id?: string;
+  activation_id?: number;
+  categoria?: ServiceCategory;
+  urgencia?: ServiceUrgency;
+  // Solo mostrar avisos activos (pendiente o en_progreso)
+  only_active?: boolean;
 }

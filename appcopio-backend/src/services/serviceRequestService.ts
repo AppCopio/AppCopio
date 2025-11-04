@@ -11,6 +11,8 @@ import type {
   ServiceRequestCreateResponse,
   ServiceRequestStatus,
   ServiceRequestFilters,
+  ServiceRequestPublicFilters,
+  ServiceRequestPublicInfo,
 } from "../types/serviceRequest";
 
 const SERVICE_REQUEST_DATASET_KEY = "service-requests";
@@ -78,7 +80,7 @@ async function createServiceRequestDataset(
           { value: "educacion", label: "Educación" },
           { value: "construccion", label: "Construcción" },
           { value: "limpieza", label: "Limpieza" },
-          { value: "cocina", label: "Cocina" },
+          { value: "alimentacion", label: "Alimentación" },
           { value: "transporte", label: "Transporte" },
           { value: "logistica", label: "Logística" },
           { value: "tecnologia", label: "Tecnología" },
@@ -616,4 +618,225 @@ export async function deleteServiceRequest(
   if (rowCount === 0) {
     throw new Error("Aviso de servicio no encontrado o ya eliminado.");
   }
+}
+
+// src/services/serviceRequestService.ts
+
+/**
+ * Mapea una fila de DB a ServiceRequestPublicInfo (versión pública)
+ */
+function mapRowToServiceRequestPublicInfo(row: any): ServiceRequestPublicInfo {
+  const data = row.data || {};
+  const selectValues = row.select_values || {};
+
+  // Extraer valores de selects
+  const extractSelectValue = (key: string, fallback: string) => {
+    if (selectValues[key]) {
+      const arr = Array.isArray(selectValues[key])
+        ? selectValues[key]
+        : [selectValues[key]];
+      return arr[0] || fallback;
+    }
+    return fallback;
+  };
+
+  return {
+    service_request_id: row.record_id,
+    center_id: row.center_id,
+    titulo: data.titulo || "",
+    descripcion: data.descripcion || "",
+    categoria: extractSelectValue("categoria", "otro") as any,
+    urgencia: extractSelectValue("urgencia", "media") as any,
+    duracion_estimada: extractSelectValue("duracion_estimada", "indefinido") as any,
+    status: extractSelectValue("status", "pendiente") as ServiceRequestStatus,
+    created_at: new Date(row.created_at).toISOString(),
+    center_name: row.center_name || undefined,
+  };
+}
+
+/**
+ * Lista avisos de servicios para vista pública
+ * Solo devuelve información no sensible y solo avisos activos por defecto
+ */
+export async function listPublicServiceRequests(
+  db: Db,
+  filters: ServiceRequestPublicFilters = {}
+): Promise<ServiceRequestPublicInfo[]> {
+  const conditions: string[] = [
+    "dr.deleted_at IS NULL",
+    "ds.key = $1",
+  ];
+  const params: any[] = [SERVICE_REQUEST_DATASET_KEY];
+  let paramCount = 2;
+
+  // Filtro por activación
+  if (filters.activation_id) {
+    conditions.push(`ds.activation_id = $${paramCount++}`);
+    params.push(filters.activation_id);
+  }
+
+  // Filtro por centro
+  if (filters.center_id) {
+    conditions.push(`ds.center_id = $${paramCount++}`);
+    params.push(filters.center_id);
+  }
+
+  // Solo avisos activos (pendiente o en_progreso) por defecto
+  const onlyActive = filters.only_active !== false; // true por defecto
+
+  const query = `
+    SELECT 
+      dr.record_id,
+      dr.data,
+      dr.created_at,
+      ds.center_id,
+      c.name as center_name,
+      COALESCE(
+        (
+          SELECT jsonb_object_agg(df.key, 
+            COALESCE(
+              (SELECT jsonb_agg(dfo.value) 
+               FROM DatasetRecordOptionValues drov
+               JOIN DatasetFieldOptions dfo ON dfo.option_id = drov.option_id
+               WHERE drov.record_id = dr.record_id AND drov.field_id = df.field_id
+              ), 
+              '[]'::jsonb
+            )
+          )
+          FROM DatasetFields df
+          WHERE df.dataset_id = dr.dataset_id AND df.type IN ('select', 'multi_select')
+        ),
+        '{}'::jsonb
+      ) as select_values
+    FROM DatasetRecords dr
+    JOIN Datasets ds ON ds.dataset_id = dr.dataset_id
+    LEFT JOIN Centers c ON c.center_id = ds.center_id
+    WHERE ${conditions.join(" AND ")}
+    ORDER BY 
+      CASE 
+        WHEN (select_values->>'urgencia')::jsonb->>0 = 'critica' THEN 1
+        WHEN (select_values->>'urgencia')::jsonb->>0 = 'alta' THEN 2
+        WHEN (select_values->>'urgencia')::jsonb->>0 = 'media' THEN 3
+        ELSE 4
+      END,
+      dr.created_at DESC
+  `;
+
+  const { rows } = await db.query(query, params);
+  let results = rows.map(mapRowToServiceRequestPublicInfo);
+
+  // Filtros post-query (en memoria)
+  
+  // Solo avisos activos
+  if (onlyActive) {
+    results = results.filter(
+      (r) => r.status === "pendiente" || r.status === "en_progreso"
+    );
+  }
+
+  // Filtro por categoría
+  if (filters.categoria) {
+    results = results.filter((r) => r.categoria === filters.categoria);
+  }
+
+  // Filtro por urgencia
+  if (filters.urgencia) {
+    results = results.filter((r) => r.urgencia === filters.urgencia);
+  }
+
+  return results;
+}
+
+/**
+ * Obtiene un aviso específico en su versión pública
+ */
+export async function getPublicServiceRequestById(
+  db: Db,
+  service_request_id: string
+): Promise<ServiceRequestPublicInfo | null> {
+  const query = `
+    SELECT 
+      dr.record_id,
+      dr.data,
+      dr.created_at,
+      ds.center_id,
+      c.name as center_name,
+      COALESCE(
+        (
+          SELECT jsonb_object_agg(df.key, 
+            COALESCE(
+              (SELECT jsonb_agg(dfo.value) 
+               FROM DatasetRecordOptionValues drov
+               JOIN DatasetFieldOptions dfo ON dfo.option_id = drov.option_id
+               WHERE drov.record_id = dr.record_id AND drov.field_id = df.field_id
+              ), 
+              '[]'::jsonb
+            )
+          )
+          FROM DatasetFields df
+          WHERE df.dataset_id = dr.dataset_id AND df.type IN ('select', 'multi_select')
+        ),
+        '{}'::jsonb
+      ) as select_values
+    FROM DatasetRecords dr
+    JOIN Datasets ds ON ds.dataset_id = dr.dataset_id
+    LEFT JOIN Centers c ON c.center_id = ds.center_id
+    WHERE dr.record_id = $1
+      AND dr.deleted_at IS NULL
+    LIMIT 1
+  `;
+
+  const { rows } = await db.query(query, [service_request_id]);
+
+  if (rows.length === 0) return null;
+
+  return mapRowToServiceRequestPublicInfo(rows[0]);
+}
+
+/**
+ * Cuenta avisos por categoría (para estadísticas públicas)
+ */
+export async function countServiceRequestsByCategory(
+  db: Db,
+  activation_id?: number
+): Promise<Record<string, number>> {
+  const conditions = ["dr.deleted_at IS NULL", "ds.key = $1"];
+  const params: any[] = [SERVICE_REQUEST_DATASET_KEY];
+  let paramCount = 2;
+
+  if (activation_id) {
+    conditions.push(`ds.activation_id = $${paramCount++}`);
+    params.push(activation_id);
+  }
+
+  const query = `
+    WITH status_filter AS (
+      SELECT dr.record_id, dr.dataset_id
+      FROM DatasetRecords dr
+      JOIN Datasets ds ON ds.dataset_id = dr.dataset_id
+      JOIN DatasetFields df ON df.dataset_id = dr.dataset_id AND df.key = 'status'
+      JOIN DatasetRecordOptionValues drov ON drov.record_id = dr.record_id AND drov.field_id = df.field_id
+      JOIN DatasetFieldOptions dfo ON dfo.option_id = drov.option_id
+      WHERE ${conditions.join(" AND ")}
+        AND dfo.value IN ('pendiente', 'en_progreso')
+    )
+    SELECT 
+      dfo.value as categoria,
+      COUNT(*) as count
+    FROM status_filter sf
+    JOIN DatasetFields df ON df.dataset_id = sf.dataset_id AND df.key = 'categoria'
+    JOIN DatasetRecordOptionValues drov ON drov.record_id = sf.record_id AND drov.field_id = df.field_id
+    JOIN DatasetFieldOptions dfo ON dfo.option_id = drov.option_id
+    GROUP BY dfo.value
+    ORDER BY count DESC
+  `;
+
+  const { rows } = await db.query(query, params);
+
+  const counts: Record<string, number> = {};
+  for (const row of rows) {
+    counts[row.categoria] = parseInt(row.count, 10);
+  }
+
+  return counts;
 }
