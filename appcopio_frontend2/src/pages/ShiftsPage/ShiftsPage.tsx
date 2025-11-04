@@ -5,16 +5,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   getCenterShifts,
   cancelShift,
-  exportShiftsToCSV,
 } from '@/services/shifts.service';
 import CreateShiftModal from '@/components/shifts/CreateShiftModal';
 import EditShiftModal from '@/components/shifts/EditShiftModal';
 import ShiftHistoryModal from '@/components/shifts/ShiftHistoryModal';
 import ShiftsCalendarView from '@/components/shifts/ShiftsCalendarView';
 import type { CenterShift, ShiftListOptions, Weekday } from '@/types/shift';
+import Papa from 'papaparse';
+import { saveAs } from 'file-saver';
+import { formatShiftStatus } from '@/utils/shiftUtils';
 import './ShiftsPage.css';
 
-const WEEKDAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const WEEKDAY_NAMES = [ 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 export default function ShiftsPage() {
   const { centerId } = useParams<{ centerId: string }>();
@@ -86,32 +88,100 @@ export default function ShiftsPage() {
     }
   };
 
-  const handleExportCSV = async () => {
+  const handleExportCSV = () => {
     if (!centerId) return;
     
     try {
       setIsExporting(true);
       
-      const options: any = {};
-      if (fromDate) options.from_date = new Date(fromDate).toISOString();
-      if (toDate) options.to_date = new Date(toDate).toISOString();
+      // Filtrar shifts según los filtros aplicados
+      const shiftsToExport = getFilteredShifts();
       
-      const blob = await exportShiftsToCSV(centerId, options);
+      // Definir headers del CSV
+      const headers = [
+        'centro_id',
+        'centro_nombre',
+        'usuario_asignado',
+        'fecha_inicio',
+        'fecha_fin',
+        'hora_inicio',
+        'hora_fin',
+        'dias_semana',
+        'estado',
+        'notas'
+      ];
       
-      // Crear link de descarga
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `turnos_${centerId}_${Date.now()}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      // Función auxiliar para formatear fecha
+      const formatDate = (date: Date) => {
+        return date.toLocaleDateString('es-CL', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+      };
+      
+      // Función auxiliar para formatear hora
+      const formatTime = (date: Date) => {
+        return date.toLocaleTimeString('es-CL', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      };
+      
+      // Función auxiliar para formatear días de la semana
+      const formatWeekdays = (weekdays: Weekday[]) => {
+        return weekdays.map(day => WEEKDAY_NAMES[day]).join(', ');
+      };
+      
+      type Row = Record<string, string | number | null | undefined>;
+      
+      // Mapear los turnos a filas del CSV
+      const rows: Row[] = shiftsToExport.map((shift) => {
+        const startDate = new Date(shift.shift_start);
+        const endDate = new Date(shift.shift_end);
+        
+        return {
+          centro_id: shift.center_id,
+          centro_nombre: shift.center_name || `Centro ${shift.center_id}`,
+          usuario_asignado: shift.assigned_user_name,
+          fecha_inicio: formatDate(startDate),
+          fecha_fin: formatDate(endDate),
+          hora_inicio: formatTime(startDate),
+          hora_fin: formatTime(endDate),
+          dias_semana: formatWeekdays(shift.weekdays),
+          estado: shift.status,
+          notas: shift.notes || '',
+        };
+      });
+      
+      // Crear la matriz de datos
+      const dataMatrix = rows.map((r) => headers.map((h) => (r[h] ?? '') as string | number));
+      
+      // Generar CSV usando Papa Parse
+      const csvCore = Papa.unparse(
+        {
+          fields: headers,
+          data: dataMatrix,
+        },
+        {
+          delimiter: ';',
+          quotes: true,
+          newline: '\r\n',
+        }
+      );
+      
+      // Agregar separador para Excel y BOM para UTF-8
+      const csv = 'sep=;\r\n' + csvCore;
+      const csvWithBOM = '\uFEFF' + csv;
+      
+      // Crear blob y descargar
+      const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `Turnos_Centro_${centerId}_${Date.now()}.csv`);
       
       alert('Turnos exportados exitosamente');
     } catch (err: any) {
       console.error('Error exporting shifts:', err);
-      alert(err?.response?.data?.error || 'Error al exportar los turnos');
+      alert(err?.message || 'Error al exportar los turnos');
     } finally {
       setIsExporting(false);
     }
@@ -372,7 +442,7 @@ function ShiftCard({ shift, canManage, onEdit, onCancel, onViewHistory }: ShiftC
           <p className="shift-user">👤 {shift.assigned_user_name}</p>
         </div>
         <span className={`shift-status ${shift.status}`}>
-          {shift.status}
+          {formatShiftStatus(shift.status)}
         </span>
       </div>
 
@@ -409,7 +479,7 @@ function ShiftCard({ shift, canManage, onEdit, onCancel, onViewHistory }: ShiftC
       )}
 
       <div className="shift-card-actions">
-        {canManage && shift.status === 'programado' && (
+        {canManage && (shift.status === 'programado' || shift.status === 'en_curso') && (
           <>
             <button className="btn-action btn-edit" onClick={onEdit}>
               ✏️ Editar

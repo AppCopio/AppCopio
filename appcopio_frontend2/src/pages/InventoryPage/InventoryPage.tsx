@@ -26,6 +26,8 @@ import type {
 } from "@/types/inventory";
 import "./InventoryPage.css";
 import { useScrollToTop } from '@/hooks/useScrollToTop';
+import { getPrioritiesByCenter, upsertPriority } from "@/services/priorities.service";
+import type { Priority, CenterPriority } from "@/types/priorities";
 
 const groupByCategory = (items: InventoryItem[]): GroupedInventory =>
   (items ?? []).reduce((acc, item) => {
@@ -46,6 +48,9 @@ export default function InventoryPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [priorities, setPriorities] = useState<CenterPriority[]>([]);
+  const [savingPriorityItemId, setSavingPriorityItemId] = useState<string | null>(null);
+
 
   // Modales / edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -117,6 +122,12 @@ export default function InventoryPage() {
         setCategories(cats);
         setCenterCapacity(capacity);
         
+        if (cats.length > 0 && newItemCategory === "") {
+          setNewItemCategory(String(cats[0].category_id));
+        }
+        const data = await getPrioritiesByCenter(centerId);
+        console.log("data_",data);
+        setPriorities(data);
       } catch (e: any) {
         if (!controller.signal.aborted) {
           setError(e?.message ?? "No se pudieron cargar los datos.");
@@ -146,7 +157,21 @@ export default function InventoryPage() {
       if (!controller.signal.aborted && showLoading) setIsLoading(false);
     }
   };
+  const getItemPriority = (itemId: string) =>
+    priorities.find((p) => String(p.item_id) === String(itemId))?.priority ?? 'bajo';
 
+  const handlePriorityChange = async (itemId: string, newPriority: Priority) => {
+    if (!user?.user_id || !centerId) return;
+    try {
+      setSavingPriorityItemId(itemId);
+      const updated = await upsertPriority(centerId, itemId, newPriority);
+  setPriorities((prev: CenterPriority[]) => prev.filter((p: CenterPriority) => String(p.item_id) !== String(itemId)).concat(updated));
+    } catch (err) {
+      console.error("Error al actualizar prioridad:", err);
+    } finally {
+      setSavingPriorityItemId(null);
+    }
+  };
   // Callback para actualizar el fullnessPercentage del centro
   const handleFullnessCalculated = useCallback(async (fullnessPercentage: number) => {
     if (!centerId || !isOnline) return;
@@ -164,7 +189,7 @@ export default function InventoryPage() {
   const handleSortByDate = (order: string) => {
     const sorted = { ...inventory };
     for (const category in sorted) {
-      sorted[category] = sorted[category].slice().sort((a, b) => {
+      sorted[category] = sorted[category].slice().sort((a: InventoryItem, b: InventoryItem) => {
         const da = new Date(a.updated_at).getTime();
         const db = new Date(b.updated_at).getTime();
         if (Number.isNaN(da) || Number.isNaN(db)) return 0;
@@ -258,7 +283,7 @@ export default function InventoryPage() {
     setIsSubmitting(true);
     try {
       const created = await createCategory(name);
-      setCategories((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+  setCategories((prev: Category[]) => [...prev, created].sort((a: Category, b: Category) => a.name.localeCompare(b.name)));
       setNewCategoryName("");
       alert(`Categoría "${name}" añadida con éxito.`);
     } catch (err: any) {
@@ -280,7 +305,7 @@ export default function InventoryPage() {
     setIsSubmitting(true);
     try {
       await deleteCategory(categoryToDelete);
-      setCategories((prev) => prev.filter((c) => String(c.category_id) !== categoryToDelete));
+  setCategories((prev: Category[]) => prev.filter((c: Category) => String(c.category_id) !== categoryToDelete));
       setCategoryToDelete("");
       alert("Categoría eliminada con éxito.");
     } catch (err: any) {
@@ -565,8 +590,18 @@ export default function InventoryPage() {
                                 </span>
                               )}
                             </div>
+                            <select
+                              value={getItemPriority(String(item.item_id))}
+                              onChange={(e) => handlePriorityChange(String(item.item_id), e.target.value as Priority)}
+                              disabled={savingPriorityItemId === String(item.item_id)}
+                              className={`priority-select priority-${getItemPriority(String(item.item_id))}`}
+                            >
+                              <option value="bajo">Prioridad Baja</option>
+                              <option value="medio">Prioridad Media</option>
+                              <option value="alto">Prioridad Alta</option>
+                            </select>
                           </td>
-                        )}
+                        )}  
                       </tr>
                     ))
                   )}

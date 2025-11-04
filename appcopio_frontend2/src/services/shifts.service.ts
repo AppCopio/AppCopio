@@ -141,28 +141,3 @@ export async function deleteShift(
   await api.delete(`shifts/${shiftId}/hard`, { signal });
 }
 
-/**
- * Exporta turnos a CSV
- */
-export async function exportShiftsToCSV(
-  centerId: string,
-  options: { from_date?: string; to_date?: string } = {}
-): Promise<Blob> {
-  const params = new URLSearchParams();
-  
-  if (options.from_date) {
-    params.append('from_date', options.from_date);
-  }
-  if (options.to_date) {
-    params.append('to_date', options.to_date);
-  }
-  
-  const queryString = params.toString();
-  const url = `shifts/center/${centerId}/export${queryString ? `?${queryString}` : ''}`;
-  
-  const response = await api.get(url, {
-    responseType: 'blob',
-  });
-  
-  return response.data;
-}
