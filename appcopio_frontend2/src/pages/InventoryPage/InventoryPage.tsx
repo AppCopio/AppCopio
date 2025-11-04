@@ -122,9 +122,9 @@ useEffect(() => {
     try {
       console.log("📦 [async] Solicitando datos con Promise.all...");
       const [inv, cats, capacityData] = await Promise.all([
-        listCenterInventory(centerId, controller.signal),
-        listCategories(controller.signal),
-        getCenterCapacity(centerId, controller.signal),
+        listCenterInventory(centerId),
+        listCategories(),
+        getCenterCapacity(centerId),
       ]);
       console.log("✅ [async] Datos recibidos:");
       console.log("   🗃️ inventario:", inv?.length ?? 0, "items");
