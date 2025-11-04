@@ -139,6 +139,18 @@ export default function MyShiftsPage() {
                 </div>
 
                 <div className="info-row">
+                  <span className="icon">📅</span>
+                  <span>
+                    {new Date(shift.shift_end).toLocaleDateString('es-CL', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </span>
+                </div>
+
+                <div className="info-row">
                   <span className="icon">🕐</span>
                   <span>
                     {new Date(shift.shift_start).toLocaleTimeString('es-CL', { 

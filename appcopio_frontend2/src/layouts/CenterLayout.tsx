@@ -50,21 +50,27 @@ const CenterLayout: React.FC = () => {
   // Determinar si el usuario es TM (trabajador municipal sin privilegios de apoyo admin)
   const isTM = !!user && user.role_id === 2 && !user.es_apoyo_admin;
   
+  // Determinar si el usuario es un contacto ciudadano
+  const isCitizenContact = !!user && user.role_id === 3; 
+
   const allLinks = [
     //{ label: "Inventario",            to: paths.center.inventory(id) },
     { label: "Ver Detalles",          to: paths.center.details(id) },
     { label: "Crear Solicitud",       to: paths.center.needsNew(id), hiddenForTM: true },
     { label: "Estado de Actualizaciones", to: paths.center.updates(id) },
     //{ label: "Listado de Personas",   to: paths.center.residents(id) },
-    { label: "Turnos",                to: paths.center.shifts(id), hiddenForTM: true },
+    { label: "Turnos",                to: paths.center.shifts(id), hiddenForCitizenContact: true },
     //{ label: "Registros de activación",   to: paths.center.databases(id) },
     { label: "Historial de activaciones",   to: paths.center.activationsHistory(id)},
     { label: "Inventario",   to: paths.center.inventory(id)},
-
   ];
 
-  // Filtrar enlaces: ocultar "Crear Solicitud" y "Turnos" para TMs
-  const links = allLinks.filter(link => !(isTM && link.hiddenForTM));
+  // Filtrar enlaces: ocultar "Crear Solicitud" y "Turnos" para TMs, y otros enlaces para contacto ciudadano
+  const links = allLinks.filter(link => {
+    if (isTM && link.hiddenForTM) return false;
+    if (isCitizenContact && link.hiddenForCitizenContact) return false;
+    return true;
+  });
 
   return (
     <div className="center-layout">

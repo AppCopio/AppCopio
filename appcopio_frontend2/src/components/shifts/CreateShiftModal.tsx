@@ -38,7 +38,7 @@ export default function CreateShiftModal({ centerId, onClose, onSuccess }: Creat
   const [endDate, setEndDate] = useState('');     // YYYY-MM-DD
   
   // Días de la semana que trabaja
-  const [selectedWeekdays, setSelectedWeekdays] = useState<Weekday[]>([1, 2, 3, 4, 5]); // Lun-Vie por defecto
+  const [selectedWeekdays, setSelectedWeekdays] = useState<Weekday[]>([0, 1, 2, 3, 4]); // Lun-Vie por defecto
   
   // Horario diario (mismo para todos los días seleccionados)
   const [startTime, setStartTime] = useState('08:00'); // HH:mm
