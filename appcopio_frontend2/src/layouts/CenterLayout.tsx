@@ -53,7 +53,14 @@ const CenterLayout: React.FC = () => {
   // Determinar si el usuario es un contacto ciudadano
   const isCitizenContact = !!user && user.role_id === 3; 
 
-  const allLinks = [
+  type NavLink = {
+    label: string;
+    to: string;
+    hiddenForTM?: boolean;
+    hiddenForCitizenContact?: boolean;
+  };
+
+  const allLinks: NavLink[] = [
     //{ label: "Inventario",            to: paths.center.inventory(id) },
     { label: "Ver Detalles",          to: paths.center.details(id) },
     //{ label: "Crear Solicitud",       to: paths.center.needsNew(id), hiddenForTM: true },
@@ -65,7 +72,7 @@ const CenterLayout: React.FC = () => {
     { label: "Historial de activaciones",   to: paths.center.activationsHistory(id)},
     { label: "Inventario",   to: paths.center.inventory(id)},
   ];
-
+  
   // Filtrar enlaces: ocultar "Crear Solicitud" y "Turnos" para TMs, y otros enlaces para contacto ciudadano
   const links = allLinks.filter(link => {
     if (isTM && link.hiddenForTM) return false;

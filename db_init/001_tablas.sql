@@ -671,3 +671,29 @@ CREATE TABLE CenterShiftHistory (
 CREATE INDEX idx_shift_history_shift ON CenterShiftHistory(shift_id, changed_at DESC);
 CREATE INDEX idx_shift_history_user ON CenterShiftHistory(changed_by);
 CREATE INDEX idx_shift_history_action ON CenterShiftHistory(action);
+
+CREATE TABLE IF NOT EXISTS ResourceBoxes (
+    box_id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INT REFERENCES Users(user_id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Tabla de items dentro de cada caja
+CREATE TABLE IF NOT EXISTS ResourceBoxItems (
+    box_item_id SERIAL PRIMARY KEY,
+    box_id INT NOT NULL REFERENCES ResourceBoxes(box_id) ON DELETE CASCADE,
+    item_id INT NOT NULL REFERENCES Products(item_id) ON DELETE RESTRICT,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices para mejorar el rendimiento
+CREATE INDEX IF NOT EXISTS idx_resourceboxitems_box_id ON ResourceBoxItems(box_id);
+CREATE INDEX IF NOT EXISTS idx_resourceboxitems_item_id ON ResourceBoxItems(item_id);
+CREATE INDEX IF NOT EXISTS idx_resourceboxes_created_by ON ResourceBoxes(created_by_user_id);
+CREATE INDEX IF NOT EXISTS idx_resourceboxes_is_active ON ResourceBoxes(is_active);
