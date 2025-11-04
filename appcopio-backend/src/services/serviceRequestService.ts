@@ -15,12 +15,8 @@ import type {
   ServiceRequestPublicInfo,
 } from "../types/serviceRequest";
 
-const SERVICE_REQUEST_DATASET_KEY = "service-requests";
+const SERVICE_REQUEST_DATASET_KEY = "service-request";
 const SERVICE_REQUEST_DATASET_NAME = "Avisos de Servicios Necesarios";
-
-// =================================================================
-// HELPERS PRIVADOS
-// =================================================================
 
 /**
  * Busca el ID del dataset de avisos de servicios si ya existe
@@ -244,10 +240,6 @@ function mapRowToServiceRequestInfo(row: any): ServiceRequestInfo {
     created_by_name: row.created_by_name || undefined,
   };
 }
-
-// =================================================================
-// FUNCIONES PÚBLICAS
-// =================================================================
 
 /**
  * Crea un nuevo aviso de servicio
@@ -685,33 +677,36 @@ export async function listPublicServiceRequests(
   const onlyActive = filters.only_active !== false; // true por defecto
 
   const query = `
-    SELECT 
-      dr.record_id,
-      dr.data,
-      dr.created_at,
-      ds.center_id,
-      c.name as center_name,
-      COALESCE(
-        (
-          SELECT jsonb_object_agg(df.key, 
-            COALESCE(
-              (SELECT jsonb_agg(dfo.value) 
-               FROM DatasetRecordOptionValues drov
-               JOIN DatasetFieldOptions dfo ON dfo.option_id = drov.option_id
-               WHERE drov.record_id = dr.record_id AND drov.field_id = df.field_id
-              ), 
-              '[]'::jsonb
+    WITH RankedRequests AS (
+      SELECT 
+        dr.record_id,
+        dr.data,
+        dr.created_at,
+        ds.center_id,
+        c.name as center_name,
+        COALESCE(
+          (
+            SELECT jsonb_object_agg(df.key, 
+              COALESCE(
+                (SELECT jsonb_agg(dfo.value) 
+                 FROM DatasetRecordOptionValues drov
+                 JOIN DatasetFieldOptions dfo ON dfo.option_id = drov.option_id
+                 WHERE drov.record_id = dr.record_id AND drov.field_id = df.field_id
+                ), 
+                '[]'::jsonb
+              )
             )
-          )
-          FROM DatasetFields df
-          WHERE df.dataset_id = dr.dataset_id AND df.type IN ('select', 'multi_select')
-        ),
-        '{}'::jsonb
-      ) as select_values
-    FROM DatasetRecords dr
-    JOIN Datasets ds ON ds.dataset_id = dr.dataset_id
-    LEFT JOIN Centers c ON c.center_id = ds.center_id
-    WHERE ${conditions.join(" AND ")}
+            FROM DatasetFields df
+            WHERE df.dataset_id = dr.dataset_id AND df.type IN ('select', 'multi_select')
+          ),
+          '{}'::jsonb
+        ) as select_values
+      FROM DatasetRecords dr
+      JOIN Datasets ds ON ds.dataset_id = dr.dataset_id
+      LEFT JOIN Centers c ON c.center_id = ds.center_id
+      WHERE ${conditions.join(" AND ")}
+    )
+    SELECT * FROM RankedRequests
     ORDER BY 
       CASE 
         WHEN (select_values->>'urgencia')::jsonb->>0 = 'critica' THEN 1
@@ -719,7 +714,7 @@ export async function listPublicServiceRequests(
         WHEN (select_values->>'urgencia')::jsonb->>0 = 'media' THEN 3
         ELSE 4
       END,
-      dr.created_at DESC
+      created_at DESC
   `;
 
   const { rows } = await db.query(query, params);
@@ -791,52 +786,4 @@ export async function getPublicServiceRequestById(
   if (rows.length === 0) return null;
 
   return mapRowToServiceRequestPublicInfo(rows[0]);
-}
-
-/**
- * Cuenta avisos por categoría (para estadísticas públicas)
- */
-export async function countServiceRequestsByCategory(
-  db: Db,
-  activation_id?: number
-): Promise<Record<string, number>> {
-  const conditions = ["dr.deleted_at IS NULL", "ds.key = $1"];
-  const params: any[] = [SERVICE_REQUEST_DATASET_KEY];
-  let paramCount = 2;
-
-  if (activation_id) {
-    conditions.push(`ds.activation_id = $${paramCount++}`);
-    params.push(activation_id);
-  }
-
-  const query = `
-    WITH status_filter AS (
-      SELECT dr.record_id, dr.dataset_id
-      FROM DatasetRecords dr
-      JOIN Datasets ds ON ds.dataset_id = dr.dataset_id
-      JOIN DatasetFields df ON df.dataset_id = dr.dataset_id AND df.key = 'status'
-      JOIN DatasetRecordOptionValues drov ON drov.record_id = dr.record_id AND drov.field_id = df.field_id
-      JOIN DatasetFieldOptions dfo ON dfo.option_id = drov.option_id
-      WHERE ${conditions.join(" AND ")}
-        AND dfo.value IN ('pendiente', 'en_progreso')
-    )
-    SELECT 
-      dfo.value as categoria,
-      COUNT(*) as count
-    FROM status_filter sf
-    JOIN DatasetFields df ON df.dataset_id = sf.dataset_id AND df.key = 'categoria'
-    JOIN DatasetRecordOptionValues drov ON drov.record_id = sf.record_id AND drov.field_id = df.field_id
-    JOIN DatasetFieldOptions dfo ON dfo.option_id = drov.option_id
-    GROUP BY dfo.value
-    ORDER BY count DESC
-  `;
-
-  const { rows } = await db.query(query, params);
-
-  const counts: Record<string, number> = {};
-  for (const row of rows) {
-    counts[row.categoria] = parseInt(row.count, 10);
-  }
-
-  return counts;
 }

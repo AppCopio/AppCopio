@@ -109,7 +109,7 @@ app.use("/api/centers", requireAuth, movementRoutes);
 app.use("/api/resource-boxes", requireAuth, resourceBoxRoutes);
 app.use("/api/centers", prioritiesRoutes); 
 app.use('/api/volunteers', volunteerRoutes);
-app.use('/api/serviceRequest', serviceRequestRoutes);
+app.use('/api/service-request', serviceRequestRoutes);
 
 /** Middleware de errores (último siempre) */
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {

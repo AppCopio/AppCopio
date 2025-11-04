@@ -5,7 +5,7 @@ import { requireUser } from "../auth/requireUser";
 import { requireAuth } from "../auth/middleware";
 import { 
   createServiceRequest, listServiceRequests, getServiceRequestById, updateServiceRequest, deleteServiceRequest,
-  listPublicServiceRequests, getPublicServiceRequestById, countServiceRequestsByCategory, 
+  listPublicServiceRequests, getPublicServiceRequestById, 
 } from "../services/serviceRequestService";
 import type { 
     ServiceCategory, ServiceRequestCreateData, ServiceRequestUpdateData, ServiceRequestFilters, 
@@ -48,37 +48,6 @@ const listPublicRequests: RequestHandler = async (req, res) => {
     console.error("Error en listPublicRequests:", error);
     res.status(500).json({
       error: "Error interno del servidor al listar los avisos de servicio.",
-    });
-  }
-};
-
-/**
- * @controller GET /api/service-requests/public/stats
- * @description Conteo de avisos activos por categoría.
- * @access Público
- */
-const getCategoryCounts: RequestHandler = async (req, res) => {
-  const { activation_id } = req.query;
-  const activationId = activation_id
-    ? parseInt(activation_id as string, 10)
-    : undefined;
-
-  if (activation_id && isNaN(activationId!)) {
-    return res
-      .status(400)
-      .json({ error: "El filtro activation_id debe ser un número." });
-  }
-
-  try {
-    const counts = await countServiceRequestsByCategory(pool, activationId);
-    res.json({
-      counts,
-      activation_id: activationId,
-    });
-  } catch (error: any) {
-    console.error("Error en getCategoryCounts:", error);
-    res.status(500).json({
-      error: "Error interno del servidor al obtener las estadísticas.",
     });
   }
 };
@@ -325,7 +294,6 @@ const deleteRequest: RequestHandler = async (req, res) => {
 };
 
 router.get("/public/list", listPublicRequests);
-router.get("/public/stats", getCategoryCounts);
 router.get("/public/:requestId", getPublicRequest);
 // ----------------------------------------------------------------
 router.post("/", requireAuth, createRequest);
