@@ -32,44 +32,11 @@ export default function ExitBoxesSection({ centerId }: ExitBoxesSectionProps) {
   const [filter, setFilter] = useState<'all' | 'created'>('all');
 
   useEffect(() => {
-    const loadExitBoxes = () => {
-      try {
-        const exitBoxesData = JSON.parse(localStorage.getItem('exitBoxes') || '[]');
-        // Por ahora incluir todas las cajas (más adelante filtrar por centro)
-        setExitBoxes(exitBoxesData);
-      } catch (error) {
-        console.error('Error loading exit boxes:', error);
-        setExitBoxes([]);
-      }
-    };
-
-    loadExitBoxes();
-
-    // Escuchar cambios en localStorage (solo funciona entre pestañas)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'exitBoxes') {
-        loadExitBoxes();
-      }
-    };
-
-    // Escuchar evento personalizado para actualizaciones inmediatas
-    const handleExitBoxUpdate = () => {
-      loadExitBoxes();
-    };
-
-    // Polling para detectar cambios en la misma pestaña (como respaldo)
-    const pollInterval = setInterval(() => {
-      loadExitBoxes();
-    }, 5000); // Verificar cada 5 segundos como respaldo
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('exitBoxesUpdated', handleExitBoxUpdate);
+    // Las cajas de salida ahora se registran directamente como movimientos de inventario
+    // Esta funcionalidad ha sido reemplazada
+    setExitBoxes([]);
     
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('exitBoxesUpdated', handleExitBoxUpdate);
-      clearInterval(pollInterval);
-    };
+    console.log('ExitBoxesSection: Esta funcionalidad ha sido reemplazada por movimientos de inventario directos');
   }, [centerId]);
 
   const filteredBoxes = exitBoxes.filter(box => {

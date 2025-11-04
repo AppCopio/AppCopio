@@ -50,15 +50,24 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
     const loadFamilies = async () => {
       try {
         const familyList = await familyService.list();
-        setFamilies(familyList);
-        if (familyList.length > 0) {
-          setSelectedFamilyId(familyList[0].family_id);
+        const familiesWithHeadNames = await Promise.all(
+          familyList.map(async (family) => {
+            const headOfHouseholdName = await familyService.getPersonName(family.jefe_hogar_person_id);
+            return {
+              ...family,
+              headOfHouseholdName,
+            };
+          })
+        );
+        setFamilies(familiesWithHeadNames);
+        if (familiesWithHeadNames.length > 0) {
+          setSelectedFamilyId(familiesWithHeadNames[0].family_id);
         }
       } catch (error) {
         console.error('Error loading families:', error);
       }
     };
-    
+
     loadFamilies();
   }, []);
 
@@ -273,7 +282,7 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
                 <option value="">Selecciona una familia</option>
                 {families.map(family => (
                   <option key={family.family_id} value={family.family_id}>
-                    {familyService.getDisplayName(family)}
+                    {family.headOfHouseholdName || `Familia #${family.family_id}`}
                   </option>
                 ))}
               </select>

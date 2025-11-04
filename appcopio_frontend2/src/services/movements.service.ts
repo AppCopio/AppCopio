@@ -188,14 +188,12 @@ export async function validateItemDeletion(
 }
 
 /**
- * Obtiene todas las cajas de recursos disponibles desde localStorage
+ * Obtiene todas las cajas de recursos disponibles desde el backend
  */
 export async function getResourceBoxes(signal?: AbortSignal): Promise<ResourceBox[]> {
   try {
-    // Como el backend de tu compañero no tiene tabla resourceboxes,
-    // cargar desde localStorage
-    const boxes = JSON.parse(localStorage.getItem('resourceBoxes') || '[]');
-    return boxes;
+    const response = await api.get('/resource-boxes', { signal });
+    return response.data;
   } catch (error) {
     console.error('Error fetching resource boxes:', error);
     return [];
@@ -203,43 +201,15 @@ export async function getResourceBoxes(signal?: AbortSignal): Promise<ResourceBo
 }
 
 /**
- * Crea una nueva caja de recursos usando el endpoint de tu compañero
+ * Crea una nueva caja de recursos usando el backend
  */
 export async function createResourceBox(
   data: Omit<ResourceBox, 'box_id' | 'created_at' | 'created_by_user_id'>,
   signal?: AbortSignal
 ): Promise<ResourceBox> {
   try {
-    // El backend de tu compañero no tiene tabla resourceboxes separada
-    // En su lugar, almacena las cajas temporalmente en localStorage
-    // y permite crear entradas directamente usando el endpoint /inventory/box
-    
-    // Convertir items al formato esperado por el backend
-    const backendItems = data.items.map(item => ({
-      itemName: item.item_name,
-      categoryId: item.category_id,
-      quantity: item.quantity,
-      unit: item.unit,
-      notes: item.notes
-    }));
-    
-    // Crear la caja de manera local y devolver la estructura esperada
-    const boxId = Date.now(); // ID temporal único
-    const newBox: ResourceBox = {
-      box_id: boxId,
-      name: data.name,
-      description: data.description,
-      items: data.items,
-      created_at: new Date().toISOString(),
-      created_by_user_id: 1 // Se asumirá el usuario actual
-    };
-    
-    // Guardar en localStorage para poder usar después
-    const existingBoxes = JSON.parse(localStorage.getItem('resourceBoxes') || '[]');
-    existingBoxes.push(newBox);
-    localStorage.setItem('resourceBoxes', JSON.stringify(existingBoxes));
-    
-    return newBox;
+    const response = await api.post('/resource-boxes', data, { signal });
+    return response.data;
   } catch (error) {
     console.error('Error creating resource box:', error);
     throw error;
@@ -255,16 +225,17 @@ export async function createBoxEntry(
   signal?: AbortSignal
 ): Promise<{ movement_id: number; message: string }> {
   try {
-    // Obtener la caja desde localStorage
-    const boxes = JSON.parse(localStorage.getItem('resourceBoxes') || '[]');
-    const selectedBox = boxes.find((box: ResourceBox) => box.box_id === data.box_id);
+    // Obtener la caja desde el backend
+    const response = await api.get(`/resource-boxes/${data.box_id}`, { signal });
+    const selectedBox = response.data;
     
     if (!selectedBox) {
       throw new Error('Caja no encontrada');
     }
     
-    // Convertir items al formato esperado por el backend de tu compañero
-    const backendItems = selectedBox.items.map((item: BoxItemTemplate) => ({
+    // Convertir items al formato esperado por el backend
+    const backendItems = selectedBox.items.map((item: any) => ({
+      itemId: item.item_id,
       itemName: item.item_name,
       categoryId: item.category_id,
       quantity: item.quantity,
@@ -272,17 +243,65 @@ export async function createBoxEntry(
       notes: item.notes
     }));
     
-    // Formatear datos según lo que espera el backend de tu compañero
+    // Formatear datos según lo que espera el backend
     const backendData = {
       name: selectedBox.name,
       description: selectedBox.description || data.reason,
       items: backendItems
     };
     
-    const response = await api.post(`/centers/${centerId}/inventory/box`, backendData, { signal });
-    return response.data;
+    const entryResponse = await api.post(`/centers/${centerId}/inventory/box`, backendData, { signal });
+    return entryResponse.data;
   } catch (error) {
     console.error(`Error creating box entry for center ${centerId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene una caja de recursos específica por su ID
+ */
+export async function getResourceBoxById(
+  boxId: number,
+  signal?: AbortSignal
+): Promise<ResourceBox | null> {
+  try {
+    const response = await api.get(`/resource-boxes/${boxId}`, { signal });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching resource box ${boxId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Actualiza una caja de recursos existente
+ */
+export async function updateResourceBox(
+  boxId: number,
+  data: Partial<Omit<ResourceBox, 'box_id' | 'created_at' | 'created_by_user_id'>>,
+  signal?: AbortSignal
+): Promise<ResourceBox> {
+  try {
+    const response = await api.put(`/resource-boxes/${boxId}`, data, { signal });
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating resource box ${boxId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Elimina (marca como inactiva) una caja de recursos
+ */
+export async function deleteResourceBox(
+  boxId: number,
+  signal?: AbortSignal
+): Promise<void> {
+  try {
+    await api.delete(`/resource-boxes/${boxId}`, { signal });
+  } catch (error) {
+    console.error(`Error deleting resource box ${boxId}:`, error);
     throw error;
   }
 }

@@ -10,6 +10,7 @@ export interface FamilyGroup {
   status: string;
   created_at: string;
   updated_at: string;
+  headOfHouseholdName?: string; // Nombre del jefe de hogar
 }
 
 /**
@@ -126,5 +127,25 @@ export const familyService = {
    */
   getDisplayName(family: FamilyGroup): string {
     return `Familia #${family.family_id}`;
-  }
+  },
+
+  /**
+   * Obtiene el nombre completo de una persona por su ID
+   * @param personId ID de la persona
+   * @returns Nombre completo de la persona
+   */
+  async getPersonName(personId: number): Promise<string> {
+    try {
+      const r = await api.get(`/persons/${personId}`);
+      const person = r.data;
+      if (person) {
+        const { nombre, primer_apellido, segundo_apellido } = person;
+        return [nombre, primer_apellido, segundo_apellido].filter(Boolean).join(' ');
+      }
+      return "Desconocido";
+    } catch (error) {
+      console.error(`Error fetching person with ID ${personId}:`, error);
+      return "Desconocido";
+    }
+  },
 };

@@ -81,10 +81,11 @@ export interface ResourceBox {
 
 // Plantilla de item dentro de una caja
 export interface BoxItemTemplate {
-  item_name: string;
-  category_id: number;
+  item_id: number; // Referencia a Products.item_id
+  item_name?: string; // Se obtiene del backend al cargar
+  category_id?: number; // Se obtiene del backend al cargar
   quantity: number;
-  unit: string;
+  unit?: string; // Se obtiene del backend al cargar
   notes?: string;
 }
 

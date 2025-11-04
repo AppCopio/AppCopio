@@ -4,7 +4,7 @@ import type { Category, InventoryItem } from '@/types/inventory';
 import type { ResourceBox, BoxItemTemplate } from '@/types/movements';
 import { listCategories } from '@/services/categories.service';
 import { listCenterInventory } from '@/services/inventory.service';
-import { getResourceBoxes, createResourceBox, createBoxEntry, createExitMovement } from '@/services/movements.service';
+import { getResourceBoxes, createResourceBox, createBoxEntry, createExitMovement, createBulkExitMovement } from '@/services/movements.service';
 import './ResourceBoxManager.css';
 
 interface ResourceBoxManagerProps {
@@ -42,10 +42,8 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
 
   // Estado para agregar item a la caja
   const [showAddItemToBox, setShowAddItemToBox] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState<number>(0);
+  const [selectedItemId, setSelectedItemId] = useState<number>(0); // Ahora seleccionamos de Products
   const [newItemQuantity, setNewItemQuantity] = useState(1);
-  const [newItemUnit, setNewItemUnit] = useState('');
   const [newItemNotes, setNewItemNotes] = useState('');
 
   // Estado para crear cajas de salida con inventario existente
@@ -74,20 +72,21 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
       const cats = await listCategories();
       setCategories(cats);
       
-      // Cargar cajas desde localStorage (ya que no hay tabla en el backend)
+      // Cargar cajas desde el backend
       const boxes = await getResourceBoxes();
       setResourceBoxes(boxes);
       
-      // Cargar cajas de salida desde localStorage
-      const exitBoxesData = JSON.parse(localStorage.getItem('exitBoxes') || '[]');
-      setExitBoxes(exitBoxesData);
+      // Las cajas de salida se manejan ahora directamente como movimientos de salida
+      // No necesitamos cargarlas de localStorage
+      setExitBoxes([]);
       
       // Cargar inventario actual del centro
       const inventory = await listCenterInventory(centerId);
       setCurrentInventory(inventory);
       
-      if (cats.length > 0) {
-        setNewItemCategory(cats[0].category_id);
+      // Inicializar con el primer item del inventario si existe
+      if (inventory.length > 0) {
+        setSelectedItemId(inventory[0].item_id);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -97,16 +96,23 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
   };
 
   const addItemToBox = () => {
-    if (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim()) {
-      alert('Todos los campos son requeridos y la cantidad debe ser mayor a 0');
+    if (!selectedItemId || newItemQuantity <= 0) {
+      alert('Debe seleccionar un item y la cantidad debe ser mayor a 0');
+      return;
+    }
+
+    // Buscar información del item seleccionado
+    const selectedProduct = currentInventory.find(inv => inv.item_id === selectedItemId);
+    if (!selectedProduct) {
+      alert('Item no encontrado');
       return;
     }
 
     const newItem: BoxItemTemplate = {
-      item_name: newItemName.trim(),
-      category_id: newItemCategory,
+      item_id: selectedItemId,
+      item_name: selectedProduct.name,
       quantity: newItemQuantity,
-      unit: newItemUnit.trim(),
+      unit: selectedProduct.unit || undefined,
       notes: newItemNotes.trim() || undefined
     };
 
@@ -116,9 +122,7 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
     }));
 
     // Reset form
-    setNewItemName('');
     setNewItemQuantity(1);
-    setNewItemUnit('');
     setNewItemNotes('');
     setShowAddItemToBox(false);
   };
@@ -439,31 +443,17 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
     try {
       setIsSubmitting(true);
       
-      // Crear la caja de salida (por ahora solo en localStorage)
-      const exitBox = {
-        box_id: Date.now(), // ID temporal
-        name: exitBoxForm.name,
-        description: exitBoxForm.description,
-        type: 'exit',
-        items: exitBoxForm.items.map(item => ({
-          item_name: item.productName,
-          category: item.categoryName,
-          quantity: item.quantityToUse,
-          unit: item.unit,
-          inventory_item_id: item.itemId
-        })),
-        created_at: new Date().toISOString(),
-        ready_for_delivery: true
-      };
+      // Registrar las salidas en el backend
+      const exits = exitBoxForm.items.map(item => ({
+        itemId: item.itemId,
+        quantity: item.quantityToUse,
+        familyId: null, // Sin familia asignada aún
+        reason: `Caja de salida: ${exitBoxForm.name}`,
+        notes: exitBoxForm.description || undefined
+      }));
 
-      // Guardar en localStorage (simulando el backend)
-      const existingExitBoxes = JSON.parse(localStorage.getItem('exitBoxes') || '[]');
-      existingExitBoxes.push(exitBox);
-      localStorage.setItem('exitBoxes', JSON.stringify(existingExitBoxes));
-      setExitBoxes(existingExitBoxes);
-
-      // Disparar evento personalizado para notificar a otros componentes
-      window.dispatchEvent(new CustomEvent('exitBoxesUpdated'));
+      // Usar el endpoint de salidas múltiples
+      await createBulkExitMovement(centerId, { exits });
 
       alert(`¡Caja de salida "${exitBoxForm.name}" creada exitosamente!\n\nLa caja contiene ${exitBoxForm.items.length} items y está lista para ser entregada a una familia.`);
       
@@ -541,69 +531,20 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
     </>
   );
 
-  // Funciones para manejar cajas de salida
+  // Funciones para manejar cajas de salida (deprecated - ahora se usan movimientos directos)
   const deliverExitBox = (box: any) => {
-    setSelectedExitBox(box);
-    setReason(`Entrega de caja: ${box.name}`);
-    setNotes(`Caja contiene ${box.items.length} items: ${box.items.map((item: any) => `${item.quantity} ${item.unit} ${item.item_name}`).join(', ')}`);
+    // Esta funcionalidad ha sido reemplazada por movimientos de salida directos
+    alert('Esta funcionalidad ha sido actualizada. Use la pestaña "Crear Caja de Salida" para registrar salidas.');
   };
 
   const deleteExitBox = (boxId: number) => {
-    if (confirm('¿Está seguro de que desea eliminar esta caja de salida?')) {
-      const updatedBoxes = exitBoxes.filter(box => box.box_id !== boxId);
-      setExitBoxes(updatedBoxes);
-      localStorage.setItem('exitBoxes', JSON.stringify(updatedBoxes));
-      
-      // Disparar evento personalizado para notificar a otros componentes
-      window.dispatchEvent(new CustomEvent('exitBoxesUpdated'));
-    }
+    // Las cajas de salida ahora se registran directamente como movimientos
+    alert('Las cajas de salida ahora se registran como movimientos de inventario.');
   };
 
   const executeExitBoxDelivery = async () => {
-    if (!selectedExitBox) return;
-
-    try {
-      setIsSubmitting(true);
-      
-      // Registrar movimientos de salida reales para cada item de la caja
-      const movementPromises = selectedExitBox.items.map(async (item: any) => {
-        return await createExitMovement(centerId, {
-          itemId: item.inventory_item_id,
-          quantity: item.quantity,
-          reason: reason,
-          notes: notes,
-          familyId: 1 // Temporal - usar familia por defecto hasta implementar selector
-        });
-      });
-
-      // Ejecutar todos los movimientos
-      await Promise.all(movementPromises);
-      
-      alert(`¡Caja "${selectedExitBox.name}" entregada exitosamente!\n\nSe han registrado ${selectedExitBox.items.length} movimientos de salida y se ha descontado del inventario.`);
-      
-      // Eliminar la caja de salida después de entregarla
-      const updatedBoxes = exitBoxes.filter(box => box.box_id !== selectedExitBox.box_id);
-      setExitBoxes(updatedBoxes);
-      localStorage.setItem('exitBoxes', JSON.stringify(updatedBoxes));
-      
-      // Disparar evento personalizado para notificar a otros componentes
-      window.dispatchEvent(new CustomEvent('exitBoxesUpdated'));
-      
-      // Limpiar formulario
-      setSelectedExitBox(null);
-      setReason('');
-      setNotes('');
-      
-      // Recargar inventario para mostrar cantidades actualizadas
-      await loadData();
-      
-      onSuccess();
-    } catch (error: any) {
-      console.error('Error entregando caja:', error);
-      alert('Error al entregar la caja: ' + (error?.message || 'Error desconocido'));
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Esta funcionalidad ha sido reemplazada por movimientos de salida directos
+    alert('Esta funcionalidad ha sido actualizada. Las salidas ahora se registran directamente.');
   };
 
   if (isLoading) {
@@ -755,27 +696,19 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
             <h4>Agregar Item a la Caja</h4>
             
             <div className="form-group">
-              <label>Nombre del item *</label>
-              <input
-                type="text"
-                value={newItemName}
-                onChange={(e) => setNewItemName(e.target.value)}
-                placeholder="Nombre del item"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Categoría *</label>
+              <label>Seleccionar Item del Inventario *</label>
               <select
-                value={newItemCategory}
-                onChange={(e) => setNewItemCategory(Number(e.target.value))}
+                value={selectedItemId}
+                onChange={(e) => setSelectedItemId(Number(e.target.value))}
               >
-                {categories.map(cat => (
-                  <option key={cat.category_id} value={cat.category_id}>
-                    {cat.name}
+                <option value={0}>-- Seleccione un item --</option>
+                {currentInventory.map(item => (
+                  <option key={item.item_id} value={item.item_id}>
+                    {item.name} ({item.category}) - Stock: {item.quantity} {item.unit}
                   </option>
                 ))}
               </select>
+              <small>Seleccione un item existente del inventario</small>
             </div>
 
             <div className="form-group">
@@ -785,16 +718,6 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
                 value={newItemQuantity}
                 onChange={(e) => setNewItemQuantity(Number(e.target.value))}
                 min="1"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Unidad *</label>
-              <input
-                type="text"
-                value={newItemUnit}
-                onChange={(e) => setNewItemUnit(e.target.value)}
-                placeholder="Ej: kg, lts, un"
               />
             </div>
 
@@ -814,9 +737,7 @@ export default function ResourceBoxManager({ centerId, onClose, onSuccess }: Res
                 className="btn-secondary"
                 onClick={() => {
                   setShowAddItemToBox(false);
-                  setNewItemName('');
                   setNewItemQuantity(1);
-                  setNewItemUnit('');
                   setNewItemNotes('');
                 }}
               >

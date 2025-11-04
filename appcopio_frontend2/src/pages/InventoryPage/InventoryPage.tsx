@@ -50,6 +50,7 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<CenterPriority[]>([]);
   const [savingPriorityItemId, setSavingPriorityItemId] = useState<string | null>(null);
+  const [newItemCategory, setNewItemCategory] = useState<string>("");
 
 
   // Modales / edición
