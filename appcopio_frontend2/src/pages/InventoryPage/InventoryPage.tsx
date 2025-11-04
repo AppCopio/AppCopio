@@ -24,6 +24,7 @@ import type {
   Category,
   InventoryCreateDTO,
 } from "@/types/inventory";
+import ServiceRequestsSection from "@/components/map/ServiceRequestsSection";
 import "./InventoryPage.css";
 import { useScrollToTop } from '@/hooks/useScrollToTop';
 import { getPrioritiesByCenter, upsertPriority } from "@/services/priorities.service";
