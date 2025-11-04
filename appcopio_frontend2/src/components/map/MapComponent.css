@@ -342,3 +342,15 @@
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+.sidepanel-info {
+  background-color: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.sidepanel-info p {
+  margin: 8px 0;
+  font-size: 14px;
+}

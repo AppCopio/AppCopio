@@ -14,6 +14,7 @@ import SidePanel from "./SidePanel";
 import { getCenterCapacity } from "@/services/centers.service";
 import type { Category, InventoryItem } from "@/types/inventory";
 import type { InventoryPriorityItem } from "@/types/priorities";
+import ServiceRequestsSection from './ServiceRequestsSection';
 type MapComponentProps = {
   centers: Center[];
 };
@@ -431,7 +432,10 @@ export default function MapComponent({ centers }: MapComponentProps) {
                       ? `${center.name} - ${formatOperationalStatus(center.operational_status)}`
                       : `${center.name} - Abastecido al ${Number(center.fullnessPercentage ?? 0).toFixed(0)}%`
                   }
-                  onClick={() => setSelectedCenterId(String(center.center_id))}
+                  onClick={() => {
+                    setSelectedCenterId(String(center.center_id));
+                    setIsPanelOpen(true); // Abrir el panel cuando se selecciona un centro
+                  }}
                 >
                   <div className={`marker-pin ${getPinStatusClass(center, isNearby)}`}>
                     <span>{center.type === "Albergue" ? "🏠" : "📦"}</span>
@@ -530,14 +534,19 @@ export default function MapComponent({ centers }: MapComponentProps) {
         </div>
 
         </div>
-        <SidePanel open={isPanelOpen} onClose={() => setIsPanelOpen(false)}>
-          <h3>{selectedCenter?.name}</h3>
-          <p><strong>Centro de:</strong> {selectedCenter?.type || 'No disponible'} </p>
-          <p><strong>Dirección:</strong> {selectedCenter?.address || 'No disponible'} </p>
-          <p><strong>Activo:</strong> {selectedCenter?.is_active ? '✅ Sí' : '❌ No'}</p>
-          <p><strong>Capacidad total:</strong> {centerCapacity?.total_capacity ?? 'Cargando...'} </p>
-          <p><strong>Capacidad actual:</strong> {centerCapacity?.current_capacity ?? 'Cargando...'} </p>
-          <p><strong>Capacidad disponible:</strong> {centerCapacity?.available_capacity ?? 'Cargando...'} </p>
+        <SidePanel 
+          open={isPanelOpen} 
+          onClose={() => setIsPanelOpen(false)}
+          title={selectedCenter?.name || "Información del Centro"} // ← ACTUALIZAR
+        >
+          <div className="sidepanel-info">
+            <p><strong>Centro de:</strong> {selectedCenter?.type || 'No disponible'} </p>
+            <p><strong>Dirección:</strong> {selectedCenter?.address || 'No disponible'} </p>
+            <p><strong>Activo:</strong> {selectedCenter?.is_active ? '✅ Sí' : '❌ No'}</p>
+            <p><strong>Capacidad total:</strong> {centerCapacity?.total_capacity ?? 'Cargando...'} </p>
+            <p><strong>Capacidad actual:</strong> {centerCapacity?.current_capacity ?? 'Cargando...'} </p>
+            <p><strong>Capacidad disponible:</strong> {centerCapacity?.available_capacity ?? 'Cargando...'} </p>
+          </div>
 
           <div className="resources-title-separator">
             <hr className="separator-line" />
@@ -576,6 +585,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
               );
             })}
           </div>
+          <ServiceRequestsSection />
         </SidePanel>
       </APIProvider>
 
