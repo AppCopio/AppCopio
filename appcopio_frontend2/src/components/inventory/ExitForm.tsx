@@ -151,6 +151,11 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
     // Convertir items de la plantilla al formato del formulario de salida
     const templateItems: ExitItem[] = template.items
       .map(templateItem => {
+        // Validar que el item_name existe
+        if (!templateItem.item_name) {
+          return null; // Item inválido
+        }
+
         // Buscar el item en el inventario actual
         const inventoryItem = currentInventory.find(invItem => 
           invItem.name.toLowerCase() === templateItem.item_name.toLowerCase() &&

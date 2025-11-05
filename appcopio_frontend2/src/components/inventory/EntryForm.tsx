@@ -119,14 +119,16 @@ export default function EntryForm({ centerId, currentInventory, onClose, onSucce
 
   const handleTemplateSelect = (template: ResourceBox) => {
     // Convertir items de la plantilla al formato del formulario
-    const templateItems: EntryItem[] = template.items.map(templateItem => ({
-      id: crypto.randomUUID(),
-      item_name: templateItem.item_name,
-      category_id: templateItem.category_id,
-      quantity: templateItem.quantity,
-      unit: templateItem.unit,
-      is_new_item: true // Las plantillas siempre crean items nuevos por defecto
-    }));
+    const templateItems: EntryItem[] = template.items
+      .filter(templateItem => templateItem.item_name && templateItem.unit) // Filtrar items válidos
+      .map(templateItem => ({
+        id: crypto.randomUUID(),
+        item_name: templateItem.item_name!,
+        category_id: templateItem.category_id,
+        quantity: templateItem.quantity,
+        unit: templateItem.unit!,
+        is_new_item: true // Las plantillas siempre crean items nuevos por defecto
+      }));
 
     // Agregar items de la plantilla a la lista actual
     setItems(prev => [...prev, ...templateItems]);
