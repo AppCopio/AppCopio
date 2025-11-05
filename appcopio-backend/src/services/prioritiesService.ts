@@ -55,27 +55,27 @@ export async function deletePriority(centerId: string, itemId: string) {
 
 
 export async function getItemsWithPriorities(centerId: string) {
-    const query = `
-        SELECT 
-          p.item_id,
-          p.name AS item_name,
-          p.category_id,
-          c.name AS category_name,       -- <--- AGREGAR
-          cip.priority,
-          cip.updated_at,
-          u.username AS updated_by_user
-        FROM Products p
-        LEFT JOIN Categories c        -- <--- JOIN con Categories
-          ON p.category_id = c.category_id
-        LEFT JOIN CenterInventoryItems cii
-          ON cii.center_id = $1 AND cii.item_id = p.item_id
-        LEFT JOIN CenterItemPriority cip
-          ON cip.center_id = $1 AND cip.item_id = p.item_id
-        LEFT JOIN Users u 
-          ON cip.updated_by = u.user_id
-        WHERE cii.center_id = $1
-        ORDER BY cip.priority DESC, c.name;
-      `;
-    const { rows } = await pool.query(query, [centerId]);
-    return rows;
+  const query = `
+    SELECT 
+      p.item_id,
+      p.name AS item_name,
+      p.category_id,
+      c.name AS category_name,
+      COALESCE(cip.priority, 'bajo') AS priority,
+      cip.updated_at,
+      u.username AS updated_by_user
+    FROM Products p
+    LEFT JOIN Categories c
+      ON p.category_id = c.category_id
+    LEFT JOIN CenterInventoryItems cii
+      ON cii.center_id = $1 AND cii.item_id = p.item_id
+    LEFT JOIN CenterItemPriority cip
+      ON cip.center_id = $1 AND cip.item_id = p.item_id
+    LEFT JOIN Users u 
+      ON cip.updated_by = u.user_id
+    WHERE cii.center_id = $1
+    ORDER BY cip.priority DESC, c.name;
+  `;
+  const { rows } = await pool.query(query, [centerId]);
+  return rows;
 }

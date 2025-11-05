@@ -53,14 +53,14 @@ const CenterLayout: React.FC = () => {
   // Determinar si el usuario es un contacto ciudadano
   const isCitizenContact = !!user && user.role_id === 3; 
 
-  type NavLink = {
+  type CenterLink = {
     label: string;
     to: string;
     hiddenForTM?: boolean;
     hiddenForCitizenContact?: boolean;
   };
 
-  const allLinks: NavLink[] = [
+  const allLinks: CenterLink[] = [
     //{ label: "Inventario",            to: paths.center.inventory(id) },
     { label: "Ver Detalles",          to: paths.center.details(id) },
     //{ label: "Crear Solicitud",       to: paths.center.needsNew(id), hiddenForTM: true },
