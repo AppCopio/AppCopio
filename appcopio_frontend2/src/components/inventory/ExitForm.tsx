@@ -27,7 +27,6 @@ interface ExitItem {
 
 export default function ExitForm({ centerId, currentInventory, onClose, onSuccess }: ExitFormProps) {
   const [reason, setReason] = useState('');
-  const [recipient, setRecipient] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<ExitItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -214,8 +213,8 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!reason.trim() || !recipient.trim()) {
-      alert('El motivo y destinatario son obligatorios');
+    if (!reason.trim()) {
+      alert('El motivo es obligatorio');
       return;
     }
 
@@ -239,9 +238,13 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
 
     setIsSubmitting(true);
 
+    // Obtener el nombre de la familia seleccionada
+    const selectedFamily = families.find(family => family.family_id === selectedFamilyId);
+    const familyName = selectedFamily?.headOfHouseholdName || `Familia #${selectedFamilyId}`;
+
     const exitData: ExitMovementCreateDTO = {
       reason: reason.trim(),
-      recipient: recipient.trim(),
+      recipient: familyName,
       notes: notes.trim() || undefined,
       items: items.map(item => ({
         item_id: item.item_id,
@@ -259,7 +262,7 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
           quantity: item.requested_quantity,
           familyId: selectedFamilyId!,
           reason: reason.trim(),
-          notes: `${recipient.trim()}${notes.trim() ? ` - ${notes.trim()}` : ''}`
+          notes: `${familyName}${notes.trim() ? ` - ${notes.trim()}` : ''}`
         }));
         
         await createBulkExitMovement(centerId, { exits });
@@ -270,7 +273,7 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
           quantity: items[0].requested_quantity,
           familyId: selectedFamilyId!,
           reason: reason.trim(),
-          notes: `${recipient.trim()}${notes.trim() ? ` - ${notes.trim()}` : ''}`
+          notes: `${familyName}${notes.trim() ? ` - ${notes.trim()}` : ''}`
         };
         
         await createExitMovement(centerId, singleExit);
@@ -337,18 +340,6 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="recipient">Destinatario *</label>
-              <input
-                id="recipient"
-                type="text"
-                value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-                placeholder="Ej: Familia Rodriguez, Grupo de 5 personas, María González..."
-                required
-              />
             </div>
 
             <div className="form-group">

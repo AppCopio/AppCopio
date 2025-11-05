@@ -488,17 +488,33 @@ export async function addInventoryItem(client: PoolClient, centerId: string, ite
 }
 
 export async function updateInventoryItem(client: PoolClient, centerId: string, itemId: string, data: { quantity: number, reason?: string, notes?: string, userId: number }) {
+    // Primero obtener la cantidad actual para calcular la diferencia
+    const currentQuantityResult = await client.query(
+        `SELECT quantity FROM CenterInventoryItems WHERE center_id = $1 AND item_id = $2`,
+        [centerId, itemId]
+    );
+
+    if (currentQuantityResult.rowCount === 0) return null;
+
+    const currentQuantity = currentQuantityResult.rows[0].quantity;
+    const quantityDifference = data.quantity - currentQuantity;
+
+    // Solo proceder si hay una diferencia real
+    if (quantityDifference === 0) {
+        return currentQuantityResult.rows[0];
+    }
+
+    // Actualizar la cantidad en la tabla de inventario
     const result = await client.query(
         `UPDATE CenterInventoryItems SET quantity = $1, updated_at = NOW(), updated_by = $2
          WHERE center_id = $3 AND item_id = $4 RETURNING *`,
         [data.quantity, data.userId, centerId, itemId]
     );
 
-    if (result.rowCount === 0) return null;
-
+    // Registrar en el log la DIFERENCIA, no la cantidad total
     await client.query(
         `INSERT INTO InventoryLog (center_id, item_id, action_type, quantity, created_by, reason, notes) VALUES ($1, $2, 'ADJUST', $3, $4, $5, $6)`,
-        [centerId, itemId, data.quantity, data.userId, data.reason, data.notes]
+        [centerId, itemId, quantityDifference, data.userId, data.reason || 'Ajuste manual desde inventario', data.notes]
     );
     
     return result.rows[0];
