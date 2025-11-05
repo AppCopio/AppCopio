@@ -217,6 +217,7 @@ const setActivationStatus: RequestHandler = async (req, res) => {
 const setOperationalStatus: RequestHandler = async (req, res) => {
     const { operationalStatus, publicNote } = req.body;
     const validStatuses = ['capacidad maxima', 'cerrado temporalmente', 'abierto'];
+    
     if (!validStatuses.includes(operationalStatus)) {
         res.status(400).json({ error: `El estado debe ser uno de: ${validStatuses.join(', ')}.` });
         return;
@@ -224,6 +225,7 @@ const setOperationalStatus: RequestHandler = async (req, res) => {
     try {
         const note = operationalStatus === 'cerrado temporalmente' ? publicNote : null;
         const updatedCenter = await updateOperationalStatus(pool, req.params.id, operationalStatus, note);
+        
         if (!updatedCenter) {
             res.status(404).json({ error: 'Centro no encontrado.' });
         } else {

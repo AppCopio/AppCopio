@@ -1,6 +1,6 @@
 // src/components/inventory/BoxTemplateManager.tsx
 import React, { useState, useEffect } from 'react';
-import type { Category } from '@/types/inventory';
+import type { Category, InventoryItem } from '@/types/inventory';
 import type { ResourceBox, BoxItemTemplate } from '@/types/movements';
 import { listCategories } from '@/services/categories.service';
 import { getResourceBoxes, createResourceBox } from '@/services/movements.service';
@@ -12,6 +12,7 @@ interface BoxTemplateManagerProps {
   onTemplateSelect?: (template: ResourceBox, type: 'entry' | 'exit') => void;
   mode?: 'manage' | 'select';
   selectMode?: 'entry' | 'exit';
+  currentInventory?: InventoryItem[]; // Para seleccionar items existentes en plantillas de salida
 }
 
 interface BoxForm {
@@ -26,7 +27,8 @@ export default function BoxTemplateManager({
   onClose, 
   onTemplateSelect, 
   mode = 'manage',
-  selectMode = 'entry'
+  selectMode = 'entry',
+  currentInventory = []
 }: BoxTemplateManagerProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [resourceBoxes, setResourceBoxes] = useState<ResourceBox[]>([]);
@@ -51,6 +53,10 @@ export default function BoxTemplateManager({
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemUnit, setNewItemUnit] = useState('');
   const [newItemNotes, setNewItemNotes] = useState('');
+  
+  // Estados para seleccionar entre nuevo item vs item existente
+  const [isCreatingNewItem, setIsCreatingNewItem] = useState(true);
+  const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<number | undefined>();
 
   useEffect(() => {
     loadData();
@@ -60,6 +66,7 @@ export default function BoxTemplateManager({
     setIsLoading(true);
     try {
       const cats = await listCategories();
+      console.log('Categorías cargadas en BoxTemplateManager:', cats); // Debug
       setCategories(cats);
       
       const boxes = await getResourceBoxes();
@@ -76,22 +83,50 @@ export default function BoxTemplateManager({
   };
 
   const addItemToBox = () => {
-    if (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim()) {
-      alert('Complete todos los campos requeridos');
-      return;
-    }
+    let itemToAdd: BoxItemTemplate;
 
-    const newItem: BoxItemTemplate = {
-      item_name: newItemName.trim(),
-      category_id: newItemCategory,
-      quantity: newItemQuantity,
-      unit: newItemUnit.trim(),
-      notes: newItemNotes.trim() || undefined
-    };
+    if (boxForm.type === 'entry' || isCreatingNewItem) {
+      // Validación para items nuevos (siempre para entrada, o cuando se selecciona para salida)
+      if (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim() || !newItemCategory) {
+        alert('Complete todos los campos requeridos');
+        return;
+      }
+
+      itemToAdd = {
+        item_name: newItemName.trim(),
+        category_id: newItemCategory,
+        quantity: newItemQuantity,
+        unit: newItemUnit.trim(),
+        notes: newItemNotes.trim() || undefined
+      };
+    } else {
+      // Validación para items existentes del inventario (solo para plantillas de salida)
+      if (!selectedInventoryItemId || newItemQuantity <= 0) {
+        alert('Seleccione un item del inventario y especifique la cantidad');
+        return;
+      }
+
+      const inventoryItem = currentInventory.find(item => item.item_id === selectedInventoryItemId);
+      if (!inventoryItem) {
+        alert('Item del inventario no encontrado');
+        return;
+      }
+
+      const category = categories.find(cat => cat.name === inventoryItem.category);
+      
+      itemToAdd = {
+        item_id: inventoryItem.item_id,
+        item_name: inventoryItem.name,
+        category_id: category?.category_id || newItemCategory,
+        quantity: newItemQuantity,
+        unit: inventoryItem.unit || 'unidad',
+        notes: newItemNotes.trim() || undefined
+      };
+    }
 
     setBoxForm(prev => ({
       ...prev,
-      items: [...prev.items, newItem]
+      items: [...prev.items, itemToAdd]
     }));
 
     // Limpiar formulario
@@ -99,6 +134,8 @@ export default function BoxTemplateManager({
     setNewItemQuantity(1);
     setNewItemUnit('');
     setNewItemNotes('');
+    setSelectedInventoryItemId(undefined);
+    setIsCreatingNewItem(true);
     setShowAddItemToBox(false);
   };
 
@@ -144,7 +181,7 @@ export default function BoxTemplateManager({
   };
 
   const entryTemplates = resourceBoxes.filter(box => 
-    !box.type || box.type === 'entry'
+    box.type === 'entry'
   );
   
   const exitTemplates = resourceBoxes.filter(box => 
@@ -156,9 +193,8 @@ export default function BoxTemplateManager({
       // En modo manage, mostrar todas las plantillas (unificado)
       return resourceBoxes;
     } else {
-      // En modo select, filtrar por tipo
-      const currentType = selectMode;
-      return currentType === 'entry' ? entryTemplates : exitTemplates;
+      // En modo select, filtrar por tipo según selectMode
+      return selectMode === 'entry' ? entryTemplates : exitTemplates;
     }
   };
 
@@ -218,23 +254,6 @@ export default function BoxTemplateManager({
           <div className="manage-mode-header">
             <h3>Gestión de Plantillas</h3>
             <p>Visualice, edite y elimine todas sus plantillas de entrada y salida</p>
-          </div>
-        )}
-
-        {mode === 'select' && (
-          <div className="tabs-container">
-            <button 
-              className={`tab ${activeTab === 'entry' ? 'active' : ''}`}
-              onClick={() => setActiveTab('entry')}
-            >
-              ↙ Plantillas de Entrada ({entryTemplates.length})
-            </button>
-            <button 
-              className={`tab ${activeTab === 'exit' ? 'active' : ''}`}
-              onClick={() => setActiveTab('exit')}
-            >
-              ↗ Plantillas de Salida ({exitTemplates.length})
-            </button>
           </div>
         )}
 
@@ -426,52 +445,132 @@ export default function BoxTemplateManager({
         {showAddItemToBox && (
           <div className="modal-overlay">
             <div className="modal-content">
-              <h4>Agregar Item a la Plantilla</h4>
+              <h4>Agregar Item a la Plantilla de {boxForm.type === 'entry' ? 'Entrada' : 'Salida'}</h4>
               
-              <div className="form-group">
-                <label>Nombre del item *</label>
-                <input
-                  type="text"
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  placeholder="Ej: Arroz, Frazadas, etc."
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Categoría *</label>
-                <select
-                  value={newItemCategory}
-                  onChange={(e) => setNewItemCategory(parseInt(e.target.value))}
-                >
-                  {categories.map(category => (
-                    <option key={category.category_id} value={category.category_id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-row">
+              {/* Selector entre item nuevo o existente */}
+              {boxForm.type === 'exit' && currentInventory.length > 0 && (
                 <div className="form-group">
-                  <label>Cantidad *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={newItemQuantity}
-                    onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                  />
+                  <label>Tipo de item</label>
+                  <div className="radio-group">
+                    <label style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                      <input
+                        type="radio"
+                        checked={isCreatingNewItem}
+                        onChange={() => setIsCreatingNewItem(true)}
+                        style={{ marginRight: '12px' }}
+                      />
+                      Crear nuevo item
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                      <input
+                        type="radio"
+                        checked={!isCreatingNewItem}
+                        onChange={() => setIsCreatingNewItem(false)}
+                        style={{ marginRight: '12px' }}
+                      />
+                      Seleccionar del inventario actual
+                    </label>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Unidad *</label>
-                  <input
-                    type="text"
-                    value={newItemUnit}
-                    onChange={(e) => setNewItemUnit(e.target.value)}
-                    placeholder="kg, unidades, litros, etc."
-                  />
+              )}
+
+              {/* Información para plantillas de entrada */}
+              {boxForm.type === 'entry' && (
+                <div className="entry-info-message" style={{
+                  background: '#e3f2fd',
+                  border: '1px solid #2196f3',
+                  borderRadius: '4px',
+                  padding: '12px',
+                  marginBottom: '16px',
+                  color: '#1565c0'
+                }}>
+                  <p style={{ margin: 0, color: '#1565c0' }}>
+                    <strong>Plantilla de Entrada:</strong> Los items deben ser nuevos productos que ingresarán al inventario.
+                  </p>
                 </div>
-              </div>
+              )}
+
+              {/* Mostrar formulario según la selección */}
+              {(boxForm.type === 'entry' || isCreatingNewItem) ? (
+                <>
+                  <div className="form-group">
+                    <label>Nombre del item *</label>
+                    <input
+                      type="text"
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      placeholder="Ej: Arroz, Frazadas, etc."
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Categoría *</label>
+                    <select
+                      value={newItemCategory || ''}
+                      onChange={(e) => setNewItemCategory(parseInt(e.target.value) || 0)}
+                    >
+                      <option value="">Seleccione una categoría...</option>
+                      {categories.map(category => {
+                        console.log('Categoría disponible:', category); // Debug
+                        return (
+                          <option key={category.category_id} value={category.category_id}>
+                            {category.name}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {categories.length === 0 && <p style={{color: 'red', fontSize: '12px'}}>No hay categorías cargadas</p>}
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Cantidad *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newItemQuantity}
+                        onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Unidad *</label>
+                      <input
+                        type="text"
+                        value={newItemUnit}
+                        onChange={(e) => setNewItemUnit(e.target.value)}
+                        placeholder="kg, unidades, litros, etc."
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label>Seleccionar item del inventario *</label>
+                    <select
+                      value={selectedInventoryItemId || ''}
+                      onChange={(e) => setSelectedInventoryItemId(e.target.value ? parseInt(e.target.value) : undefined)}
+                    >
+                      <option value="">-- Seleccionar item --</option>
+                      {currentInventory.filter(item => item.quantity > 0).map(item => (
+                        <option key={item.item_id} value={item.item_id}>
+                          {item.name} - {item.quantity} {item.unit} ({item.category})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Cantidad *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newItemQuantity}
+                      onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="form-group">
                 <label>Notas</label>
@@ -493,6 +592,8 @@ export default function BoxTemplateManager({
                     setNewItemQuantity(1);
                     setNewItemUnit('');
                     setNewItemNotes('');
+                    setSelectedInventoryItemId(undefined);
+                    setIsCreatingNewItem(true);
                   }}
                 >
                   Cancelar
@@ -501,7 +602,13 @@ export default function BoxTemplateManager({
                   type="button"
                   className="btn-primary"
                   onClick={addItemToBox}
-                  disabled={!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim()}
+                  disabled={
+                    boxForm.type === 'entry'
+                      ? (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim() || !newItemCategory)
+                      : isCreatingNewItem 
+                        ? (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim() || !newItemCategory)
+                        : (!selectedInventoryItemId || newItemQuantity <= 0)
+                  }
                 >
                   Agregar Item
                 </button>

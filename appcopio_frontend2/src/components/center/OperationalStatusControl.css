@@ -165,23 +165,23 @@
 }
 
 .status-temporarily-closed {
-  border-color: #fd7e14;
-  color: #721c24;
+  border-color: #6c757d;
+  color: #495057;
 }
 
 .status-temporarily-closed .status-indicator {
-  background: #fff3cd;
-  border-color: #ffeaa7;
+  background: #f8f9fa;
+  border-color: #dee2e6;
 }
 
 .status-full-capacity {
-  border-color: #ffc107;
-  color: #856404;
+  border-color: #dc3545;
+  color: #721c24;
 }
 
 .status-full-capacity .status-indicator {
-  background: #fff3cd;
-  border-color: #ffeaa7;
+  background: #f8d7da;
+  border-color: #f5c6cb;
 }
 
 .status-help {

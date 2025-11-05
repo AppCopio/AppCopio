@@ -164,21 +164,25 @@
   font-size: 0.9em;
   font-weight: bold;
   text-transform: uppercase;
+  border: 2px solid;
 }
 
 .operational-status-badge.operational-open {
   background-color: #d4edda;
   color: #155724;
+  border-color: #28a745;
 }
 
 .operational-status-badge.operational-closed {
-  background-color: #fff3cd;
-  color: #856404;
+  background-color: #6c757d;
+  color: #ffffff;
+  border-color: #495057;
 }
 
 .operational-status-badge.operational-full {
   background-color: #f8d7da;
   color: #721c24;
+  border-color: #f5c6cb;
 }
 
 .operational-status-badge.operational-unknown {

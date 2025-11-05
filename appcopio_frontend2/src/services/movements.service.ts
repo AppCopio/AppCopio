@@ -226,10 +226,12 @@ export async function validateItemDeletion(
  */
 export async function getResourceBoxes(signal?: AbortSignal): Promise<ResourceBox[]> {
   try {
+    console.log('🔄 Obteniendo plantillas del backend...');
     const response = await api.get('/resource-boxes', { signal });
+    console.log('📦 Plantillas obtenidas:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error fetching resource boxes:', error);
+    console.error('❌ Error fetching resource boxes:', error);
     return [];
   }
 }
@@ -242,39 +244,14 @@ export async function createResourceBox(
   signal?: AbortSignal
 ): Promise<ResourceBox> {
   try {
-    // El backend de tu compañero no tiene tabla resourceboxes separada
-    // En su lugar, almacena las cajas temporalmente en localStorage
-    // y permite crear entradas directamente usando el endpoint /inventory/box
+    console.log('🔄 Creando plantilla en el backend:', data);
     
-    // Convertir items al formato esperado por el backend
-    const backendItems = data.items.map(item => ({
-      itemName: item.item_name,
-      categoryId: item.category_id,
-      quantity: item.quantity,
-      unit: item.unit,
-      notes: item.notes
-    }));
+    const response = await api.post('/resource-boxes', data, { signal });
     
-    // Crear la caja de manera local y devolver la estructura esperada
-    const boxId = Date.now(); // ID temporal único
-    const newBox: ResourceBox = {
-      box_id: boxId,
-      name: data.name,
-      description: data.description,
-      type: data.type, // ¡AGREGAR EL TIPO!
-      items: data.items,
-      created_at: new Date().toISOString(),
-      created_by_user_id: 1 // Se asumirá el usuario actual
-    };
-    
-    // Guardar en localStorage para poder usar después
-    const existingBoxes = JSON.parse(localStorage.getItem('resourceBoxes') || '[]');
-    existingBoxes.push(newBox);
-    localStorage.setItem('resourceBoxes', JSON.stringify(existingBoxes));
-    
-    return newBox;
+    console.log('✅ Plantilla creada exitosamente:', response.data);
+    return response.data;
   } catch (error) {
-    console.error('Error creating resource box:', error);
+    console.error('❌ Error creating resource box:', error);
     throw error;
   }
 }

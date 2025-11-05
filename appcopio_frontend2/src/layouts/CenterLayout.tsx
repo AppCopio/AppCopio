@@ -83,7 +83,9 @@ const CenterLayout: React.FC = () => {
   return (
     <div className="center-layout">
       <div className="center-header">
-        <h2>Gestionando: {center ? center.name : `Centro ${centerId}`}</h2>
+        <h2 style={{ color: '#000000', fontWeight: '600' }}>
+          Gestionando: {center ? center.name : `Centro ${centerId}`}
+        </h2>
 
         {/* Mantiene la misma estructura y clases para que el CSS antiguo siga sirviendo */}
         <nav className="center-subnav">

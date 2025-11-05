@@ -301,19 +301,21 @@ export default function EntryForm({ centerId, currentInventory, onClose, onSucce
             <div className="form-group">
               <label>Tipo de item</label>
               <div className="radio-group">
-                <label>
+                <label style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                   <input
                     type="radio"
                     checked={isNewItem}
                     onChange={() => setIsNewItem(true)}
+                    style={{ marginRight: '12px' }}
                   />
                   Crear nuevo item
                 </label>
-                <label>
+                <label style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                   <input
                     type="radio"
                     checked={!isNewItem}
                     onChange={() => setIsNewItem(false)}
+                    style={{ marginRight: '12px' }}
                   />
                   Incrementar item existente
                 </label>
@@ -454,6 +456,7 @@ export default function EntryForm({ centerId, currentInventory, onClose, onSucce
           onTemplateSelect={handleTemplateSelect}
           mode="select"
           selectMode="entry"
+          currentInventory={currentInventory}
         />
       )}
       </div>

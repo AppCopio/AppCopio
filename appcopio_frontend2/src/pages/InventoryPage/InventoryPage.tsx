@@ -628,6 +628,7 @@ export default function InventoryPage() {
           centerId={centerId}
           onClose={() => setIsBoxTemplateManagerOpen(false)}
           mode="manage"
+          currentInventory={Object.values(inventory).flat()}
         />
       ) : null}
     </div>

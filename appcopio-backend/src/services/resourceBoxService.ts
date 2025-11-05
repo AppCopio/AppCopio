@@ -11,7 +11,10 @@ export interface ResourceBoxCreate {
 }
 
 export interface ResourceBoxItemCreate {
-    item_id: number; // Referencia a Products.item_id
+    item_id?: number; // Referencia a Products.item_id (opcional si se crea nuevo)
+    item_name?: string; // Nombre del item para crear nuevo producto
+    category_id?: number; // Categoría para nuevo producto
+    unit?: string; // Unidad para nuevo producto
     quantity: number;
     notes?: string;
 }
@@ -68,17 +71,35 @@ export async function createResourceBox(
 
         // Insertar los items de la caja
         if (data.items && data.items.length > 0) {
-            const itemsQuery = `
-                INSERT INTO ResourceBoxItems (box_id, item_id, quantity, notes)
-                VALUES ($1, $2, $3, $4)
-                RETURNING box_item_id, box_id, item_id, quantity, notes
-            `;
-
             const items: ResourceBoxItem[] = [];
+            
             for (const item of data.items) {
+                let finalItemId = item.item_id;
+                
+                // Si no tiene item_id, crear el producto primero
+                if (!finalItemId && item.item_name) {
+                    const productInsertQuery = `
+                        INSERT INTO Products (name, unit, category_id)
+                        VALUES ($1, $2, $3)
+                        RETURNING item_id
+                    `;
+                    const productResult = await client.query(productInsertQuery, [
+                        item.item_name,
+                        item.unit || 'unidad',
+                        item.category_id
+                    ]);
+                    finalItemId = productResult.rows[0].item_id;
+                }
+                
+                const itemsQuery = `
+                    INSERT INTO ResourceBoxItems (box_id, item_id, quantity, notes)
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING box_item_id, box_id, item_id, quantity, notes
+                `;
+                
                 const itemResult = await client.query(itemsQuery, [
                     box.box_id,
-                    item.item_id,
+                    finalItemId,
                     item.quantity,
                     item.notes || null
                 ]);
@@ -90,7 +111,7 @@ export async function createResourceBox(
                     LEFT JOIN Categories c ON p.category_id = c.category_id
                     WHERE p.item_id = $1
                 `;
-                const productResult = await client.query(productQuery, [item.item_id]);
+                const productResult = await client.query(productQuery, [finalItemId]);
                 const product = productResult.rows[0];
                 
                 items.push({

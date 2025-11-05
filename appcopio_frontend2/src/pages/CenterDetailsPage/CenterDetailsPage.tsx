@@ -128,6 +128,23 @@ const CenterDetailsPage: React.FC = () => {
   const openAssign = (role: AssignRole) => { setAssignRole(role); setAssignOpen(true); };
   const closeAssign = () => setAssignOpen(false);
 
+  // Función para recargar los datos del centro
+  const reloadCenterData = useCallback(async () => {
+    if (!centerId) return;
+    
+    try {
+      const centerData = await getOneCenter(centerId);
+      const mapped = {
+        ...(centerData as any),
+        operational_status: mapStatusToFrontend((centerData as any).operational_status),
+      } as Center & { public_note?: string; operational_status?: OperationalStatusUI };
+      
+      setCenter(mapped as CenterData);
+    } catch (error) {
+      console.error('Error recargando datos del centro:', error);
+    }
+  }, [centerId]);
+
   const handleOperationalStatusChange = useCallback(
   async (newStatus: OperationalStatusUI, publicNote?: string) => {
     if (!center || isUpdatingOperationalStatus) return;
@@ -140,21 +157,10 @@ const CenterDetailsPage: React.FC = () => {
     setIsUpdatingOperationalStatus(true);
     try {
       await updateOperationalStatus(center.center_id, newStatus, publicNote);
-      setCenter((prev) =>
-      prev
-        ? {
-            ...prev,
-            operational_status: (newStatus === "Abierto"
-              ? "abierto"
-              : newStatus === "Cerrado Temporalmente"
-              ? "cerrado_temporalmente"
-              : newStatus === "Capacidad Máxima"
-              ? "capacidad_maxima"
-              : undefined) as Center["operational_status"],
-            public_note: newStatus === "Cerrado Temporalmente" ? publicNote : undefined,
-          }
-        : prev
-    );
+      
+      // Recargar los datos del centro desde el servidor para asegurar consistencia
+      await reloadCenterData();
+      
     } catch (err: any) {
       console.error("Error updating operational status:", err);
       alert(err?.response?.data?.message || err?.message || "No se pudo actualizar el estado operacional.");
@@ -162,7 +168,7 @@ const CenterDetailsPage: React.FC = () => {
       setIsUpdatingOperationalStatus(false);
     }
   },
-  [center, isUpdatingOperationalStatus]
+  [center, isUpdatingOperationalStatus, reloadCenterData]
 );
 
 const fullnessPercentage = useMemo(() => {
@@ -294,8 +300,8 @@ const fullnessPercentage = useMemo(() => {
               )}
               <div className="info-item">
                 <label>Estado Operativo:</label>
-                <span className={`operational-status-badge ${getOperationalStatusClass(mapStatusToFrontend(center.operational_status))}`}>
-                  {mapStatusToFrontend(center.operational_status) ?? "—"}
+                <span className={`operational-status-badge ${getOperationalStatusClass(center.operational_status as OperationalStatusUI)}`}>
+                  {(center.operational_status as OperationalStatusUI) ?? "—"}
                 </span>
               </div>
               {mapStatusToFrontend(center.operational_status) === "Cerrado Temporalmente" && center.public_note && (
@@ -314,7 +320,7 @@ const fullnessPercentage = useMemo(() => {
               center.operational_status && (
                 <OperationalStatusControl
                   centerId={centerId!}
-                  currentStatus={mapStatusToFrontend(center.operational_status) ?? "Abierto"}
+                  currentStatus={(center.operational_status as OperationalStatusUI) ?? "Abierto"}
                   currentNote={center.public_note ?? undefined}
                   onStatusChange={handleOperationalStatusChange}
                   isUpdating={isUpdatingOperationalStatus}

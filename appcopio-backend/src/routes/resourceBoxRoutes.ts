@@ -74,15 +74,26 @@ const createResourceBox: RequestHandler = async (req, res) => {
 
     // Validar cada item
     for (const item of items) {
-        if (!item.item_id || !item.quantity) {
+        // Los items pueden tener item_id (para referencias existentes) o item_name (para nuevos items)
+        if (!item.item_id && !item.item_name) {
             res.status(400).json({ 
-                error: 'Cada item debe tener: item_id (referencia a Products) y quantity.' 
+                error: 'Cada item debe tener: item_id (referencia a Products) o item_name (para nuevos items).' 
             });
             return;
         }
-        if (item.quantity <= 0) {
+        if (!item.quantity || item.quantity <= 0) {
             res.status(400).json({ error: 'La cantidad de cada item debe ser mayor a 0.' });
             return;
+        }
+        
+        // Si es un item nuevo (tiene item_name pero no item_id), validar campos adicionales
+        if (!item.item_id && item.item_name) {
+            if (!item.category_id || !item.unit) {
+                res.status(400).json({ 
+                    error: 'Los items nuevos deben incluir: item_name, category_id, unit y quantity.' 
+                });
+                return;
+            }
         }
     }
 

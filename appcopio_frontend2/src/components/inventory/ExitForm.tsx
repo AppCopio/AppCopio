@@ -510,6 +510,7 @@ export default function ExitForm({ centerId, currentInventory, onClose, onSucces
             onTemplateSelect={handleTemplateSelect}
             mode="select"
             selectMode="exit"
+            currentInventory={currentInventory}
           />
         )}
       </div>
