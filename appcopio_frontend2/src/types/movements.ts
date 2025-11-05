@@ -69,15 +69,15 @@ export interface ExitItemCreateDTO {
   quantity: number; // cantidad a entregar
 }
 
-// Interfaz para las "cajas" de recursos
+// Interfaz para las "cajas" de recursos (plantillas genéricas)
 export interface ResourceBox {
   box_id?: number;
   name: string;
   description?: string;
-  type?: 'entry' | 'exit'; // Tipo de plantilla: entrada o salida
   items: BoxItemTemplate[];
   created_at?: string;
   created_by_user_id?: number;
+  created_by_user_name?: string;
 }
 
 // Plantilla de item dentro de una caja

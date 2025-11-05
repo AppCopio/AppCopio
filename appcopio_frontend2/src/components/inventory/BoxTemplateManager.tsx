@@ -2,61 +2,58 @@
 import React, { useState, useEffect } from 'react';
 import type { Category, InventoryItem } from '@/types/inventory';
 import type { ResourceBox, BoxItemTemplate } from '@/types/movements';
-import { listCategories } from '@/services/categories.service';
-import { getResourceBoxes, createResourceBox } from '@/services/movements.service';
+import { listCategories, createCategory } from '@/services/categories.service';
+import { listCenterInventory, createInventoryItem } from '@/services/inventory.service';
+import {
+  getResourceBoxes,
+  createResourceBox,
+  updateResourceBox,
+  deleteResourceBox,
+} from '@/services/movements.service';
 import './BoxTemplateManager.css';
 
 interface BoxTemplateManagerProps {
   centerId: string;
   onClose: () => void;
-  onTemplateSelect?: (template: ResourceBox, type: 'entry' | 'exit') => void;
-  mode?: 'manage' | 'select';
-  selectMode?: 'entry' | 'exit';
-  currentInventory?: InventoryItem[]; // Para seleccionar items existentes en plantillas de salida
 }
 
 interface BoxForm {
   name: string;
   description: string;
   items: BoxItemTemplate[];
-  type: 'entry' | 'exit';
 }
 
-export default function BoxTemplateManager({ 
-  centerId, 
-  onClose, 
-  onTemplateSelect, 
-  mode = 'manage',
-  selectMode = 'entry',
-  currentInventory = []
-}: BoxTemplateManagerProps) {
+export default function BoxTemplateManager({ centerId, onClose }: BoxTemplateManagerProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [resourceBoxes, setResourceBoxes] = useState<ResourceBox[]>([]);
-  const [activeTab, setActiveTab] = useState<'entry' | 'exit'>(mode === 'select' ? selectMode : 'entry');
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [templates, setTemplates] = useState<ResourceBox[]>([]);
+  const [currentInventory, setCurrentInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showViewTemplate, setShowViewTemplate] = useState(false);
-  const [selectedTemplateToView, setSelectedTemplateToView] = useState<ResourceBox | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Estado para crear nueva plantilla
+  // Modo: 'list' | 'create' | 'edit'
+  const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
+  const [editingTemplate, setEditingTemplate] = useState<ResourceBox | null>(null);
+
+  // Estado del formulario
   const [boxForm, setBoxForm] = useState<BoxForm>({
     name: '',
     description: '',
     items: [],
-    type: 'entry'
   });
 
-  // Estado para agregar item a la plantilla
-  const [showAddItemToBox, setShowAddItemToBox] = useState(false);
+  // Estado para agregar item a la caja
+  const [showAddItemForm, setShowAddItemForm] = useState(false);
+  const [itemFormMode, setItemFormMode] = useState<'existing' | 'new'>('existing');
+  
+  // Para item existente
+  const [selectedItemId, setSelectedItemId] = useState<number>(0);
+  const [itemQuantity, setItemQuantity] = useState(1);
+  const [itemNotes, setItemNotes] = useState('');
+
+  // Para item nuevo
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState<number>(0);
-  const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemUnit, setNewItemUnit] = useState('');
-  const [newItemNotes, setNewItemNotes] = useState('');
-  
-  // Estados para seleccionar entre nuevo item vs item existente
-  const [isCreatingNewItem, setIsCreatingNewItem] = useState(true);
-  const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<number | undefined>();
 
   useEffect(() => {
     loadData();
@@ -65,627 +62,484 @@ export default function BoxTemplateManager({
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const cats = await listCategories();
-      console.log('Categorías cargadas en BoxTemplateManager:', cats); // Debug
+      const [cats, boxes, inventory] = await Promise.all([
+        listCategories(),
+        getResourceBoxes(),
+        listCenterInventory(centerId),
+      ]);
+
       setCategories(cats);
-      
-      const boxes = await getResourceBoxes();
-      setResourceBoxes(boxes);
-      
+      setTemplates(boxes);
+      setCurrentInventory(inventory);
+
       if (cats.length > 0) {
         setNewItemCategory(cats[0].category_id);
       }
+      if (inventory.length > 0) {
+        setSelectedItemId(inventory[0].item_id);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
+      alert('Error al cargar los datos');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const addItemToBox = () => {
-    let itemToAdd: BoxItemTemplate;
-
-    if (boxForm.type === 'entry' || isCreatingNewItem) {
-      // Validación para items nuevos (siempre para entrada, o cuando se selecciona para salida)
-      if (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim() || !newItemCategory) {
-        alert('Complete todos los campos requeridos');
-        return;
-      }
-
-      itemToAdd = {
-        item_name: newItemName.trim(),
-        category_id: newItemCategory,
-        quantity: newItemQuantity,
-        unit: newItemUnit.trim(),
-        notes: newItemNotes.trim() || undefined
-      };
-    } else {
-      // Validación para items existentes del inventario (solo para plantillas de salida)
-      if (!selectedInventoryItemId || newItemQuantity <= 0) {
-        alert('Seleccione un item del inventario y especifique la cantidad');
-        return;
-      }
-
-      const inventoryItem = currentInventory.find(item => item.item_id === selectedInventoryItemId);
-      if (!inventoryItem) {
-        alert('Item del inventario no encontrado');
-        return;
-      }
-
-      const category = categories.find(cat => cat.name === inventoryItem.category);
-      
-      itemToAdd = {
-        item_id: inventoryItem.item_id,
-        item_name: inventoryItem.name,
-        category_id: category?.category_id || newItemCategory,
-        quantity: newItemQuantity,
-        unit: inventoryItem.unit || 'unidad',
-        notes: newItemNotes.trim() || undefined
-      };
-    }
-
-    setBoxForm(prev => ({
-      ...prev,
-      items: [...prev.items, itemToAdd]
-    }));
-
-    // Limpiar formulario
-    setNewItemName('');
-    setNewItemQuantity(1);
-    setNewItemUnit('');
-    setNewItemNotes('');
-    setSelectedInventoryItemId(undefined);
-    setIsCreatingNewItem(true);
-    setShowAddItemToBox(false);
+  // Crear nueva plantilla
+  const startCreateTemplate = () => {
+    setBoxForm({
+      name: '',
+      description: '',
+      items: [],
+    });
+    setMode('create');
   };
 
-  const removeItemFromBox = (index: number) => {
-    setBoxForm(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
+  // Editar plantilla existente
+  const startEditTemplate = (template: ResourceBox) => {
+    setEditingTemplate(template);
+    setBoxForm({
+      name: template.name,
+      description: template.description || '',
+      items: [...template.items],
+    });
+    setMode('edit');
   };
 
-  const createTemplate = async () => {
-    if (!boxForm.name.trim() || boxForm.items.length === 0) {
-      alert('Complete el nombre y agregue al menos un item');
+  // Eliminar plantilla
+  const handleDeleteTemplate = async (boxId: number, templateName: string) => {
+    if (!window.confirm(`¿Estás seguro de eliminar la plantilla "${templateName}"?`)) {
       return;
     }
 
     try {
-      const templateData = {
-        name: boxForm.name.trim(),
-        description: boxForm.description.trim() || undefined,
-        type: boxForm.type,
-        items: boxForm.items
-      };
-
-      await createResourceBox(templateData);
-      alert(`Plantilla de ${boxForm.type === 'entry' ? 'entrada' : 'salida'} creada exitosamente`);
-      
-      // Limpiar formulario
-      setBoxForm({
-        name: '',
-        description: '',
-        items: [],
-        type: 'entry'
-      });
-      setShowCreateForm(false);
-      
-      // Recargar plantillas
-      await loadData();
-    } catch (error: any) {
-      console.error('Error creating template:', error);
-      alert('Error al crear la plantilla: ' + (error?.message || 'Error desconocido'));
-    }
-  };
-
-  const entryTemplates = resourceBoxes.filter(box => 
-    box.type === 'entry'
-  );
-  
-  const exitTemplates = resourceBoxes.filter(box => 
-    box.type === 'exit'
-  );
-
-  const getTemplatesByTab = () => {
-    if (mode === 'manage') {
-      // En modo manage, mostrar todas las plantillas (unificado)
-      return resourceBoxes;
-    } else {
-      // En modo select, filtrar por tipo según selectMode
-      return selectMode === 'entry' ? entryTemplates : exitTemplates;
-    }
-  };
-
-  const handleTemplateSelect = (template: ResourceBox) => {
-    if (onTemplateSelect) {
-      onTemplateSelect(template, activeTab);
-    }
-  };
-
-  const handleViewTemplate = (template: ResourceBox) => {
-    setSelectedTemplateToView(template);
-    setShowViewTemplate(true);
-  };
-
-  const handleDeleteTemplate = async (template: ResourceBox) => {
-    if (!confirm(`¿Está seguro de que desea eliminar la plantilla "${template.name}"?`)) {
-      return;
-    }
-
-    try {
-      // Obtener plantillas actuales
-      const currentBoxes = JSON.parse(localStorage.getItem('resourceBoxes') || '[]');
-      
-      // Filtrar para eliminar la plantilla seleccionada
-      const updatedBoxes = currentBoxes.filter((box: ResourceBox) => box.box_id !== template.box_id);
-      
-      // Guardar en localStorage
-      localStorage.setItem('resourceBoxes', JSON.stringify(updatedBoxes));
-      
-      // Recargar datos
-      await loadData();
-      
-      alert(`Plantilla "${template.name}" eliminada exitosamente`);
+      await deleteResourceBox(boxId);
+      setTemplates((prev) => prev.filter((t) => t.box_id !== boxId));
+      alert('Plantilla eliminada exitosamente');
     } catch (error) {
       console.error('Error deleting template:', error);
       alert('Error al eliminar la plantilla');
     }
   };
 
+  // Guardar plantilla (crear o actualizar)
+  const handleSaveTemplate = async () => {
+    if (!boxForm.name.trim()) {
+      alert('El nombre de la plantilla es requerido');
+      return;
+    }
+
+    if (boxForm.items.length === 0) {
+      alert('Debe agregar al menos un item a la plantilla');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (mode === 'create') {
+        const newTemplate = await createResourceBox(boxForm);
+        setTemplates((prev) => [...prev, newTemplate]);
+        alert('Plantilla creada exitosamente');
+      } else if (mode === 'edit' && editingTemplate?.box_id) {
+        const updated = await updateResourceBox(editingTemplate.box_id, boxForm);
+        setTemplates((prev) =>
+          prev.map((t) => (t.box_id === editingTemplate.box_id ? updated : t))
+        );
+        alert('Plantilla actualizada exitosamente');
+      }
+
+      setMode('list');
+      setEditingTemplate(null);
+      setBoxForm({ name: '', description: '', items: [] });
+    } catch (error) {
+      console.error('Error saving template:', error);
+      alert('Error al guardar la plantilla');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Cancelar edición/creación
+  const handleCancelEdit = () => {
+    setMode('list');
+    setEditingTemplate(null);
+    setBoxForm({ name: '', description: '', items: [] });
+  };
+
+  // Agregar item a la plantilla
+  const handleAddItemToTemplate = () => {
+    if (itemFormMode === 'existing') {
+      // Item existente
+      if (!selectedItemId || itemQuantity <= 0) {
+        alert('Debe seleccionar un item y la cantidad debe ser mayor a 0');
+        return;
+      }
+
+      const selectedItem = currentInventory.find((i) => i.item_id === selectedItemId);
+      if (!selectedItem) {
+        alert('Item no encontrado');
+        return;
+      }
+
+      const categoryObj = categories.find((c) => c.name === selectedItem.category);
+
+      const newItem: BoxItemTemplate = {
+        item_id: selectedItem.item_id,
+        item_name: selectedItem.name,
+        category_id: categoryObj?.category_id || 0,
+        quantity: itemQuantity,
+        unit: selectedItem.unit || '',
+        notes: itemNotes,
+      };
+
+      setBoxForm((prev) => ({
+        ...prev,
+        items: [...prev.items, newItem],
+      }));
+    } else {
+      // Item nuevo
+      if (!newItemName.trim() || !newItemUnit.trim() || itemQuantity <= 0) {
+        alert('Todos los campos son requeridos y la cantidad debe ser mayor a 0');
+        return;
+      }
+
+      const newItem: BoxItemTemplate = {
+        item_name: newItemName.trim(),
+        category_id: newItemCategory,
+        quantity: itemQuantity,
+        unit: newItemUnit.trim(),
+        notes: itemNotes,
+      };
+
+      setBoxForm((prev) => ({
+        ...prev,
+        items: [...prev.items, newItem],
+      }));
+    }
+
+    // Resetear formulario
+    setShowAddItemForm(false);
+    setItemQuantity(1);
+    setItemNotes('');
+    setNewItemName('');
+    setNewItemUnit('');
+  };
+
+  // Eliminar item de la plantilla
+  const handleRemoveItemFromTemplate = (index: number) => {
+    setBoxForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index),
+    }));
+  };
+
   if (isLoading) {
     return (
-      <div className="box-template-container">
-        <div className="loading">Cargando plantillas...</div>
+      <div className="entry-form-overlay">
+        <div className="entry-form-modal">
+          <div className="entry-form-container">
+            <div className="entry-form-header">
+              <h3>Gestionar Plantillas de Cajas</h3>
+              <button className="close-btn" onClick={onClose}>×</button>
+            </div>
+            <div className="entry-form">
+              <p>Cargando plantillas...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="box-template-overlay">
-      <div className="box-template-modal">
-        <div className="box-template-header">
-          <h3>⚙ {mode === 'manage' ? 'Gestión de' : 'Seleccionar'} Plantillas de Cajas</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
-        </div>
-
-        {mode === 'manage' && (
-          <div className="manage-mode-header">
-            <h3>Gestión de Plantillas</h3>
-            <p>Visualice, edite y elimine todas sus plantillas de entrada y salida</p>
+    <div className="entry-form-overlay">
+      <div className="entry-form-modal">
+        <div className="entry-form-container">
+          <div className="entry-form-header">
+            <h3>
+              {mode === 'list' && '📦 Gestionar Plantillas de Cajas'}
+              {mode === 'create' && '➕ Crear Nueva Plantilla'}
+              {mode === 'edit' && '✏️ Editar Plantilla'}
+            </h3>
+            <button className="close-btn" onClick={onClose}>×</button>
           </div>
-        )}
 
-        <div className="box-template-content">
-          {mode === 'select' && (
-            <div className="select-mode-header">
-              <h4>Seleccionar Plantilla de {selectMode === 'entry' ? 'Entrada' : 'Salida'}</h4>
-              <p>Elija una plantilla para usar en el registro de {selectMode === 'entry' ? 'entrada' : 'salida'}:</p>
-            </div>
-          )}
-          
-          {mode === 'manage' && (
-            <div className="action-buttons">
-              <button 
-                className="btn-primary" 
-                onClick={() => {
-                  setBoxForm(prev => ({ ...prev, type: 'entry' }));
-                  setShowCreateForm(true);
-                }}
-              >
-                ↙ Crear Plantilla de Entrada
-              </button>
-              <button 
-                className="btn-primary" 
-                onClick={() => {
-                  setBoxForm(prev => ({ ...prev, type: 'exit' }));
-                  setShowCreateForm(true);
-                }}
-              >
-                ↗ Crear Plantilla de Salida
-              </button>
-            </div>
-          )}
+          <div className="entry-form">
+            {mode === 'list' && (
+              <>
+                <div className="items-header">
+                  <h4>Plantillas Disponibles</h4>
+                  <button className="add-item-btn" onClick={startCreateTemplate}>
+                    + Nueva Plantilla
+                  </button>
+                </div>
 
-          <div className="templates-grid">
-            {getTemplatesByTab().length === 0 ? (
-              <div className="empty-templates">
-                {mode === 'manage' 
-                  ? 'No hay plantillas creadas. Cree plantillas de entrada o salida para comenzar.'
-                  : `No hay plantillas de ${selectMode === 'entry' ? 'entrada' : 'salida'} creadas.`
-                }
-              </div>
-            ) : (
-              getTemplatesByTab().map(template => (
-                <div key={template.box_id} className="template-card">
-                  <div className={`template-type-badge ${template.type || 'entry'}`}>
-                    {(template.type === 'exit') ? '↗ SALIDA' : '↙ ENTRADA'}
+                {templates.length === 0 ? (
+                  <div className="alert-warning">
+                    No hay plantillas creadas. Haz clic en "Nueva Plantilla" para comenzar.
                   </div>
-                  <h4>{template.name}</h4>
-                  {template.description && <p className="template-description">{template.description}</p>}
-                  <div className="template-items-count">{template.items.length} items</div>
-                  <div className="template-items-preview">
-                    {template.items.slice(0, 3).map((item, idx) => (
-                      <span key={idx} className="item-preview">
-                        {item.quantity} {item.unit} {item.item_name}
-                      </span>
+                ) : (
+                  <div className="templates-grid">
+                    {templates.map((template) => (
+                      <div key={template.box_id} className="template-card">
+                        <h5>{template.name}</h5>
+                        {template.description && (
+                          <p className="template-description">{template.description}</p>
+                        )}
+                        <div className="template-items-count">
+                          {template.items.length} items
+                        </div>
+                        <div className="template-actions">
+                          <button
+                            className="btn-edit"
+                            onClick={() => startEditTemplate(template)}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className="btn-delete"
+                            onClick={() =>
+                              handleDeleteTemplate(template.box_id!, template.name)
+                            }
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
                     ))}
-                    {template.items.length > 3 && (
-                      <span className="more-items">+{template.items.length - 3} más</span>
-                    )}
                   </div>
-                  {mode === 'manage' ? (
-                    <div className="template-actions">
-                      <button 
-                        className="view-template-btn"
-                        onClick={() => handleViewTemplate(template)}
-                      >
-                        Ver Plantilla
-                      </button>
-                      <button 
-                        className="delete-template-btn"
-                        onClick={() => handleDeleteTemplate(template)}
-                      >
-                        Eliminar
-                      </button>
+                )}
+              </>
+            )}
+
+            {(mode === 'create' || mode === 'edit') && (
+              <>
+                <div className="form-section">
+                  <h4>Información de la Plantilla</h4>
+                  
+                  <div className="form-group">
+                    <label htmlFor="templateName">Nombre de la Plantilla *</label>
+                    <input
+                      id="templateName"
+                      type="text"
+                      value={boxForm.name}
+                      onChange={(e) => setBoxForm({ ...boxForm, name: e.target.value })}
+                      placeholder="Ej: Caja de Alimentos Básica"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="templateDescription">Descripción</label>
+                    <textarea
+                      id="templateDescription"
+                      value={boxForm.description}
+                      onChange={(e) => setBoxForm({ ...boxForm, description: e.target.value })}
+                      placeholder="Descripción opcional de la plantilla"
+                      rows={2}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <div className="items-header">
+                    <h4>Items de la Plantilla</h4>
+                    <button
+                      className="add-item-btn"
+                      onClick={() => setShowAddItemForm(true)}
+                      disabled={isSubmitting}
+                    >
+                      + Añadir Item
+                    </button>
+                  </div>
+
+                  {boxForm.items.length === 0 ? (
+                    <div className="empty-items">
+                      No hay items agregados. Haz clic en "Añadir Item" para comenzar.
                     </div>
                   ) : (
-                    <button 
-                      className="use-template-btn"
-                      onClick={() => handleTemplateSelect(template)}
-                    >
-                      Usar Esta Plantilla
-                    </button>
+                    <div className="items-list">
+                      {boxForm.items.map((item, idx) => {
+                        const categoryName = categories.find(
+                          (cat) => cat.category_id === item.category_id
+                        )?.name || 'Sin categoría';
+                        
+                        return (
+                          <div key={idx} className="item-row">
+                            <div className="item-info">
+                              <span className="item-name">{item.item_name}</span>
+                              <span className="item-category">{categoryName}</span>
+                              <span className="item-quantity">
+                                {item.quantity} {item.unit}
+                              </span>
+                              {!item.item_id && (
+                                <span className="new-item-badge">Nuevo</span>
+                              )}
+                            </div>
+                            <button
+                              className="remove-item-btn"
+                              onClick={() => handleRemoveItemFromTemplate(idx)}
+                              disabled={isSubmitting}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-              ))
+
+                <div className="form-actions">
+                  <button
+                    className="btn-secondary"
+                    onClick={handleCancelEdit}
+                    disabled={isSubmitting}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    className="btn-primary"
+                    onClick={handleSaveTemplate}
+                    disabled={isSubmitting || boxForm.items.length === 0}
+                  >
+                    {isSubmitting
+                      ? 'Guardando...'
+                      : mode === 'create'
+                      ? 'Crear Plantilla'
+                      : 'Guardar Cambios'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
-
-        {/* Modal para crear nueva plantilla */}
-        {showCreateForm && (
-          <div className="modal-overlay">
-            <div className="modal-content large-modal">
-              <h4>Crear Nueva Plantilla de {boxForm.type === 'entry' ? 'Entrada' : 'Salida'}</h4>
-              
-              <div className="form-group">
-                <label>Nombre de la plantilla *</label>
-                <input
-                  type="text"
-                  value={boxForm.name}
-                  onChange={(e) => setBoxForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ej: Kit de Alimentos Básicos"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Descripción</label>
-                <textarea
-                  value={boxForm.description}
-                  onChange={(e) => setBoxForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción opcional de la plantilla"
-                  rows={3}
-                />
-              </div>
-
-              <div className="box-items-section">
-                <div className="items-header">
-                  <h5>Items de la plantilla ({boxForm.items.length})</h5>
-                  <button
-                    type="button"
-                    className="add-item-btn"
-                    onClick={() => setShowAddItemToBox(true)}
-                  >
-                    + Agregar Item
-                  </button>
-                </div>
-
-                {boxForm.items.length > 0 ? (
-                  <div className="box-items-list">
-                    {boxForm.items.map((item, index) => {
-                      const categoryName = categories.find(cat => cat.category_id === item.category_id)?.name || 'Sin categoría';
-                      return (
-                        <div key={index} className="box-item">
-                          <div className="item-info">
-                            <span className="item-name">{item.item_name}</span>
-                            <span className="item-category">{categoryName}</span>
-                            <span className="item-quantity">{item.quantity} {item.unit}</span>
-                            {item.notes && <span className="item-notes">{item.notes}</span>}
-                          </div>
-                          <button
-                            type="button"
-                            className="remove-item-btn"
-                            onClick={() => removeItemFromBox(index)}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="empty-items">
-                    No hay items agregados. Agregue al menos un item para crear la plantilla.
-                  </div>
-                )}
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setBoxForm({
-                      name: '',
-                      description: '',
-                      items: [],
-                      type: 'entry'
-                    });
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={createTemplate}
-                  disabled={!boxForm.name.trim() || boxForm.items.length === 0}
-                >
-                  Crear Plantilla
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal para agregar item a la plantilla */}
-        {showAddItemToBox && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-              <h4>Agregar Item a la Plantilla de {boxForm.type === 'entry' ? 'Entrada' : 'Salida'}</h4>
-              
-              {/* Selector entre item nuevo o existente */}
-              {boxForm.type === 'exit' && currentInventory.length > 0 && (
-                <div className="form-group">
-                  <label>Tipo de item</label>
-                  <div className="radio-group">
-                    <label style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                      <input
-                        type="radio"
-                        checked={isCreatingNewItem}
-                        onChange={() => setIsCreatingNewItem(true)}
-                        style={{ marginRight: '12px' }}
-                      />
-                      Crear nuevo item
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                      <input
-                        type="radio"
-                        checked={!isCreatingNewItem}
-                        onChange={() => setIsCreatingNewItem(false)}
-                        style={{ marginRight: '12px' }}
-                      />
-                      Seleccionar del inventario actual
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {/* Información para plantillas de entrada */}
-              {boxForm.type === 'entry' && (
-                <div className="entry-info-message" style={{
-                  background: '#e3f2fd',
-                  border: '1px solid #2196f3',
-                  borderRadius: '4px',
-                  padding: '12px',
-                  marginBottom: '16px',
-                  color: '#1565c0'
-                }}>
-                  <p style={{ margin: 0, color: '#1565c0' }}>
-                    <strong>Plantilla de Entrada:</strong> Los items deben ser nuevos productos que ingresarán al inventario.
-                  </p>
-                </div>
-              )}
-
-              {/* Mostrar formulario según la selección */}
-              {(boxForm.type === 'entry' || isCreatingNewItem) ? (
-                <>
-                  <div className="form-group">
-                    <label>Nombre del item *</label>
-                    <input
-                      type="text"
-                      value={newItemName}
-                      onChange={(e) => setNewItemName(e.target.value)}
-                      placeholder="Ej: Arroz, Frazadas, etc."
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Categoría *</label>
-                    <select
-                      value={newItemCategory || ''}
-                      onChange={(e) => setNewItemCategory(parseInt(e.target.value) || 0)}
-                    >
-                      <option value="">Seleccione una categoría...</option>
-                      {categories.map(category => {
-                        console.log('Categoría disponible:', category); // Debug
-                        return (
-                          <option key={category.category_id} value={category.category_id}>
-                            {category.name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    {categories.length === 0 && <p style={{color: 'red', fontSize: '12px'}}>No hay categorías cargadas</p>}
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Cantidad *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={newItemQuantity}
-                        onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Unidad *</label>
-                      <input
-                        type="text"
-                        value={newItemUnit}
-                        onChange={(e) => setNewItemUnit(e.target.value)}
-                        placeholder="kg, unidades, litros, etc."
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label>Seleccionar item del inventario *</label>
-                    <select
-                      value={selectedInventoryItemId || ''}
-                      onChange={(e) => setSelectedInventoryItemId(e.target.value ? parseInt(e.target.value) : undefined)}
-                    >
-                      <option value="">-- Seleccionar item --</option>
-                      {currentInventory.filter(item => item.quantity > 0).map(item => (
-                        <option key={item.item_id} value={item.item_id}>
-                          {item.name} - {item.quantity} {item.unit} ({item.category})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Cantidad *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={newItemQuantity}
-                      onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="form-group">
-                <label>Notas</label>
-                <textarea
-                  value={newItemNotes}
-                  onChange={(e) => setNewItemNotes(e.target.value)}
-                  placeholder="Información adicional opcional"
-                  rows={2}
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setShowAddItemToBox(false);
-                    setNewItemName('');
-                    setNewItemQuantity(1);
-                    setNewItemUnit('');
-                    setNewItemNotes('');
-                    setSelectedInventoryItemId(undefined);
-                    setIsCreatingNewItem(true);
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={addItemToBox}
-                  disabled={
-                    boxForm.type === 'entry'
-                      ? (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim() || !newItemCategory)
-                      : isCreatingNewItem 
-                        ? (!newItemName.trim() || newItemQuantity <= 0 || !newItemUnit.trim() || !newItemCategory)
-                        : (!selectedInventoryItemId || newItemQuantity <= 0)
-                  }
-                >
-                  Agregar Item
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal para ver plantilla */}
-        {showViewTemplate && selectedTemplateToView && (
-          <div className="modal-overlay">
-            <div className="modal-content large-modal">
-              <h4>Ver Plantilla: {selectedTemplateToView.name}</h4>
-              
-              <div className="template-info">
-                <div className="template-type">
-                  <span className={`template-type-badge ${selectedTemplateToView.type || 'entry'}`}>
-                    {(selectedTemplateToView.type === 'exit') ? '↗ SALIDA' : '↙ ENTRADA'}
-                  </span>
-                </div>
-                
-                {selectedTemplateToView.description && (
-                  <div className="form-group">
-                    <label>Descripción:</label>
-                    <p>{selectedTemplateToView.description}</p>
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label>Items de la plantilla ({selectedTemplateToView.items.length}):</label>
-                  <div className="view-template-items">
-                    {selectedTemplateToView.items.map((item, index) => {
-                      const categoryName = categories.find(cat => cat.category_id === item.category_id)?.name || 'Sin categoría';
-                      return (
-                        <div key={index} className="view-template-item">
-                          <div className="item-info">
-                            <span className="item-name">{item.item_name}</span>
-                            <span className="item-category">{categoryName}</span>
-                            <span className="item-quantity">{item.quantity} {item.unit}</span>
-                            {item.notes && <span className="item-notes">{item.notes}</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setShowViewTemplate(false);
-                    setSelectedTemplateToView(null);
-                  }}
-                >
-                  Cerrar
-                </button>
-                {mode === 'manage' && onTemplateSelect && (
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => {
-                      handleTemplateSelect(selectedTemplateToView);
-                      setShowViewTemplate(false);
-                      setSelectedTemplateToView(null);
-                    }}
-                  >
-                    Usar Esta Plantilla
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Modal para agregar item */}
+      {showAddItemForm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h4>Agregar Item a la Plantilla</h4>
+
+            <div className="form-group">
+              <label>Tipo de Item:</label>
+              <div className="radio-group">
+                <label>
+                  <input
+                    type="radio"
+                    value="existing"
+                    checked={itemFormMode === 'existing'}
+                    onChange={() => setItemFormMode('existing')}
+                  />
+                  Item Existente
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    value="new"
+                    checked={itemFormMode === 'new'}
+                    onChange={() => setItemFormMode('new')}
+                  />
+                  Crear Nuevo Item
+                </label>
+              </div>
+            </div>
+
+            {itemFormMode === 'existing' ? (
+              <div className="form-group">
+                <label>Seleccionar Item *</label>
+                <select
+                  value={selectedItemId}
+                  onChange={(e) => setSelectedItemId(Number(e.target.value))}
+                >
+                  {currentInventory.map((item) => (
+                    <option key={item.item_id} value={item.item_id}>
+                      {item.name} ({item.category}) - Stock: {item.quantity} {item.unit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>Nombre del Item *</label>
+                  <input
+                    type="text"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    placeholder="Ej: Arroz"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Categoría *</label>
+                  <select
+                    value={newItemCategory}
+                    onChange={(e) => setNewItemCategory(Number(e.target.value))}
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat.category_id} value={cat.category_id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Unidad *</label>
+                  <input
+                    type="text"
+                    value={newItemUnit}
+                    onChange={(e) => setNewItemUnit(e.target.value)}
+                    placeholder="Ej: kg, litros, unidades"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="form-group">
+              <label>Cantidad *</label>
+              <input
+                type="number"
+                value={itemQuantity}
+                onChange={(e) => setItemQuantity(Number(e.target.value))}
+                min="1"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Notas</label>
+              <input
+                type="text"
+                value={itemNotes}
+                onChange={(e) => setItemNotes(e.target.value)}
+                placeholder="Notas adicionales (opcional)"
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setShowAddItemForm(false);
+                  setItemQuantity(1);
+                  setItemNotes('');
+                  setNewItemName('');
+                  setNewItemUnit('');
+                }}
+              >
+                Cancelar
+              </button>
+              <button className="btn-primary" onClick={handleAddItemToTemplate}>
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

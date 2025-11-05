@@ -14,8 +14,7 @@ import { getCenterCapacity, updateCenterFullness } from "@/services/centers.serv
 import { getUser } from "@/services/users.service";
 import { validateItemDeletion, createInventoryAdjustment } from "@/services/movements.service";
 import ResourcesAndNeeds from "@/components/inventory/ResourcesAndNeeds";
-import EntryForm from "@/components/inventory/EntryForm";
-import ExitForm from "@/components/inventory/ExitForm";
+import MovementForm from "@/components/inventory/MovementForm";
 import BoxTemplateManager from "@/components/inventory/BoxTemplateManager";
 import type {
   InventoryItem,
@@ -600,9 +599,9 @@ export default function InventoryPage() {
 
       {/* HdU11: Modales para movimientos de inventario */}
       {isEntryFormOpen && centerId ? (
-        <EntryForm
+        <MovementForm
           centerId={centerId}
-          currentInventory={Object.values(inventory).flat()}
+          type="entry"
           onClose={() => setIsEntryFormOpen(false)}
           onSuccess={() => {
             fetchInventory(false);
@@ -612,9 +611,9 @@ export default function InventoryPage() {
       ) : null}
 
       {isExitFormOpen && centerId && (
-        <ExitForm
+        <MovementForm
           centerId={centerId}
-          currentInventory={Object.values(inventory).flat()}
+          type="exit"
           onClose={() => setIsExitFormOpen(false)}
           onSuccess={() => {
             fetchInventory(false);
@@ -627,8 +626,6 @@ export default function InventoryPage() {
         <BoxTemplateManager
           centerId={centerId}
           onClose={() => setIsBoxTemplateManagerOpen(false)}
-          mode="manage"
-          currentInventory={Object.values(inventory).flat()}
         />
       ) : null}
     </div>
