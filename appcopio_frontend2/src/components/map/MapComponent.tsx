@@ -324,7 +324,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
   };
  React.useEffect(() => {
   if (!selectedCenter) return;
-
+  fetchCenterCapacity(selectedCenter.center_id);
   getInventoryWithPriorities(selectedCenter.center_id)
     .then((data) => {
       // Ordenar primero por prioridad, luego por categoría
@@ -348,10 +348,6 @@ export default function MapComponent({ centers }: MapComponentProps) {
       setPriorities([]);
     });
 }, [selectedCenter]);
-  React.useEffect(() => {
-    if (!selectedCenter) return;
-    fetchPriorities(selectedCenter.center_id);
-  }, [selectedCenter]);
 
   async function fetchCenterCapacity(centerId: string) {
     try {
@@ -434,7 +430,6 @@ export default function MapComponent({ centers }: MapComponentProps) {
                   }
                   onClick={() => {
                     setSelectedCenterId(String(center.center_id));
-                    setIsPanelOpen(true); // Abrir el panel cuando se selecciona un centro
                   }}
                 >
                   <div className={`marker-pin ${getPinStatusClass(center, isNearby)}`}>
@@ -516,6 +511,14 @@ export default function MapComponent({ centers }: MapComponentProps) {
                       Ofrecer Servicios Voluntarios
                     </button>
                   )}
+                              {/* ✅ Nuevo botón para abrir el panel */}
+                  <button
+                    className="see-more-btn"
+                    onClick={() => setIsPanelOpen(true)}
+                    type="button"
+                  >
+                    🔍 Ver más
+                  </button>
                 </div>
               </InfoWindow>
             )}
@@ -566,18 +569,36 @@ export default function MapComponent({ centers }: MapComponentProps) {
               });
 
               return (
-                <div key={level}>
+                <div key={level} className={`priority-block ${level}`}>
                   <h4 className={`priority-title ${level}`}>
-                    {level === "alto" ? "🔴 Prioridad Alta" : level === "medio" ? "🟡 Prioridad Media" : "🟢 Prioridad Baja"}
+                    {level === "alto"
+                      ? "🔴 Prioridad Alta"
+                      : level === "medio"
+                      ? "🟡 Prioridad Media"
+                      : "🟢 Prioridad Baja"}
                   </h4>
 
                   {Object.entries(itemsByCategory).map(([category, items]) => (
-                    <div key={category}>
+                    <div key={category} className="priority-category">
                       <strong>Categoria {category}</strong>
-                      <ul>
-                        {items.map(item => (
-                          <li key={item.item_id}>{item.item_name}</li>
-                        ))}
+                      <ul className="priority-items-list">
+                        {items.map(item => {
+                          const updatedDate = item.updated_at
+                            ? new Date(item.updated_at).toLocaleString("es-CL", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "Sin actualización";
+                          return (
+                            <li key={item.item_id} className="priority-item">
+                              <span className="item-name">{item.item_name}</span>
+                              <span className="item-updated">🕒 {updatedDate}</span>
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   ))}

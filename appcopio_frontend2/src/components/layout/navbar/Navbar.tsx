@@ -289,7 +289,10 @@ export default function VerticalNavbar() {
                 isCollapsed={isCollapsed}
                 onClick={handleNavItemClick}
               />
+              <NavItem to={paths.myShifts} icon={<WorkIcon />} label="Mis Turnos" isCollapsed={isCollapsed} onClick={handleNavItemClick} />
           </ListItem>
+          
+          
           
         )}
         {/* Admin Menu (Agrupado) */}
@@ -566,16 +569,6 @@ export default function VerticalNavbar() {
             <AccountCircleIcon fontSize="small" />
           </ListItemIcon>
           Mi Perfil
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={() => {
-          handleMenuClose();
-          navigate(paths.myShifts);
-        }}>
-          <ListItemIcon>
-            <WorkIcon fontSize="small" />
-          </ListItemIcon>
-          Mis turnos
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>

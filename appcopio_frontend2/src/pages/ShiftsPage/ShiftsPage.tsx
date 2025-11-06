@@ -42,7 +42,7 @@ export default function ShiftsPage() {
   // Permisos
   const isAdmin = user?.role_id === 1;
   const isAdminSupport = !!user?.es_apoyo_admin;
-  const canManage = isAdmin || isAdminSupport;
+  const canManage = isAdmin || isAdminSupport || (user?.role_id === 2); 
 
   useEffect(() => {
     if (centerId) {

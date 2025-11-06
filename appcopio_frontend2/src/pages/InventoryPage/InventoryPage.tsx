@@ -24,6 +24,7 @@ import type {
   Category,
   InventoryCreateDTO,
 } from "@/types/inventory";
+import ServiceRequestsSection from "@/components/map/ServiceRequestsSection";
 import "./InventoryPage.css";
 import { useScrollToTop } from '@/hooks/useScrollToTop';
 import { getPrioritiesByCenter, upsertPriority } from "@/services/priorities.service";
@@ -50,6 +51,7 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<CenterPriority[]>([]);
   const [savingPriorityItemId, setSavingPriorityItemId] = useState<string | null>(null);
+  const [newItemCategory, setNewItemCategory] = useState<string>("");
 
 
   // Modales / edición
@@ -98,46 +100,81 @@ export default function InventoryPage() {
   const isAssignedToCenter = centerId ? assignedCenters.includes(String(centerId)) : false;
   const canManage = isAdminOrSupport || isAssignedToCenter;
 
-  // Carga inicial
-  useEffect(() => {
-    if (!centerId) {
-      setIsLoading(false);
-      setError("Centro no encontrado");
-      return;
-    }
-    const controller = new AbortController();
-    (async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [inv, cats, capacityData] = await Promise.all([
-          listCenterInventory(centerId),
-          listCategories(),
-          getCenterCapacity(centerId),
-        ]);
-        const groupedInv = groupByCategory(inv);
-        const capacity = capacityData?.current_capacity || 0;
-        
-        setInventory(groupedInv);
-        setCategories(cats);
-        setCenterCapacity(capacity);
-        
-        if (cats.length > 0 && newItemCategory === "") {
-          setNewItemCategory(String(cats[0].category_id));
-        }
-        const data = await getPrioritiesByCenter(centerId);
-        console.log("data_",data);
-        setPriorities(data);
-      } catch (e: any) {
-        if (!controller.signal.aborted) {
-          setError(e?.message ?? "No se pudieron cargar los datos.");
-        }
-      } finally {
-        if (!controller.signal.aborted) setIsLoading(false);
+ // Carga inicial del inventario + prioridades
+useEffect(() => {
+  console.log("🟢 [useEffect] Montando efecto de carga inicial");
+  console.log("📌 centerId recibido:", centerId);
+
+  if (!centerId) {
+    console.warn("⚠️ [useEffect] No hay centerId. Cancelando carga inicial.");
+    setIsLoading(false);
+    setError("Centro no encontrado");
+    return;
+  }
+
+  const controller = new AbortController();
+  console.log("🔧 [useEffect] Creado AbortController:", controller);
+
+  (async () => {
+    console.log("🚀 [async] Iniciando carga de datos del centro", centerId);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log("📦 [async] Solicitando datos con Promise.all...");
+      const [inv, cats, capacityData] = await Promise.all([
+        listCenterInventory(centerId),
+        listCategories(),
+        getCenterCapacity(centerId),
+      ]);
+      console.log("✅ [async] Datos recibidos:");
+      console.log("   🗃️ inventario:", inv?.length ?? 0, "items");
+      console.log("   🏷️ categorías:", cats?.length ?? 0);
+      console.log("   📊 capacidad:", capacityData);
+
+      const groupedInv = groupByCategory(inv);
+      const capacity = capacityData?.current_capacity || 0;
+
+      setInventory(groupedInv);
+      setCategories(cats);
+      setCenterCapacity(capacity);
+
+      if (cats.length > 0 && newItemCategory === "") {
+        console.log("✨ [async] Asignando categoría inicial:", cats[0].category_id);
+        setNewItemCategory(String(cats[0].category_id));
       }
-    })();
-    return () => controller.abort();
-  }, [centerId]);
+
+      console.log("📡 [async] Llamando getPrioritiesByCenter con:", centerId);
+      const data = await getPrioritiesByCenter(centerId);
+      console.log("🧾 [async] Prioridades recibidas:", data);
+
+      if (!data || data.length === 0) {
+        console.warn("⚠️ [async] No se recibieron prioridades para este centro.");
+      } else {
+        console.log("✅ [async] Se recibieron", data.length, "prioridades.");
+      }
+
+      setPriorities(data);
+    } catch (e: any) {
+      console.error("❌ [async] Error en la carga inicial:", e);
+      if (!controller.signal.aborted) {
+        setError(e?.message ?? "No se pudieron cargar los datos.");
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        console.log("🧹 [finally] Terminando carga inicial. Limpiando estado.");
+        setIsLoading(false);
+      } else {
+        console.warn("⚠️ [finally] Efecto abortado antes de finalizar.");
+      }
+    }
+  })();
+
+  return () => {
+    console.log("🧽 [cleanup] Abortando peticiones del efecto de carga inicial.");
+    controller.abort();
+  };
+}, [centerId]);
 
   // Helpers
   const fetchInventory = async (showLoading = true) => {
