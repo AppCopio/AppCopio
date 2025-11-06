@@ -39,6 +39,21 @@ export {
   isOnline
 } from './offline-core';
 
+// Estado de conectividad (DETECCIÓN DUAL)
+export {
+  isSystemOffline,
+  isSystemOnline,
+  getDetailedConnectivityState
+} from './connectivity-state';
+
+// Monitor de conectividad
+export {
+  getConnectivityMonitor,
+  startConnectivityMonitoring,
+  stopConnectivityMonitoring,
+  ConnectivityStatus
+} from './connectivity-monitor';
+
 // Funciones de base de datos
 export {
   getDB,

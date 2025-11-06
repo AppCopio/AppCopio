@@ -5,6 +5,11 @@
  * - Cachea respuestas GET automáticamente
  * - Encola mutaciones (POST/PUT/DELETE) cuando offline
  * - Devuelve cache cuando offline
+ * 
+ * DETECTA OFFLINE CON DOS MÉTODOS:
+ * 1. navigator.onLine (para DevTools F12 Network → Offline)
+ * 2. ConnectivityMonitor (para desconexión física del internet)
+ * Si CUALQUIERA detecta offline → modo offline activado
  */
 
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
@@ -13,6 +18,7 @@ import { addMutationToQueue } from './offline-sync';
 import { emitMutationQueued } from './events';
 import { getTTLForEndpoint, shouldCacheEndpoint } from './config';
 import { generateUUID } from './offline-core';
+import { isSystemOffline } from './connectivity-state';
 
 // =====================================================
 // REQUEST INTERCEPTOR
@@ -23,16 +29,21 @@ import { generateUUID } from './offline-core';
  * - Si offline + GET → buscar en cache
  * - Si offline + mutación → encolar
  * - Si online → continuar normal
+ * 
+ * DETECCIÓN OFFLINE DUAL:
+ * - navigator.onLine (DevTools F12)
+ * - ConnectivityMonitor (desconexión física)
  */
 async function handleOfflineRequest(
   config: InternalAxiosRequestConfig
 ): Promise<InternalAxiosRequestConfig> {
-  const isOnline = navigator.onLine;
+  // USAR DETECCIÓN DUAL: navigator.onLine + ConnectivityMonitor
+  const systemOffline = isSystemOffline();
   const method = config.method?.toUpperCase() || 'GET';
   const url = config.url || '';
 
   // Si estamos ONLINE → continuar normal
-  if (isOnline) {
+  if (!systemOffline) {
     return config;
   }
 
