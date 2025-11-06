@@ -78,14 +78,35 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
       return;
     }
 
-    // Centros asignados activos (equivalente al assignmentsResult del handler viejo)
+    // Centros asignados vía CenterAssignments
     const qAssignments = `
       SELECT center_id
       FROM CenterAssignments
       WHERE user_id = $1 AND valid_to IS NULL
     `;
     const assignRes = await pool.query(qAssignments, [user.user_id]);
-    const assignedCenters: string[] = assignRes.rows.map((r: any) => r.center_id);
+    const centersFromAssignments: string[] = assignRes.rows.map((r: any) => r.center_id);
+    
+    /*// Centros asignados vía ActivationAssignments activos
+    const qActivationAssignments = `
+      SELECT DISTINCT ca.center_id
+      FROM ActivationAssignments aa
+      JOIN CentersActivations ca ON aa.activation_id = ca.activation_id
+      WHERE aa.user_id = $1 
+        AND aa.end_date IS NULL
+        AND ca.ended_at IS NULL
+    `;
+    const activationRes = await pool.query(qActivationAssignments, [user.user_id]);
+    const centersFromActivations: string[] = activationRes.rows.map((r: any) => r.center_id);
+    
+    // Combinar para tener todos los centros asignados al usuario sin duplicados :D
+    const assignedCenters: string[] = Array.from(
+      new Set([...centersFromAssignments, ...centersFromActivations])
+    );
+
+    console.log('📍 Centers from CenterAssignments:', centersFromAssignments);
+    console.log('📍 Centers from ActivationAssignments:', centersFromActivations);
+    console.log('📍 Combined assigned centers:', assignedCenters);*/
 
     // Construye el "sessionUser" tal como en el handler viejo (con campos extra)
     const sessionUser = {
@@ -95,11 +116,11 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
       role_name: user.role_name as string,
       es_apoyo_admin: !!user.es_apoyo_admin,
       is_active: !!user.is_active,
-      assignedCenters, // <-- NUEVO EN LA RESPUESTA (no va dentro del JWT)
-      nombre: user.nombre,           // ← AGREGAR
-    genero: user.genero,           // ← AGREGAR
-    celular: user.celular,         // ← AGREGAR
-    imagen_perfil: user.imagen_perfil, // ← AGREGAR
+      centersFromAssignments, //assignedCenters
+      nombre: user.nombre,
+      genero: user.genero,
+      celular: user.celular,   
+      imagen_perfil: user.imagen_perfil, 
     };
 
     // JWTs reales (manteniendo tu flujo nuevo)
@@ -110,7 +131,6 @@ const loginHandler: RequestHandler = async (req, res): Promise<void> => {
       role_name: user.role_name,
       is_active: user.is_active,
       es_apoyo_admin: user.es_apoyo_admin,
-      
     };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
