@@ -63,8 +63,8 @@
 
 .categories-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
   margin-top: 24px;
 }
 
@@ -75,6 +75,9 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0e0e0;
   transition: box-shadow 0.2s ease;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
 }
 
 .category-card:hover {
@@ -162,6 +165,12 @@
   font-weight: 600;
 }
 
+.items-breakdown {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .breakdown-note {
   margin: 0 0 12px 0;
   padding: 10px 12px;
@@ -178,73 +187,85 @@
 }
 
 .items-list {
-  max-height: 200px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
 }
 
-.item-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+.resources-and-needs .items-list .item-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex: none !important;
+  min-height: 30px !important;
+  max-height: none !important;
+  padding: 4px 0 !important;
+  border: none !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  width: 100% !important;
 }
 
-.item-row:last-child {
-  border-bottom: none;
+.resources-and-needs .items-list .item-row:last-child {
+  border-bottom: none !important;
 }
 
-.item-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
+.resources-and-needs .items-list .item-info {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex: 1 !important;
 }
 
-.item-name {
-  font-size: 0.9rem;
-  color: #333;
-  font-weight: 500;
+.resources-and-needs .items-list .item-name {
+  font-size: 0.9rem !important;
+  color: #333 !important;
+  font-weight: 500 !important;
 }
 
-.priority-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.resources-and-needs .items-list .priority-indicator {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
 }
 
-.item-quantities {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.9rem;
-  margin: 0 12px;
+.resources-and-needs .items-list .item-quantities {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 0.9rem !important;
+  margin: 0 12px !important;
 }
 
-.item-quantities .current {
-  color: #4caf50;
-  font-weight: 600;
+.resources-and-needs .items-list .item-quantities .current {
+  color: #4caf50 !important;
+  font-weight: 600 !important;
 }
 
-.item-quantities .separator {
-  color: #999;
+.resources-and-needs .items-list .item-quantities .separator {
+  color: #999 !important;
 }
 
-.item-quantities .needed {
-  color: #ff9800;
-  font-weight: 600;
+.resources-and-needs .items-list .item-quantities .needed {
+  color: #ff9800 !important;
+  font-weight: 600 !important;
 }
 
-.item-quantities .unit {
-  color: #666;
-  font-size: 0.8rem;
-  margin-left: 4px;
+.resources-and-needs .items-list .item-quantities .unit {
+  color: #666 !important;
+  font-size: 0.8rem !important;
+  margin-left: 4px !important;
 }
 
-.item-coverage {
-  min-width: 60px;
-  text-align: right;
+.resources-and-needs .items-list .item-coverage {
+  min-width: 60px !important;
+  text-align: right !important;
 }
 
 .coverage-hint {
@@ -294,21 +315,23 @@
 @media (max-width: 768px) {
   .categories-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
   }
   
   .category-card {
     padding: 16px;
+    min-height: 160px;
   }
   
-  .item-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+  .resources-and-needs .items-list .item-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+    padding: 6px 0 !important;
   }
   
-  .item-quantities,
-  .item-coverage {
-    margin: 0;
+  .resources-and-needs .items-list .item-quantities,
+  .resources-and-needs .items-list .item-coverage {
+    margin: 0 !important;
   }
 }

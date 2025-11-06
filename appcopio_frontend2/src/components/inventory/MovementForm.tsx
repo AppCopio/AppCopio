@@ -68,6 +68,13 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
     loadData();
   }, []);
 
+  // Asegurar que para salidas siempre esté en modo 'existing'
+  useEffect(() => {
+    if (type === 'exit') {
+      setItemFormMode('existing');
+    }
+  }, [type]);
+
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -259,7 +266,8 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
     setItemCost(undefined);
     setNewItemName('');
     setNewItemUnit('');
-    setItemFormMode('existing');
+    // Para salidas, siempre mantener modo existente
+    setItemFormMode(type === 'exit' ? 'existing' : 'existing');
   };
 
   const handleUpdateItemQuantity = (id: string, newQuantity: number) => {
@@ -495,7 +503,13 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
                 <h4>Items</h4>
                 <button
                   className="add-item-btn"
-                  onClick={() => setShowAddItemForm(true)}
+                  onClick={() => {
+                    setShowAddItemForm(true);
+                    // Para salidas, forzar modo 'existing'
+                    if (type === 'exit') {
+                      setItemFormMode('existing');
+                    }
+                  }}
                   disabled={isSubmitting}
                 >
                   + Añadir Item
@@ -602,31 +616,33 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
           <div className="modal-content">
             <h4>Agregar Item</h4>
 
-            <div className="form-group">
-              <label>Tipo de Item:</label>
-              <div className="radio-group">
-                <label>
-                  <input
-                    type="radio"
-                    value="existing"
-                    checked={itemFormMode === 'existing'}
-                    onChange={() => setItemFormMode('existing')}
-                  />
-                  Item Existente
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="new"
-                    checked={itemFormMode === 'new'}
-                    onChange={() => setItemFormMode('new')}
-                  />
-                  Crear Nuevo Item
-                </label>
+            {type === 'entry' && (
+              <div className="form-group">
+                <label>Tipo de Item:</label>
+                <div className="radio-group">
+                  <label>
+                    <input
+                      type="radio"
+                      value="existing"
+                      checked={itemFormMode === 'existing'}
+                      onChange={() => setItemFormMode('existing')}
+                    />
+                    Item Existente
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      value="new"
+                      checked={itemFormMode === 'new'}
+                      onChange={() => setItemFormMode('new')}
+                    />
+                    Crear Nuevo Item
+                  </label>
+                </div>
               </div>
-            </div>
+            )}
 
-            {itemFormMode === 'existing' ? (
+            {(itemFormMode === 'existing' || type === 'exit') ? (
               <div className="form-group">
                 <label>Seleccionar Item *</label>
                 <select

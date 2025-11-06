@@ -18,19 +18,20 @@
 
 /* Modal */
 .entry-form-modal {
-  background: white;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f1f3f4 100%);
+  border-radius: 12px;
   width: 90%;
   max-width: 1000px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15), 0 4px 20px rgba(0, 0, 0, 0.1);
   margin: auto;
+  border: 1px solid rgba(99, 102, 241, 0.1);
 }
 
 .entry-form-container {
-  background: white;
-  border-radius: 8px;
+  background: transparent;
+  border-radius: 12px;
 }
 
 /* Header */
@@ -39,26 +40,29 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 2px solid #eee;
-  background-color: #f8f9fa;
+  border-bottom: 2px solid rgba(99, 102, 241, 0.1);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   position: sticky;
   top: 0;
   z-index: 10;
+  border-radius: 12px 12px 0 0;
 }
 
 .entry-form-header h3 {
   margin: 0;
-  color: #6366f1;
+  color: white;
   font-size: 1.4em;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .close-btn {
-  background: none;
+  background: rgba(255, 255, 255, 0.1);
   border: none;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
-  color: #666;
-  padding: 5px;
+  color: white;
+  padding: 0;
   width: 35px;
   height: 35px;
   border-radius: 50%;
@@ -66,11 +70,14 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  line-height: 1;
+  font-family: Arial, sans-serif;
+  vertical-align: middle;
 }
 
 .close-btn:hover {
-  background-color: #f0f0f0;
-  color: #333;
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
 }
 
 /* Content */
@@ -156,8 +163,8 @@
 }
 
 .template-card {
-  background: white;
-  border: 1px solid #ddd;
+  background: #d6d6d6 !important;
+  border: 2px solid #000000;
   border-radius: 8px;
   padding: 20px;
   transition: all 0.2s;
@@ -190,26 +197,80 @@
   margin: 10px 0;
 }
 
+/* Lista de ítems dentro de cada plantilla */
+.template-items-list {
+  margin: 15px 0;
+  padding: 12px;
+  background-color: #d6d6d6;
+  border-radius: 6px;
+  border: 2px solid #000000;
+}
+
+.template-items-list h6 {
+  margin: 0 0 8px 0;
+  font-size: 0.85em;
+  color: #495057;
+  font-weight: 600;
+}
+
+.items-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.item-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 2px solid #e9ecef;
+  font-size: 0.85em;
+}
+
+.item-entry:last-child {
+  border-bottom: none;
+}
+
+.item-name {
+  color: #333;
+  font-weight: 500;
+  flex: 1;
+}
+
+.item-quantity {
+  color: #6c757d;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 10px;
+}
+
 .template-actions {
   display: flex;
   gap: 10px;
   margin-top: 15px;
 }
 
-.btn-edit {
+.template-actions .btn-edit {
   flex: 1;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 15px;
+  background-color: #007bff !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 10px 16px !important;
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3) !important;
+  text-transform: none !important;
+  letter-spacing: 0.5px !important;
 }
 
-.btn-edit:hover {
-  background-color: #0056b3;
+.template-actions .btn-edit:hover {
+  background-color: #0056b3 !important;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4) !important;
+  transform: translateY(-1px) !important;
 }
 
 .btn-delete {

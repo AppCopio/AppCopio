@@ -562,7 +562,8 @@ const CenterManagementPage: React.FC = () => {
           <div className="modal-content">
             <h2>Confirmar Eliminación</h2>
             <p>
-              ¿Estás seguro de que deseas eliminar el centro con ID: <strong>{centerToDelete}</strong>? El centro será ocultado de la lista pero podrá ser restaurado por un administrador si es necesario.
+              ¿Estás seguro de que deseas eliminar el centro con ID: <strong>{centerToDelete}</strong>? Esta acción es
+              irreversible y eliminará todos los datos relacionados.
             </p>
             <div className="modal-actions">
               <button onClick={handleConfirmDelete} className="confirm-btn" disabled={isAuthLoading}>

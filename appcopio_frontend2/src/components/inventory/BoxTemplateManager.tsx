@@ -290,6 +290,24 @@ export default function BoxTemplateManager({ centerId, onClose }: BoxTemplateMan
                         <div className="template-items-count">
                           {template.items.length} items
                         </div>
+                        
+                        {/* Mostrar los ítems de la plantilla */}
+                        {template.items.length > 0 && (
+                          <div className="template-items-list">
+                            <h6>Ítems incluidos:</h6>
+                            <ul className="items-list">
+                              {template.items.map((item, index) => (
+                                <li key={index} className="item-entry">
+                                  <span className="item-name">{item.item_name}</span>
+                                  <span className="item-quantity">
+                                    {item.quantity} {item.unit}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
                         <div className="template-actions">
                           <button
                             className="btn-edit"
