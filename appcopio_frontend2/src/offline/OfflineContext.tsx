@@ -16,6 +16,13 @@ import {
   stopBackgroundSync 
 } from './offline-sync';
 import { emitSyncCompleted, emitSyncFailed } from './events';
+import { 
+  getConnectivityMonitor, 
+  startConnectivityMonitoring, 
+  stopConnectivityMonitoring,
+  ConnectivityStatus
+} from './connectivity-monitor';
+import { isSystemOffline, isSystemOnline } from './connectivity-state';
 import type { OfflineState, SyncConflict } from './types';
 
 /**
@@ -27,6 +34,9 @@ interface OfflineContextType extends OfflineState {
   triggerSync: () => Promise<void>;
   clearConflict: (mutationId: string) => void;
   getStats: () => Promise<any>;
+  // Nuevos: estado de conectividad detallado
+  connectivityStatus: ConnectivityStatus;
+  forceConnectivityCheck: () => Promise<ConnectivityStatus>;
 }
 
 /**
@@ -45,8 +55,13 @@ interface OfflineProviderProps {
  * Provider del contexto offline
  */
 export function OfflineProvider({ children }: OfflineProviderProps) {
-  // Estado de conectividad (usa navigator.onLine)
-  const [isOnline, setIsOnline] = React.useState<boolean>(navigator.onLine);
+  // Estado de conectividad detallado (del monitor)
+  const [connectivityStatus, setConnectivityStatus] = React.useState<ConnectivityStatus>(
+    ConnectivityStatus.ONLINE
+  );
+  
+  // Estado de conectividad simple (isOnline combina ONLINE y SLOW)
+  const [isOnline, setIsOnline] = React.useState<boolean>(true);
   
   // Estado de sincronización
   const [isSyncing, setIsSyncing] = React.useState<boolean>(false);
@@ -86,12 +101,53 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
         // Iniciar background sync automático (FASE 3)
         startBackgroundSync();
         
+        // Iniciar monitoreo activo de conectividad (NUEVO)
+        startConnectivityMonitoring({
+          // Configuración personalizada
+          pingUrl: '/api/ping', // Asegúrate de tener este endpoint en tu backend
+          checkInterval: 10000,  // Check cada 10s
+          slowThreshold: 2000,   // >2s = lento
+          offlineThreshold: 5000, // >5s = offline
+          maxFailedAttempts: 2   // 2 fallos = offline
+        });
+        
+        // Suscribirse a cambios de conectividad
+        const monitor = getConnectivityMonitor();
+        const unsubscribe = monitor.subscribe(async (status) => {
+          setConnectivityStatus(status);
+          // Actualizar isOnline usando detección DUAL
+          const wasOffline = !isSystemOnline();
+          setIsOnline(isSystemOnline());
+          
+          // Si recuperamos conexión, intentar sync automático INMEDIATO
+          if (isSystemOnline() && wasOffline) {
+            console.log('[OfflineContext] 🔄 Conexión recuperada! Verificando cola...');
+            
+            // Recontear pendientes inmediatamente
+            const count = await countPendingMutations();
+            setPendingCount(count);
+            
+            if (count > 0) {
+              console.log(`[OfflineContext] ⚡ Sincronizando ${count} operaciones pendientes AHORA`);
+              // Usar setTimeout 0 para ejecutar en el próximo tick, sin esperar intervalos
+              setTimeout(() => triggerSync(), 0);
+            } else {
+              console.log('[OfflineContext] ✅ No hay operaciones pendientes');
+            }
+          }
+        });
+        
         // Recontear pendientes después de la limpieza
         const finalCount = await countPendingMutations();
         setPendingCount(finalCount);
         
         console.log(`[OfflineContext] ${finalCount} mutaciones pendientes encontradas (${cleanedCount} limpiadas)`);
-        console.log('[OfflineContext] 🚀 Background sync iniciado (Fase 3)');
+        console.log('[OfflineContext] 🚀 Background sync y connectivity monitor iniciados');
+        
+        // Cleanup
+        return () => {
+          unsubscribe();
+        };
       } catch (error) {
         console.error('[OfflineContext] Error inicializando offline system:', error);
       }
@@ -102,34 +158,63 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
     // Cleanup al desmontar
     return () => {
       stopBackgroundSync();
+      stopConnectivityMonitoring();
     };
   }, []);
 
   /**
-   * Escucha eventos de conectividad del navegador
+   * Escucha eventos del navegador (para DevTools F12 Network → Offline)
+   * Esto detecta cambios instantáneos cuando se activa el modo offline en DevTools
    */
   React.useEffect(() => {
-    const handleOnline = () => {
-      console.log('[OfflineContext] Conexión restaurada');
-      setIsOnline(true);
+    const handleNavigatorOnline = async () => {
+      console.log('[OfflineContext] 📡 Evento navigator: online (DevTools)');
       
-      // Intentar sincronizar automáticamente al recuperar conexión
-      triggerSync();
+      // Forzar check inmediato del monitor para sincronizar estado
+      try {
+        const monitor = getConnectivityMonitor();
+        await monitor.forceCheck();
+        console.log('[OfflineContext] ✅ Check de conectividad forzado');
+      } catch (error) {
+        console.warn('[OfflineContext] No se pudo forzar check de conectividad:', error);
+      }
+      
+      // Actualizar estado usando detección dual
+      setIsOnline(isSystemOnline());
+      
+      // Si hay pendientes, intentar sync INMEDIATO
+      if (isSystemOnline()) {
+        console.log('[OfflineContext] 🔄 Conexión DevTools restaurada, verificando cola...');
+        
+        // Recontear pendientes inmediatamente
+        const count = await countPendingMutations();
+        setPendingCount(count);
+        
+        if (count > 0) {
+          console.log(`[OfflineContext] ⚡ Sincronizando ${count} operaciones pendientes AHORA (DevTools)`);
+          // Sync inmediato sin esperar intervalos
+          setTimeout(() => triggerSync(), 0);
+        } else {
+          console.log('[OfflineContext] ✅ No hay operaciones pendientes');
+        }
+      }
     };
 
-    const handleOffline = () => {
-      console.log('[OfflineContext] Conexión perdida');
-      setIsOnline(false);
+    const handleNavigatorOffline = () => {
+      console.log('[OfflineContext] 📡 Evento navigator: offline (DevTools)');
+      // Actualizar estado usando detección dual
+      setIsOnline(isSystemOnline());
     };
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    // Agregar listeners de eventos del navegador
+    window.addEventListener('online', handleNavigatorOnline);
+    window.addEventListener('offline', handleNavigatorOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleNavigatorOnline);
+      window.removeEventListener('offline', handleNavigatorOffline);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pendingCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Refresca el contador de operaciones pendientes
@@ -146,6 +231,7 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
   /**
    * Trigger manual de sincronización
    * Procesa todas las mutaciones pendientes usando la cola
+   * Usa detección DUAL de conectividad
    */
   const triggerSync = React.useCallback(async () => {
     if (isSyncing) {
@@ -153,8 +239,9 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
       return;
     }
 
-    if (!isOnline) {
-      console.log('[OfflineContext] No se puede sincronizar sin conexión');
+    // Usar detección DUAL
+    if (isSystemOffline()) {
+      console.log('[OfflineContext] No se puede sincronizar sin conexión (detección dual)');
       return;
     }
 
@@ -204,7 +291,7 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
     } finally {
       setIsSyncing(false);
     }
-  }, [isSyncing, isOnline, refreshPendingCount]);
+  }, [isSyncing, refreshPendingCount]); // Removido isOnline porque ahora se calcula con isSystemOffline()
 
   /**
    * Limpia un conflicto específico de la lista
@@ -226,6 +313,14 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
   }, []);
 
   /**
+   * Fuerza un check de conectividad inmediato
+   */
+  const forceConnectivityCheck = React.useCallback(async (): Promise<ConnectivityStatus> => {
+    const monitor = getConnectivityMonitor();
+    return await monitor.forceCheck();
+  }, []);
+
+  /**
    * Valor del contexto
    */
   const value: OfflineContextType = {
@@ -234,10 +329,12 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
     pendingCount,
     lastSync,
     conflicts,
+    connectivityStatus,
     refreshPendingCount,
     triggerSync,
     clearConflict,
-    getStats
+    getStats,
+    forceConnectivityCheck
   };
 
   return (

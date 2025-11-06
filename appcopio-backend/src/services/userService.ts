@@ -99,11 +99,27 @@ export async function getUserWithAssignments(db: Db, id: number) {
         WHERE u.user_id = $1`;
     
     
-    const assignmentsQuery = `SELECT center_id FROM centerassignments WHERE user_id = $1 AND valid_to IS NULL`;
-    
-    const [userResult, assignmentsResult] = await Promise.all([
+    // Centros asignados vía CenterAssignments
+    const qAssignments = `
+      SELECT center_id
+      FROM CenterAssignments
+      WHERE user_id = $1 AND valid_to IS NULL
+    `;
+
+    // Centros asignados vía ActivationAssignments activos
+    const qActivationAssignments = `
+      SELECT DISTINCT ca.center_id
+      FROM ActivationAssignments aa
+      JOIN CentersActivations ca ON aa.activation_id = ca.activation_id
+      WHERE aa.user_id = $1 
+        AND aa.end_date IS NULL
+        AND ca.ended_at IS NULL
+    `;
+
+    const [userResult, assignRes, activationRes] = await Promise.all([
         db.query(userQuery, [id]),
-        db.query(assignmentsQuery, [id])
+        db.query(qAssignments, [id]), 
+        db.query(qActivationAssignments, [id]), 
     ]);
 
     if (userResult.rowCount === 0) {
@@ -111,8 +127,18 @@ export async function getUserWithAssignments(db: Db, id: number) {
     }
     
     const user = userResult.rows[0];
-    const assignedCenters = assignmentsResult.rows.map(row => row.center_id);
+    const centersFromAssignments: string[] = assignRes.rows.map((r: any) => r.center_id);
+    const centersFromActivations: string[] = activationRes.rows.map((r: any) => r.center_id);
     
+    // Combinar para tener todos los centros asignados al usuario sin duplicados :D
+    const assignedCenters: string[] = Array.from(
+      new Set([...centersFromAssignments, ...centersFromActivations])
+    );
+
+    console.log('📍 Centers from CenterAssignments:', centersFromAssignments);
+    console.log('📍 Centers from ActivationAssignments:', centersFromActivations);
+    console.log('📍 Combined assigned centers:', assignedCenters);
+
     return { ...user, assignedCenters };
 }
 
