@@ -37,12 +37,11 @@ interface ConnectivityConfig {
  * Configuración por defecto
  */
 const DEFAULT_CONFIG: ConnectivityConfig = {
-  // Usar un endpoint pequeño y rápido (1x1 pixel, headers only)
-  // Puedes cambiar esto a tu propio backend si lo prefieres
-  pingUrl: '/api/ping', // Cambiar a tu endpoint
+  // Usar favicon de Google - ligero, confiable y no satura tu backend
+  pingUrl: 'https://www.google.com/favicon.ico',
 
-  // Check cada 30 minutos
-  checkInterval: 1800000,
+  // Check cada 30 segundos
+  checkInterval: 30000,
   
   // Más de 2 segundos = conexión lenta
   slowThreshold: 2000,
@@ -189,29 +188,26 @@ class ConnectivityMonitor {
       }, this.config.offlineThreshold);
 
       const response = await fetch(this.config.pingUrl, {
-        method: 'HEAD', // Más ligero que GET
+        method: 'GET', // GET para favicon (HEAD no funciona bien con Google)
+        mode: 'no-cors', // Evitar problemas de CORS con dominios externos
         cache: 'no-store',
         signal: controller.signal,
         // Agregar timestamp para evitar cache del navegador
         headers: {
-          'Cache-Control': 'no-cache',
-          'X-Ping-Time': Date.now().toString()
+          'Cache-Control': 'no-cache'
         }
       });
 
       clearTimeout(timeoutId);
       
       const latency = Date.now() - startTime;
-      console.log(`[ConnectivityMonitor] ⚡ Respuesta recibida en ${latency}ms (status: ${response.status})`);
+      
+      // Con mode: 'no-cors', response.type será 'opaque' y no podremos leer status
+      // Si llegamos aquí sin error, significa que hay conectividad
+      console.log(`[ConnectivityMonitor] ⚡ Respuesta recibida en ${latency}ms (type: ${response.type})`);
 
       // Determinar estado según latencia
       let status: ConnectivityStatus;
-      
-      if (!response.ok) {
-        // Error HTTP (4xx, 5xx)
-        console.error(`[ConnectivityMonitor] ❌ Error HTTP ${response.status}`);
-        throw new Error(`HTTP ${response.status}`);
-      }
       
       if (latency > this.config.slowThreshold) {
         console.log(`[ConnectivityMonitor] 🐌 Conexión lenta detectada (${latency}ms > ${this.config.slowThreshold}ms)`);
