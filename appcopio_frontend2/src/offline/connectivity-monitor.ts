@@ -40,9 +40,9 @@ const DEFAULT_CONFIG: ConnectivityConfig = {
   // Usar un endpoint pequeño y rápido (1x1 pixel, headers only)
   // Puedes cambiar esto a tu propio backend si lo prefieres
   pingUrl: '/api/ping', // Cambiar a tu endpoint
-  
-  // Check cada 10 segundos
-  checkInterval: 10000,
+
+  // Check cada 30 minutos
+  checkInterval: 1800000,
   
   // Más de 2 segundos = conexión lenta
   slowThreshold: 2000,
