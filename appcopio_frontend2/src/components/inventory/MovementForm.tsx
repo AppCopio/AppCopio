@@ -220,7 +220,7 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
         const createdItem = await createInventoryItem(centerId, {
           itemName: newItemName.trim(),
           categoryId: newItemCategory,
-          quantity: 0,
+          quantity: itemQuantity,
           unit: newItemUnit.trim(),
         });
 
