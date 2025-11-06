@@ -386,11 +386,6 @@ const fullnessPercentage = useMemo(() => {
                 } catch {}
               }}
             />
-            {activation && center.center_id && (
-              <Button variant="contained" onClick={() => navigate(`/center/${center.center_id}/fibe`)}>
-                Formulario FIBE
-              </Button>
-            )}
           </div>
         </div>
       </div>
