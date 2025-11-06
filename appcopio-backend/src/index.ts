@@ -85,20 +85,6 @@ app.use("/api/auth", authRoutes);
 app.get("/api", (req: Request, res: Response) => {
   res.json({ message: "¡El Backend de AppCopio está funcionando! 災害" });
 });
-
-// Endpoint de ping para monitoreo de conectividad (sin autenticación)
-// Este endpoint es ultra-ligero para detectar rápidamente si hay conexión
-app.head("/api/ping", (_req: Request, res: Response) => {
-  res.status(200).end();
-});
-
-app.get("/api/ping", (_req: Request, res: Response) => {
-  res.status(200).json({ 
-    status: "ok", 
-    timestamp: Date.now() 
-  });
-});
-
 app.use("/api/centers", centerRoutes)
 app.use("/api/updates", requireAuth, updateRoutes);
 app.use("/api/users", requireAuth, userRouter);

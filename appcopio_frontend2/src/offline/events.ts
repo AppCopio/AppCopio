@@ -8,7 +8,7 @@
 // =====================================================
 
 export interface OfflineEvent {
-  type: 'mutation_queued' | 'sync_completed' | 'sync_failed' | 'cache_hit' | 'connectivity_changed';
+  type: 'mutation_queued' | 'sync_completed' | 'sync_failed' | 'cache_hit';
   data: any;
   timestamp: number;
 }
@@ -147,19 +147,6 @@ export function emitSyncFailed(error: any): void {
   const event: OfflineEvent = {
     type: 'sync_failed',
     data: { error: error.message || 'Error desconocido' },
-    timestamp: Date.now()
-  };
-
-  offlineEventEmitter.emit(event);
-}
-
-/**
- * Emite evento cuando cambia el estado de conectividad
- */
-export function emitConnectivityChanged(status: string): void {
-  const event: OfflineEvent = {
-    type: 'connectivity_changed',
-    data: { status },
     timestamp: Date.now()
   };
 
