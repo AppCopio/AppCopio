@@ -113,15 +113,27 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
         
         // Suscribirse a cambios de conectividad
         const monitor = getConnectivityMonitor();
-        const unsubscribe = monitor.subscribe((status) => {
+        const unsubscribe = monitor.subscribe(async (status) => {
           setConnectivityStatus(status);
           // Actualizar isOnline usando detección DUAL
+          const wasOffline = !isSystemOnline();
           setIsOnline(isSystemOnline());
           
-          // Si recuperamos conexión, intentar sync automático
-          if (isSystemOnline() && pendingCount > 0) {
-            console.log('[OfflineContext] 🔄 Conexión recuperada, iniciando sync automático');
-            triggerSync();
+          // Si recuperamos conexión, intentar sync automático INMEDIATO
+          if (isSystemOnline() && wasOffline) {
+            console.log('[OfflineContext] 🔄 Conexión recuperada! Verificando cola...');
+            
+            // Recontear pendientes inmediatamente
+            const count = await countPendingMutations();
+            setPendingCount(count);
+            
+            if (count > 0) {
+              console.log(`[OfflineContext] ⚡ Sincronizando ${count} operaciones pendientes AHORA`);
+              // Usar setTimeout 0 para ejecutar en el próximo tick, sin esperar intervalos
+              setTimeout(() => triggerSync(), 0);
+            } else {
+              console.log('[OfflineContext] ✅ No hay operaciones pendientes');
+            }
           }
         });
         
@@ -155,15 +167,36 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
    * Esto detecta cambios instantáneos cuando se activa el modo offline en DevTools
    */
   React.useEffect(() => {
-    const handleNavigatorOnline = () => {
+    const handleNavigatorOnline = async () => {
       console.log('[OfflineContext] 📡 Evento navigator: online (DevTools)');
+      
+      // Forzar check inmediato del monitor para sincronizar estado
+      try {
+        const monitor = getConnectivityMonitor();
+        await monitor.forceCheck();
+        console.log('[OfflineContext] ✅ Check de conectividad forzado');
+      } catch (error) {
+        console.warn('[OfflineContext] No se pudo forzar check de conectividad:', error);
+      }
+      
       // Actualizar estado usando detección dual
       setIsOnline(isSystemOnline());
       
-      // Si hay pendientes, intentar sync
-      if (isSystemOnline() && pendingCount > 0) {
-        console.log('[OfflineContext] 🔄 Conexión DevTools restaurada, iniciando sync');
-        triggerSync();
+      // Si hay pendientes, intentar sync INMEDIATO
+      if (isSystemOnline()) {
+        console.log('[OfflineContext] 🔄 Conexión DevTools restaurada, verificando cola...');
+        
+        // Recontear pendientes inmediatamente
+        const count = await countPendingMutations();
+        setPendingCount(count);
+        
+        if (count > 0) {
+          console.log(`[OfflineContext] ⚡ Sincronizando ${count} operaciones pendientes AHORA (DevTools)`);
+          // Sync inmediato sin esperar intervalos
+          setTimeout(() => triggerSync(), 0);
+        } else {
+          console.log('[OfflineContext] ✅ No hay operaciones pendientes');
+        }
       }
     };
 
