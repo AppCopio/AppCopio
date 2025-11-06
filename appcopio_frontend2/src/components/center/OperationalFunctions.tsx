@@ -121,7 +121,7 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
           </div>
         </div>
 
-        {/* Card: Gestión de Grupos */}
+        {/* Card: Gestión de Grupos 
         <div 
           className="operational-card groups-card"
           onClick={() => navigate(`/center/${centerId}/groups`)}
@@ -133,7 +133,7 @@ const OperationalFunctions: React.FC<OperationalFunctionsProps> = ({
             <h4>Gestión de Grupos</h4>
             <p className="card-sublabel">Familias y residentes</p>
           </div>
-        </div>
+        </div>*/}
 
         {/* Card: Formulario FIBE */}
         <div 

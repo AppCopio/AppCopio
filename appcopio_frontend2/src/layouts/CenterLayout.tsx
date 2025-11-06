@@ -67,7 +67,7 @@ const CenterLayout: React.FC = () => {
     //{ label: "Estado de Actualizaciones", to: paths.center.updates(id) },
     { label: "Solicitudes de Actualización", to: paths.center.requests(id) },
     //{ label: "Listado de Personas",   to: paths.center.residents(id) },
-    { label: "Turnos",                to: paths.center.shifts(id), hiddenForCitizenContact: true },
+    //{ label: "Turnos",                to: paths.center.shifts(id), hiddenForCitizenContact: true },
     //{ label: "Registros de activación",   to: paths.center.databases(id) },
     { label: "Historial de activaciones",   to: paths.center.activationsHistory(id)},
     { label: "Inventario",   to: paths.center.inventory(id)},
