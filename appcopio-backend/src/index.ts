@@ -10,7 +10,7 @@ import listEndpoints from "express-list-endpoints";
 import pool from "./config/db";
 import authRoutes from "./routes/authRoutes";
 import centerRoutes from "./routes/centerRoutes";
-//import productRoutes from "./routes/productRoutes";
+import productRoutes from "./routes/productRoutes";
 import inventoryRoutes from "./routes/inventoryRoutes";
 import userRouter from "./routes/userRoutes";
 import updateRoutes from "./routes/updateRoutes";
@@ -100,6 +100,7 @@ app.get("/api/ping", (_req: Request, res: Response) => {
 });
 
 app.use("/api/centers", centerRoutes)
+app.use("/api/products", requireAuth, productRoutes);
 app.use("/api/updates", requireAuth, updateRoutes);
 app.use("/api/users", requireAuth, userRouter);
 app.use("/api/inventory", requireAuth, inventoryRoutes);

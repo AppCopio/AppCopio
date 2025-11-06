@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { Category, InventoryItem } from '@/types/inventory';
 import type { ResourceBox, BoxItemTemplate } from '@/types/movements';
 import { listCategories, createCategory } from '@/services/categories.service';
-import { listCenterInventory, createInventoryItem } from '@/services/inventory.service';
+import { listCenterInventory, listAllProducts, createInventoryItem } from '@/services/inventory.service';
 import { 
   getResourceBoxes, 
   createEntryMovement, 
@@ -37,7 +37,8 @@ interface MovementItem {
 export default function MovementForm({ centerId, type, onClose, onSuccess }: MovementFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [templates, setTemplates] = useState<ResourceBox[]>([]);
-  const [currentInventory, setCurrentInventory] = useState<InventoryItem[]>([]);
+  const [currentInventory, setCurrentInventory] = useState<InventoryItem[]>([]); // Inventario del centro
+  const [allProducts, setAllProducts] = useState<InventoryItem[]>([]); // Todos los productos de la BD
   const [families, setFamilies] = useState<FamilyGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +64,9 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
   const [newItemUnit, setNewItemUnit] = useState('');
 
   const [stockErrors, setStockErrors] = useState<{[key: string]: string}>({});
+  
+  // Filtro para entradas: mostrar solo items del centro
+  const [showOnlyCenterItems, setShowOnlyCenterItems] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -88,11 +92,22 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
       setTemplates(boxes);
       setCurrentInventory(inventory);
 
+      // Para entradas, cargar todos los productos del catálogo
+      if (type === 'entry') {
+        const products = await listAllProducts();
+        setAllProducts(products);
+        if (products.length > 0) {
+          setSelectedItemId(products[0].item_id);
+        }
+      } else {
+        // Para salidas, usar el inventario del centro
+        if (inventory.length > 0) {
+          setSelectedItemId(inventory[0].item_id);
+        }
+      }
+
       if (cats.length > 0) {
         setNewItemCategory(cats[0].category_id);
-      }
-      if (inventory.length > 0) {
-        setSelectedItemId(inventory[0].item_id);
       }
 
       if (type === 'exit') {
@@ -162,6 +177,20 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
     return templates.find((t) => t.box_id === selectedTemplateId) || null;
   }, [selectedTemplateId, templates]);
 
+  // Items disponibles según el tipo y filtro
+  const availableItems = useMemo(() => {
+    if (type === 'exit') {
+      return currentInventory; // Salidas siempre usan inventario del centro
+    }
+    
+    // Entradas: filtrar según checkbox
+    if (showOnlyCenterItems) {
+      return currentInventory;
+    }
+    
+    return allProducts;
+  }, [type, showOnlyCenterItems, currentInventory, allProducts]);
+
   const previewItems = useMemo(() => {
     if (!selectedTemplate) return [] as Array<{ name: string; category: string; qty: number; unit: string }>;
     const mult = Math.max(1, Number(templateMultiplier || 1));
@@ -170,6 +199,13 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
       return { name: it.item_name, category: categoryName, qty: (it.quantity || 0) * mult, unit: it.unit };
     });
   }, [selectedTemplate, templateMultiplier, categories]);
+
+  // Actualizar selectedItemId cuando cambie el filtro o la lista de items disponibles
+  useEffect(() => {
+    if (availableItems.length > 0 && !availableItems.find(item => item.item_id === selectedItemId)) {
+      setSelectedItemId(availableItems[0].item_id);
+    }
+  }, [availableItems, selectedItemId]);
 
   const handleResetTemplate = () => {
     if (window.confirm('¿Deseas descartar la plantilla cargada y empezar de cero?')) {
@@ -187,7 +223,9 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
         return;
       }
 
-      const selectedItem = currentInventory.find((i) => i.item_id === selectedItemId);
+      // Usar la lista filtrada según el tipo y el checkbox
+      const selectedItem = availableItems.find((i) => i.item_id === selectedItemId);
+      
       if (!selectedItem) {
         alert('Item no encontrado');
         return;
@@ -239,7 +277,8 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
 
         setItems((prev) => [...prev, newItem]);
         
-        setCurrentInventory((prev) => [...prev, {
+        // Actualizar la lista correspondiente con el nuevo item creado
+        const newInventoryItem = {
           item_id: createdItem.item_id,
           name: newItemName.trim(),
           category: categoryObj?.name || 'Sin categoría',
@@ -247,7 +286,10 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
           unit: newItemUnit.trim(),
           updated_at: new Date().toISOString(),
           updated_by_user: 'Sistema',
-        }]);
+        };
+        
+        setCurrentInventory((prev) => [...prev, newInventoryItem]);
+        setAllProducts((prev) => [...prev, newInventoryItem]);
 
         alert(`Item "${newItemName}" creado exitosamente en Products`);
       } catch (error) {
@@ -643,19 +685,43 @@ export default function MovementForm({ centerId, type, onClose, onSuccess }: Mov
             )}
 
             {(itemFormMode === 'existing' || type === 'exit') ? (
-              <div className="form-group">
-                <label>Seleccionar Item *</label>
-                <select
-                  value={selectedItemId}
-                  onChange={(e) => setSelectedItemId(Number(e.target.value))}
-                >
-                  {currentInventory.map((item) => (
-                    <option key={item.item_id} value={item.item_id}>
-                      {item.name} ({item.category}) - Stock: {item.quantity} {item.unit}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div className="form-group">
+                  <div className="label-with-checkbox">
+                    <label>Seleccionar Item *</label>
+                    {type === 'entry' && (
+                      <label className="checkbox-inline">
+                        <input
+                          type="checkbox"
+                          checked={showOnlyCenterItems}
+                          onChange={(e) => setShowOnlyCenterItems(e.target.checked)}
+                        />
+                        {' '}Mostrar solo items del centro
+                      </label>
+                    )}
+                  </div>
+                  {availableItems.length > 0 ? (
+                    <select
+                      value={selectedItemId}
+                      onChange={(e) => setSelectedItemId(Number(e.target.value))}
+                    >
+                      {availableItems.map((item) => (
+                        <option key={item.item_id} value={item.item_id}>
+                          {item.name} ({item.category})
+                          {type === 'exit' && ` - Stock: ${item.quantity} ${item.unit}`}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="empty-items-message">
+                      {type === 'exit' 
+                        ? 'No hay items disponibles en el inventario del centro'
+                        : 'No hay items disponibles en el inventario del centro. Desmarca el filtro o crea un nuevo item.'
+                      }
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <>
                 <div className="form-group">

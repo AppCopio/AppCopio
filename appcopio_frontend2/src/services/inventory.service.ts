@@ -8,6 +8,21 @@ import type {
 } from "@/types/inventory";
 
 /**
+ * Obtiene todos los items de la tabla Products (catálogo completo).
+ * Útil para formularios de entrada donde se quiere mostrar el catálogo completo de productos.
+ */
+export async function listAllProducts(): Promise<InventoryItem[]> {
+  try {
+    const { data } = await api.get<InventoryItem[]>(`/products`);
+    return data ?? [];
+  } catch (error) {
+    if (isCancelError(error)) return [];
+    console.error(`Error fetching all products:`, error);
+    return [];
+  }
+}
+
+/**
  * Obtiene la lista completa de ítems en el inventario de un centro.
  */
 export async function listCenterInventory(
