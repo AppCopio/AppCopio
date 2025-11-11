@@ -402,3 +402,30 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+.category-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f6f6f6;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin: 6px 0;
+  transition: background-color 0.2s ease;
+}
+
+.category-header:hover {
+  background-color: #eaeaea;
+}
+
+.toggle-icon {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.priority-items-list {
+  margin-top: 4px;
+  margin-left: 14px;
+  list-style-type: "• ";
+}

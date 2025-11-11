@@ -10,8 +10,15 @@ interface SidePanelProps {
 
 const SidePanel: React.FC<SidePanelProps> = ({ open, onClose, children, title = "Información del Centro" }) => {
   return (
-    <div className={`sidepanel ${open ? "open" : ""}`}>
-      <div className="sidepanel-content">
+    <>
+      {/* overlay detrás */}
+      {open && <div className="sidepanel-overlay" onClick={onClose}></div>}
+
+      {/* panel encima del overlay */}
+      <div
+        className={`sidepanel ${open ? "open" : ""}`}
+        onClick={(e) => e.stopPropagation()} // 👈 evita cierre por clic interno
+      >
         <div className="sidepanel-header">
           <h2>{title}</h2>
           <button className="close-btn" onClick={onClose}>
@@ -21,9 +28,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ open, onClose, children, title = 
 
         <div className="sidepanel-body">{children}</div>
       </div>
-
-      {open && <div className="sidepanel-overlay" onClick={onClose}></div>}
-    </div>
+    </>
   );
 };
 
