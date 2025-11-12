@@ -245,14 +245,14 @@ export default function ShiftsPage() {
               className="btn-create-shift"
               onClick={() => setShowCreateModal(true)}
             >
-              ➕ Asignar Turno
+              Asignar Turno
             </button>
             <button
               className="btn-export"
               onClick={handleExportCSV}
               disabled={isExporting || shifts.length === 0}
             >
-              {isExporting ? '⏳ Exportando...' : '📥 Exportar CSV'}
+              {isExporting ? '⏳ Exportando...' : 'Exportar CSV'}
             </button>
           </div>
         )}
@@ -311,7 +311,7 @@ export default function ShiftsPage() {
             className="btn-clear-filters"
             onClick={clearFilters}
           >
-            🔄 Limpiar Filtros
+            Limpiar Filtros
           </button>
         </div>
       </div>
@@ -322,13 +322,13 @@ export default function ShiftsPage() {
           className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
           onClick={() => setViewMode('list')}
         >
-          📋 Lista
+          Lista
         </button>
         <button
           className={`view-toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
           onClick={() => setViewMode('calendar')}
         >
-          📆 Calendario
+          Calendario
         </button>
       </div>
 
@@ -348,7 +348,7 @@ export default function ShiftsPage() {
                 className="btn-create-shift"
                 onClick={() => setShowCreateModal(true)}
               >
-                ➕ Asignar Primer Turno
+                Asignar Primer Turno
               </button>
             )}
           </div>
