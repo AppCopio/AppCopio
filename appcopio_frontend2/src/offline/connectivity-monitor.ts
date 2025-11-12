@@ -40,8 +40,8 @@ const DEFAULT_CONFIG: ConnectivityConfig = {
   // Usar favicon de Google - ligero, confiable y no satura tu backend
   pingUrl: 'https://www.google.com/favicon.ico',
 
-  // Check cada 30 segundos
-  checkInterval: 30000,
+  // Check cada 10 segundos
+  checkInterval: 10000,
   
   // Más de 2 segundos = conexión lenta
   slowThreshold: 2000,
