@@ -116,9 +116,21 @@
     color: white;
 }
 
-.urgency.alta { background-color: #dc3545; }
-.urgency.media { background-color: #ffc107; color: #333; }
-.urgency.baja { background-color: #28a745; }
+.urgency.alta { 
+  background-color: var(--color-danger-bg); 
+  color: var(--color-danger);
+  border: 2px solid var(--color-danger);
+}
+.urgency.media { 
+  background-color: var(--color-warning-bg); 
+  color: var(--color-warning); 
+  border: 2px solid var(--color-warning);
+}
+.urgency.baja { 
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+  border: 2px solid var(--color-success);
+}
 
 .action-button {
     padding: 0.4rem 0.8rem;

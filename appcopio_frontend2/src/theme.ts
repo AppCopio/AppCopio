@@ -52,6 +52,7 @@ declare module "@mui/material/Typography" {
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
     brand: true; softGray: true; outlineGray: true; textBare: true;
+    primary: true; secondary: true; success: true; warning: true; danger: true;
   }
 }
 
@@ -59,6 +60,67 @@ const toRem = (px: number) => `${px / 16}rem`;
 
 // Tema global
 export const theme = createTheme({
+  // ===== PALETA DE COLORES ESTANDARIZADA =====
+  palette: {
+    primary: {
+      main: '#1976d2',      // Azul principal
+      light: '#42a5f5',
+      dark: '#1565c0',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#9c27b0',      // Púrpura
+      light: '#ba68c8',
+      dark: '#7b1fa2',
+      contrastText: '#ffffff',
+    },
+    success: {
+      main: '#2e7d32',      // Verde
+      light: '#4caf50',
+      dark: '#1b5e20',
+      contrastText: '#ffffff',
+    },
+    warning: {
+      main: '#ed6c02',      // Naranja
+      light: '#ff9800',
+      dark: '#e65100',
+      contrastText: '#ffffff',
+    },
+    error: {
+      main: '#d32f2f',      // Rojo
+      light: '#f44336',
+      dark: '#c62828',
+      contrastText: '#ffffff',
+    },
+    info: {
+      main: '#0288d1',      // Azul claro
+      light: '#03a9f4',
+      dark: '#01579b',
+      contrastText: '#ffffff',
+    },
+    grey: {
+      50: '#fafafa',
+      100: '#f5f5f5',
+      200: '#eeeeee',
+      300: '#e0e0e0',
+      400: '#bdbdbd',
+      500: '#9e9e9e',
+      600: '#757575',
+      700: '#616161',
+      800: '#424242',
+      900: '#212121',
+    },
+    text: {
+      primary: '#212121',
+      secondary: '#757575',
+      disabled: '#bdbdbd',
+    },
+    background: {
+      default: '#fafafa',
+      paper: '#ffffff',
+    },
+  },
+  
   // Craeción de tipografías personalizadas
   typography: {
     fontFamily:
@@ -280,6 +342,31 @@ export const theme = createTheme({
         { props: { variant: "brand" }, style: {
           "--btn-bg": "#262626",  "--btn-bg-hover": "#666666ff",
           "--btn-border": "#262626", "--btn-border-hover": "#262626",
+          "--btn-text": "#ffffff", "--btn-text-hover": "#ffffff",
+        }},
+        { props: { variant: "primary" }, style: {
+          "--btn-bg": "#1976d2", "--btn-bg-hover": "#1565c0",
+          "--btn-border": "#1976d2", "--btn-border-hover": "#1565c0",
+          "--btn-text": "#ffffff", "--btn-text-hover": "#ffffff",
+        }},
+        { props: { variant: "secondary" }, style: {
+          "--btn-bg": "#9c27b0", "--btn-bg-hover": "#7b1fa2",
+          "--btn-border": "#9c27b0", "--btn-border-hover": "#7b1fa2",
+          "--btn-text": "#ffffff", "--btn-text-hover": "#ffffff",
+        }},
+        { props: { variant: "success" }, style: {
+          "--btn-bg": "#2e7d32", "--btn-bg-hover": "#1b5e20",
+          "--btn-border": "#2e7d32", "--btn-border-hover": "#1b5e20",
+          "--btn-text": "#ffffff", "--btn-text-hover": "#ffffff",
+        }},
+        { props: { variant: "warning" }, style: {
+          "--btn-bg": "#ed6c02", "--btn-bg-hover": "#e65100",
+          "--btn-border": "#ed6c02", "--btn-border-hover": "#e65100",
+          "--btn-text": "#ffffff", "--btn-text-hover": "#ffffff",
+        }},
+        { props: { variant: "danger" }, style: {
+          "--btn-bg": "#d32f2f", "--btn-bg-hover": "#c62828",
+          "--btn-border": "#d32f2f", "--btn-border-hover": "#c62828",
           "--btn-text": "#ffffff", "--btn-text-hover": "#ffffff",
         }},
         { props: { variant: "softGray" }, style: {

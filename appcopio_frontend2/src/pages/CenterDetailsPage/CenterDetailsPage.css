@@ -134,21 +134,24 @@
 
 .status-badge {
   display: inline-block;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 15px;
   font-size: 0.9em;
   font-weight: bold;
   text-transform: uppercase;
+  border: 2px solid;
 }
 
 .status-badge.status-active {
-  background-color: #d4edda;
-  color: #155724;
+  background-color: var(--color-operational-open-bg);
+  color: var(--color-operational-open);
+  border-color: var(--color-operational-open);
 }
 
 .status-badge.status-inactive {
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: var(--color-operational-full-bg);
+  color: var(--color-operational-full);
+  border-color: var(--color-operational-full);
 }
 
 .fullness-percentage {
@@ -168,26 +171,26 @@
 }
 
 .operational-status-badge.operational-open {
-  background-color: #d4edda;
-  color: #155724;
-  border-color: #28a745;
+  background-color: var(--color-operational-open-bg);
+  color: var(--color-operational-open);
+  border-color: var(--color-operational-open);
 }
 
 .operational-status-badge.operational-closed {
-  background-color: #6c757d;
-  color: #ffffff;
-  border-color: #495057;
+  background-color: var(--color-operational-closed-bg);
+  color: var(--color-operational-closed);
+  border-color: var(--color-operational-closed);
 }
 
 .operational-status-badge.operational-full {
-  background-color: #f8d7da;
-  color: #721c24;
-  border-color: #f5c6cb;
+  background-color: var(--color-operational-full-bg);
+  color: var(--color-operational-full);
+  border-color: var(--color-operational-full);
 }
 
 .operational-status-badge.operational-unknown {
-  background-color: #e2e3e5;
-  color: #6c757d;
+  background-color: var(--color-operational-unknown-bg);
+  color: var(--color-operational-unknown);
 }
 
 .public-note-display {
@@ -218,21 +221,27 @@
 }
 
 .status-toggle-btn.activate {
-  background-color: #28a745;
-  color: white;
+  background-color: var(--color-success);
+  color: var(--color-text-white);
+  border: none;
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-normal);
 }
 
 .status-toggle-btn.activate:hover {
-  background-color: #218838;
+  background-color: var(--color-success-dark);
 }
 
 .status-toggle-btn.deactivate {
-  background-color: #dc3545;
-  color: white;
+  background-color: var(--color-error);
+  color: var(--color-text-white);
+  border: none;
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-normal);
 }
 
 .status-toggle-btn.deactivate:hover {
-  background-color: #c82333;
+  background-color: var(--color-error-dark);
 }
 
 .resources-section {

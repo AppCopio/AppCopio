@@ -1,5 +1,6 @@
 
 /* src/pages/CenterRequestsPage/CenterRequestsPage.css */
+/* ACTUALIZADO: Forzar estilos para número de solicitudes y color urgencia alta v2.0 */
 
 /* Contenedor principal */
 .center-requests-container {
@@ -96,9 +97,48 @@
 }
 
 .card-sublabel {
-  color: #666;
-  font-size: 0.9rem;
-  margin: 0;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.9rem !important;
+  margin: 0 !important;
+  background-color: var(--color-neutral-bg) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  border: 2px solid var(--color-neutral) !important;
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  margin-top: 8px !important;
+}
+
+.center-requests-container .request-card.list-card .card-sublabel {
+  color: #616161 !important;
+  font-size: 0.9rem !important;
+  margin: 0 !important;
+  background-color: #f5f5f5 !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  border: 2px solid #757575 !important;
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  margin-top: 8px !important;
+}
+
+.center-requests-container .request-card.list-card .card-sublabel .stat-number {
+  font-size: 1.8rem !important;
+  font-weight: bold !important;
+  color: #212121 !important;
+  display: inline !important;
+}
+
+.center-requests-container .request-card.list-card .card-sublabel .stat-label {
+  font-size: 0.9rem !important;
+  color: #616161 !important;
+  text-transform: lowercase !important;
+  display: inline !important;
+  margin-top: 0 !important;
 }
 
 .card-stats {
@@ -107,15 +147,22 @@
   justify-content: center;
   gap: 8px;
   margin-top: 12px;
-  color: #000000;
+  background-color: var(--color-neutral-bg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 2px solid var(--color-neutral);
 }
 
 .stat-number {
-  color: #000000;
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--color-text-primary);
 }
 
 .stat-label {
-  color: #000000;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  text-transform: lowercase;
 }
 
 /* Sección de formulario de creación */
@@ -414,46 +461,54 @@ button:disabled {
 .urgency-badge,
 .status-badge {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: capitalize;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 0.9em;
+  font-weight: bold;
+  text-transform: uppercase;
+  border: 2px solid;
 }
 
 .urgency-badge.urgency-baja {
-  background: #e3f2fd;
-  color: #1976d2;
+  background-color: var(--color-info-bg);
+  color: var(--color-info);
+  border-color: var(--color-info);
 }
 
 .urgency-badge.urgency-media {
-  background: #fff3e0;
-  color: #f57c00;
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
 }
 
-.urgency-badge.urgency-alta {
-  background: #ffebee;
-  color: #d32f2f;
+.center-requests-container .requests-table .urgency-badge.urgency-alta {
+  background-color: #ffebee !important;
+  color: #d32f2f !important;
+  border-color: #d32f2f !important;
 }
 
 .status-badge.status-pending {
-  background: #fff3cd;
-  color: #856404;
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
 }
 
 .status-badge.status-approved {
-  background: #d4edda;
-  color: #155724;
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .status-badge.status-rejected {
-  background: #f8d7da;
-  color: #721c24;
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
 }
 
 .status-badge.status-canceled {
-  background: #e2e3e5;
-  color: #383d41;
+  background-color: var(--color-operational-closed-bg);
+  color: var(--color-operational-closed);
+  border-color: var(--color-operational-closed);
 }
 
 /* Estados de carga */
