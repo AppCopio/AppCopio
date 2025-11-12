@@ -429,3 +429,19 @@
   margin-left: 14px;
   list-style-type: "• ";
 }
+
+.priority-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 6px 10px;
+  background-color: #f3f3f3;
+  border-radius: 6px;
+  margin: 8px 0;
+  transition: background-color 0.2s ease;
+}
+
+.priority-header:hover {
+  background-color: #e7e7e7;
+}
