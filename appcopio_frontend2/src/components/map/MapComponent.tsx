@@ -59,6 +59,10 @@ const getPinStatusClass = (center: Center, isNearby: boolean = false): string =>
     baseClass = "status-full-capacity";
   } else if (center.operational_status === "abierto") {
     baseClass = "status-open";
+    const fp = Number(center.fullnessPercentage ?? 0);
+    if (fp < 33) baseClass = "status-critical";
+    else if (fp < 66) baseClass = "status-warning";
+    else baseClass = "status-ok";
   } else {
     // fallback por porcentaje
     const fp = Number(center.fullnessPercentage ?? 0);

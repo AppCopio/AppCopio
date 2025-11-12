@@ -21,13 +21,17 @@ export const INVENTORY_RATIOS: CategoryRatios = {
     { name: "Pan", quantityPerPerson: 1, period: "daily", unit: "unidades", priority: "medium" },
     { name: "Leche", quantityPerPerson: 2, period: "weekly", unit: "litros", priority: "medium" },
     { name: "Frutas", quantityPerPerson: 2, period: "daily", unit: "unidades", priority: "medium" },
+    { name: "Fideos", quantityPerPerson: 2, period: "daily", unit: "unidades", priority: "medium" },
+    { name: "Arroz", quantityPerPerson: 2, period: "daily", unit: "unidades", priority: "medium" },
+    { name: "Salsa de tomate", quantityPerPerson: 2, period: "daily", unit: "unidades", priority: "medium" },
+    { name: "Yogurt", quantityPerPerson: 2, period: "daily", unit: "unidades", priority: "medium" },
   ],
   
-  "Ropa de Cama y Abrigo": [
+  "Ropa y Abrigo": [
     { name: "Frazadas", quantityPerPerson: 2, period: "monthly", unit: "unidades", priority: "high" },
     { name: "Almohadas", quantityPerPerson: 1, period: "monthly", unit: "unidades", priority: "high" },
     { name: "Colchones", quantityPerPerson: 1, period: "monthly", unit: "unidades", priority: "high" },
-    { name: "Ropa de abrigo", quantityPerPerson: 3, period: "monthly", unit: "prendas", priority: "medium" },
+    { name: "Cobertores", quantityPerPerson: 3, period: "monthly", unit: "unidades", priority: "medium" },
     { name: "Sábanas", quantityPerPerson: 2, period: "monthly", unit: "juegos", priority: "medium" },
   ],
   
@@ -40,7 +44,7 @@ export const INVENTORY_RATIOS: CategoryRatios = {
     { name: "Toallas sanitarias", quantityPerPerson: 10, period: "weekly", unit: "unidades", priority: "high" },
   ],
   
-  "Medicamentos y Primeros Auxilios": [
+  "Botiquín y Primeros Auxilios": [
     { name: "Vendas", quantityPerPerson: 2, period: "monthly", unit: "rollos", priority: "high" },
     { name: "Alcohol", quantityPerPerson: 0.1, period: "weekly", unit: "litros", priority: "high" },
     { name: "Paracetamol", quantityPerPerson: 5, period: "monthly", unit: "pastillas", priority: "medium" },
@@ -60,6 +64,13 @@ export const INVENTORY_RATIOS: CategoryRatios = {
     { name: "Detergente", quantityPerPerson: 0.2, period: "weekly", unit: "kilos", priority: "medium" },
     { name: "Escobas", quantityPerPerson: 0.1, period: "monthly", unit: "unidades", priority: "low" },
     { name: "Trapeadores", quantityPerPerson: 0.1, period: "monthly", unit: "unidades", priority: "low" },
+  ],
+
+  "Herramientas y Equipamiento": [
+    { name: "Pala", quantityPerPerson: 0.1, period: "weekly", unit: "unidades", priority: "high" },
+    { name: "Escoba", quantityPerPerson: 0.2, period: "weekly", unit: "unidades", priority: "medium" },
+    { name: "Chuzo", quantityPerPerson: 0.1, period: "weekly", unit: "unidades", priority: "low" },
+    { name: "Trapeadores", quantityPerPerson: 0.1, period: "weekly", unit: "unidades", priority: "low" },
   ],
 };
 
