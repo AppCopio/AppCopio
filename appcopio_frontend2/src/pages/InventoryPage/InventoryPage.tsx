@@ -368,19 +368,19 @@ useEffect(() => {
             onClick={() => setShowNeedsSection(!showNeedsSection)}
             title="Mostrar/Ocultar análisis de necesidades"
           >
-            {showNeedsSection ? '📊 Ocultar Necesidades' : '📊 Mostrar Necesidades'}
+            {showNeedsSection ? 'Ocultar Necesidades' : 'Mostrar Necesidades'}
           </button>
           {canManage && (
             <>
               {/* HdU11: Botones para movimientos de inventario */}
               <button className="movement-btn entry-btn" onClick={() => setIsEntryFormOpen(true)}>
-                📥 Registrar Entrada
+                Registrar Entrada
               </button>
               <button className="movement-btn exit-btn" onClick={() => setIsExitFormOpen(true)}>
-                📤 Registrar Salida
+                Registrar Salida
               </button>
               <button className="movement-btn box-btn" onClick={() => setIsBoxTemplateManagerOpen(true)}>
-                📦 Gestionar Cajas
+                Gestionar Cajas
               </button>
               
               {isAdminOrSupport && (
