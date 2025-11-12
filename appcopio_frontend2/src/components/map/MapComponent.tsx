@@ -206,6 +206,8 @@ export default function MapComponent({ centers }: MapComponentProps) {
     available_capacity: number;
   } | null>(null);
   const [priorities, setPriorities] = React.useState<InventoryPriorityItem[]>([]);
+  const [openCategories, setOpenCategories] = React.useState<Record<string, boolean>>({});
+  const [openPriorities, setOpenPriorities] = React.useState<Record<string, boolean>>({});
 
   //Form voluntarios
   const [showVolunteerForm, setShowVolunteerForm] = React.useState(false);
@@ -241,7 +243,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
     () => centers.find((c) => String(c.center_id) === selectedCenterId) || null,
     [centers, selectedCenterId]
   );
-
+  
   // Centrar mapa en ubicación del usuario cuando se obtenga
   // Nota: Se podría implementar un mecanismo para centrar el mapa programáticamente
   // cuando se obtenga la ubicación del usuario, pero por simplicidad se omite por ahora
@@ -277,6 +279,18 @@ export default function MapComponent({ centers }: MapComponentProps) {
     setVolunteerFormCenter(null);
   };
 
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
+  };
+  const togglePriority = (priority: string) => {
+    setOpenPriorities(prev => ({
+      ...prev,
+      [priority]: !prev[priority],
+    }));
+  };
   // Cargar filtros y estado de colapso guardados al montar el componente
   React.useEffect(() => {
     try {
@@ -361,6 +375,7 @@ export default function MapComponent({ centers }: MapComponentProps) {
       console.error("❌ Error al obtener capacidad:", error);
     }
   }
+  
 
 
   // Función para manejar el toggle del colapso
@@ -572,40 +587,71 @@ export default function MapComponent({ centers }: MapComponentProps) {
                 itemsByCategory[cat].push(item);
               });
 
+              const isPriorityOpen = openPriorities[level] ?? false;
+
               return (
                 <div key={level} className={`priority-block ${level}`}>
-                  <h4 className={`priority-title ${level}`}>
-                    {level === "alto"
-                      ? "🔴 Prioridad Alta"
-                      : level === "medio"
-                      ? "🟡 Prioridad Media"
-                      : "🟢 Prioridad Baja"}
-                  </h4>
+                  <div
+                    className="priority-header"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePriority(level);
+                    }}
+                  >
+                    <h4 className={`priority-title ${level}`}>
+                      {level === "alto"
+                        ? "🔴 Prioridad Alta"
+                        : level === "medio"
+                        ? "🟡 Prioridad Media"
+                        : "🟢 Prioridad Baja"}
+                    </h4>
+                    <span className="toggle-icon">{isPriorityOpen ? "▲" : "▼"}</span>
+                  </div>
 
-                  {Object.entries(itemsByCategory).map(([category, items]) => (
-                    <div key={category} className="priority-category">
-                      <strong>Categoria {category}</strong>
-                      <ul className="priority-items-list">
-                        {items.map(item => {
-                          const updatedDate = item.updated_at
-                            ? new Date(item.updated_at).toLocaleString("es-CL", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "Sin actualización";
-                          return (
-                            <li key={item.item_id} className="priority-item">
-                              <span className="item-name">{item.item_name}</span>
-                              <span className="item-updated">🕒 {updatedDate}</span>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                  {/* 🔽 Solo mostramos las categorías si la prioridad está abierta */}
+                  {isPriorityOpen && (
+                    <div className="priority-categories">
+                      {Object.entries(itemsByCategory).map(([category, items]) => {
+                        const isOpen = openCategories[category] ?? false;
+                        return (
+                          <div key={category} className="priority-category">
+                            <div
+                              className="category-header"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCategory(category);
+                              }}
+                            >
+                              <strong>📂 Categoría {category}</strong>
+                              <span className="toggle-icon">{isOpen ? "▲" : "▼"}</span>
+                            </div>
+
+                            {isOpen && (
+                              <ul className="priority-items-list">
+                                {items.map(item => {
+                                  const updatedDate = item.updated_at
+                                    ? new Date(item.updated_at).toLocaleString("es-CL", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "Sin actualización";
+                                  return (
+                                    <li key={item.item_id} className="priority-item">
+                                      <span className="item-name">{item.item_name}</span>
+                                      <span className="item-updated">🕒 {updatedDate}</span>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
                 </div>
               );
             })}

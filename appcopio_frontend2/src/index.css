@@ -1,5 +1,8 @@
 /* src/index.css (CORREGIDO) */
 
+/* Importar variables CSS globales */
+@import './styles/variables.css';
+
 /* 1. Añadimos la regla universal de box-sizing para layouts predecibles */
 *,
 *::before,

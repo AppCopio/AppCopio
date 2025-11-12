@@ -163,7 +163,7 @@
 }
 
 .template-card {
-  background: #d6d6d6 !important;
+  background: #ffffff !important;
   border: 2px solid #000000;
   border-radius: 8px;
   padding: 20px;
@@ -201,7 +201,7 @@
 .template-items-list {
   margin: 15px 0;
   padding: 12px;
-  background-color: #d6d6d6;
+  background-color: #ffffff;
   border-radius: 6px;
   border: 2px solid #000000;
 }

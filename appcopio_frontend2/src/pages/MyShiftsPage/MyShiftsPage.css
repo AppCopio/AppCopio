@@ -111,31 +111,37 @@
 }
 
 .status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: capitalize;
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 0.9em;
+  font-weight: bold;
+  text-transform: uppercase;
+  border: 2px solid;
 }
 
 .status-badge.programado {
-  background: #dbeafe;
-  color: #1e40af;
+  background-color: var(--color-info-bg);
+  color: var(--color-info);
+  border-color: var(--color-info);
 }
 
 .status-badge.en_curso {
-  background: #dcfce7;
-  color: #166534;
+  background-color: var(--color-operational-open-bg);
+  color: var(--color-operational-open);
+  border-color: var(--color-operational-open);
 }
 
 .status-badge.completado {
-  background: #f3f4f6;
-  color: #4b5563;
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .status-badge.cancelado {
-  background: #fee2e2;
-  color: #991b1b;
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
 }
 
 .shift-card-body {

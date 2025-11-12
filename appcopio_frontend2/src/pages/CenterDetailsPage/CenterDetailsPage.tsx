@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import OperationalStatusControl from "@/components/center/OperationalStatusControl";
 import "./CenterDetailsPage.css";
+import PageHeader from "@/components/common/PageHeader";
 
 import type { CenterData, Center } from "@/types/center";
 import {
@@ -171,13 +172,6 @@ const CenterDetailsPage: React.FC = () => {
   [center, isUpdatingOperationalStatus, reloadCenterData]
 );
 
-const fullnessPercentage = useMemo(() => {
-  if (resources.length === 0) return 0;
-  const totalStock = resources.reduce((acc, r) => acc + (r.quantity || 0), 0);
-  const maxCapacity = resources.length * 100;
-  return maxCapacity > 0 ? Math.min((totalStock / maxCapacity) * 100, 100) : 0;
-}, [resources]);
-
   // Cargar datos del centro
   useEffect(() => {
     if (!centerId) return;
@@ -223,6 +217,16 @@ const fullnessPercentage = useMemo(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  // Refrescar los datos del centro cada 30 segundos para mantener sincronizado el porcentaje de abastecimiento
+  useEffect(() => {
+    if (!centerId) return;
+    
+    const interval = setInterval(() => {
+      reloadCenterData();
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [centerId, reloadCenterData]);
 
   //revisar si se ocupa esto
   const groupedResources = useMemo(() => {
@@ -271,11 +275,23 @@ const fullnessPercentage = useMemo(() => {
       )}
 
     <div className="center-details-container">
-      <div className="center-details-header">
-        <button onClick={() => navigate(-1)} className="back-button">← Volver</button>
-        <h1>Detalles del Centro</h1>
-        <Link to={`/admin/centers/${centerId}/edit`} className="edit-button">Editar Detalles</Link>
-      </div>
+      <PageHeader
+        title={center.name}
+        subtitle={`Centro ${center.type} - ${center.address || 'Dirección no especificada'}`}
+        breadcrumbs={[
+          { label: 'Centros', path: '/admin/centers' },
+          { label: 'Detalles del Centro' }
+        ]}
+        actions={
+          <Button 
+            variant="primary" 
+            component={Link} 
+            to={`/admin/centers/${centerId}/edit`}
+          >
+            Editar Detalles
+          </Button>
+        }
+      />
 
       <div className="center-details-content">
         <div className="center-info-section">
@@ -292,12 +308,10 @@ const fullnessPercentage = useMemo(() => {
                 <label>Estado Actual:</label>
                 <span className={`status-badge ${getStatusClass(center.is_active)}`}>{getStatusText(center.is_active)}</span>
               </div>
-              {typeof center.fullnessPercentage === "number" && (
-                <div className="info-item">
-                  <label>Nivel de Abastecimiento:</label>
-                  <span className="fullness-percentage">{center.fullnessPercentage.toFixed(1)}%</span>
-                </div>
-              )}
+              <div className="info-item">
+                <label>Nivel de Abastecimiento:</label>
+                <span className="fullness-percentage">{(center.fullnessPercentage || 0).toFixed(1)}%</span>
+              </div>
               <div className="info-item">
                 <label>Estado Operativo:</label>
                 <span className={`operational-status-badge ${getOperationalStatusClass(center.operational_status as OperationalStatusUI)}`}>

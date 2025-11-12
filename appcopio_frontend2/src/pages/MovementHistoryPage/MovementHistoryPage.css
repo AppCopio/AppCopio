@@ -272,26 +272,97 @@
 
 .movement-body {
   padding: 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: flex-start;
 }
 
 .movement-details {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  width: 300px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 400px;
 }
 
 .detail-row {
-  margin-bottom: 8px;
+  margin: 0;
   line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  width: 100%;
 }
 
 .detail-row strong {
-  color: #333;
-  margin-right: 8px;
+  color: #495057;
+  font-weight: 600;
+  min-width: 80px;
+  flex-shrink: 0;
+  word-wrap: break-word;
+  white-space: nowrap;
+}
+
+.detail-row span {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  hyphens: auto;
+}
+
+/* Estilo especial para fila de destinatario */
+.detail-row.recipient-row {
+  background-color: #e8f4ff;
+  border-left: 4px solid #007bff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 0;
+  box-sizing: border-box;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.detail-row.recipient-row strong {
+  color: #0056b3;
+  font-weight: 700;
+  min-width: 80px;
+}
+
+.detail-row.recipient-row span {
+  color: #0056b3;
+  font-weight: 500;
+}
+
+.movement-items {
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .movement-items h4 {
   margin: 0 0 15px 0;
-  color: #333;
+  color: #495057;
   font-size: 1.1em;
+  font-weight: 600;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 8px;
 }
 
 .items-grid {
@@ -395,5 +466,36 @@
   
   .items-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .movement-body {
+    padding: 16px;
+    gap: 16px;
+    flex-direction: column;
+  }
+  
+  .movement-details {
+    flex: none;
+    min-width: auto;
+    order: 1;
+  }
+  
+  .movement-items {
+    flex: none;
+    order: 2;
+  }
+  
+  .movement-details,
+  .movement-items {
+    padding: 12px;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .detail-row strong {
+    min-width: auto;
   }
 }

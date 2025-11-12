@@ -43,19 +43,24 @@
 }
 
 .status-pill {
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 0.9em;
   font-weight: bold;
-  color: #fff;
+  text-transform: uppercase;
+  border: 2px solid;
 }
 
 .status-pill.active {
-  background-color: #28a745; /* Verde */
+  background-color: var(--color-operational-open-bg);
+  color: var(--color-operational-open);
+  border-color: var(--color-operational-open);
 }
 
 .status-pill.inactive {
-  background-color: #6c757d; /* Gris */
+  background-color: var(--color-operational-full-bg);
+  color: var(--color-operational-full);
+  border-color: var(--color-operational-full);
 }
 
 .card-body p {

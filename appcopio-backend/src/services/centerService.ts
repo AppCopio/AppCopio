@@ -58,7 +58,14 @@ export async function getCenterById(db: Db, id: string) {
         `SELECT c.*, d.* FROM Centers c LEFT JOIN CentersDescription d ON c.center_id = d.center_id WHERE c.center_id = $1`,
         [id]
     );
-    return result.rowCount > 0 ? result.rows[0] : null;
+    if (result.rowCount === 0) return null;
+    
+    const center = result.rows[0];
+    // Mapear fullness_percentage a fullnessPercentage para mantener consistencia con el frontend
+    return {
+        ...center,
+        fullnessPercentage: center.fullness_percentage ?? 0
+    };
 }
 
 export async function createCenter(client: PoolClient, body: any) {
