@@ -134,78 +134,186 @@
 
 /* Estilos estandarizados para todos los botones principales */
 .action-btn,
-.movement-btn {
+.movements-btn {
+  background-color: #000000;   /* negro sólido */
+  color: #ffffff;
   border: none;
-  border-radius: 8px;
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 5px;
+  padding: 8px 14px;
+  font-size: 0.9em;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  white-space: nowrap;
-  text-decoration: none;
-  min-height: 44px;
-  min-width: 160px;
+  text-align: center;
+  min-width: 120px;
+  min-height: 34px;
+  text-decoration: none;       /* por si es un <Link> */
 }
 
+
 .action-btn:hover,
-.movement-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.movements-btn:hover {
+  background-color: #000000;   /* sin cambio de color */
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.movements-btn:active {
+  background-color: #111111;   /* leve oscurecimiento al click */
 }
 
 /* Colores específicos para movement-btn */
 .entry-btn {
-  background-color: #28a745;
-  color: white;
+  background-color: #000000;   /* negro sólido */
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;           /* igual que el de necesidades */
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 120px;
+  min-height: 34px;
 }
 
 .entry-btn:hover {
-  background-color: #218838;
+  background-color: #000000;   /* sin cambio de color */
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.entry-btn:active {
+  background-color: #111111;   /* leve oscurecimiento al click */
 }
 
 .exit-btn {
-  background-color: #dc3545;
-  color: white;
+  background-color: #000000;   /* negro sólido */
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 120px;
+  min-height: 34px;
 }
 
 .exit-btn:hover {
-  background-color: #c82333;
+  background-color: #000000;   /* sin cambio de color */
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.exit-btn:active {
+  background-color: #111111;   /* leve oscurecimiento al click */
 }
 
 .box-btn {
-  background-color: #6f42c1;
-  color: white;
+  background-color: #000000;   /* negro sólido */
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 120px;
+  min-height: 34px;
 }
 
 .box-btn:hover {
-  background-color: #5a32a3;
+  background-color: #000000;   /* sin cambio de color */
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.box-btn:active {
+  background-color: #111111;   /* leve oscurecimiento al click */
 }
 
 /* Colores específicos para action-btn */
 .action-btn {
-  background-color: #007bff;
-  color: white;
+  background-color: #000000;   /* negro sólido */
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 120px;
+  min-height: 34px;
 }
 
 .action-btn:hover {
-  background-color: #0056b3;
+  background-color: #000000;   /* sin cambio de color */
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.action-btn:active {
+  background-color: #111111;   /* leve oscurecimiento al click */
 }
 
 /* Colores específicos para botones de historial (amarillo original) */
-.action-btn.history-btn {
-  background-color: #ffc107;
-  color: #333;
+.history-btn {
+  background-color: #000000;   /* negro sólido */
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 120px;
+  min-height: 34px;
+  text-decoration: none;       /* importante si es <Link> */
 }
 
-.action-btn.history-btn:hover {
-  background-color: #e0a800;
-} 
+.history-btn:hover {
+  background-color: #000000;   /* sin cambio de color */
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
 
+.history-btn:active {
+  background-color: #111111;   /* leve oscurecimiento al click */
+}
 /* ... tus estilos existentes de la tabla ... */
 
 /* Estilos para el Modal */
@@ -317,36 +425,43 @@
 /* HdU09: Estilos para los botones de toggle */
 .toggle-buttons-container {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .toggle-needs-btn {
-  background-color: #6c757d;
-  color: white;
+  background-color: #000000;   /* negro sólido */
+  color: #ffffff;
   border: none;
-  border-radius: 6px;
-  padding: 10px 15px;
-  font-size: 0.9em;
+  border-radius: 5px;
+  padding: 8px 14px;           /* 🔹 más pequeño que antes */
+  font-size: 0.9em;            /* 🔹 texto más fino */
+  font-weight: 500;            /* 🔹 menos grueso */
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: center;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  min-width: 120px;            /* 🔹 más compacto */
+  min-height: 34px;            /* 🔹 altura controlada */
 }
 
 .toggle-needs-btn:hover {
-  background-color: #5a6268;
+  background-color: #000000;   /* no cambia color */
+  color: #ffffff;
   transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .toggle-needs-btn.active {
-  background-color: #007bff;
+  background-color: #111111;   /* leve variación en activo */
 }
 
 .toggle-needs-btn.active:hover {
-  background-color: #0056b3;
+  background-color: #111111;
+  color: #ffffff;
 }
 
 /* Estilos específicos para el contenedor de botones */
@@ -531,16 +646,21 @@
 
 .priority-select {
   border-radius: 6px;
-  padding: 4px 8px;
-  font-weight: 600;
+  padding: 5px 10px;                  /* 🔹 un poco más pequeño */
+  font-weight: 500;                   /* 🔹 texto más fino */
+  font-size: 0.85em;                  /* 🔹 tamaño de letra reducido */
   color: white;
   border: none;
   outline: none;
   cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
-  margin-left: 24px; /* separación desde el botón Editar hacia la prioridad (más espacio) */
+  transition: transform 0.2s ease, background-color 0.3s ease;
+  margin-left: 24px;                  /* separación respecto al botón Editar */
+  text-align: center;
 }
 
+.priority-select:hover {
+  transform: translateY(-1px);        /* leve elevación */
+}
 .priority-alto {
   background-color: #e74c3c; /* rojo */
 }
@@ -580,4 +700,57 @@ select.priority-select.priority-medio {
 select.priority-select.priority-alto {
   background-color: #e74c3c;
   color: white;
+}
+/* === Centrar todo el contenido dentro de la columna Acciones === */
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;     /* Centra horizontalmente */
+  justify-content: center; /* Centra verticalmente */
+  gap: 6px;                /* Espacio parejo entre elementos */
+  height: 100%;            /* Ocupa toda la altura de la celda */
+  text-align: center;
+}
+
+/* Botón principal (Editar) centrado */
+.item-actions .action-btn {
+  background-color: #000;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 12px;
+  font-size: 0.85em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 90px;
+  text-align: center;
+}
+
+.item-actions .action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* Etiqueta de stock (bloque rojo pequeño) */
+.item-actions .delete-warning {
+  display: inline-block;
+  font-size: 0.8em;
+  color: #b52d2d;
+  font-weight: 600;
+  padding: 2px 8px;
+  background-color: #f8d7da;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  text-align: center;
+}
+
+/* Selector de prioridad centrado y compacto */
+.item-actions .priority-select {
+  width: auto;
+  font-size: 0.8em;
+  padding: 4px 10px;
+  border-radius: 5px;
+  margin-left: 0;
+  text-align: center;
 }
