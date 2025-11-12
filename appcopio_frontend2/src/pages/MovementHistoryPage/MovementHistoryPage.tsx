@@ -247,22 +247,6 @@ export default function MovementHistoryPage() {
               </div>
 
               <div className="movement-body">
-                <div className="movement-details">
-                  <div className="detail-row">
-                    <strong>Motivo:</strong> {movement.reason}
-                  </div>
-                  {movement.recipient && (
-                    <div className="detail-row">
-                      <strong>Destinatario:</strong> {movement.recipient}
-                    </div>
-                  )}
-                  {movement.notes && (
-                    <div className="detail-row">
-                      <strong>Notas:</strong> {movement.notes}
-                    </div>
-                  )}
-                </div>
-
                 <div className="movement-items">
                   <h4>Items ({movement.items.length}):</h4>
                   <div className="items-grid">
@@ -281,6 +265,25 @@ export default function MovementHistoryPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div className="movement-details">
+                  <div className="detail-row">
+                    <strong>Motivo:</strong> 
+                    <span>{movement.reason}</span>
+                  </div>
+                  {movement.recipient && (
+                    <div className="detail-row recipient-row">
+                      <strong>Destinatario:</strong> 
+                      <span>{movement.recipient}</span>
+                    </div>
+                  )}
+                  {movement.notes && (
+                    <div className="detail-row">
+                      <strong>Notas:</strong> 
+                      <span>{movement.notes}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

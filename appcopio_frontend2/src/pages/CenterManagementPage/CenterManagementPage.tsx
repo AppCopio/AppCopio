@@ -161,6 +161,15 @@ const CenterManagementPage: React.FC = () => {
     fetchCenters();
   }, [fetchCenters]);
 
+  // Efecto para actualizar los datos periódicamente (cada 2 minutos)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchCenters(false); // false = no mostrar spinner de carga
+    }, 120000); // 2 minutos
+
+    return () => clearInterval(interval);
+  }, [fetchCenters]);
+
   useEffect(() => {
     let filtered = centers;
 

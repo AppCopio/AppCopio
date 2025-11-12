@@ -1,0 +1,106 @@
+/* PageHeader Component Styles */
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-lg) var(--spacing-lg) 0;
+}
+
+.page-header--centered {
+  align-items: center;
+  text-align: center;
+}
+
+.page-header__breadcrumbs {
+  margin-bottom: var(--spacing-xs);
+}
+
+.page-header__breadcrumbs .MuiBreadcrumbs-separator {
+  margin: 0 var(--spacing-xs);
+  color: var(--color-text-secondary);
+}
+
+.page-header__main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.page-header--centered .page-header__main {
+  flex-direction: column;
+  align-items: center;
+}
+
+.page-header__content {
+  flex: 1;
+  min-width: 0; /* Para permitir que el texto se corte si es necesario */
+}
+
+.page-header__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+.page-header__subtitle {
+  margin: var(--spacing-xs) 0 0 0;
+  color: var(--color-text-secondary);
+  max-width: 600px;
+}
+
+.page-header--centered .page-header__subtitle {
+  text-align: center;
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .page-header {
+    padding: var(--spacing-md) var(--spacing-md) 0;
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  .page-header__main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
+  
+  .page-header__actions {
+    justify-content: flex-start;
+  }
+  
+  .page-header--centered .page-header__actions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: var(--spacing-sm) var(--spacing-sm) 0;
+  }
+  
+  .page-header__title {
+    font-size: var(--font-size-2xl); /* Reduce el tamaño en móvil */
+  }
+  
+  .page-header__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .page-header__actions > * {
+    width: 100%;
+  }
+}

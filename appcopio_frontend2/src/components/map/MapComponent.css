@@ -77,31 +77,31 @@
 
 /* --- ESTILOS DE ESTADO PARA EL BORDE --- */
 .marker-pin.status-ok {
-  border-color: #28a745;
+  border-color: var(--color-success);
 }
 .marker-pin.status-warning {
-  border-color: #ffc107;
+  border-color: var(--color-warning);
 }
 .marker-pin.status-critical {
-  border-color: #dc3545;
+  border-color: var(--color-danger);
 }
 .marker-pin.status-inactive {
-  border-color: #6c757d;
+  border-color: var(--color-neutral);
   opacity: 0.6;
   filter: grayscale(80%);
 }
 
 /* Nuevos estados operativos */
 .marker-pin.status-open {
-  border-color: #28a745;
+  border-color: var(--color-operational-open);
 }
 .marker-pin.status-temporarily-closed {
-  border-color: #6c757d;
+  border-color: var(--color-operational-closed);
   opacity: 0.7;
 }
 .marker-pin.status-full-capacity {
-  border-color: #dc3545;
-  background-color: #f8d7da;
+  border-color: var(--color-operational-full);
+  background-color: var(--color-operational-full-bg);
 }
 
 /* Estilo especial para centros cercanos */

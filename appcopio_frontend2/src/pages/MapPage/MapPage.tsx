@@ -32,6 +32,21 @@ export default function MapPage() {
     return () => controller.abort();
   }, []);
 
+  // Efecto para actualizar los datos del mapa periódicamente
+  React.useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const data = await listCenters();
+        setCenters(data);
+      } catch (e) {
+        console.error("Error refreshing center data for map:", e);
+        // No mostrar error al usuario, es una actualización en segundo plano
+      }
+    }, 60000); // Actualizar cada minuto
+
+    return () => clearInterval(interval);
+  }, []);
+
   if (loading) {
     return <div className="map-page-container">Cargando mapa y centros de acopio...</div>;
   }

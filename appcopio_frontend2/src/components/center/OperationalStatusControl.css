@@ -63,7 +63,7 @@
 }
 
 .status-button:hover:not(:disabled) {
-  border-color: #007bff;
+  border-color: var(--color-primary);
   box-shadow: 0 2px 4px rgba(0,123,255,0.1);
 }
 
@@ -132,7 +132,7 @@
 }
 
 .status-option.current {
-  background: #e3f2fd;
+  background: var(--color-primary-bg);
   font-weight: 600;
 }
 
@@ -155,33 +155,33 @@
 
 /* Estados específicos */
 .status-open {
-  border-color: #28a745;
-  color: #155724;
+  border-color: var(--color-operational-open);
+  color: var(--color-operational-open);
 }
 
 .status-open .status-indicator {
-  background: #d4edda;
-  border-color: #c3e6cb;
+  background: var(--color-operational-open-bg);
+  border-color: var(--color-operational-open);
 }
 
 .status-temporarily-closed {
-  border-color: #6c757d;
-  color: #495057;
+  border-color: var(--color-operational-closed);
+  color: var(--color-operational-closed);
 }
 
 .status-temporarily-closed .status-indicator {
-  background: #f8f9fa;
-  border-color: #dee2e6;
+  background: var(--color-operational-closed-bg);
+  border-color: var(--color-operational-closed);
 }
 
 .status-full-capacity {
-  border-color: #dc3545;
-  color: #721c24;
+  border-color: var(--color-operational-full);
+  color: var(--color-operational-full);
 }
 
 .status-full-capacity .status-indicator {
-  background: #f8d7da;
-  border-color: #f5c6cb;
+  background: var(--color-operational-full-bg);
+  border-color: var(--color-operational-full);
 }
 
 .status-help {
@@ -230,7 +230,7 @@
 
 .note-editor textarea:focus {
   outline: none;
-  border-color: #007bff;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
@@ -248,7 +248,7 @@
 
 .btn-confirm {
   padding: 8px 16px;
-  background: #007bff;
+  background: var(--color-primary);
   color: white;
   border: none;
   border-radius: 4px;
@@ -258,7 +258,7 @@
 }
 
 .btn-confirm:hover:not(:disabled) {
-  background: #0056b3;
+  background: var(--color-primary-dark);
 }
 
 .btn-confirm:disabled {
@@ -268,7 +268,7 @@
 
 .btn-cancel {
   padding: 8px 16px;
-  background: #6c757d;
+  background: var(--color-neutral);
   color: white;
   border: none;
   border-radius: 4px;
@@ -278,7 +278,7 @@
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: #545b62;
+  background: var(--color-neutral-dark);
 }
 
 .current-note {
@@ -295,8 +295,8 @@
 
 .btn-edit-note {
   padding: 4px 8px;
-  background: #ffc107;
-  color: #212529;
+  background: var(--color-warning);
+  color: var(--color-text-white);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -304,5 +304,5 @@
 }
 
 .btn-edit-note:hover:not(:disabled) {
-  background: #e0a800;
+  background: var(--color-warning-dark);
 }
