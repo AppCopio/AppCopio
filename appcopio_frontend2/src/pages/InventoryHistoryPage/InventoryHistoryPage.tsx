@@ -173,25 +173,25 @@ export default function InventoryHistoryPage() {
               className={`filter-btn ${filterAction === "all" ? "active" : ""}`}
               onClick={() => setFilterAction("all")}
             >
-              📊 Todos
+              Todos
             </button>
             <button 
               className={`filter-btn ${filterAction === "ADD" ? "active" : ""}`}
               onClick={() => setFilterAction("ADD")}
             >
-              📥 Entradas
+              Entradas
             </button>
             <button 
               className={`filter-btn ${filterAction === "SUB" ? "active" : ""}`}
               onClick={() => setFilterAction("SUB")}
             >
-              📤 Salidas
+              Salidas
             </button>
             <button 
               className={`filter-btn ${filterAction === "ADJUST" ? "active" : ""}`}
               onClick={() => setFilterAction("ADJUST")}
             >
-              ⚖️ Ajustes
+              Ajustes
             </button>
           </div>
         </div>
